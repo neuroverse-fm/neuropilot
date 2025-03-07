@@ -11,6 +11,8 @@ Also, if you have GitHub Copilot (or similar extensions) enabled, disable them.
 Once you are in a file, place your cursor where you want the new code to be inserted and trigger a suggestion.
 This should send a command to Neuro asking her to complete the code.
 
+The extension will immediately try to establish a connection to the API when activated. If the extension was started before the API was ready, or you lose connection to the API, you can use the command "NeuroPilot: Reconnect" from the Command Palette.
+
 You can configure the extension using the extension settings.
 For example, you can set how many lines of code will be provided as context before and after the current line.
 You can also set it to trigger a completion every time you stop typing (this is fine for the tools above, but might be a problem for Neuro since it sends and cancels requests in quick succession, which is why it's disabled by default).

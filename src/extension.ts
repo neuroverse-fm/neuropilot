@@ -3,11 +3,6 @@ import { Range } from 'vscode';
 import { NeuroClient } from 'neuro-game-sdk';
 
 export function activate(_context: vscode.ExtensionContext) {
-    console.log('inline-completions demo started');
-    vscode.commands.registerCommand('demo-ext.command1', async (...args) => {
-        vscode.window.showInformationMessage('command1: ' + JSON.stringify(args));
-    });
-
     let serverUrl = vscode.workspace.getConfiguration('neuropilot').get('websocketUrl', 'http://localhost:8000');
     let gameName = vscode.workspace.getConfiguration('neuropilot').get('gameName', 'Visual Studio Code');
     let neuroClient: NeuroClient;
@@ -91,6 +86,11 @@ export function activate(_context: vscode.ExtensionContext) {
         waitingForResponse = false;
         neuroClient.unregisterActions(['complete_code']);
     }
+
+    vscode.commands.registerCommand('neuropilot.reconnect', async (...args) => {
+        console.log('Reconnecting to Neuro API');
+        createClient();
+    });
 
     createClient();
 
