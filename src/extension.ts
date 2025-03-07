@@ -98,7 +98,6 @@ export function activate(_context: vscode.ExtensionContext) {
         async provideInlineCompletionItems(document, position, context, token) {
             const result: vscode.InlineCompletionList = {
                 items: [],
-                commands: [],
             };
 
             const enabled = vscode.workspace.getConfiguration('neuropilot').get('enabled', true)
@@ -148,21 +147,6 @@ export function activate(_context: vscode.ExtensionContext) {
             }
 
             return result;
-        },
-
-        handleDidShowCompletionItem(_completionItem: vscode.InlineCompletionItem): void {
-            // console.log('handleDidShowCompletionItem');
-        },
-
-        /**
-         * Is called when an inline completion item was accepted partially.
-         * @param acceptedLength The length of the substring of the inline completion that was accepted already.
-         */
-        handleDidPartiallyAcceptCompletionItem(
-            _completionItem: vscode.InlineCompletionItem,
-            _info: vscode.PartialAcceptInfo | number
-        ): void {
-            // console.log('handleDidPartiallyAcceptCompletionItem');
         },
     };
     vscode.languages.registerInlineCompletionItemProvider({ pattern: '**' }, provider);
