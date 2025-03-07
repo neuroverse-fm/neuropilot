@@ -31,7 +31,57 @@
 					"command": "extension.inline-completion-settings"
 				}
 			]
-		}
+		},
+		"configuration": [
+			{
+				"title": "NeuroPilot",
+				"properties": {
+					"neuropilot.enable": {
+						"type": "boolean",
+						"default": true,
+						"description": "Enable or disable the extension"
+					},
+					"neuropilot.websocketUrl": {
+						"type": "string",
+						"default": "ws://localhost:8000",
+						"description": "The URL to use for completions"
+					},
+					"neuropilot.gameName": {
+						"type": "string",
+						"default": "Visual Studio Code",
+						"description": "The name to use for this \"game\""
+					},
+					"neuropilot.beforeContext": {
+						"type": "integer",
+						"default": 10,
+						"description": "The number of lines before the cursor position to include in the completion request"
+					},
+					"neuropilot.afterContext": {
+						"type": "integer",
+						"default": 10,
+						"description": "The number of lines after the cursor position to include in the completion request"
+					},
+					"neuropilot.maxCompletions": {
+						"type": "integer",
+						"default": 3,
+						"description": "The maximum number of completions to request"
+					},
+					"neuropilot.completionTrigger": {
+						"type": "string",
+						"default": "invokeOnly",
+						"description": "When to trigger completions",
+						"enum": [
+							"invokeOnly",
+							"automatic"
+						],
+						"enumDescriptions": [
+							"Only request completions when the user explicitly invokes the completion provider",
+							"Automatically request completions when the user stops typing"
+						]
+					}
+				}
+			}
+		]
 	},
 	"scripts": {
 		"vscode:prepublish": "npm run compile",
@@ -46,9 +96,13 @@
 		"@stylistic/eslint-plugin": "^2.9.0",
 		"@types/node": "^20",
 		"@types/vscode": "^1.74.0",
+		"@types/ws": "^8.18.0",
 		"@vscode/dts": "^0.4.0",
 		"eslint": "^9.13.0",
 		"typescript": "^5.8.2",
 		"typescript-eslint": "^8.26.0"
+	},
+	"dependencies": {
+		"neuro-game-sdk": "github:AriesAlex/typescript-neuro-game-sdk#49a4a711e031447bcf4c9e5bd8caab3922ed02b5"
 	}
 }

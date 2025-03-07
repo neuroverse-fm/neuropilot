@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { Range } from 'vscode';
+import { NeuroClient } from 'neuro-game-sdk';
 
 export function activate(_context: vscode.ExtensionContext) {
     console.log('inline-completions demo started');
@@ -7,63 +8,150 @@ export function activate(_context: vscode.ExtensionContext) {
         vscode.window.showInformationMessage('command1: ' + JSON.stringify(args));
     });
 
-    const provider: vscode.InlineCompletionItemProvider = {
-        async provideInlineCompletionItems(document, position, _context, _token) {
-            console.log('provideInlineCompletionItems triggered');
-            const regexp = /\/\/ \[(.+?),(.+?)\)(.*?):(.*)/;
-            if (position.line <= 0) {
-                return;
-            }
+    let serverUrl = vscode.workspace.getConfiguration('neuropilot').get('websocketUrl', 'http://localhost:8000');
+    let gameName = vscode.workspace.getConfiguration('neuropilot').get('gameName', 'Visual Studio Code');
+    let neuroClient: NeuroClient;
+    let neuroClientConnected = false;
+    let waitingForResponse = false;
+    let lastSuggestions: string[] = [];
 
+    function createClient() {
+        console.log('Creating new client');
+        if(neuroClient)
+            neuroClient.disconnect();
+        neuroClientConnected = false;
+        // TODO: Check if this is a memory leak
+        neuroClient = new NeuroClient(serverUrl, gameName, () => {
+            console.log('Connected to Neuro API');
+            neuroClientConnected = true;
+
+            neuroClient.onAction(actionData => {
+                if(actionData.name === 'complete_code') {
+                    const suggestions = actionData.params?.suggestions;
+                    if(!waitingForResponse) { // Request was cancelled
+                        neuroClient.sendActionResult(actionData.id, true, 'Request was cancelled');
+                        return;
+                    }
+                    else if(suggestions === undefined) {
+                        neuroClient.sendActionResult(actionData.id, false, 'Missing required parameter "suggestions"');
+                        return;
+                    }
+                    neuroClient.unregisterActions(['complete_code']);
+                    neuroClient.sendActionResult(actionData.id, true);
+                    waitingForResponse = false;
+                    lastSuggestions = suggestions;
+                    console.log('Received suggestions:', suggestions);
+                }
+            });
+        });
+    }
+
+    function requestCompletion(beforeContext: string, afterContext: string, maxCount: number) {
+        if(!neuroClientConnected) {
+            console.log('Not connected to Neuro API');
+            return;
+        }
+        if(waitingForResponse) {
+            console.error('Already waiting for response');
+            return;
+        }
+
+        waitingForResponse = true;
+        
+        neuroClient.registerActions([
+            {
+                name: 'complete_code',
+                description: `Suggest code to write (at most ${maxCount} suggestions)`,
+                schema: {
+                    type: 'object',
+                    properties: {
+                        suggestions: {
+                            type: 'array',
+                            items: { type: 'string' },
+                            maxItems: maxCount,
+                        }
+                    },
+                    required: ['suggestions'],
+                }
+            }
+        ])
+
+        neuroClient.forceActions(
+            'Write code that fits between afterContext and beforeContext',
+            ['complete_code'],
+            JSON.stringify({
+                beforeContext: beforeContext,
+                afterContext: afterContext,
+            }),
+            false,
+        )
+    }
+
+    function cancelRequest() {
+        waitingForResponse = false;
+        neuroClient.unregisterActions(['complete_code']);
+    }
+
+    createClient();
+
+    const provider: vscode.InlineCompletionItemProvider = {
+        async provideInlineCompletionItems(document, position, context, token) {
             const result: vscode.InlineCompletionList = {
                 items: [],
                 commands: [],
             };
 
-            let offset = 1;
-            while (offset > 0) {
-                if (position.line - offset < 0) {
-                    break;
-                }
+            const enabled = vscode.workspace.getConfiguration('neuropilot').get('enabled', true)
+            if(!enabled) {
+                return result;
+            }
 
-                const lineBefore = document.lineAt(position.line - offset).text;
-                const matches = lineBefore.match(regexp);
-                if (!matches) {
-                    break;
-                }
-                offset++;
+            const triggerAuto = vscode.workspace.getConfiguration('neuropilot').get<string>('completionTrigger', 'invokeOnly') === 'automatic';
+            if(!triggerAuto && context.triggerKind !== vscode.InlineCompletionTriggerKind.Invoke) {
+                return result;
+            }
 
-                const start = matches[1];
-                const startInt = parseInt(start, 10);
-                const end = matches[2];
-                const endInt =
-                    end === '*'
-                        ? document.lineAt(position.line).text.length
-                        : parseInt(end, 10);
-                const flags = matches[3];
-                const completeBracketPairs = flags.includes('b');
-                const isSnippet = flags.includes('s');
-                const text = matches[4].replace(/\\n/g, '\n');
+            // Check if game or URL changed
+            const newServerUrl = vscode.workspace.getConfiguration('neuropilot').get('neuropilot.websocketUrl', 'ws://localhost:8000');
+            const newGameName = vscode.workspace.getConfiguration('neuropilot').get('gameName', 'Visual Studio Code');
+            if(serverUrl !== newServerUrl || gameName !== newGameName) {
+                console.log('Game or URL changed, creating new client');
+                serverUrl = newServerUrl;
+                gameName = newGameName;
+                createClient();
+            }
 
+            // Get context
+            const beforeContextLength = vscode.workspace.getConfiguration('neuropilot').get('beforeContext', 10);
+            const afterContextLength = vscode.workspace.getConfiguration('neuropilot').get('afterContext', 10);
+            const maxCount = vscode.workspace.getConfiguration('neuropilot').get('maxCompletions', 3);
+
+            const contextStart = Math.max(0, position.line - beforeContextLength);
+            const contextBefore = document.getText(new Range(document.positionAt(contextStart), position));
+            const contextEnd = Math.min(document.lineCount, position.line + afterContextLength);
+            const contextAfter = document.getText(new Range(position, document.positionAt(contextEnd)));
+
+            requestCompletion(contextBefore, contextAfter, maxCount);
+            
+            token.onCancellationRequested(() => {
+                console.log('Cancelled request');
+                cancelRequest();
+            });
+            while(waitingForResponse) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+
+            for(const suggestion of lastSuggestions) {
                 result.items.push({
-                    insertText: isSnippet ? new vscode.SnippetString(text) : text,
-                    range: new Range(position.line, startInt, position.line, endInt),
-                    completeBracketPairs,
+                    insertText: suggestion,
                 });
             }
 
-            if (result.items.length > 0) {
-                result.commands!.push({
-                    command: 'demo-ext.command1',
-                    title: 'My Inline Completion Demo Command',
-                    arguments: [1, 2],
-                });
-            }
             return result;
         },
 
         handleDidShowCompletionItem(_completionItem: vscode.InlineCompletionItem): void {
-            console.log('handleDidShowCompletionItem');
+            // console.log('handleDidShowCompletionItem');
         },
 
         /**
@@ -74,7 +162,7 @@ export function activate(_context: vscode.ExtensionContext) {
             _completionItem: vscode.InlineCompletionItem,
             _info: vscode.PartialAcceptInfo | number
         ): void {
-            console.log('handleDidPartiallyAcceptCompletionItem');
+            // console.log('handleDidPartiallyAcceptCompletionItem');
         },
     };
     vscode.languages.registerInlineCompletionItemProvider({ pattern: '**' }, provider);
