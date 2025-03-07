@@ -2,17 +2,20 @@
 	"enabledApiProposals": [
 		"inlineCompletionsAdditions"
 	],
-	"name": "inline-completion-sample",
-	"displayName": "Inline Completion Sample",
-	"description": "Sample showing how to implement an inline completion provider",
+	"name": "neuropilot",
+	"displayName": "NeuroPilot",
+	"description": "Lets Neuro-sama provide inline completions in VS Code",
 	"version": "0.0.1",
-	"publisher": "vscode-samples",
-	"repository": "https://github.com/Microsoft/vscode-extension-samples",
+	"publisher": "Pasu4",
+	"repository": "https://github.com/Pasu4/neuropilot",
+	"license": "MIT",
 	"engines": {
 		"vscode": "^1.67.0"
 	},
 	"categories": [
-		"Other"
+		"AI",
+		"Programming Languages",
+		"Machine Learning"
 	],
 	"activationEvents": [
 		"*"

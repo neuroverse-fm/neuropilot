@@ -15,7 +15,7 @@
 				"${workspaceFolder}/playground.js",
 				"--disable-extensions",
 				"--enable-proposed-api",
-				"vscode-samples.inline-completion-sample"
+				"Pasu4.neuropilot"
 			],
 			"outFiles": [
 				"${workspaceFolder}/out/**/*.js"
