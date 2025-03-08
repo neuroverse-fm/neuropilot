@@ -2,7 +2,7 @@
 
 This extension lets Neuro-sama suggest code for you similar to GitHub Copilot.
 If you don't have a Neuro-sama, you can use tools like [Randy](https://github.com/VedalAI/neuro-game-sdk/tree/main/Randy), [Tony](https://github.com/Pasu4/neuro-api-tony) or [Jippity](https://github.com/EnterpriseScratchDev/neuro-api-jippity).
-If you are using Tony, I recommend activating auto-answer, since completion requests are canceled if you click out of VS Code.
+If you are using Tony, activating auto-answer is recommended, since completion requests are canceled if you click out of VS Code.
 
 ## How to use
 
@@ -21,7 +21,6 @@ You can also set it to trigger a completion every time you stop typing (this is 
 
 - Clone the repository
 - Run `npm install` in terminal to install dependencies
-- A `postinstall` script would download latest version of `vscode.proposed.*.d.ts`
 - Run the `Run Extension` target in the Debug View. This will:
 	- Start a task `npm: watch` to compile the code
 	- Run the extension in a new VS Code window
