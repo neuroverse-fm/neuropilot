@@ -34,11 +34,13 @@ jobs:
         npm install
         npm run compile
       
-    - name: Bump version and commit
+    - name: Bump version, commit and tag
       run: |
+        NEW_VERSION=$(npm version ${{ github.event.inputs.version }} --no-git-tag-version)
         git config --global user.name "Github Actions"
         git config --global user.email "actions@github.com"
-        npm version ${{ github.event.inputs.version }} -m "Bump version to %s"
+        git commit -am "Bump version to $NEW_VERSION"
+        git tag $NEW_VERSION
         git push https://Pasu4:${{secrets.GITHUB_TOKEN}}:@github.com/Pasu4/neuropilot
     
     - name: Install vsce
