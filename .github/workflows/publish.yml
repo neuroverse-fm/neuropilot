@@ -1,5 +1,8 @@
 name: Publish Extension
 
+permissions:
+  contents: write
+
 on:
   workflow_dispatch:
     inputs:
