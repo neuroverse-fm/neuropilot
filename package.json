@@ -1,7 +1,4 @@
 {
-	"enabledApiProposals": [
-		"inlineCompletionsAdditions"
-	],
 	"name": "neuropilot",
 	"displayName": "NeuroPilot",
 	"description": "Lets Neuro-sama provide inline completions in VS Code",
