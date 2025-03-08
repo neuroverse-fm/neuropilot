@@ -1,7 +1,14 @@
+# Node.js
 out
 node_modules
+
+# VS Code
 .vscode-test/
 *.vsix
+
+# Krita
 *.kra
 *.*~
+
+# Inkscape
 icon.svg
