@@ -72,6 +72,11 @@
 							"Only request completions when the user explicitly invokes the completion provider",
 							"Automatically request completions when the user stops typing"
 						]
+					},
+					"neuropilot.initialContext": {
+						"type": "string",
+						"default": "You are using an extension in Visual Studio Code that allows you to suggest code to Vedal. You will receive the lines of code before and after the cursor position and then be able to suggest what Vedal should write next.",
+						"description": "The initial context to sent to Neuro-sama"
 					}
 				}
 			}

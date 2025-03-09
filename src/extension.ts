@@ -8,6 +8,7 @@ export function activate(_context: vscode.ExtensionContext) {
     let neuroClient: NeuroClient;
     let neuroClientConnected = false;
     let waitingForResponse = false;
+    let requestCancelled = false;
     let lastSuggestions: string[] = [];
 
     function createClient() {
@@ -20,20 +21,33 @@ export function activate(_context: vscode.ExtensionContext) {
             console.log('Connected to Neuro API');
             neuroClientConnected = true;
 
+            neuroClient.sendContext(
+                vscode.workspace.getConfiguration('neuropilot').get('initialContext', 'Something went wrong, blame whoever made this extension.'),
+            );
+
             neuroClient.onAction(actionData => {
                 if(actionData.name === 'complete_code') {
                     const suggestions = actionData.params?.suggestions;
-                    if(!waitingForResponse) { // Request was cancelled
+
+                    if(requestCancelled) {
                         neuroClient.sendActionResult(actionData.id, true, 'Request was cancelled');
+                        neuroClient.unregisterActions(['complete_code']);
                         return;
                     }
-                    else if(suggestions === undefined) {
+                    if(!waitingForResponse) {
+                        neuroClient.sendActionResult(actionData.id, true, 'Not currently waiting for suggestions');
+                        neuroClient.unregisterActions(['complete_code']);
+                        return;
+                    }
+                    if(suggestions === undefined) {
                         neuroClient.sendActionResult(actionData.id, false, 'Missing required parameter "suggestions"');
                         return;
                     }
+
                     neuroClient.unregisterActions(['complete_code']);
                     neuroClient.sendActionResult(actionData.id, true);
                     waitingForResponse = false;
+                    requestCancelled = false;
                     lastSuggestions = suggestions;
                     console.log('Received suggestions:', suggestions);
                 }
@@ -52,11 +66,19 @@ export function activate(_context: vscode.ExtensionContext) {
         }
 
         waitingForResponse = true;
+        requestCancelled = false;
         
         neuroClient.registerActions([
             {
                 name: 'complete_code',
-                description: `Suggest code to write (at most ${maxCount} suggestions)`,
+                description: maxCount == 1
+                    ? `Suggest code to write.` +
+                    ` You may make one suggestion.` +
+                    ` Your suggestion can be a single line or a multi-line code snippet.`
+                    
+                    : `Suggest code to write.` +
+                    ` You may make up to ${maxCount} suggestions, but only one will be used.` +
+                    ` Your suggestions can be single lines or multi-line code snippets.`,
                 schema: {
                     type: 'object',
                     properties: {
@@ -84,6 +106,7 @@ export function activate(_context: vscode.ExtensionContext) {
 
     function cancelRequest() {
         waitingForResponse = false;
+        requestCancelled = true;
         neuroClient.unregisterActions(['complete_code']);
     }
 
