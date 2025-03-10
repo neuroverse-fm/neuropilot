@@ -202,6 +202,27 @@ export function activate(_context: vscode.ExtensionContext) {
         console.log('Reconnecting to Neuro API');
         createClient();
     });
+
+    vscode.commands.registerCommand('neuropilot.sendCurrentFile', async (...args) => {
+        const editor = vscode.window.activeTextEditor;
+        if(!editor) {
+            console.log('No active text editor');
+            return;
+        }
+        const document = editor.document;
+        let fileName = document.fileName.replace(/\\/g, '/');
+        const language = document.languageId;
+        const text = document.getText();
+
+        const rootFolder = vscode.workspace.workspaceFolders?.[0].uri.fsPath.replace(/\\/, '/');
+        if(rootFolder && fileName.startsWith(rootFolder))
+            fileName = fileName.substring(rootFolder.length);
+        else
+            fileName = fileName.substring(fileName.lastIndexOf('/') + 1);
+
+        console.log('Sending current file to Neuro API');
+        neuroClient.sendContext(`Current file: ${fileName}\nLanguage: ${language}\nContent:\n\`\`\`\n${text}\n\`\`\``);
+    });
     
     //#endregion
 

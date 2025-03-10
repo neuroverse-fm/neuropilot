@@ -23,7 +23,13 @@
 		"commands": [
 			{
 				"command": "neuropilot.reconnect",
-				"title": "NeuroPilot: Reconnect"
+				"title": "Reconnect",
+				"category": "NeuroPilot"
+			},
+			{
+				"command": "neuropilot.sendCurrentFile",
+				"title": "Send Current File As Context",
+				"category": "NeuroPilot"
 			}
 		],
 		"configuration": [

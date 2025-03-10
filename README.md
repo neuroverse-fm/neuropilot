@@ -17,6 +17,16 @@ You can configure the extension using the extension settings.
 For example, you can set how many lines of code will be provided as context before and after the current line.
 You can also set it to trigger a completion every time you stop typing (this is fine for the tools above, but might be a problem for Neuro since it sends and cancels requests in quick succession, which is why it's disabled by default).
 
+## Commands
+
+### Reconnect
+
+Attempts to reconnect to the API.
+
+### Send File As Context
+
+Sends the entire current file as context to Neuro, along with the file name and configured language.
+
 ## Debugging
 
 - Clone the repository
