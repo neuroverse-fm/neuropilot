@@ -22,6 +22,7 @@ You can also set it to trigger a completion every time you stop typing (this is 
 ### Reconnect
 
 Attempts to reconnect to the API.
+Shows a notification when it succeeds or fails.
 
 ### Send File As Context
 

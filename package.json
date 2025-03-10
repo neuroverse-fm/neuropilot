@@ -36,11 +36,6 @@
 			{
 				"title": "NeuroPilot",
 				"properties": {
-					"neuropilot.enable": {
-						"type": "boolean",
-						"default": true,
-						"description": "Enable or disable the extension"
-					},
 					"neuropilot.websocketUrl": {
 						"type": "string",
 						"default": "ws://localhost:8000",

@@ -22,19 +22,32 @@ export function activate(_context: vscode.ExtensionContext) {
     let requestCancelled = false;
     let lastSuggestions: string[] = [];
 
+    const outputChannel = vscode.window.createOutputChannel('NeuroPilot');
+
     //#endregion
 
     //#region Functions
 
+    function logOutput(tag: string, message: string) {
+        let ms = Date.now() % 1000;
+        let time = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit'}) + '.' + ms.toString().padStart(3, '0');
+        const prefix = `${time} [${tag}] `;
+        for(const line of message.split('\n')) {
+            outputChannel.appendLine(prefix + line);
+        }
+    }
+
     function createClient() {
-        console.log('Creating new client');
+        logOutput('INFO', 'Creating Neuro API client');
         if(neuroClient)
             neuroClient.disconnect();
         neuroClientConnected = false;
         // TODO: Check if this is a memory leak
         neuroClient = new NeuroClient(serverUrl, gameName, () => {
-            console.log('Connected to Neuro API');
+            logOutput('INFO', 'Connected to Neuro API');
             neuroClientConnected = true;
+
+            vscode.window.showInformationMessage('Successfully connected to Neuro API.');
 
             neuroClient.sendContext(
                 vscode.workspace.getConfiguration('neuropilot').get('initialContext', 'Something went wrong, blame whoever made this extension.'),
@@ -62,23 +75,41 @@ export function activate(_context: vscode.ExtensionContext) {
                     neuroClient.unregisterActions(['complete_code']);
                     neuroClient.sendActionResult(actionData.id, true);
                     waitingForResponse = false;
-                    requestCancelled = false;
                     lastSuggestions = suggestions;
-                    console.log('Received suggestions:', suggestions);
+                    logOutput('INFO', 'Received suggestions:\n' + JSON.stringify(suggestions));
                 }
             });
+
+            neuroClient.onClose = () => {
+                neuroClientConnected = false;
+                logOutput('INFO', 'Disconnected from Neuro API');
+                vscode.window.showInformationMessage('Disconnected from Neuro API.');
+            };
+
+            neuroClient.onError = (error) => {
+                logOutput('ERROR', `Neuro client error: ${error}`);
+                vscode.window.showErrorMessage(`Neuro client error: ${error}`);
+            };
         });
+
+        neuroClient.onError = () => {
+            logOutput('ERROR', 'Could not connect to Neuro API');
+            vscode.window.showErrorMessage('Could not connect to Neuro API.');
+        };
     }
 
     function requestCompletion(beforeContext: string, afterContext: string, fileName: string, language: string, maxCount: number) {
         if(!neuroClientConnected) {
-            console.log('Not connected to Neuro API');
+            logOutput('ERROR', 'Attempted to request completion while disconnected');
+            vscode.window.showErrorMessage('Not connected to Neuro API.');
             return;
         }
         if(waitingForResponse) {
-            console.error('Already waiting for response');
+            logOutput('WARNING', 'Attempted to request completion while waiting for response');
             return;
         }
+
+        logOutput('INFO', `Requesting completion for ${fileName}`);
 
         waitingForResponse = true;
         requestCancelled = false;
@@ -122,7 +153,6 @@ export function activate(_context: vscode.ExtensionContext) {
     }
 
     function cancelRequest() {
-        waitingForResponse = false;
         requestCancelled = true;
         neuroClient.unregisterActions(['complete_code']);
     }
@@ -137,11 +167,6 @@ export function activate(_context: vscode.ExtensionContext) {
                 items: [],
             };
             
-            const enabled = vscode.workspace.getConfiguration('neuropilot').get('enabled', true)
-            if(!enabled) {
-                return result;
-            }
-            
             const triggerAuto = vscode.workspace.getConfiguration('neuropilot').get<string>('completionTrigger', 'invokeOnly') === 'automatic';
             if(!triggerAuto && context.triggerKind !== vscode.InlineCompletionTriggerKind.Invoke) {
                 return result;
@@ -151,7 +176,7 @@ export function activate(_context: vscode.ExtensionContext) {
             const newServerUrl = vscode.workspace.getConfiguration('neuropilot').get('neuropilot.websocketUrl', 'ws://localhost:8000');
             const newGameName = vscode.workspace.getConfiguration('neuropilot').get('gameName', 'Visual Studio Code');
             if(serverUrl !== newServerUrl || gameName !== newGameName) {
-                console.log('Game or URL changed, creating new client');
+                logOutput('INFO', 'Game or URL changed, creating new client');
                 serverUrl = newServerUrl;
                 gameName = newGameName;
                 createClient();
@@ -176,7 +201,7 @@ export function activate(_context: vscode.ExtensionContext) {
             requestCompletion(contextBefore, contextAfter, fileName, document.languageId, maxCount);
             
             token.onCancellationRequested(() => {
-                console.log('Cancelled request');
+                logOutput('INFO', 'Cancelled request');
                 cancelRequest();
             });
             while(waitingForResponse) {
@@ -199,14 +224,15 @@ export function activate(_context: vscode.ExtensionContext) {
     //#region Commands
     
     vscode.commands.registerCommand('neuropilot.reconnect', async (...args) => {
-        console.log('Reconnecting to Neuro API');
+        logOutput('INFO', 'Attempting to reconnect to Neuro API');
         createClient();
     });
 
     vscode.commands.registerCommand('neuropilot.sendCurrentFile', async (...args) => {
         const editor = vscode.window.activeTextEditor;
         if(!editor) {
-            console.log('No active text editor');
+            logOutput('ERROR', 'No active text editor');
+            vscode.window.showErrorMessage('No active text editor.');
             return;
         }
         const document = editor.document;
@@ -220,7 +246,7 @@ export function activate(_context: vscode.ExtensionContext) {
         else
             fileName = fileName.substring(fileName.lastIndexOf('/') + 1);
 
-        console.log('Sending current file to Neuro API');
+        logOutput('INFO', 'Sending current file to Neuro API');
         neuroClient.sendContext(`Current file: ${fileName}\nLanguage: ${language}\nContent:\n\`\`\`\n${text}\n\`\`\``);
     });
     
