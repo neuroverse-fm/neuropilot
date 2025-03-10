@@ -3,6 +3,8 @@ import { Range } from 'vscode';
 import { NeuroClient } from 'neuro-game-sdk';
 
 export function activate(_context: vscode.ExtensionContext) {
+    //#region Variables
+
     let serverUrl = vscode.workspace.getConfiguration('neuropilot').get('websocketUrl', 'http://localhost:8000');
     let gameName = vscode.workspace.getConfiguration('neuropilot').get('gameName', 'Visual Studio Code');
     let neuroClient: NeuroClient;
@@ -10,6 +12,10 @@ export function activate(_context: vscode.ExtensionContext) {
     let waitingForResponse = false;
     let requestCancelled = false;
     let lastSuggestions: string[] = [];
+
+    //#endregion
+
+    //#region Functions
 
     function createClient() {
         console.log('Creating new client');
@@ -55,7 +61,7 @@ export function activate(_context: vscode.ExtensionContext) {
         });
     }
 
-    function requestCompletion(beforeContext: string, afterContext: string, maxCount: number) {
+    function requestCompletion(beforeContext: string, afterContext: string, fileName: string, maxCount: number) {
         if(!neuroClientConnected) {
             console.log('Not connected to Neuro API');
             return;
@@ -97,6 +103,7 @@ export function activate(_context: vscode.ExtensionContext) {
             'Write code that fits between afterContext and beforeContext',
             ['complete_code'],
             JSON.stringify({
+                file: fileName,
                 beforeContext: beforeContext,
                 afterContext: afterContext,
             }),
@@ -110,29 +117,26 @@ export function activate(_context: vscode.ExtensionContext) {
         neuroClient.unregisterActions(['complete_code']);
     }
 
-    vscode.commands.registerCommand('neuropilot.reconnect', async (...args) => {
-        console.log('Reconnecting to Neuro API');
-        createClient();
-    });
-
-    createClient();
-
+    //#endregion
+    
+    //#region Inline completions provider
+    
     const provider: vscode.InlineCompletionItemProvider = {
         async provideInlineCompletionItems(document, position, context, token) {
             const result: vscode.InlineCompletionList = {
                 items: [],
             };
-
+            
             const enabled = vscode.workspace.getConfiguration('neuropilot').get('enabled', true)
             if(!enabled) {
                 return result;
             }
-
+            
             const triggerAuto = vscode.workspace.getConfiguration('neuropilot').get<string>('completionTrigger', 'invokeOnly') === 'automatic';
             if(!triggerAuto && context.triggerKind !== vscode.InlineCompletionTriggerKind.Invoke) {
                 return result;
             }
-
+            
             // Check if game or URL changed
             const newServerUrl = vscode.workspace.getConfiguration('neuropilot').get('neuropilot.websocketUrl', 'ws://localhost:8000');
             const newGameName = vscode.workspace.getConfiguration('neuropilot').get('gameName', 'Visual Studio Code');
@@ -142,18 +146,18 @@ export function activate(_context: vscode.ExtensionContext) {
                 gameName = newGameName;
                 createClient();
             }
-
+            
             // Get context
             const beforeContextLength = vscode.workspace.getConfiguration('neuropilot').get('beforeContext', 10);
             const afterContextLength = vscode.workspace.getConfiguration('neuropilot').get('afterContext', 10);
             const maxCount = vscode.workspace.getConfiguration('neuropilot').get('maxCompletions', 3);
-
+            
             const contextStart = Math.max(0, position.line - beforeContextLength);
             const contextBefore = document.getText(new Range(document.positionAt(contextStart), position));
             const contextEnd = Math.min(document.lineCount, position.line + afterContextLength);
             const contextAfter = document.getText(new Range(position, document.positionAt(contextEnd)));
-
-            requestCompletion(contextBefore, contextAfter, maxCount);
+            
+            requestCompletion(contextBefore, contextAfter, document.fileName, maxCount);
             
             token.onCancellationRequested(() => {
                 console.log('Cancelled request');
@@ -162,15 +166,29 @@ export function activate(_context: vscode.ExtensionContext) {
             while(waitingForResponse) {
                 await new Promise(resolve => setTimeout(resolve, 100));
             }
-
+            
             for(const suggestion of lastSuggestions) {
                 result.items.push({
                     insertText: suggestion,
                 });
             }
-
+            
             return result;
         },
     };
     vscode.languages.registerInlineCompletionItemProvider({ pattern: '**' }, provider);
+    
+    //#endregion
+    
+    //#region Commands
+    
+    vscode.commands.registerCommand('neuropilot.reconnect', async (...args) => {
+        console.log('Reconnecting to Neuro API');
+        createClient();
+    });
+    
+    //#endregion
+
+    // Create client on startup
+    createClient();
 }
