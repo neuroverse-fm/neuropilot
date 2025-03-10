@@ -8,8 +8,17 @@ export function activate(_context: vscode.ExtensionContext) {
     let serverUrl = vscode.workspace.getConfiguration('neuropilot').get('websocketUrl', 'http://localhost:8000');
     let gameName = vscode.workspace.getConfiguration('neuropilot').get('gameName', 'Visual Studio Code');
     let neuroClient: NeuroClient;
+    /** Whether the client successfully connected to the API. */
     let neuroClientConnected = false;
+    /**
+     * Whether this extension is currently waiting on a response, agnostic of whether the last request was canceled.
+     * This is used to prevent multiple `actions/force` requests from being sent at the same time.
+     */
     let waitingForResponse = false;
+    /**
+     * Whether the last request was canceled.
+     * This is used to tell Neuro that the request was canceled.
+     */
     let requestCancelled = false;
     let lastSuggestions: string[] = [];
 
@@ -61,7 +70,7 @@ export function activate(_context: vscode.ExtensionContext) {
         });
     }
 
-    function requestCompletion(beforeContext: string, afterContext: string, fileName: string, maxCount: number) {
+    function requestCompletion(beforeContext: string, afterContext: string, fileName: string, language: string, maxCount: number) {
         if(!neuroClientConnected) {
             console.log('Not connected to Neuro API');
             return;
@@ -104,6 +113,7 @@ export function activate(_context: vscode.ExtensionContext) {
             ['complete_code'],
             JSON.stringify({
                 file: fileName,
+                language: language,
                 beforeContext: beforeContext,
                 afterContext: afterContext,
             }),
@@ -153,11 +163,17 @@ export function activate(_context: vscode.ExtensionContext) {
             const maxCount = vscode.workspace.getConfiguration('neuropilot').get('maxCompletions', 3);
             
             const contextStart = Math.max(0, position.line - beforeContextLength);
-            const contextBefore = document.getText(new Range(document.positionAt(contextStart), position));
-            const contextEnd = Math.min(document.lineCount, position.line + afterContextLength);
-            const contextAfter = document.getText(new Range(position, document.positionAt(contextEnd)));
+            const contextBefore = document.getText(new Range(new vscode.Position(contextStart, 0), position)).replace(/\r\n/g, '\n');
+            const contextEnd = Math.min(document.lineCount - 1, position.line + afterContextLength);
+            const contextAfter = document.getText(new Range(position, new vscode.Position(contextEnd, document.lineAt(contextEnd).text.length))).replace(/\r\n/g, '\n');
+            const rootFolder = vscode.workspace.workspaceFolders?.[0].uri.fsPath.replace(/\\/, '/');
+            let fileName = document.fileName.replace(/\\/g, '/');
+            if(rootFolder && fileName.startsWith(rootFolder))
+                fileName = fileName.substring(rootFolder.length);
+            else
+                fileName = fileName.substring(fileName.lastIndexOf('/') + 1);
             
-            requestCompletion(contextBefore, contextAfter, document.fileName, maxCount);
+            requestCompletion(contextBefore, contextAfter, fileName, document.languageId, maxCount);
             
             token.onCancellationRequested(() => {
                 console.log('Cancelled request');
