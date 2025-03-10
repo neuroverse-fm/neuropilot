@@ -15,6 +15,21 @@
 				"kind": "build",
 				"isDefault": true
 			}
+		},
+		{
+			"label": "Publish extension",
+			"type": "shell",
+			"command": "vsce publish ${input:version} --allow-star-activation",
+			"problemMatcher": []
+		}
+	],
+	"inputs": [
+		{
+			"id": "version",
+			"description": "Bump which version?",
+			"type": "pickString",
+			"default": "patch",
+			"options": [ "patch", "minor", "major" ]
 		}
 	]
 }
