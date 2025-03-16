@@ -129,11 +129,11 @@ export function registerChatParticipant(context: vscode.ExtensionContext) {
 
     context.subscriptions.push(neuro.onDidReceiveFeedback((feedback: vscode.ChatResultFeedback) => {
         if(feedback.kind === vscode.ChatResultFeedbackKind.Helpful) {
-            logOutput('INFO', 'Feedback was deemed helpful');
+            logOutput('INFO', 'Answer was deemed helpful');
             NEURO.client?.sendContext("Vedal found your answer helpful.");
         }
         else {
-            logOutput('INFO', 'Feedback was deemed unhelpful');
+            logOutput('INFO', 'Answer was deemed unhelpful');
             logOutput('DEBUG', JSON.stringify(feedback));
             NEURO.client?.sendContext("Vedal found your answer unhelpful.");
         }
@@ -149,11 +149,12 @@ async function requestChatResponse(prompt: string, state: string, token: vscode.
     NEURO.client?.registerActions([
         {
             name: 'chat',
-            description:
+            description: // TODO: https://github.com/VedalAI/neuro-game-sdk/issues/43
                 'Provide an answer to Vedal\'s request.' +
                 ' Use markdown to format your response.' +
-                ' You may include code blocks by using triple backticks.' +
-                ' Be sure to use the correct language identifier after the first set of backticks.',
+                ' You may additionally include code blocks by using triple backticks.' +
+                ' Be sure to use the correct language identifier after the first set of backticks.' +
+                ' If you decide to include a code block, make sure to explain what it is doing.',
             schema: {
                 type: 'object',
                 properties: {
