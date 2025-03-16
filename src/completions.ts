@@ -2,7 +2,7 @@ import { NeuroClient } from 'neuro-game-sdk';
 import * as vscode from 'vscode';
 import { Range } from 'vscode';
 import { NEURO } from './constants';
-import { logOutput, assert } from './utils';
+import { logOutput, assert, simpleFileName, filterFileContents } from './utils';
 
 let lastSuggestions: string[] = [];
 
@@ -64,6 +64,7 @@ export function requestCompletion(beforeContext: string, afterContext: string, f
 
 export function cancelCompletionRequest() {
     NEURO.cancelled = true;
+    NEURO.waiting = false;
     if(!NEURO.client) return;
     NEURO.client.unregisterActions(['complete_code']);
 }
@@ -75,24 +76,27 @@ export function registerCompletionResultHandler() {
         if(actionData.name === 'complete_code') {
             const suggestions = actionData.params?.suggestions;
 
-            if(NEURO.cancelled) {
-                NEURO.client.sendActionResult(actionData.id, true, 'Request was cancelled');
-                NEURO.client.unregisterActions(['complete_code']);
-                return;
-            }
-            if(!NEURO.waiting) {
-                NEURO.client.sendActionResult(actionData.id, true, 'Not currently waiting for suggestions');
-                NEURO.client.unregisterActions(['complete_code']);
-                return;
-            }
             if(suggestions === undefined) {
                 NEURO.client.sendActionResult(actionData.id, false, 'Missing required parameter "suggestions"');
                 return;
             }
 
             NEURO.client.unregisterActions(['complete_code']);
-            NEURO.client.sendActionResult(actionData.id, true);
+            
+            if(NEURO.cancelled) {
+                NEURO.client.sendActionResult(actionData.id, true, 'Request was cancelled');
+                NEURO.waiting = false;
+                return;
+            }
+            if(!NEURO.waiting) {
+                NEURO.client.sendActionResult(actionData.id, true, 'Not currently waiting for suggestions');
+                return;
+            }
+            
             NEURO.waiting = false;
+
+            NEURO.client.sendActionResult(actionData.id, true);
+
             lastSuggestions = suggestions;
             logOutput('INFO', 'Received suggestions:\n' + JSON.stringify(suggestions));
         }
@@ -116,15 +120,10 @@ export const completionsProvider: vscode.InlineCompletionItemProvider = {
         const maxCount = vscode.workspace.getConfiguration('neuropilot').get('maxCompletions', 3);
         
         const contextStart = Math.max(0, position.line - beforeContextLength);
-        const contextBefore = document.getText(new Range(new vscode.Position(contextStart, 0), position)).replace(/\r\n/g, '\n');
+        const contextBefore = filterFileContents(document.getText(new Range(new vscode.Position(contextStart, 0), position)));
         const contextEnd = Math.min(document.lineCount - 1, position.line + afterContextLength);
         const contextAfter = document.getText(new Range(position, new vscode.Position(contextEnd, document.lineAt(contextEnd).text.length))).replace(/\r\n/g, '\n');
-        const rootFolder = vscode.workspace.workspaceFolders?.[0].uri.fsPath.replace(/\\/, '/');
-        let fileName = document.fileName.replace(/\\/g, '/');
-        if(rootFolder && fileName.startsWith(rootFolder))
-            fileName = fileName.substring(rootFolder.length);
-        else
-            fileName = fileName.substring(fileName.lastIndexOf('/') + 1);
+        const fileName = simpleFileName(document.fileName);
         
         requestCompletion(contextBefore, contextAfter, fileName, document.languageId, maxCount);
         
@@ -149,6 +148,7 @@ export const completionsProvider: vscode.InlineCompletionItemProvider = {
         } catch(err) {
             if(typeof err === 'string') {
                 logOutput('ERROR', err);
+                NEURO.cancelled = true;
                 vscode.window.showErrorMessage(err);
             }
             else {

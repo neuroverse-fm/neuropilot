@@ -69,3 +69,16 @@ const clientConnectedHandlers: (() => void)[] = [];
 export function onClientConnected(handler: () => void) {
     clientConnectedHandlers.push(handler);
 }
+
+export function simpleFileName(fileName: string): string {
+    const rootFolder = vscode.workspace.workspaceFolders?.[0].uri.fsPath.replace(/\\/, '/');
+    let result = fileName.replace(/\\/g, '/');
+    if(rootFolder && result.startsWith(rootFolder))
+        return result.substring(rootFolder.length);
+    else
+        return result.substring(result.lastIndexOf('/') + 1);
+}
+
+export function filterFileContents(contents: string): string {
+    return contents.replace(/\r\n/g, '\n');
+}

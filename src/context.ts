@@ -1,7 +1,6 @@
 import * as vscode from 'vscode';
-import { NeuroClient } from 'neuro-game-sdk';
 
-import { assert, logOutput } from "./utils";
+import { assert, logOutput, simpleFileName } from "./utils";
 import { NEURO } from './constants';
 
 export function sendCurrentFile() {
@@ -12,7 +11,7 @@ export function sendCurrentFile() {
         return;
     }
     const document = editor.document;
-    let fileName = document.fileName.replace(/\\/g, '/');
+    const fileName = simpleFileName(document.fileName);
     const language = document.languageId;
     const text = document.getText();
 
@@ -21,14 +20,7 @@ export function sendCurrentFile() {
         vscode.window.showErrorMessage('Not connected to Neuro API.');
         return;
     }
-    assert(NEURO.client instanceof NeuroClient);
-
-    const rootFolder = vscode.workspace.workspaceFolders?.[0].uri.fsPath.replace(/\\/, '/');
-    if(rootFolder && fileName.startsWith(rootFolder))
-        fileName = fileName.substring(rootFolder.length);
-    else
-        fileName = fileName.substring(fileName.lastIndexOf('/') + 1);
 
     logOutput('INFO', 'Sending current file to Neuro API');
-    NEURO.client.sendContext(`Current file: ${fileName}\nLanguage: ${language}\nContent:\n\`\`\`\n${text}\n\`\`\``);
+    NEURO.client?.sendContext(`Current file: ${fileName}\n\nContent:\n\n\`\`\`${language}\n${text}\n\`\`\``);
 }

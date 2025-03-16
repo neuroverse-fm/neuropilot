@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 
 import { NEURO } from './constants';
-import { logOutput } from './utils';
+import { assert, filterFileContents, logOutput, simpleFileName } from './utils';
 
 const NEURO_PARTICIPANT_ID = 'neuropilot.neuro';
 
@@ -11,28 +11,37 @@ interface NeuroChatResult extends vscode.ChatResult {
     }
 }
 
+interface NeuroChatContext {
+    fileName?: string;
+    range?: vscode.Range;
+    text: string;
+}
+
 let lastChatResponse: string = '';
 
 export function registerChatResponseHandler() {
     NEURO.client?.onAction((actionData) => {
         if(actionData.name === 'chat') {
             const answer = actionData.params?.answer;
-            if(NEURO.cancelled) {
-                NEURO.client?.sendActionResult(actionData.id, true, 'Request was cancelled');
-                NEURO.client?.unregisterActions(['chat']);
-                return;
-            }
-            if(!NEURO.waiting) {
-                NEURO.client?.sendActionResult(actionData.id, true, 'Not currently waiting for a chat response');
-                NEURO.client?.unregisterActions(['chat']);
-                return;
-            }
             if(answer === undefined) {
                 NEURO.client?.sendActionResult(actionData.id, false, 'Missing required parameter "answer"');
                 return;
             }
 
             NEURO.client?.unregisterActions(['chat']);
+
+            if(NEURO.cancelled) {
+                NEURO.client?.sendActionResult(actionData.id, true, 'Request was cancelled');
+                NEURO.waiting = false;
+                return;
+            }
+            if(!NEURO.waiting) {
+                NEURO.client?.sendActionResult(actionData.id, true, 'Not currently waiting for a chat response');
+                return;
+            }
+
+            NEURO.waiting = false;
+
             NEURO.client?.sendActionResult(actionData.id, true);
             lastChatResponse = answer;
             NEURO.waiting = false;
@@ -66,10 +75,47 @@ export function registerChatParticipant(context: vscode.ExtensionContext) {
 
             return { metadata: { command: '' } };
         }
+
+        // Collect references
+        stream.progress('Collecting references...');
+        
+        const references: NeuroChatContext[] = [];
+        for(const ref of request.references) {
+            if(ref.value instanceof vscode.Location) {
+                await vscode.workspace.openTextDocument(ref.value.uri).then((document) => {
+                    assert(ref.value instanceof vscode.Location);
+                    const text = filterFileContents(document.getText(ref.value.range));
+                    references.push({
+                        fileName: simpleFileName(ref.value.uri.fsPath),
+                        range: ref.value.range,
+                        text: text,
+                    });
+                });
+            }
+            else if(ref.value instanceof vscode.Uri) {
+                await vscode.workspace.openTextDocument(ref.value).then((document) => {
+                    assert(ref.value instanceof vscode.Uri);
+                    const text = filterFileContents(document.getText());
+                    references.push({
+                        fileName: simpleFileName(ref.value.fsPath),
+                        text: text,
+                    });
+                });
+            }
+            else if(typeof ref.value === 'string') {
+                references.push({
+                    text: filterFileContents(ref.value),
+                });
+            }
+            else {
+                logOutput('ERROR', 'Invalid reference type');
+            }
+        }
+
+        // Query Neuro API
         stream.progress('Waiting for Neuro to respond...');
 
-        logOutput('DEBUG', JSON.stringify(context));
-        const answer = await requestChatResponse(request.prompt, token);
+        const answer = await requestChatResponse(request.prompt, JSON.stringify({ references: references }), token);
 
         stream.markdown(answer);
 
@@ -94,7 +140,7 @@ export function registerChatParticipant(context: vscode.ExtensionContext) {
     }));
 }
 
-async function requestChatResponse(prompt: string, token: vscode.CancellationToken): Promise<string> {
+async function requestChatResponse(prompt: string, state: string, token: vscode.CancellationToken): Promise<string> {
     logOutput('INFO', 'Requesting chat response from Neuro');
 
     NEURO.waiting = true;
@@ -121,7 +167,7 @@ async function requestChatResponse(prompt: string, token: vscode.CancellationTok
     NEURO.client?.forceActions(
         prompt,
         ['chat'],
-        undefined, // TODO: Provide references
+        state,
         false,
     );
 
@@ -146,6 +192,7 @@ async function requestChatResponse(prompt: string, token: vscode.CancellationTok
     } catch(error) {
         if(typeof error === 'string') {
             logOutput('ERROR', error);
+            NEURO.cancelled = true;
             return error;
         }
         else {
@@ -156,6 +203,7 @@ async function requestChatResponse(prompt: string, token: vscode.CancellationTok
 
 export function cancelChatRequest() {
     NEURO.cancelled = true;
+    NEURO.waiting = false;
     if(!NEURO.client) return;
     NEURO.client.unregisterActions(['chat']);
 }
