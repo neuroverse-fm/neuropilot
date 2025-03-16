@@ -2,7 +2,7 @@ import { NeuroClient } from 'neuro-game-sdk';
 import * as vscode from 'vscode';
 import { Range } from 'vscode';
 import { NEURO } from './constants';
-import { logOutput, createClient, assert, onClientCreated as onClientConnected } from './utils';
+import { logOutput, assert } from './utils';
 
 let lastSuggestions: string[] = [];
 
@@ -47,7 +47,7 @@ export function requestCompletion(beforeContext: string, afterContext: string, f
                 required: ['suggestions'],
             }
         }
-    ])
+    ]);
 
     NEURO.client.forceActions(
         'Write code that fits between afterContext and beforeContext',
@@ -59,7 +59,7 @@ export function requestCompletion(beforeContext: string, afterContext: string, f
             afterContext: afterContext,
         }),
         false,
-    )
+    );
 }
 
 export function cancelRequest() {

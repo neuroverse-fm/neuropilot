@@ -30,4 +30,4 @@ export const NEURO: Neuro = {
     waiting: false,
     cancelled: false,
     outputChannel: null,
-}
+};

@@ -24,7 +24,7 @@ export default tseslint.config(
 			'@stylistic': stylistic
 		},
 		rules: {
-			'curly': 'warn',
+			// 'curly': 'warn',
 			'@stylistic/semi': ['warn', 'always'],
 			'@typescript-eslint/no-empty-function': 'off',
 			'@typescript-eslint/naming-convention': [

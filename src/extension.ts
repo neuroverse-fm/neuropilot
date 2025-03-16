@@ -1,9 +1,7 @@
 import * as vscode from 'vscode';
-import { Range } from 'vscode';
-import { NeuroClient } from 'neuro-game-sdk';
 
 import { NEURO } from './constants';
-import { assert, logOutput, createClient, onClientCreated as onClientConnected } from './utils';
+import { logOutput, createClient, onClientConnected } from './utils';
 import { completionsProvider, handleCompletionResponse } from './completions';
 import { sendCurrentFile } from './context';
 
@@ -17,7 +15,7 @@ export function activate(_context: vscode.ExtensionContext) {
     
     vscode.languages.registerInlineCompletionItemProvider({ pattern: '**' }, completionsProvider);
     
-    vscode.commands.registerCommand('neuropilot.reconnect', async (...args) => {
+    vscode.commands.registerCommand('neuropilot.reconnect', async (..._) => {
         logOutput('INFO', 'Attempting to reconnect to Neuro API');
         createClient();
     });
@@ -25,6 +23,6 @@ export function activate(_context: vscode.ExtensionContext) {
     vscode.commands.registerCommand('neuropilot.sendCurrentFile', sendCurrentFile);
 
     // Create client on startup
-    createClient();
     onClientConnected(handleCompletionResponse);
+    createClient();
 }

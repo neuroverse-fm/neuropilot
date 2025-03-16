@@ -3,9 +3,8 @@ import { NeuroClient } from "neuro-game-sdk";
 
 import { NEURO } from './constants';
 
-export function assert(obj: any): asserts obj {
-    if(!obj)
-        throw new Error('Assertion failed');
+export function assert(obj: unknown): asserts obj {
+    if(!obj) throw new Error('Assertion failed');
 }
 
 export function logOutput(tag: string, message: string) {
@@ -13,8 +12,8 @@ export function logOutput(tag: string, message: string) {
         console.error('Output channel not initialized');
         return;
     }
-    let ms = Date.now() % 1000;
-    let time = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit'}) + '.' + ms.toString().padStart(3, '0');
+    const ms = Date.now() % 1000;
+    const time = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit'}) + '.' + ms.toString().padStart(3, '0');
     const prefix = `${time} [${tag}] `;
     for(const line of message.split('\n')) {
         NEURO.outputChannel.appendLine(prefix + line);
@@ -54,7 +53,7 @@ export function createClient() {
             vscode.window.showErrorMessage(`Neuro client error: ${error}`);
         };
 
-        for(const handler of clientCreatedHandlers) {
+        for(const handler of clientConnectedHandlers) {
             handler();
         }
     });
@@ -65,8 +64,8 @@ export function createClient() {
     };
 }
 
-let clientCreatedHandlers: (() => void)[] = [];
+const clientConnectedHandlers: (() => void)[] = [];
 
-export function onClientCreated(handler: () => void) {
-    clientCreatedHandlers.push(handler);
+export function onClientConnected(handler: () => void) {
+    clientConnectedHandlers.push(handler);
 }
