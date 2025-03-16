@@ -92,7 +92,7 @@ export function registerCompletionResultHandler() {
                 NEURO.client.sendActionResult(actionData.id, true, 'Not currently waiting for suggestions');
                 return;
             }
-            
+
             NEURO.waiting = false;
 
             NEURO.client.sendActionResult(actionData.id, true);
@@ -158,7 +158,7 @@ export const completionsProvider: vscode.InlineCompletionItemProvider = {
         
         for(const suggestion of lastSuggestions) {
             result.items.push({
-                insertText: suggestion,
+                insertText: suggestion.trim(),
             });
         }
         
