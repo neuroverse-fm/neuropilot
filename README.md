@@ -4,20 +4,49 @@ This extension lets Neuro-sama suggest code for you similar to GitHub Copilot.
 If you don't have a Neuro-sama, you can use tools like [Randy](https://github.com/VedalAI/neuro-game-sdk/tree/main/Randy), [Tony](https://github.com/Pasu4/neuro-api-tony) or [Jippity](https://github.com/EnterpriseScratchDev/neuro-api-jippity).
 If you are using Tony, activating auto-answer is recommended, since completion requests are canceled if you click out of VS Code.
 
+This extension will:
+
+- let Neuro make inline code suggestions.
+- add Neuro as a chat participant for Copilot Chat.
+
+This extension will **not**:
+
+- let Neuro read what you type in real time, unless you enable it in the settings.
+- let Neuro read any unopened files, unless you explicitly add them to context.
+- let Neuro directly edit files unsupervised.
+- give Neuro terminal access.
+
 ## How to use
 
 After installing the extension, you should add a keyboard shortcut for "Trigger Inline Suggestion" (`editor.action.inlineSuggest.trigger`) if you haven't already.
-Also, if you have GitHub Copilot (or similar extensions) enabled, disable them.
 Once you are in a file, place your cursor where you want the new code to be inserted and trigger a suggestion.
 This should send a command to Neuro asking her to complete the code.
 
-The extension will immediately try to establish a connection to the API when activated. If the extension was started before the API was ready, or you lose connection to the API, you can use the command "NeuroPilot: Reconnect" from the Command Palette.
+You can also use Copilot Chat to ask Neuro to generate code by specifying `@neuro` in the prompt.
+This will bypass Copilot and instead send the prompt to Neuro, along with any selected references.
+
+Unfortunately, "Trigger Inline Suggestion" will trigger all completion providers, and since Copilot is required for the Copilot Chat window, you cannot simply disable it.
+There is a workaround however, by editing your User/Workspace Settings to make Copilot unable to talk to the API.
+Simply paste this into your `settings.json` file:
+
+```json
+"github.copilot.advanced": {
+    "debug.overrideEngine": "someRandomString"
+}
+```
+
+On startup, the extension will immediately try to establish a connection to the API.
+If the extension was started before the API was ready, or you lose connection to the API, you can use the command "NeuroPilot: Reconnect" from the Command Palette.
 
 You can configure the extension using the extension settings.
 For example, you can set how many lines of code will be provided as context before and after the current line.
 You can also set it to trigger a completion every time you stop typing (this is fine for the tools above, but might be a problem for Neuro since it sends and cancels requests in quick succession, which is why it's disabled by default).
 
 ## Commands
+
+### Give Cookie
+
+Gives a cookie to Neuro.
 
 ### Reconnect
 
@@ -28,14 +57,14 @@ Shows a notification when it succeeds or fails.
 
 Sends the entire current file as context to Neuro, along with the file name and configured language.
 
-### Give Cookie
+## Further Info
 
-Gives a cookie to Neuro.
+This extension uses the [TypeScript/JavaScript SDK](https://github.com/AriesAlex/typescript-neuro-game-sdk) by [AriesAlex](https://github.com/AriesAlex).
 
 ## Debugging
 
 - Clone the repository
 - Run `npm install` in terminal to install dependencies
 - Run the `Run Extension` target in the Debug View. This will:
-	- Start a task `npm: watch` to compile the code
-	- Run the extension in a new VS Code window
+    - Start a task `npm: watch` to compile the code
+    - Run the extension in a new VS Code window
