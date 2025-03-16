@@ -1,5 +1,7 @@
 # NeuroPilot
 
+![Demo GIF](demo.gif)
+
 This extension lets Neuro-sama suggest code for you similar to GitHub Copilot.
 If you don't have a Neuro-sama, you can use tools like [Randy](https://github.com/VedalAI/neuro-game-sdk/tree/main/Randy), [Tony](https://github.com/Pasu4/neuro-api-tony) or [Jippity](https://github.com/EnterpriseScratchDev/neuro-api-jippity).
 If you are using Tony, activating auto-answer is recommended, since completion requests are canceled if you click out of VS Code.
