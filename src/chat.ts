@@ -1,0 +1,161 @@
+import * as vscode from 'vscode';
+
+import { NEURO } from './constants';
+import { logOutput } from './utils';
+
+const NEURO_PARTICIPANT_ID = 'neuropilot.neuro';
+
+interface NeuroChatResult extends vscode.ChatResult {
+    metadata: {
+        command: string;
+    }
+}
+
+let lastChatResponse: string = '';
+
+export function registerChatResponseHandler() {
+    NEURO.client?.onAction((actionData) => {
+        if(actionData.name === 'chat') {
+            const answer = actionData.params?.answer;
+            if(NEURO.cancelled) {
+                NEURO.client?.sendActionResult(actionData.id, true, 'Request was cancelled');
+                NEURO.client?.unregisterActions(['chat']);
+                return;
+            }
+            if(!NEURO.waiting) {
+                NEURO.client?.sendActionResult(actionData.id, true, 'Not currently waiting for a chat response');
+                NEURO.client?.unregisterActions(['chat']);
+                return;
+            }
+            if(answer === undefined) {
+                NEURO.client?.sendActionResult(actionData.id, false, 'Missing required parameter "answer"');
+                return;
+            }
+
+            NEURO.client?.unregisterActions(['chat']);
+            NEURO.client?.sendActionResult(actionData.id, true);
+            lastChatResponse = answer;
+            NEURO.waiting = false;
+            logOutput('INFO', 'Received chat response:\n' + answer);
+        }
+    });
+}
+
+export function registerChatParticipant(context: vscode.ExtensionContext) {
+    const handler: vscode.ChatRequestHandler = async (request: vscode.ChatRequest, context: vscode.ChatContext, stream: vscode.ChatResponseStream, token: vscode.CancellationToken): Promise<NeuroChatResult> => {
+        // if(request.command === 'code') {
+        // }
+
+        if(!NEURO.connected) {
+            stream.markdown('Not connected to Neuro API.');
+            stream.button({
+                command: 'neuropilot.reconnect',
+                title: 'Reconnect',
+                tooltip: 'Attempt to reconnect to Neuro API',
+            });
+            return { metadata: { command: '' } };
+        }
+        if(NEURO.waiting) {
+            stream.markdown('Already waiting for a response from Neuro.');
+
+            stream.button({
+                command: 'neuropilot.reconnect',
+                title: 'Reconnect',
+                tooltip: 'Attempt to reconnect to Neuro API',
+            });
+
+            return { metadata: { command: '' } };
+        }
+        stream.progress('Waiting for Neuro to respond...');
+
+        logOutput('DEBUG', JSON.stringify(context));
+        const answer = await requestChatResponse(request.prompt, token);
+
+        stream.markdown(answer);
+
+        return { metadata: { command: '' } };
+    };
+
+    const neuro = vscode.chat.createChatParticipant(NEURO_PARTICIPANT_ID, handler);
+    neuro.iconPath = vscode.Uri.joinPath(context.extensionUri, 'icon.png'); // TODO: Different image
+    
+    // TODO: Add followup provider?
+
+    context.subscriptions.push(neuro.onDidReceiveFeedback((feedback: vscode.ChatResultFeedback) => {
+        if(feedback.kind === vscode.ChatResultFeedbackKind.Helpful) {
+            logOutput('INFO', 'Feedback was deemed helpful');
+            NEURO.client?.sendContext("Vedal found your answer helpful.");
+        }
+        else {
+            logOutput('INFO', 'Feedback was deemed unhelpful');
+            logOutput('DEBUG', JSON.stringify(feedback));
+            NEURO.client?.sendContext("Vedal found your answer unhelpful.");
+        }
+    }));
+}
+
+async function requestChatResponse(prompt: string, token: vscode.CancellationToken): Promise<string> {
+    logOutput('INFO', 'Requesting chat response from Neuro');
+
+    NEURO.waiting = true;
+    NEURO.cancelled = false;
+
+    NEURO.client?.registerActions([
+        {
+            name: 'chat',
+            description:
+                'Provide an answer to Vedal\'s request.' +
+                ' Use markdown to format your response.' +
+                ' You may include code blocks by using triple backticks.' +
+                ' Be sure to use the correct language identifier after the first set of backticks.',
+            schema: {
+                type: 'object',
+                properties: {
+                    answer: { type: 'string' },
+                },
+                required: ['answer'],
+            }
+        }
+    ]);
+
+    NEURO.client?.forceActions(
+        prompt,
+        ['chat'],
+        undefined, // TODO: Provide references
+        false,
+    );
+
+    token.onCancellationRequested(() => {
+        logOutput('INFO', 'Cancelled request');
+        cancelChatRequest();
+    });
+
+    const timeoutMs = vscode.workspace.getConfiguration('neuropilot').get('timeout', 10000);
+    const timeout = new Promise<string>((_, reject) => setTimeout(() => reject('Request timed out'), timeoutMs));
+    const response = new Promise<string>((resolve) => {
+        const interval = setInterval(() => {
+            if(!NEURO.waiting) {
+                clearInterval(interval);
+                resolve(lastChatResponse);
+            }
+        }, 100);
+    });
+
+    try {
+        return await Promise.race([timeout, response]);
+    } catch(error) {
+        if(typeof error === 'string') {
+            logOutput('ERROR', error);
+            return error;
+        }
+        else {
+            throw error;
+        }
+    }
+}
+
+export function cancelChatRequest() {
+    NEURO.cancelled = true;
+    if(!NEURO.client) return;
+    NEURO.client.unregisterActions(['chat']);
+}

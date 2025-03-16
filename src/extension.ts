@@ -2,10 +2,11 @@ import * as vscode from 'vscode';
 
 import { NEURO } from './constants';
 import { logOutput, createClient, onClientConnected } from './utils';
-import { completionsProvider, handleCompletionResponse } from './completions';
+import { completionsProvider, registerCompletionResultHandler } from './completions';
 import { sendCurrentFile } from './context';
+import { registerChatParticipant, registerChatResponseHandler } from './chat';
 
-export function activate(_context: vscode.ExtensionContext) {
+export function activate(context: vscode.ExtensionContext) {
     NEURO.url = vscode.workspace.getConfiguration('neuropilot').get('websocketUrl', 'http://localhost:8000');
     NEURO.gameName = vscode.workspace.getConfiguration('neuropilot').get('gameName', 'Visual Studio Code');
     NEURO.connected = false;
@@ -15,14 +16,17 @@ export function activate(_context: vscode.ExtensionContext) {
     
     vscode.languages.registerInlineCompletionItemProvider({ pattern: '**' }, completionsProvider);
     
-    vscode.commands.registerCommand('neuropilot.reconnect', async (..._) => {
+    vscode.commands.registerCommand('neuropilot.reconnect', async (..._args) => {
         logOutput('INFO', 'Attempting to reconnect to Neuro API');
         createClient();
     });
 
     vscode.commands.registerCommand('neuropilot.sendCurrentFile', sendCurrentFile);
 
-    // Create client on startup
-    onClientConnected(handleCompletionResponse);
+    registerChatParticipant(context);
+    
+    onClientConnected(registerCompletionResultHandler);
+    onClientConnected(registerChatResponseHandler);
+
     createClient();
 }

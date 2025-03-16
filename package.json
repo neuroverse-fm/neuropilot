@@ -20,6 +20,15 @@
 	],
 	"main": "./out/extension.js",
 	"contributes": {
+		"chatParticipants": [
+			{
+				"id": "neuropilot.neuro",
+				"name": "neuro",
+				"fullName": "Neuro-sama",
+				"description": "Chat with Neuro-sama",
+				"isSticky": true
+			}
+		],
 		"commands": [
 			{
 				"command": "neuropilot.reconnect",
@@ -78,6 +87,11 @@
 						"type": "string",
 						"default": "You are using an extension in Visual Studio Code that allows you to suggest code to Vedal. You will receive the lines of code before and after the cursor position and then be able to suggest what Vedal should write next.",
 						"description": "The initial context to sent to Neuro-sama"
+					},
+					"neuropilot.timeout": {
+						"type": "integer",
+						"default": 10000,
+						"description": "The timeout in milliseconds for completions and chat responses in ms"
 					}
 				}
 			}
@@ -93,7 +107,7 @@
 		"@eslint/js": "^9.13.0",
 		"@stylistic/eslint-plugin": "^2.9.0",
 		"@types/node": "^20",
-		"@types/vscode": "^1.74.0",
+		"@types/vscode": "^1.95.0",
 		"@types/ws": "^8.18.0",
 		"eslint": "^9.13.0",
 		"typescript": "^5.8.2",

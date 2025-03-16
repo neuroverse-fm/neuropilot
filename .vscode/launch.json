@@ -13,7 +13,7 @@
 			"args": [
 				"--extensionDevelopmentPath=${workspaceFolder}",
 				"${workspaceFolder}/playground.js",
-				"--disable-extensions"
+				// "--disable-extensions"
 			],
 			"outFiles": [
 				"${workspaceFolder}/out/**/*.js"

@@ -62,13 +62,13 @@ export function requestCompletion(beforeContext: string, afterContext: string, f
     );
 }
 
-export function cancelRequest() {
+export function cancelCompletionRequest() {
     NEURO.cancelled = true;
     if(!NEURO.client) return;
     NEURO.client.unregisterActions(['complete_code']);
 }
 
-export function handleCompletionResponse() {
+export function registerCompletionResultHandler() {
     NEURO.client?.onAction((actionData) => {
         assert(NEURO.client instanceof NeuroClient);
 
@@ -130,10 +130,30 @@ export const completionsProvider: vscode.InlineCompletionItemProvider = {
         
         token.onCancellationRequested(() => {
             logOutput('INFO', 'Cancelled request');
-            cancelRequest();
+            cancelCompletionRequest();
         });
-        while(NEURO.waiting) {
-            await new Promise(resolve => setTimeout(resolve, 100));
+
+        const timeoutMs = vscode.workspace.getConfiguration('neuropilot').get('timeout', 10000);
+        const timeout = new Promise<void>((_, reject) => setTimeout(() => reject('Request timed out'), timeoutMs));
+        const completion = new Promise<void>((resolve) => {
+            const interval = setInterval(() => {
+                if(!NEURO.waiting) {
+                    clearInterval(interval);
+                    resolve();
+                }
+            }, 100);
+        });
+
+        try {
+            await Promise.race([timeout, completion]);
+        } catch(err) {
+            if(typeof err === 'string') {
+                logOutput('ERROR', err);
+                vscode.window.showErrorMessage(err);
+            }
+            else {
+                throw err;
+            }
         }
         
         for(const suggestion of lastSuggestions) {
