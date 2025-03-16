@@ -28,6 +28,7 @@ export function createClient() {
     NEURO.connected = false;
     NEURO.waiting = false;
     NEURO.cancelled = false;
+    NEURO.waitingForCookie = false;
 
     // TODO: Check if this is a memory leak
     NEURO.client = new NeuroClient(NEURO.url, NEURO.gameName, () => {

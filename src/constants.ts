@@ -19,6 +19,8 @@ interface Neuro {
      */
     cancelled: boolean;
     outputChannel: vscode.OutputChannel | null;
+    /** Whether Neuro has asked for a cookie. */
+    waitingForCookie: boolean;
 }
 
 export const NEURO: Neuro = {
@@ -30,4 +32,5 @@ export const NEURO: Neuro = {
     waiting: false,
     cancelled: false,
     outputChannel: null,
+    waitingForCookie: false,
 };

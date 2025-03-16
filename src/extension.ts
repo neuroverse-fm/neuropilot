@@ -3,7 +3,7 @@ import * as vscode from 'vscode';
 import { NEURO } from './constants';
 import { logOutput, createClient, onClientConnected } from './utils';
 import { completionsProvider, registerCompletionResultHandler } from './completions';
-import { sendCurrentFile } from './context';
+import { giveCookie, registerRequestCookieAction, sendCurrentFile } from './context';
 import { registerChatParticipant, registerChatResponseHandler } from './chat';
 
 export function activate(context: vscode.ExtensionContext) {
@@ -20,13 +20,14 @@ export function activate(context: vscode.ExtensionContext) {
         logOutput('INFO', 'Attempting to reconnect to Neuro API');
         createClient();
     });
-
     vscode.commands.registerCommand('neuropilot.sendCurrentFile', sendCurrentFile);
+    vscode.commands.registerCommand('neuropilot.giveCookie', giveCookie);
 
     registerChatParticipant(context);
     
     onClientConnected(registerCompletionResultHandler);
     onClientConnected(registerChatResponseHandler);
+    onClientConnected(registerRequestCookieAction);
 
     createClient();
 }

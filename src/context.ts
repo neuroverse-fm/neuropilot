@@ -24,3 +24,57 @@ export function sendCurrentFile() {
     logOutput('INFO', 'Sending current file to Neuro API');
     NEURO.client?.sendContext(`Current file: ${fileName}\n\nContent:\n\n\`\`\`${language}\n${text}\n\`\`\``);
 }
+
+export function registerRequestCookieAction() {
+    NEURO.client?.registerActions([
+        {
+            name: 'request_cookie',
+            description: 'Ask Vedal for a cookie.',
+        }
+    ])
+
+    NEURO.client?.onAction((actionData) => {
+        if(actionData.name === 'request_cookie') {
+            if(NEURO.waitingForCookie) {
+                logOutput('INFO', 'Already waiting for a cookie');
+                NEURO.client?.sendActionResult(actionData.id, true, 'You already asked for a cookie.');
+                return;
+            }
+            NEURO.waitingForCookie = true;
+            NEURO.client?.sendActionResult(actionData.id, true, 'Vedal has been asked for a cookie.');
+
+            vscode.window.showInformationMessage('Neuro is asking for a cookie.', 'Give', 'Deny').then((value) => {
+                if(value === 'Give') {
+                    giveCookie();
+                } else if(value === 'Deny') {
+                    denyCookie();
+                }
+                NEURO.waitingForCookie = false;
+            });
+        }
+    });
+}
+
+export function giveCookie() {
+    NEURO.waitingForCookie = false;
+    if(!NEURO.connected) {
+        logOutput('ERROR', 'Attempted to give cookie while disconnected');
+        vscode.window.showErrorMessage('Not connected to Neuro API.');
+        return;
+    }
+
+    logOutput('INFO', 'Giving cookie to Neuro');
+    NEURO.client?.sendContext('Vedal gave you a cookie!');
+}
+
+export function denyCookie() {
+    NEURO.waitingForCookie = false;
+    if(!NEURO.connected) {
+        logOutput('ERROR', 'Attempted to deny cookie while disconnected');
+        vscode.window.showErrorMessage('Not connected to Neuro API.');
+        return;
+    }
+
+    logOutput('INFO', 'Denying cookie to Neuro');
+    NEURO.client?.sendContext('Vedal denied you the cookie.');
+}

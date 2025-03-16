@@ -28,6 +28,10 @@ Shows a notification when it succeeds or fails.
 
 Sends the entire current file as context to Neuro, along with the file name and configured language.
 
+### Give Cookie
+
+Gives a cookie to Neuro.
+
 ## Debugging
 
 - Clone the repository

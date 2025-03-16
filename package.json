@@ -39,6 +39,11 @@
 				"command": "neuropilot.sendCurrentFile",
 				"title": "Send Current File As Context",
 				"category": "NeuroPilot"
+			},
+			{
+				"command": "neuropilot.giveCookie",
+				"title": "Give Cookie",
+				"category": "NeuroPilot"
 			}
 		],
 		"configuration": [
@@ -85,7 +90,7 @@
 					},
 					"neuropilot.initialContext": {
 						"type": "string",
-						"default": "You are using an extension in Visual Studio Code that allows you to suggest code to Vedal. You will receive the lines of code before and after the cursor position and then be able to suggest what Vedal should write next.",
+						"default": "You are using an extension in Visual Studio Code that allows you to code together with Vedal.",
 						"description": "The initial context to sent to Neuro-sama"
 					},
 					"neuropilot.timeout": {
