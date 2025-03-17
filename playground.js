@@ -1,18 +1,11 @@
-// Trigger inline completions after each line
+// Overly complicated Hello World example
 
-// [0,*):// Trigger inline completions in this line, they work!
-// Trigger inline completions in this line
+const greetingTarget = 'World';
+const greeting = 'Hello';
+const greetingFormat = '%s, %s!';
 
-// [0,*):console.log(
+const formattedGreeting = greetingFormat
+    .replace('%s', greeting)
+    .replace('%s', greetingTarget);
 
-
-// [0,*):console.log("foo"
-// [0,*):console.log({ label: "("
-
-
-// [0,*):console.log(`${(1+2}`)
-
-// [0,*):({\n){
-
-// [33,33):lambda x: x.notnull()
-notNull = languages.apply();
+console.log(formattedGreeting); // Hello, World!
