@@ -44,6 +44,11 @@
 				"command": "neuropilot.giveCookie",
 				"title": "Give Cookie",
 				"category": "NeuroPilot"
+			},
+			{
+				"command": "neuropilot.reloadPermissions",
+				"title": "Reload Permissions",
+				"category": "NeuroPilot"
 			}
 		],
 		"configuration": [
@@ -97,6 +102,41 @@
 						"type": "integer",
 						"default": 10000,
 						"description": "The timeout in milliseconds for completions and chat responses in ms"
+					},
+					"neuropilot.permissionToChangeFile": {
+						"type": "boolean",
+						"default": false,
+						"markdownDescription": "Let Neuro switch the active file. For security reasons, Neuro cannot open anything in folders that start with a dot (`.git`, `.vscode`, ...).\n\nRequires reloading permissions if changed."
+					},
+					"neuropilot.permissionToEditFile": {
+						"type": "boolean",
+						"default": false,
+						"markdownDescription": "Let Neuro edit the active file directly.\n\nRequires reloading permissions if changed."
+					},
+					"neuropilot.permissionToCreate": {
+						"type": "boolean",
+						"default": false,
+						"markdownDescription": "Let Neuro create new files and folders in the workspace.\n\nRequires reloading permissions if changed."
+					},
+					"neuropilot.permissionToDelete": {
+						"type": "boolean",
+						"default": false,
+						"markdownDescription": "Let Neuro delete files and folders in the workspace.\n\nRequires reloading permissions if changed."
+					},
+					"neuropilot.permissionToRename": {
+						"type": "boolean",
+						"default": false,
+						"markdownDescription": "Let Neuro rename files and folders in the workspace.\n\nRequires reloading permissions if changed."
+					},
+					"neuropilot.permissionToRunTasks": {
+						"type": "boolean",
+						"default": false,
+						"markdownDescription": "Let Neuro run workspace tasks defined in `tasks.json`.\n\nRequires reloading permissions if changed."
+					},
+					"neuropilot.permissionToRequestCookies": {
+						"type": "boolean",
+						"default": true,
+						"markdownDescription": "Neuro may ask for cookies while coding.\n\nRequires reloading permissions if changed."
 					}
 				}
 			}

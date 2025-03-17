@@ -1,6 +1,12 @@
 import * as vscode from 'vscode';
 import { NeuroClient } from "neuro-game-sdk";
 
+export interface NeuroTask {
+    id: string;
+    description: string;
+    task: vscode.Task;
+}
+
 interface Neuro {
     initialized: boolean;
     client: NeuroClient | null;
@@ -21,6 +27,8 @@ interface Neuro {
     outputChannel: vscode.OutputChannel | null;
     /** Whether Neuro has asked for a cookie. */
     waitingForCookie: boolean;
+    tasks: NeuroTask[];
+    currentTaskExecution: vscode.TaskExecution | null;
 }
 
 export const NEURO: Neuro = {
@@ -33,4 +41,6 @@ export const NEURO: Neuro = {
     cancelled: false,
     outputChannel: null,
     waitingForCookie: false,
+    tasks: [],
+    currentTaskExecution: null,
 };

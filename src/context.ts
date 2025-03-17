@@ -26,15 +26,26 @@ export function sendCurrentFile() {
 }
 
 export function registerRequestCookieAction() {
+    NEURO.client?.unregisterActions(['request_cookie']);
+
+    if(!vscode.workspace.getConfiguration('neuropilot').get('permissionToRequestCookies', true))
+        return;
+    
     NEURO.client?.registerActions([
         {
             name: 'request_cookie',
             description: 'Ask Vedal for a cookie.',
         }
-    ])
+    ]);
+}
 
+export function registerRequestCookieHandler() {
     NEURO.client?.onAction((actionData) => {
         if(actionData.name === 'request_cookie') {
+            if(!vscode.workspace.getConfiguration('neuropilot').get('permissionToRequestCookies', true)) {
+                logOutput('WARNING', 'Neuro attempted to request a cookie, but permission is disabled');
+                NEURO.client?.sendActionResult(actionData.id, true, 'Permission to request cookies is disabled.');
+            }
             if(NEURO.waitingForCookie) {
                 logOutput('INFO', 'Already waiting for a cookie');
                 NEURO.client?.sendActionResult(actionData.id, true, 'You already asked for a cookie.');

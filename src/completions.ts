@@ -2,7 +2,7 @@ import { NeuroClient } from 'neuro-game-sdk';
 import * as vscode from 'vscode';
 import { Range } from 'vscode';
 import { NEURO } from './constants';
-import { logOutput, assert, simpleFileName, filterFileContents } from './utils';
+import { logOutput, assert, simpleFileName, filterFileContents, getPositionContext } from './utils';
 
 let lastSuggestions: string[] = [];
 
@@ -115,17 +115,11 @@ export const completionsProvider: vscode.InlineCompletionItemProvider = {
         }
         
         // Get context
-        const beforeContextLength = vscode.workspace.getConfiguration('neuropilot').get('beforeContext', 10);
-        const afterContextLength = vscode.workspace.getConfiguration('neuropilot').get('afterContext', 10);
+        const cursorContext = getPositionContext(document, position);
+        const fileName = simpleFileName(document.fileName);
         const maxCount = vscode.workspace.getConfiguration('neuropilot').get('maxCompletions', 3);
         
-        const contextStart = Math.max(0, position.line - beforeContextLength);
-        const contextBefore = filterFileContents(document.getText(new Range(new vscode.Position(contextStart, 0), position)));
-        const contextEnd = Math.min(document.lineCount - 1, position.line + afterContextLength);
-        const contextAfter = document.getText(new Range(position, new vscode.Position(contextEnd, document.lineAt(contextEnd).text.length))).replace(/\r\n/g, '\n');
-        const fileName = simpleFileName(document.fileName);
-        
-        requestCompletion(contextBefore, contextAfter, fileName, document.languageId, maxCount);
+        requestCompletion(cursorContext.contextBefore, cursorContext.contextAfter, fileName, document.languageId, maxCount);
         
         token.onCancellationRequested(() => {
             logOutput('INFO', 'Cancelled request');
@@ -145,14 +139,14 @@ export const completionsProvider: vscode.InlineCompletionItemProvider = {
 
         try {
             await Promise.race([timeout, completion]);
-        } catch(err) {
-            if(typeof err === 'string') {
-                logOutput('ERROR', err);
+        } catch(erm) {
+            if(typeof erm === 'string') {
+                logOutput('ERROR', erm);
                 NEURO.cancelled = true;
-                vscode.window.showErrorMessage(err);
+                vscode.window.showErrorMessage(erm);
             }
             else {
-                throw err;
+                throw erm;
             }
         }
         

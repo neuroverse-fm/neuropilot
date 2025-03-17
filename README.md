@@ -6,17 +6,22 @@ This extension lets Neuro-sama suggest code for you similar to GitHub Copilot.
 If you don't have a Neuro-sama, you can use tools like [Randy](https://github.com/VedalAI/neuro-game-sdk/tree/main/Randy), [Tony](https://github.com/Pasu4/neuro-api-tony) or [Jippity](https://github.com/EnterpriseScratchDev/neuro-api-jippity).
 If you are using Tony, activating auto-answer is recommended, since completion requests are canceled if you click out of VS Code.
 
-This extension will:
+This extension **will**:
 
 - let Neuro make inline code suggestions.
 - add Neuro as a chat participant for Copilot Chat.
 
-This extension will **not**:
+If you enable it, this extension **can**:
+
+- let Neuro edit the current file.
+- let Neuro read and open files in the workspace (planned feature).
+- let Neuro create, rename and delete files in the workspace (planned feature).
+- let Neuro run pre-defined tasks.
+
+This extension **will not**:
 
 - let Neuro read what you type in real time, unless you enable it in the settings.
-- let Neuro read any unopened files, unless you explicitly add them to context.
-- let Neuro directly edit files unsupervised.
-- give Neuro terminal access.
+- give Neuro direct terminal access.
 
 ## How to use
 
@@ -39,6 +44,11 @@ Simply paste this into your `settings.json` file:
 
 On startup, the extension will immediately try to establish a connection to the API.
 If the extension was started before the API was ready, or you lose connection to the API, you can use the command "NeuroPilot: Reconnect" from the Command Palette.
+
+To make Neuro able to code unsupervised, go to the extension settings and activate the necessary permissions, then run the command "NeuroPilot: Reload Permissions" from the Command Palette.
+Tasks that Neuro can run are loaded from `tasks.json`, but it requires some setup for Neuro to use them.
+All tasks that Neuro should be able to run must have the string `[Neuro]` at the start of their `detail` property.
+This is a safety measure so she doesn't have access to all tasks.
 
 You can configure the extension using the extension settings.
 For example, you can set how many lines of code will be provided as context before and after the current line.

@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { NeuroClient } from "neuro-game-sdk";
 
 import { NEURO } from './constants';
+import { Range } from 'vscode';
 
 export function assert(obj: unknown): asserts obj {
     if(!obj) throw new Error('Assertion failed');
@@ -82,4 +83,31 @@ export function simpleFileName(fileName: string): string {
 
 export function filterFileContents(contents: string): string {
     return contents.replace(/\r\n/g, '\n');
+}
+
+interface NeuroPositionContext {
+    contextBefore: string;
+    contextAfter: string;
+}
+
+export function getPositionContext(document: vscode.TextDocument, position: vscode.Position): NeuroPositionContext {
+    const beforeContextLength = vscode.workspace.getConfiguration('neuropilot').get('beforeContext', 10);
+    const afterContextLength = vscode.workspace.getConfiguration('neuropilot').get('afterContext', 10);
+    
+    const contextStart = Math.max(0, position.line - beforeContextLength);
+    const contextBefore = filterFileContents(document.getText(new Range(new vscode.Position(contextStart, 0), position)));
+    const contextEnd = Math.min(document.lineCount - 1, position.line + afterContextLength);
+    const contextAfter = document.getText(new Range(position, new vscode.Position(contextEnd, document.lineAt(contextEnd).text.length))).replace(/\r\n/g, '\n');
+
+    return {
+        contextBefore: filterFileContents(contextBefore),
+        contextAfter: filterFileContents(contextAfter)
+    };
+}
+
+export function formatActionID(name: string): string {
+    // Action IDs must be snake_case
+    return name
+        .replace(/[^a-zA-Z0-9_]+/g, '_')
+        .toLowerCase();
 }

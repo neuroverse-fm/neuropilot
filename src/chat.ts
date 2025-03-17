@@ -190,14 +190,14 @@ async function requestChatResponse(prompt: string, state: string, token: vscode.
 
     try {
         return await Promise.race([timeout, response]);
-    } catch(error) {
-        if(typeof error === 'string') {
-            logOutput('ERROR', error);
+    } catch(erm) {
+        if(typeof erm === 'string') {
+            logOutput('ERROR', erm);
             NEURO.cancelled = true;
-            return error;
+            return erm;
         }
         else {
-            throw error;
+            throw erm;
         }
     }
 }
