@@ -593,7 +593,9 @@ function handleTerminateTask(actionData: any) {
         return;
     }
 
-    NEURO.currentTaskExecution?.terminate();
+    const exe = NEURO.currentTaskExecution;
+    NEURO.currentTaskExecution = null;
+    exe.terminate();
     logOutput('INFO', 'Terminated current task');
     NEURO.client?.sendActionResult(actionData.id, true, 'Terminated current task');
 }
