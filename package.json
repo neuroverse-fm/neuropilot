@@ -103,37 +103,49 @@
 						"default": 10000,
 						"description": "The timeout in milliseconds for completions and chat responses in ms"
 					},
-					"neuropilot.permissionToOpenFile": {
+					"neuropilot.includePattern": {
+						"type": "string",
+						"default": "**/*",
+						"markdownDescription": "A glob pattern for files Neuro is allowed to open, i.e. she will be unable to open files that don't match this pattern. Separate multiple patterns with a newline.",
+						"editPresentation": "multilineText"
+					},
+					"neuropilot.excludePattern": {
+						"type": "string",
+						"default": "**/node_modules/**\n**/venv/**",
+						"markdownDescription": "A glob pattern for files Neuro is not allowed to open. Applied after the include pattern. Files and folders beginning with a dot are always excluded, regardless of this setting. Separate multiple patterns with a newline.",
+						"editPresentation": "multilineText"
+					},
+					"neuropilot.permission.openFiles": {
 						"type": "boolean",
 						"default": false,
 						"markdownDescription": "Let Neuro open files in the workspace. For security reasons, Neuro cannot open anything that starts with a dot or has a parent folder that starts with a dot (e.g. `.git`, `.vscode`, ...).\n\nRequires reloading permissions if changed."
 					},
-					"neuropilot.permissionToEditFile": {
+					"neuropilot.permission.editActiveDocument": {
 						"type": "boolean",
 						"default": false,
 						"markdownDescription": "Let Neuro edit the active file directly.\n\nRequires reloading permissions if changed."
 					},
-					"neuropilot.permissionToCreate": {
+					"neuropilot.permission.create": {
 						"type": "boolean",
 						"default": false,
 						"markdownDescription": "Let Neuro create new files and folders in the workspace.\n\nRequires reloading permissions if changed."
 					},
-					"neuropilot.permissionToDelete": {
-						"type": "boolean",
-						"default": false,
-						"markdownDescription": "Let Neuro delete files and folders in the workspace.\n\nRequires reloading permissions if changed."
-					},
-					"neuropilot.permissionToRename": {
+					"neuropilot.permission.rename": {
 						"type": "boolean",
 						"default": false,
 						"markdownDescription": "Let Neuro rename files and folders in the workspace.\n\nRequires reloading permissions if changed."
 					},
-					"neuropilot.permissionToRunTasks": {
+					"neuropilot.permission.delete": {
+						"type": "boolean",
+						"default": false,
+						"markdownDescription": "Let Neuro delete files and folders in the workspace.\n\nRequires reloading permissions if changed."
+					},
+					"neuropilot.permission.runTasks": {
 						"type": "boolean",
 						"default": false,
 						"markdownDescription": "Let Neuro run workspace tasks defined in `tasks.json`.\n\nRequires reloading permissions if changed."
 					},
-					"neuropilot.permissionToRequestCookies": {
+					"neuropilot.permission.requestCookies": {
 						"type": "boolean",
 						"default": true,
 						"markdownDescription": "Neuro may ask for cookies while coding.\n\nRequires reloading permissions if changed."
@@ -160,6 +172,7 @@
 		"typescript-eslint": "^8.26.0"
 	},
 	"dependencies": {
+		"glob-to-regexp": "^0.4.1",
 		"neuro-game-sdk": "github:AriesAlex/typescript-neuro-game-sdk#49a4a711e031447bcf4c9e5bd8caab3922ed02b5"
 	}
 }

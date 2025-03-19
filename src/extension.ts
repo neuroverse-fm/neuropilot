@@ -14,9 +14,9 @@ export function activate(context: vscode.ExtensionContext) {
     NEURO.waiting = false;
     NEURO.cancelled = false;
     NEURO.outputChannel = vscode.window.createOutputChannel('NeuroPilot');
-    
+
     vscode.languages.registerInlineCompletionItemProvider({ pattern: '**' }, completionsProvider);
-    
+
     vscode.commands.registerCommand('neuropilot.reconnect', async (..._args) => {
         logOutput('INFO', 'Attempting to reconnect to Neuro API');
         createClient();
@@ -26,7 +26,7 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand('neuropilot.reloadPermissions', reloadPermissions);
 
     registerChatParticipant(context);
-    
+
     onClientConnected(registerCompletionResultHandler);
     onClientConnected(registerChatResponseHandler);
     onClientConnected(registerRequestCookieAction);
@@ -34,7 +34,7 @@ export function activate(context: vscode.ExtensionContext) {
     onClientConnected(reloadTasks);
     onClientConnected(registerUnsupervisedActions);
     onClientConnected(registerUnsupervisedHandlers);
-    
+
     vscode.tasks.onDidEndTask(taskEndedHandler);
 
     createClient();

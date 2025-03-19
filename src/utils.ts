@@ -1,8 +1,12 @@
 import * as vscode from 'vscode';
 import { NeuroClient } from "neuro-game-sdk";
+var globToRegExp = require('glob-to-regexp');
 
 import { NEURO } from './constants';
 import { Range } from 'vscode';
+
+export const REGEXP_ALWAYS = /^/;
+export const REGEXP_NEVER = /_$/;
 
 export function assert(obj: unknown): asserts obj {
     if(!obj) throw new Error('Assertion failed');
@@ -126,21 +130,46 @@ export function getWorkspacePath(): string | undefined {
     return path ? normalizePath(path) : undefined;
 }
 
+export function combineGlobLines(lines: string): string {
+    const result = lines.split('\n')
+        .map(line => line.trim())
+        .filter(line => line.length > 0)
+        .join(',');
+    return `{${result}}`;
+}
+
+export function combineGlobLinesToRegExp(lines: string): RegExp {
+    const result = lines.split('\n')
+        .map(line => line.trim())
+        .filter(line => line.length > 0)
+        .map(line => globToRegExp(line, { extended: true, globstar: true }).source)
+        .join('|');
+    return new RegExp(result);
+}
+
 /**
  * Check if a path is safe for Neuro to access.
  * Neuro may not access paths outside the workspace, or files and folders starting with a dot.
  * This is a security measure to prevent Neuro from modifying her own permissions or adding arbitrary tasks.
  * @param path The path to check.
+ * @param checkPatterns Whether to check against include and exclude patterns.
  * @returns True if Neuro may safely access the path.
  */
-export function isPathNeuroSafe(path: string): boolean {
+export function isPathNeuroSafe(path: string, checkPatterns: boolean = true): boolean {
     const rootFolder = getWorkspacePath();
     const normalizedPath = normalizePath(path);
+    const includePattern = vscode.workspace.getConfiguration('neuropilot').get('includePattern', '**/*');
+    const excludePattern = vscode.workspace.getConfiguration('neuropilot').get<string>('excludePattern');
+    const includeRegExp: RegExp = checkPatterns ? combineGlobLinesToRegExp(includePattern) : REGEXP_ALWAYS;
+    const excludeRegExp: RegExp = (checkPatterns && excludePattern) ? combineGlobLinesToRegExp(excludePattern) : REGEXP_NEVER;
+
     return rootFolder !== undefined
         && normalizedPath !== rootFolder            // Prevent access to the workspace folder itself
         && normalizedPath.startsWith(rootFolder)    // Prevent access to paths outside the workspace
         && !normalizedPath.includes('/.')           // Prevent access to special files and folders (e.g. .vscode)
         && !normalizedPath.includes('..')           // Prevent access to parent folders
         && !normalizedPath.includes('~')            // Prevent access to home directory
-        && !normalizedPath.includes('$');           // Prevent access to environment variables
+        && !normalizedPath.includes('$')            // Prevent access to environment variables
+        && includeRegExp.test(normalizedPath)       // Check against include pattern
+        && !excludeRegExp.test(normalizedPath);     // Check against exclude pattern
 }

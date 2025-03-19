@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 
 import { NEURO } from "./constants";
-import { formatActionID, getPositionContext, getWorkspacePath, isPathNeuroSafe, logOutput, normalizePath } from './utils';
+import { combineGlobLines, formatActionID, getPositionContext, getWorkspacePath, isPathNeuroSafe, logOutput, normalizePath } from './utils';
 
 /**
  * Register unsupervised actions with the Neuro API.
@@ -27,7 +27,7 @@ export function registerUnsupervisedActions() {
         ...NEURO.tasks.map(task => task.id) // Just in case
     ]);
 
-    if(vscode.workspace.getConfiguration('neuropilot').get('permissionToOpenFile', false)) {
+    if(vscode.workspace.getConfiguration('neuropilot').get('permission.openFiles', false)) {
         NEURO.client?.registerActions([
             {
                 name: 'get_files',
@@ -50,7 +50,7 @@ export function registerUnsupervisedActions() {
             }
         ]);
     }
-    if(vscode.workspace.getConfiguration('neuropilot').get('permissionToEditFile', false)) {
+    if(vscode.workspace.getConfiguration('neuropilot').get('permission.editActiveDocument', false)) {
         NEURO.client?.registerActions([
             {
                 name: 'place_cursor',
@@ -116,7 +116,7 @@ export function registerUnsupervisedActions() {
             },
         ]);
     }
-    if(vscode.workspace.getConfiguration('neuropilot').get('permissionToCreate', false)) {
+    if(vscode.workspace.getConfiguration('neuropilot').get('permission.create', false)) {
         NEURO.client?.registerActions([
             {
                 name: 'create_file',
@@ -128,7 +128,7 @@ export function registerUnsupervisedActions() {
             },
         ]);
     }
-    if(vscode.workspace.getConfiguration('neuropilot').get('permissionToRename', false)) {
+    if(vscode.workspace.getConfiguration('neuropilot').get('permission.rename', false)) {
         NEURO.client?.registerActions([
             {
                 name: 'rename_file_or_folder',
@@ -136,7 +136,7 @@ export function registerUnsupervisedActions() {
             },
         ]);
     }
-    if(vscode.workspace.getConfiguration('neuropilot').get('permissionToDelete', false)) {
+    if(vscode.workspace.getConfiguration('neuropilot').get('permission.delete', false)) {
         NEURO.client?.registerActions([
             {
                 name: 'delete_file_or_folder',
@@ -144,7 +144,7 @@ export function registerUnsupervisedActions() {
             },
         ]);
     }
-    if(vscode.workspace.getConfiguration('neuropilot').get('permissionToRunTasks', false)) {
+    if(vscode.workspace.getConfiguration('neuropilot').get('permission.runTasks', false)) {
         NEURO.client?.registerActions([
             {
                 name: 'terminate_task',
@@ -220,7 +220,7 @@ export function reloadTasks() {
 
     NEURO.tasks = [];
 
-    if(!vscode.workspace.getConfiguration('neuropilot').get('permissionToRunTasks', false)) {
+    if(!vscode.workspace.getConfiguration('neuropilot').get('permission.runTasks', false)) {
         return;
     }
 
@@ -241,7 +241,7 @@ export function reloadTasks() {
             }
         }
 
-        if(!vscode.workspace.getConfiguration('neuropilot').get('permissionToRunTasks', false)) {
+        if(!vscode.workspace.getConfiguration('neuropilot').get('permission.runTasks', false)) {
             return;
         }
 
@@ -270,15 +270,35 @@ export function taskEndedHandler(event: vscode.TaskEndEvent) {
 }
 
 function handleGetFiles(actionData: any) {
-    // TODO: Implement
-    NEURO.client?.sendActionResult(actionData.id, true, 'Not implemented yet');
-    return;
+    if(!vscode.workspace.getConfiguration('neuropilot').get('permission.openFiles', false)) {
+        logOutput('WARNING', 'Neuro attempted to get files, but permission is disabled');
+        NEURO.client?.sendActionResult(actionData.id, true, 'You do not have file open permissions.');
+        return;
+    }
+
+    const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+    if(workspaceFolder === undefined) {
+        NEURO.client?.sendActionResult(actionData.id, true, 'No workspace open to get files from');
+        return;
+    }
+    NEURO.client?.sendActionResult(actionData.id, true);
+
+    const includePattern = combineGlobLines(vscode.workspace.getConfiguration('neuropilot').get('includePattern', '**'));
+    const excludePattern = combineGlobLines(vscode.workspace.getConfiguration('neuropilot').get('excludePattern', ''));
+    vscode.workspace.findFiles(includePattern, excludePattern).then(
+        (uris) => {
+            const paths = uris
+                .filter(uri => isPathNeuroSafe(uri.fsPath, false))
+                .map(uri => vscode.workspace.asRelativePath(uri));
+            NEURO.client?.sendContext(`Files in workspace:\n\n${paths.join('\n')}`);
+        }
+    )
 }
 
 function handleOpenFile(actionData: any) {
-    if(!vscode.workspace.getConfiguration('neuropilot').get('permissionToOpenFile', false)) {
+    if(!vscode.workspace.getConfiguration('neuropilot').get('permission.openFiles', false)) {
         logOutput('WARNING', 'Neuro attempted to open a file, but permission is disabled');
-        NEURO.client?.sendActionResult(actionData.id, true, 'You do not have edit permissions.');
+        NEURO.client?.sendActionResult(actionData.id, true, 'You do not have file open permissions.');
         return;
     }
 
@@ -294,15 +314,17 @@ function handleOpenFile(actionData: any) {
         return;
     }
 
+    NEURO.client?.sendActionResult(actionData.id, true);
+
     vscode.workspace.openTextDocument(uri).then(
         (document) => {
             vscode.window.showTextDocument(document);
             logOutput('INFO', `Opened file ${relativePath}`);
-            NEURO.client?.sendActionResult(actionData.id, true, `Opened file ${relativePath}\n\nContent:\n\n\`\`\`${document.languageId}\n${document.getText()}\n\`\`\``);
+            NEURO.client?.sendContext(`Opened file ${relativePath}\n\nContent:\n\n\`\`\`${document.languageId}\n${document.getText()}\n\`\`\``);
         },
         (_) => {
             logOutput('ERROR', `Failed to open file ${relativePath}`);
-            NEURO.client?.sendActionResult(actionData.id, true, `Failed to open file ${relativePath}`);
+            NEURO.client?.sendContext(`Failed to open file ${relativePath}`);
         }
     );
 }
@@ -314,7 +336,7 @@ function handleFindInWorkspace(actionData: any) {
 }
 
 function handlePlaceCursor(actionData: any) {
-    if(!vscode.workspace.getConfiguration('neuropilot').get('permissionToEditFile', false)) {
+    if(!vscode.workspace.getConfiguration('neuropilot').get('permission.editActiveDocument', false)) {
         logOutput('WARNING', 'Neuro attempted to place the cursor, but permission is disabled');
         NEURO.client?.sendActionResult(actionData.id, true, 'You do not have edit permissions.');
         return;
@@ -357,7 +379,7 @@ function handlePlaceCursor(actionData: any) {
 }
 
 function handleGetCursor(actionData: any) {
-    if(!vscode.workspace.getConfiguration('neuropilot').get('permissionToEditFile', false)) {
+    if(!vscode.workspace.getConfiguration('neuropilot').get('permission.editActiveDocument', false)) {
         logOutput('WARNING', 'Neuro attempted to get the cursor position, but permission is disabled');
         NEURO.client?.sendActionResult(actionData.id, true, 'You do not have edit permissions.');
         return;
@@ -381,7 +403,7 @@ function handleGetCursor(actionData: any) {
 }
 
 function handleInsertText(actionData: any) {
-    if(!vscode.workspace.getConfiguration('neuropilot').get('permissionToEditFile', false)) {
+    if(!vscode.workspace.getConfiguration('neuropilot').get('permission.editActiveDocument', false)) {
         logOutput('WARNING', 'Neuro attempted to insert text, but permission is disabled');
         NEURO.client?.sendActionResult(actionData.id, true, 'You do not have edit permissions.');
         return;
@@ -405,20 +427,21 @@ function handleInsertText(actionData: any) {
 
     const edit = new vscode.WorkspaceEdit();
     edit.insert(document.uri, vscode.window.activeTextEditor!.selection.active, text);
+
+    NEURO.client?.sendActionResult(actionData.id, true);
     vscode.workspace.applyEdit(edit).then(success => {
         if(success) {
             logOutput('INFO', `Inserting text into document`);
-            NEURO.client?.sendActionResult(actionData.id, true);
         }
         else {
             logOutput('ERROR', 'Failed to apply text insertion edit');
-            NEURO.client?.sendActionResult(actionData.id, true, 'Failed to insert text');
+            NEURO.client?.sendContext('Failed to insert text');
         }
     });
 }
 
 function handleReplaceText(actionData: any) {
-    if(!vscode.workspace.getConfiguration('neuropilot').get('permissionToEditFile', false)) {
+    if(!vscode.workspace.getConfiguration('neuropilot').get('permission.editActiveDocument', false)) {
         logOutput('WARNING', 'Neuro attempted to replace text, but permission is disabled');
         NEURO.client?.sendActionResult(actionData.id, true, 'You do not have edit permissions.');
         return;
@@ -451,22 +474,23 @@ function handleReplaceText(actionData: any) {
         return;
     }
 
+    NEURO.client?.sendActionResult(actionData.id, true);
+
     const edit = new vscode.WorkspaceEdit();
     edit.replace(document.uri, new vscode.Range(document.positionAt(oldStart), document.positionAt(oldStart + oldText.length)), newText);
     vscode.workspace.applyEdit(edit).then(success => {
         if(success) {
             logOutput('INFO', `Replacing text in document`);
-            NEURO.client?.sendActionResult(actionData.id, true);
         }
         else {
             logOutput('ERROR', 'Failed to apply text replacement edit');
-            NEURO.client?.sendActionResult(actionData.id, true, 'Failed to replace text');
+            NEURO.client?.sendContext('Failed to replace text');
         }
     });
 }
 
 function handleDeleteText(actionData: any) {
-    if(!vscode.workspace.getConfiguration('neuropilot').get('permissionToEditFile', false)) {
+    if(!vscode.workspace.getConfiguration('neuropilot').get('permission.editActiveDocument', false)) {
         logOutput('WARNING', 'Neuro attempted to delete text, but permission is disabled');
         NEURO.client?.sendActionResult(actionData.id, true, 'You do not have edit permissions.');
         return;
@@ -494,22 +518,23 @@ function handleDeleteText(actionData: any) {
         return;
     }
 
+    NEURO.client?.sendActionResult(actionData.id, true);
+
     const edit = new vscode.WorkspaceEdit();
     edit.delete(document.uri, new vscode.Range(document.positionAt(textStart), document.positionAt(textStart + textToDelete.length)));
     vscode.workspace.applyEdit(edit).then(success => {
         if(success) {
             logOutput('INFO', `Deleting text from document`);
-            NEURO.client?.sendActionResult(actionData.id, true);
         }
         else {
             logOutput('ERROR', 'Failed to apply text deletion edit');
-            NEURO.client?.sendActionResult(actionData.id, true, 'Failed to delete text');
+            NEURO.client?.sendContext('Failed to delete text');
         }
     });
 }
 
 function handlePlaceCursorAtText(actionData: any) {
-    if(!vscode.workspace.getConfiguration('neuropilot').get('permissionToEditFile', false)) {
+    if(!vscode.workspace.getConfiguration('neuropilot').get('permission.editActiveDocument', false)) {
         logOutput('WARNING', 'Neuro attempted to place the cursor at text, but permission is disabled');
         NEURO.client?.sendActionResult(actionData.id, true, 'You do not have edit permissions.');
         return;
@@ -581,7 +606,7 @@ function handleDeleteFileOrFolder(actionData: any) {
 }
 
 function handleTerminateTask(actionData: any) {
-    if(!vscode.workspace.getConfiguration('neuropilot').get('permissionToRunTasks', false)) {
+    if(!vscode.workspace.getConfiguration('neuropilot').get('permission.runTasks', false)) {
         logOutput('WARNING', 'Neuro attempted to terminate a task, but permission is disabled');
         NEURO.client?.sendActionResult(actionData.id, true, 'You do not have task permissions.');
         return;
@@ -601,7 +626,7 @@ function handleTerminateTask(actionData: any) {
 }
 
 function handleRunTask(actionData: any) {
-    if(!vscode.workspace.getConfiguration('neuropilot').get('permissionToRunTasks', false)) {
+    if(!vscode.workspace.getConfiguration('neuropilot').get('permission.runTasks', false)) {
         logOutput('WARNING', 'Neuro attempted to terminate a task, but permission is disabled');
         NEURO.client?.sendActionResult(actionData.id, true, 'You do not have task permissions.');
         return;
@@ -628,7 +653,7 @@ function handleRunTask(actionData: any) {
         NEURO.client?.sendActionResult(actionData.id, true, `Executing task ${task.id}`);
     } catch(erm) {
         logOutput('ERROR', `Failed to execute task ${task.id}`);
-        logOutput('ERROR', JSON.stringify(erm));
+        logOutput('DEBUG', JSON.stringify(erm));
         NEURO.client?.sendActionResult(actionData.id, false, `Failed to execute task ${task.id}`);
         return;
     }

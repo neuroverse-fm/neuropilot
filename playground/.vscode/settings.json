@@ -1,4 +1,6 @@
 {
-    "neuropilot.permissionToEditFile": true,
-    "neuropilot.permissionToOpenFile": true
+    "neuropilot.permission.editActiveDocument": true,
+    "neuropilot.permission.openFiles": true,
+    "neuropilot.permission.runTasks": true,
+    "neuropilot.includePattern": "**/*"
 }

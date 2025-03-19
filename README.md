@@ -86,79 +86,79 @@ Neuro can only run one task at a time.
 
 ### `get_files`
 
-*Requires permission to open file.*
+*Requires Permission: Open files.*
 Gets a list of files in the workspace.
 The files are returned as paths relative to the workspace root.
 
 ### `open_file`
 
-*Requires permission to open file.*
+*Requires Permission: Open files.*
 Opens a file inside the workspace (or focuses it if it is already open) and sends its contents to Neuro.
 
 ### `find_in_workspace`
 
-*Requires permission to open file.*
+*Requires Permission: Open files.*
 Searches all files in the workspace for the given text, and returns a list of files that contain that text with a line and character number.
 
 ### `place_cursor`
 
-*Requires permission to edit file.*
+*Requires Permission: Edit Active Document.*
 Places the cursor at the specified line and character (zero-based).
 
 ### `get_cursor`
 
-*Requires permission to edit file.*
+*Requires Permission: Edit Active Document.*
 Returns the current cursor position, as well as the lines before and after the cursor.
 The number of lines returned can be controlled with the settings `neuropilot.beforeContext` and `neuropilot.afterContext`.
 
 ### `insert_text`
 
-*Requires permission to edit file.*
+*Requires Permission: Edit Active Document.*
 Inserts text at the current cursor position and places the cursor after the inserted text.
 
 ### `replace_text`
 
-*Requires permission to edit file.*
+*Requires Permission: Edit Active Document.*
 Replaces the first occurence of the specified text with new text and places the cursor after the inserted text.
 
 ### `delete_text`
 
-*Requires permission to edit file.*
+*Requires Permission: Edit Active Document.*
 Deletes the first occurence of the specified text and places the cursor where the text was.
 
 ### `place_cursor_at_text`
 
-*Requires permission to edit file.*
+*Requires Permission: Edit Active Document.*
 Places the cursor before or after the first occurence of the specified text.
 
 ### `create_file`
 
-*Requires permission to create.*
+*Requires Permission: Create.*
 Creates a new file in the workspace.
 If *permission to open file* is given, the file is immediately opened.
 The file name cannot start with a dot, and cannot be created in a folder that starts with a dot.
 
 ### `create_folder`
 
-*Requires permission to create.*
+*Requires Permission: Create.*
 Creates a new folder in the workspace.
 A folder starting with a dot cannot be created this way.
 
 ### `rename_file_or_folder`
 
-*Requires permission to rename.*
+*Requires Permission: Rename.*
 Renames a file or folder in the workspace.
 This cannot rename to or from a name starting with a dot, or within a folder that starts with a dot.
 
 ### `delete_file_or_folder`
 
-*Requires permission to delete.*
+*Requires Permission: Delete.*
 Deletes a file or folder in the workspace.
 This cannot delete anything starting with a dot, or inside a folder starting with a dot.
 
 ### `terminate_task`
 
-*Requires permission to run tasks.*
+*Requires Permission: Run Tasks.*
 Terminates the currently running task that was started using a task action.
 
 ## Further Info
