@@ -111,3 +111,31 @@ export function formatActionID(name: string): string {
         .replace(/[^a-zA-Z0-9_]+/g, '_')
         .toLowerCase();
 }
+
+/**
+ * Gets the path to the first workspace folder.
+ * The path is normalized to use forward slashes.
+ * @returns The path to the workspace folder, or undefined if the workspace is not open.
+ */
+export function getWorkspacePath(): string | undefined {
+    return vscode.workspace.workspaceFolders?.[0].uri.fsPath.replace(/\\/g, '/');
+}
+
+/**
+ * Check if a path is safe for Neuro to access.
+ * Neuro may not access paths outside the workspace, or files and folders starting with a dot.
+ * This is a security measure to prevent Neuro from modifying her own permissions or adding arbitrary tasks.
+ * @param path The path to check.
+ * @returns True if Neuro may safely access the path.
+ */
+export function isPathNeuroSafe(path: string): boolean {
+    const rootFolder = getWorkspacePath();
+    const normalizedPath = path.replace(/\\/g, '/');
+    return rootFolder !== undefined
+        && normalizedPath !== rootFolder            // Prevent access to the workspace folder itself
+        && normalizedPath.startsWith(rootFolder)    // Prevent access to paths outside the workspace
+        && !normalizedPath.includes('/.')           // Prevent access to special files and folders (e.g. .vscode)
+        && !normalizedPath.includes('..')           // Prevent access to parent folders
+        && !normalizedPath.includes('~')            // Prevent access to home directory
+        && !normalizedPath.includes('$');           // Prevent access to environment variables
+}

@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 
 import { NEURO } from "./constants";
-import { formatActionID, getPositionContext, logOutput } from './utils';
+import { formatActionID, getPositionContext, isPathNeuroSafe, logOutput } from './utils';
 
 /**
  * Register unsupervised actions with the Neuro API.
@@ -207,9 +207,12 @@ export function registerUnsupervisedHandlers() {
             }
 
             const document = vscode.window.activeTextEditor?.document;
-
             if(document === undefined) {
                 NEURO.client?.sendActionResult(actionData.id, true, 'No active document to place the cursor in');
+                return;
+            }
+            if(!isPathNeuroSafe(document.fileName)) {
+                NEURO.client?.sendActionResult(actionData.id, true, 'You do not have permission to access this file');
                 return;
             }
             if(line >= document.lineCount) {
@@ -238,6 +241,10 @@ export function registerUnsupervisedHandlers() {
                 NEURO.client?.sendActionResult(actionData.id, true, 'No active document to get the cursor position from');
                 return;
             }
+            if(!isPathNeuroSafe(document.fileName)) {
+                NEURO.client?.sendActionResult(actionData.id, true, 'You do not have permission to access this file');
+                return;
+            }
             
             const cursorContext = getPositionContext(document, vscode.window.activeTextEditor!.selection.active);
             const line = vscode.window.activeTextEditor!.selection.active.line;
@@ -261,6 +268,10 @@ export function registerUnsupervisedHandlers() {
             const document = vscode.window.activeTextEditor?.document;
             if(document === undefined) {
                 NEURO.client?.sendActionResult(actionData.id, true, 'No active document to insert text into');
+                return;
+            }
+            if(!isPathNeuroSafe(document.fileName)) {
+                NEURO.client?.sendActionResult(actionData.id, true, 'You do not have permission to access this file');
                 return;
             }
 
@@ -300,6 +311,10 @@ export function registerUnsupervisedHandlers() {
                 NEURO.client?.sendActionResult(actionData.id, true, 'No active document to replace text in');
                 return;
             }
+            if(!isPathNeuroSafe(document.fileName)) {
+                NEURO.client?.sendActionResult(actionData.id, true, 'You do not have permission to access this file');
+                return;
+            }
 
             const oldStart = document.getText().indexOf(oldText);
             if(oldStart === -1) {
@@ -330,6 +345,10 @@ export function registerUnsupervisedHandlers() {
             const document = vscode.window.activeTextEditor?.document;
             if(document === undefined) {
                 NEURO.client?.sendActionResult(actionData.id, true, 'No active document to delete text from');
+                return;
+            }
+            if(!isPathNeuroSafe(document.fileName)) {
+                NEURO.client?.sendActionResult(actionData.id, true, 'You do not have permission to access this file');
                 return;
             }
 
@@ -383,6 +402,10 @@ export function registerUnsupervisedHandlers() {
             const document = vscode.window.activeTextEditor?.document;
             if(document === undefined) {
                 NEURO.client?.sendActionResult(actionData.id, true, 'No active document to place the cursor in');
+                return;
+            }
+            if(!isPathNeuroSafe(document.fileName)) {
+                NEURO.client?.sendActionResult(actionData.id, true, 'You do not have permission to access this file');
                 return;
             }
 
@@ -473,7 +496,7 @@ export function reloadTasks() {
             // Only allow tasks whose details start with '[Neuro]'
             if(task.detail?.toLowerCase().startsWith('[neuro]')) {
                 const detail = task.detail?.substring(7).trim();
-                logOutput('INFO', `Found task: ${task.name}`);
+                logOutput('INFO', `Adding Neuro task: ${task.name}`);
                 NEURO.tasks.push({
                     id: formatActionID(task.name),
                     description: detail.length > 0 ? detail : task.name,
@@ -482,7 +505,6 @@ export function reloadTasks() {
             }
             else {
                 logOutput('INFO', `Ignoring task: ${task.name}`);
-                logOutput('DEBUG', `Task scope: ${task.scope}`);
             }
         }
 
@@ -502,14 +524,13 @@ export function reloadTasks() {
 export function taskEndedHandler(event: vscode.TaskEndEvent) {
     if(NEURO.connected && NEURO.client !== null && NEURO.currentTaskExecution !== null) {
         if(event.execution === NEURO.currentTaskExecution) {
-            logOutput('INFO', 'Task finished');
-            NEURO.client.sendContext('Task finished');
+            logOutput('INFO', 'Neuro task finished');
             NEURO.currentTaskExecution = null;
             vscode.commands.executeCommand('workbench.action.terminal.copyLastCommandOutput')
                 .then(
-                    ok => vscode.env.clipboard.readText()
+                    _ => vscode.env.clipboard.readText()
                 ).then(
-                    text => NEURO.client?.sendContext(text)
+                    text => NEURO.client?.sendContext(`Task finished! Output:\n\n\`\`\`${text}\n\`\`\``)
                 );
         }
     }

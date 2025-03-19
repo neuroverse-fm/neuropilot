@@ -6,7 +6,7 @@
             "type": "shell",
             "command": "node ${file}",
             "problemMatcher": [],
-            "detail": "[Neuro]"
+            "detail": "[Neuro] Run the current JavaScript file using Node.js"
         }
     ]
 }
