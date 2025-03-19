@@ -8,4 +8,8 @@ const formattedGreeting = greetingFormat
     .replace('%s', greeting)
     .replace('%s', greetingTarget);
 
-console.log(formattedGreeting); // Hello, World!
+setTimeout(() => {
+    console.log(formattedGreeting); // Hello, World!
+}, 1000);
+
+// console.log(formattedGreeting); // Hello, World!
