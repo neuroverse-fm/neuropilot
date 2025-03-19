@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 
 import { NEURO } from "./constants";
-import { formatActionID, getPositionContext, isPathNeuroSafe, logOutput } from './utils';
+import { formatActionID, getPositionContext, getWorkspacePath, isPathNeuroSafe, logOutput, normalizePath } from './utils';
 
 /**
  * Register unsupervised actions with the Neuro API.
@@ -11,7 +11,7 @@ export function registerUnsupervisedActions() {
     // Unregister all actions first
     NEURO.client?.unregisterActions([
         'get_files',
-        'change_file',
+        'open_file',
         'find_in_workspace',
         'place_cursor',
         'get_cursor',
@@ -19,27 +19,30 @@ export function registerUnsupervisedActions() {
         'replace_text',
         'delete_text',
         'place_cursor_at_text',
-        'change_file',
         'create_file',
         'create_folder',
-        'rename_file',
-        'rename_folder',
-        'delete_file',
-        'delete_folder',
+        'rename_file_or_folder',
+        'delete_file_or_folder',
         'terminate_task',
         ...NEURO.tasks.map(task => task.id) // Just in case
-    ])
+    ]);
 
-    /*
-    if(vscode.workspace.getConfiguration('neuropilot').get('permissionToChangeFile', false)) {
+    if(vscode.workspace.getConfiguration('neuropilot').get('permissionToOpenFile', false)) {
         NEURO.client?.registerActions([
             {
                 name: 'get_files',
                 description: 'Get a list of files in the workspace',
             },
             {
-                name: 'change_file',
-                description: 'Change the current file',
+                name: 'open_file',
+                description: 'Open a file in the workspace',
+                schema: {
+                    type: 'object',
+                    properties: {
+                        path: { type: 'string' },
+                    },
+                    required: ['path'],
+                }
             },
             {
                 name: 'find_in_workspace',
@@ -47,7 +50,6 @@ export function registerUnsupervisedActions() {
             }
         ]);
     }
-    */
     if(vscode.workspace.getConfiguration('neuropilot').get('permissionToEditFile', false)) {
         NEURO.client?.registerActions([
             {
@@ -115,14 +117,6 @@ export function registerUnsupervisedActions() {
         ]);
     }
     /*
-    if(vscode.workspace.getConfiguration('neuropilot').get('permissionToChangeFile', false)) {
-        NEURO.client?.registerActions([
-            {
-                name: 'change_file',
-                description: 'Open a file in the workspace',
-            },
-        ]);
-    }
     if(vscode.workspace.getConfiguration('neuropilot').get('permissionToCreate', false)) {
         NEURO.client?.registerActions([
             {
@@ -138,24 +132,16 @@ export function registerUnsupervisedActions() {
     if(vscode.workspace.getConfiguration('neuropilot').get('permissionToRename', false)) {
         NEURO.client?.registerActions([
             {
-                name: 'rename_file',
+                name: 'rename_file_or_folder',
                 description: 'Rename a file',
-            },
-            {
-                name: 'rename_folder',
-                description: 'Rename a folder',
             },
         ]);
     }
     if(vscode.workspace.getConfiguration('neuropilot').get('permissionToDelete', false)) {
         NEURO.client?.registerActions([
             {
-                name: 'delete_file',
+                name: 'delete_file_or_folder',
                 description: 'Delete a file',
-            },
-            {
-                name: 'delete_folder',
-                description: 'Delete a folder',
             },
         ]);
     }
@@ -177,17 +163,48 @@ export function registerUnsupervisedActions() {
  */
 export function registerUnsupervisedHandlers() {
     NEURO.client?.onAction((actionData) => {
-        /*
         if(actionData.name === 'get_files') {
-            
+            // TODO: Implement
+            NEURO.client?.sendActionResult(actionData.id, true, 'Not implemented yet');
+            return;
         }
-        else if(actionData.name === 'change_file') {
-            
+        else if(actionData.name === 'open_file') {
+            if(!vscode.workspace.getConfiguration('neuropilot').get('permissionToOpenFile', false)) {
+                logOutput('WARNING', 'Neuro attempted to open a file, but permission is disabled');
+                NEURO.client?.sendActionResult(actionData.id, true, 'You do not have edit permissions.');
+                return;
+            }
+
+            const relativePath = actionData.params?.path;
+            if(relativePath === undefined) {
+                NEURO.client?.sendActionResult(actionData.id, false, 'Missing required parameter "fileName"');
+                return;
+            }
+
+            const uri = vscode.Uri.file(getWorkspacePath() + '/' + normalizePath(relativePath));
+            if(!isPathNeuroSafe(uri.fsPath)) {
+                NEURO.client?.sendActionResult(actionData.id, true, 'You do not have permission to access this file');
+                return;
+            }
+
+            vscode.workspace.openTextDocument(uri).then(
+                (document) => {
+                    vscode.window.showTextDocument(document);
+                    logOutput('INFO', `Opened file ${relativePath}`);
+                    NEURO.client?.sendActionResult(actionData.id, true, `Opened file ${relativePath}\n\nContent:\n\n\`\`\`${document.languageId}\n${document.getText()}\n\`\`\``);
+                },
+                (_) => {
+                    logOutput('ERROR', `Failed to open file ${relativePath}`);
+                    NEURO.client?.sendActionResult(actionData.id, true, `Failed to open file ${relativePath}`);
+                }
+            );
         }
         else if(actionData.name === 'find_in_workspace') {
-            
+            // TODO: Implement
+            NEURO.client?.sendActionResult(actionData.id, true, 'Not implemented yet');
+            return;
         }
-        else*/ if(actionData.name === 'place_cursor') {
+        else if(actionData.name === 'place_cursor') {
             if(!vscode.workspace.getConfiguration('neuropilot').get('permissionToEditFile', false)) {
                 logOutput('WARNING', 'Neuro attempted to place the cursor, but permission is disabled');
                 NEURO.client?.sendActionResult(actionData.id, true, 'You do not have edit permissions.');
@@ -424,18 +441,20 @@ export function registerUnsupervisedHandlers() {
             logOutput('INFO', `Placed cursor at text ${position} the first occurrence`);
             NEURO.client?.sendActionResult(actionData.id, true, `Cursor placed at text ${position} the first occurrence (line ${line}, character ${character})\n\nContext before:\n\n\`\`\`\n${cursorContext.contextBefore}\n\`\`\`\n\nContext after:\n\n\`\`\`\n${cursorContext.contextAfter}\n\`\`\``);
         }
-        /*else if(actionData.name === 'change_file') {
-
-        }
+        /*
         else if(actionData.name === 'create_file') {
 
         }
-        else if(actionData.name === 'rename_file') {
+        else if(actionData.name === 'create_folder') {
 
         }
-        else if(actionData.name === 'delete_file') {
+        else if(actionData.name === 'rename_file_or_folder') {
 
-        }*/
+        }
+        else if(actionData.name === 'delete_file_or_folder') {
+
+        }
+        */
         else if(actionData.name === 'terminate_task') {
             if(!vscode.workspace.getConfiguration('neuropilot').get('permissionToRunTasks', false)) {
                 logOutput('WARNING', 'Neuro attempted to terminate a task, but permission is disabled');
@@ -460,12 +479,19 @@ export function registerUnsupervisedHandlers() {
                 return;
             }
 
+            if(NEURO.currentTaskExecution !== null) {
+                logOutput('INFO', 'A task is already running');
+                NEURO.client?.sendActionResult(actionData.id, true, 'A task is already running');
+                return;
+            }
+
             const task = NEURO.tasks.find(task => task.id === actionData.name);
             if(task === undefined) {
                 logOutput('ERROR', `Task ${actionData.name} not found`);
                 NEURO.client?.sendActionResult(actionData.id, false, `Task ${actionData.name} not found`);
                 return;
             }
+
             try {
                 vscode.tasks.executeTask(task.task).then(value => {
                     logOutput('INFO', `Executing task ${task.id}`);

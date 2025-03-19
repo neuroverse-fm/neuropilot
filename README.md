@@ -54,6 +54,15 @@ You can configure the extension using the extension settings.
 For example, you can set how many lines of code will be provided as context before and after the current line.
 You can also set it to trigger a completion every time you stop typing (this is fine for the tools above, but might be a problem for Neuro since it sends and cancels requests in quick succession, which is why it's disabled by default).
 
+## Security
+
+The extension has multiple security measures in place to prevent Neuro from doing any real damage.
+As said earlier, Neuro can only run tasks that have the string `[Neuro]` at the start of their `detail` property to control what tasks Neuro can run.
+
+Neuro cannot open, edit, or otherwise access files or folders that start with a dot (`.`), or files in such folders.
+This is mainly to prevent her from opening `.vscode/tasks.json` to essentially run arbitrary commands in the terminal.
+**Warning: If your workspace is inside such a folder, Neuro will not be able to edit *any* files!**
+
 ## Commands
 
 ### Give Cookie
@@ -68,6 +77,89 @@ Shows a notification when it succeeds or fails.
 ### Send File As Context
 
 Sends the entire current file as context to Neuro, along with the file name and configured language.
+
+## Actions
+
+Neuro has access to the following actions.
+Tasks that Neuro can run are registered as additional actions.
+Neuro can only run one task at a time.
+
+### `get_files`
+
+*Requires permission to open file.*
+Gets a list of files in the workspace.
+The files are returned as paths relative to the workspace root.
+
+### `open_file`
+
+*Requires permission to open file.*
+Opens a file inside the workspace (or focuses it if it is already open) and sends its contents to Neuro.
+
+### `find_in_workspace`
+
+*Requires permission to open file.*
+Searches all files in the workspace for the given text, and returns a list of files that contain that text with a line and character number.
+
+### `place_cursor`
+
+*Requires permission to edit file.*
+Places the cursor at the specified line and character (zero-based).
+
+### `get_cursor`
+
+*Requires permission to edit file.*
+Returns the current cursor position, as well as the lines before and after the cursor.
+The number of lines returned can be controlled with the settings `neuropilot.beforeContext` and `neuropilot.afterContext`.
+
+### `insert_text`
+
+*Requires permission to edit file.*
+Inserts text at the current cursor position and places the cursor after the inserted text.
+
+### `replace_text`
+
+*Requires permission to edit file.*
+Replaces the first occurence of the specified text with new text and places the cursor after the inserted text.
+
+### `delete_text`
+
+*Requires permission to edit file.*
+Deletes the first occurence of the specified text and places the cursor where the text was.
+
+### `place_cursor_at_text`
+
+*Requires permission to edit file.*
+Places the cursor before or after the first occurence of the specified text.
+
+### `create_file`
+
+*Requires permission to create.*
+Creates a new file in the workspace.
+If *permission to open file* is given, the file is immediately opened.
+The file name cannot start with a dot, and cannot be created in a folder that starts with a dot.
+
+### `create_folder`
+
+*Requires permission to create.*
+Creates a new folder in the workspace.
+A folder starting with a dot cannot be created this way.
+
+### `rename_file_or_folder`
+
+*Requires permission to rename.*
+Renames a file or folder in the workspace.
+This cannot rename to or from a name starting with a dot, or within a folder that starts with a dot.
+
+### `delete_file_or_folder`
+
+*Requires permission to delete.*
+Deletes a file or folder in the workspace.
+This cannot delete anything starting with a dot, or inside a folder starting with a dot.
+
+### `terminate_task`
+
+*Requires permission to run tasks.*
+Terminates the currently running task that was started using a task action.
 
 ## Further Info
 

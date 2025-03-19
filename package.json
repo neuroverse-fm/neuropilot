@@ -103,10 +103,10 @@
 						"default": 10000,
 						"description": "The timeout in milliseconds for completions and chat responses in ms"
 					},
-					"neuropilot.permissionToChangeFile": {
+					"neuropilot.permissionToOpenFile": {
 						"type": "boolean",
 						"default": false,
-						"markdownDescription": "Let Neuro switch the active file. For security reasons, Neuro cannot open anything in folders that start with a dot (`.git`, `.vscode`, ...).\n\nRequires reloading permissions if changed."
+						"markdownDescription": "Let Neuro open files in the workspace. For security reasons, Neuro cannot open anything that starts with a dot or has a parent folder that starts with a dot (e.g. `.git`, `.vscode`, ...).\n\nRequires reloading permissions if changed."
 					},
 					"neuropilot.permissionToEditFile": {
 						"type": "boolean",

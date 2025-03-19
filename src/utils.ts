@@ -112,13 +112,18 @@ export function formatActionID(name: string): string {
         .toLowerCase();
 }
 
+export function normalizePath(path: string): string {
+    return path.replace(/\\/g, '/');
+}
+
 /**
  * Gets the path to the first workspace folder.
  * The path is normalized to use forward slashes.
  * @returns The path to the workspace folder, or undefined if the workspace is not open.
  */
 export function getWorkspacePath(): string | undefined {
-    return vscode.workspace.workspaceFolders?.[0].uri.fsPath.replace(/\\/g, '/');
+    const path = vscode.workspace.workspaceFolders?.[0].uri.fsPath;
+    return path ? normalizePath(path) : undefined;
 }
 
 /**
@@ -130,7 +135,7 @@ export function getWorkspacePath(): string | undefined {
  */
 export function isPathNeuroSafe(path: string): boolean {
     const rootFolder = getWorkspacePath();
-    const normalizedPath = path.replace(/\\/g, '/');
+    const normalizedPath = normalizePath(path);
     return rootFolder !== undefined
         && normalizedPath !== rootFolder            // Prevent access to the workspace folder itself
         && normalizedPath.startsWith(rootFolder)    // Prevent access to paths outside the workspace
