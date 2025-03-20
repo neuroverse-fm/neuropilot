@@ -141,7 +141,15 @@ export function registerUnsupervisedActions() {
         NEURO.client?.registerActions([
             {
                 name: 'rename_file_or_folder',
-                description: 'Rename a file',
+                description: 'Rename a file or folder. Specify the full relative path for both the old and new names.',
+                schema: {
+                    type: 'object',
+                    properties: {
+                        oldPath: { type: 'string' },
+                        newPath: { type: 'string' },
+                    },
+                    required: ['oldPath', 'newPath'],
+                }
             },
         ]);
     }
@@ -149,7 +157,15 @@ export function registerUnsupervisedActions() {
         NEURO.client?.registerActions([
             {
                 name: 'delete_file_or_folder',
-                description: 'Delete a file',
+                description: 'Delete a file or folder. If you want to delete a folder, set the "recursive" parameter to true.',
+                schema: {
+                    type: 'object',
+                    properties: {
+                        pathToDelete: { type: 'string' },
+                        recursive: { type: 'boolean' },
+                    },
+                    required: ['pathToDelete'],
+                }
             },
         ]);
     }
@@ -412,8 +428,9 @@ function handleGetCursor(actionData: any) {
     const cursorContext = getPositionContext(document, vscode.window.activeTextEditor!.selection.active);
     const line = vscode.window.activeTextEditor!.selection.active.line;
     const character = vscode.window.activeTextEditor!.selection.active.character;
+    const relativePath = vscode.workspace.asRelativePath(document.uri);
     logOutput('INFO', `Sending cursor position to Neuro`);
-    NEURO.client?.sendActionResult(actionData.id, true, `Cursor is at line ${line}, character ${character}\n\nContext before:\n\n\`\`\`\n${cursorContext.contextBefore}\n\`\`\`\n\nContext after:\n\n\`\`\`\n${cursorContext.contextAfter}\n\`\`\``);
+    NEURO.client?.sendActionResult(actionData.id, true, `In file ${relativePath}\n\nCursor is at line ${line}, character ${character}\n\nContext before:\n\n\`\`\`\n${cursorContext.contextBefore}\n\`\`\`\n\nContext after:\n\n\`\`\`\n${cursorContext.contextAfter}\n\`\`\``);
 }
 
 function handleInsertText(actionData: any) {
@@ -495,6 +512,7 @@ function handleReplaceText(actionData: any) {
     vscode.workspace.applyEdit(edit).then(success => {
         if(success) {
             logOutput('INFO', `Replacing text in document`);
+            vscode.window.activeTextEditor!.selection = new vscode.Selection(document.positionAt(oldStart + newText.length), document.positionAt(oldStart + newText.length));
         }
         else {
             logOutput('ERROR', 'Failed to apply text replacement edit');
@@ -539,6 +557,7 @@ function handleDeleteText(actionData: any) {
     vscode.workspace.applyEdit(edit).then(success => {
         if(success) {
             logOutput('INFO', `Deleting text from document`);
+            vscode.window.activeTextEditor!.selection = new vscode.Selection(document.positionAt(textStart), document.positionAt(textStart));
         }
         else {
             logOutput('ERROR', 'Failed to apply text deletion edit');
@@ -702,7 +721,7 @@ function handleCreateFolder(actionData: any) {
         return;
     }
 
-    const relativePath = normalizePath(relativePathParam).replace(/^\/|\/$/, '');
+    const relativePath = normalizePath(relativePathParam).replace(/^\/|\/$/g, '');
     const absolutePath = getWorkspacePath() + '/' + relativePath;
     if(!isPathNeuroSafe(absolutePath)) {
         NEURO.client?.sendActionResult(actionData.id, true, 'You do not have permission to create a folder at this location');
@@ -740,15 +759,125 @@ function handleCreateFolder(actionData: any) {
 }
 
 function handleRenameFileOrFolder(actionData: any) {
-    // TODO: Implement
-    NEURO.client?.sendActionResult(actionData.id, true, 'Not implemented yet');
+    if(!vscode.workspace.getConfiguration('neuropilot').get('permission.rename', false)) {
+        logOutput('WARNING', 'Neuro attempted to rename a file or folder, but permission is disabled');
+        NEURO.client?.sendActionResult(actionData.id, true, 'You do not have rename permissions.');
+        return;
+    }
+
+    const oldRelativePathParam = actionData.params?.oldPath;
+    const newRelativePathParam = actionData.params?.newPath;
+    if(oldRelativePathParam === undefined) {
+        NEURO.client?.sendActionResult(actionData.id, false, 'Missing required parameter "oldPath"');
+        return;
+    }
+    if(newRelativePathParam === undefined) {
+        NEURO.client?.sendActionResult(actionData.id, false, 'Missing required parameter "newPath"');
+        return;
+    }
+
+    const oldRelativePath = normalizePath(oldRelativePathParam).replace(/^\/|\/$/g, '');
+    const newRelativePath = normalizePath(newRelativePathParam).replace(/^\/|\/$/g, '');
+    const oldAbsolutePath = getWorkspacePath() + '/' + oldRelativePath;
+    const newAbsolutePath = getWorkspacePath() + '/' + newRelativePath;
+    if(!isPathNeuroSafe(oldAbsolutePath)) {
+        NEURO.client?.sendActionResult(actionData.id, true, 'You do not have permission to rename this element');
+        return;
+    }
+    if(!isPathNeuroSafe(newAbsolutePath)) {
+        NEURO.client?.sendActionResult(actionData.id, true, 'You do not have permission to rename the element to this name');
+        return;
+    }
+
+    NEURO.client?.sendActionResult(actionData.id, true);
+
+    checkAndRenameAsync(oldAbsolutePath, oldRelativePath, newAbsolutePath, newRelativePath);
     return;
+
+    // Function to avoid pyramid of doom
+    async function checkAndRenameAsync(oldAbsolutePath: string, oldRelativePath: string, newAbsolutePath: string, newRelativePath: string) {
+        const oldUri = vscode.Uri.file(oldAbsolutePath);
+        const newUri = vscode.Uri.file(newAbsolutePath);
+
+        // Check if the new path already exists
+        try {
+            await vscode.workspace.fs.stat(newUri);
+            // If no error is thrown, the new path already exists
+            NEURO.client?.sendContext(`Could not rename: ${newRelativePath} already exists`);
+            return;
+        } catch { } // New path does not exist, continue
+
+        // Rename the file/folder
+        try {
+            await vscode.workspace.fs.rename(oldUri, newUri);
+        } catch {
+            logOutput('ERROR', `Failed to rename ${oldRelativePath} to ${newRelativePath}`);
+            NEURO.client?.sendContext(`Failed to rename ${oldRelativePath} to ${newRelativePath}`);
+            return;
+        }
+
+        logOutput('INFO', `Renamed ${oldRelativePath} to ${newRelativePath}`);
+        NEURO.client?.sendContext(`Renamed ${oldRelativePath} to ${newRelativePath}`);
+    }
 }
 
 function handleDeleteFileOrFolder(actionData: any) {
-    // TODO: Implement
-    NEURO.client?.sendActionResult(actionData.id, true, 'Not implemented yet');
+    if(!vscode.workspace.getConfiguration('neuropilot').get('permission.delete', false)) {
+        logOutput('WARNING', 'Neuro attempted to delete a file or folder, but permission is disabled');
+        NEURO.client?.sendActionResult(actionData.id, true, 'You do not have delete permissions.');
+        return;
+    }
+
+    const relativePathParam = actionData.params?.pathToDelete;
+    const recursive = actionData.params?.recursive ?? false;
+    if(relativePathParam === undefined) {
+        NEURO.client?.sendActionResult(actionData.id, false, 'Missing required parameter "pathToDelete"');
+        return;
+    }
+
+    const relativePath = normalizePath(relativePathParam).replace(/^\/|\/$/g, '');
+    const absolutePath = getWorkspacePath() + '/' + relativePath;
+    if(!isPathNeuroSafe(absolutePath)) {
+        NEURO.client?.sendActionResult(actionData.id, true, 'You do not have permission to delete this element');
+        return;
+    }
+
+    NEURO.client?.sendActionResult(actionData.id, true);
+
+    checkAndDeleteAsync(absolutePath, relativePath, recursive);
     return;
+
+    // Function to avoid pyramid of doom
+    async function checkAndDeleteAsync(absolutePath: string, relativePath: string, recursive: boolean) {
+        const uri = vscode.Uri.file(absolutePath);
+        let stat: vscode.FileStat;
+
+        // Check if the path exists
+        try {
+            stat = await vscode.workspace.fs.stat(uri);
+        } catch {
+            NEURO.client?.sendContext(`Could not delete: ${relativePath} does not exist`);
+            return;
+        }
+
+        // Check for correct recursive parameter
+        if(stat.type === vscode.FileType.Directory && !recursive) {
+            NEURO.client?.sendContext(`Could not delete: ${relativePath} is a directory cannot be deleted without the "recursive" parameter`);
+            return;
+        }
+
+        // Delete the file/folder
+        try {
+            await vscode.workspace.fs.delete(uri, { recursive: recursive, useTrash: true });
+        } catch {
+            logOutput('ERROR', `Failed to delete ${relativePath}`);
+            NEURO.client?.sendContext(`Failed to delete ${relativePath}`);
+            return;
+        }
+
+        logOutput('INFO', `Deleted ${relativePath}`);
+        NEURO.client?.sendContext(`Deleted ${relativePath}`);
+    }
 }
 
 function handleTerminateTask(actionData: any) {
