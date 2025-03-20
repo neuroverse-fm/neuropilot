@@ -96,7 +96,8 @@
 					"neuropilot.initialContext": {
 						"type": "string",
 						"default": "You are using an extension in Visual Studio Code that allows you to code together with Vedal.",
-						"description": "The initial context to sent to Neuro-sama"
+						"description": "The initial context to sent to Neuro-sama",
+						"editPresentation": "multilineText"
 					},
 					"neuropilot.timeout": {
 						"type": "integer",
