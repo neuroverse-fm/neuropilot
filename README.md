@@ -14,8 +14,8 @@ This extension **will**:
 If you enable it, this extension **can**:
 
 - let Neuro edit the current file.
-- let Neuro read and open files in the workspace (planned feature).
-- let Neuro create, rename and delete files in the workspace (planned feature).
+- let Neuro read and open files in the workspace.
+- let Neuro create, rename and delete files in the workspace.
 - let Neuro run pre-defined tasks.
 
 This extension **will not**:
@@ -73,6 +73,10 @@ Gives a cookie to Neuro.
 
 Attempts to reconnect to the API.
 Shows a notification when it succeeds or fails.
+
+### Reload permissions
+
+Reregisters all actions according to the permissions.
 
 ### Send File As Context
 
