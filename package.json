@@ -58,7 +58,7 @@
 					"neuropilot.websocketUrl": {
 						"type": "string",
 						"default": "ws://localhost:8000",
-						"description": "The URL to use for completions"
+						"description": "The URL to connect to the Neuro API"
 					},
 					"neuropilot.gameName": {
 						"type": "string",

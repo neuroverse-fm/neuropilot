@@ -12,7 +12,6 @@ export function registerUnsupervisedActions() {
     NEURO.client?.unregisterActions([
         'get_files',
         'open_file',
-        'find_in_workspace',
         'place_cursor',
         'get_cursor',
         'insert_text',
@@ -44,10 +43,6 @@ export function registerUnsupervisedActions() {
                     required: ['path'],
                 }
             },
-            {
-                name: 'find_in_workspace',
-                description: 'Search all files in the workspace for a specific string',
-            }
         ]);
     }
     if(vscode.workspace.getConfiguration('neuropilot').get('permission.editActiveDocument', false)) {
@@ -120,11 +115,25 @@ export function registerUnsupervisedActions() {
         NEURO.client?.registerActions([
             {
                 name: 'create_file',
-                description: 'Create a new file',
+                description: 'Create a new file at the specified path. The path should include the name of the new file.',
+                schema: {
+                    type: 'object',
+                    properties: {
+                        filePath: { type: 'string' },
+                    },
+                    required: ['filePath'],
+                }
             },
             {
                 name: 'create_folder',
-                description: 'Create a new folder',
+                description: 'Create a new folder at the specified path. The path should include the name of the new folder.',
+                schema: {
+                    type: 'object',
+                    properties: {
+                        folderPath: { type: 'string' },
+                    },
+                    required: ['folderPath'],
+                }
             },
         ]);
     }
@@ -168,9 +177,6 @@ export function registerUnsupervisedHandlers() {
                 break;
             case 'open_file':
                 handleOpenFile(actionData);
-                break;
-            case 'find_in_workspace':
-                handleFindInWorkspace(actionData);
                 break;
             case 'place_cursor':
                 handlePlaceCursor(actionData);
@@ -289,7 +295,21 @@ function handleGetFiles(actionData: any) {
         (uris) => {
             const paths = uris
                 .filter(uri => isPathNeuroSafe(uri.fsPath, false))
-                .map(uri => vscode.workspace.asRelativePath(uri));
+                .map(uri => vscode.workspace.asRelativePath(uri))
+                .sort((a, b) => {
+                    const aParts = a.split('/');
+                    const bParts = b.split('/');
+
+                    for(let i = 0; i < Math.min(aParts.length, bParts.length); i++) {
+                        if(aParts[i] !== bParts[i]) {
+                            if(aParts.length === i + 1) return -1;
+                            if(bParts.length === i + 1) return 1;
+                            return aParts[i].localeCompare(bParts[i]);
+                        }
+                    }
+                    return aParts.length - bParts.length;
+                });
+            logOutput('INFO', `Sending list of files in workspace to Neuro`);
             NEURO.client?.sendContext(`Files in workspace:\n\n${paths.join('\n')}`);
         }
     )
@@ -327,12 +347,6 @@ function handleOpenFile(actionData: any) {
             NEURO.client?.sendContext(`Failed to open file ${relativePath}`);
         }
     );
-}
-
-function handleFindInWorkspace(actionData: any) {
-    // TODO: Implement
-    NEURO.client?.sendActionResult(actionData.id, true, 'Not implemented yet');
-    return;
 }
 
 function handlePlaceCursor(actionData: any) {
@@ -582,15 +596,147 @@ function handlePlaceCursorAtText(actionData: any) {
 }
 
 function handleCreateFile(actionData: any) {
-    // TODO: Implement
-    NEURO.client?.sendActionResult(actionData.id, true, 'Not implemented yet');
+    if(!vscode.workspace.getConfiguration('neuropilot').get('permission.create', false)) {
+        logOutput('WARNING', 'Neuro attempted to create a file, but permission is disabled');
+        NEURO.client?.sendActionResult(actionData.id, true, 'You do not have file creation permissions.');
+        return;
+    }
+
+    const relativePathParam = actionData.params?.filePath;
+    if(relativePathParam === undefined) {
+        NEURO.client?.sendActionResult(actionData.id, false, 'Missing required parameter "filePath"');
+        return;
+    }
+
+    const relativePath = normalizePath(relativePathParam).replace(/^\//, '');
+    const absolutePath = getWorkspacePath() + '/' + relativePath;
+    if(!isPathNeuroSafe(absolutePath)) {
+        NEURO.client?.sendActionResult(actionData.id, true, 'You do not have permission to create a file at this location');
+        return;
+    }
+
+    NEURO.client?.sendActionResult(actionData.id, true);
+
+    checkAndOpenFileAsync(absolutePath, relativePath);
     return;
+
+    // Function to avoid pyramid of doom
+    async function checkAndOpenFileAsync(absolutePath: string, relativePath: string) {
+        const fileUri = vscode.Uri.file(absolutePath);
+
+        // Check if the file already exists
+        try {
+            await vscode.workspace.fs.stat(fileUri);
+            // If no error is thrown, the file already exists
+            NEURO.client?.sendContext(`Could not create file: File ${relativePath} already exists`);
+            return;
+        } catch { } // File does not exist, continue
+
+        // Create the file
+        try {
+            await vscode.workspace.fs.writeFile(fileUri, new Uint8Array(0));
+        } catch {
+            logOutput('ERROR', `Failed to create file ${relativePath}`);
+            NEURO.client?.sendContext(`Failed to create file ${relativePath}`);
+            return;
+        }
+
+        logOutput('INFO', `Created file ${relativePath}`);
+        NEURO.client?.sendContext(`Created file ${relativePath}`);
+
+        // Open the file if Neuro has permission to do so
+        if(!vscode.workspace.getConfiguration('neuropilot').get('permission.openFiles', false))
+            return;
+
+        try {
+            const document = await vscode.workspace.openTextDocument(fileUri);
+            const editor = await vscode.window.showTextDocument(document);
+            const cursor = editor.selection.active;
+            NEURO.client?.sendContext(`Opened file ${relativePath}\n\nContent:\n\n\`\`\`${document.languageId}\n${document.getText()}\n\`\`\`\n\nCursor at (${cursor.line}:${cursor.character})`);
+        } catch {
+            logOutput('ERROR', `Failed to open file ${relativePath}`);
+            NEURO.client?.sendContext(`Failed to open file ${relativePath}`);
+        }
+    }
+    // vscode.workspace.fs.stat(vscode.Uri.file(getWorkspacePath() + '/' + normalizePath(filePath))).then(
+    //     (_) => {
+    //         NEURO.client?.sendContext(`Could not create file: File ${filePath} already exists`);
+    //     },
+    //     (_erm) => {
+    //         vscode.workspace.fs.writeFile(vscode.Uri.file(normalizedPath), new Uint8Array(0)).then(
+    //             (_) => {
+    //                 logOutput('INFO', `Created file ${filePath}`);
+    //                 NEURO.client?.sendContext(`Created file ${filePath}`);
+
+    //                 if(vscode.workspace.getConfiguration('neuropilot').get('permission.openFiles', false)) {
+    //                     vscode.workspace.openTextDocument(vscode.Uri.file(getWorkspacePath() + '/' + normalizePath(filePath))).then(
+    //                         (document) => {
+    //                             vscode.window.showTextDocument(document).then((_) => {
+    //                                 logOutput('INFO', `Opened file ${filePath}`);
+    //                                 const cursor = vscode.window.activeTextEditor!.selection
+    //                                 NEURO.client?.sendContext(`Opened file ${filePath}\n\nContent:\n\n\`\`\`${document.languageId}\n${document.getText()}\n\`\`\``);
+    //                             })
+    //                         }
+    //                     );
+    //                 }
+    //             },
+    //             (_erm) => {
+    //                 logOutput('ERROR', `Failed to create file ${filePath}`);
+    //                 NEURO.client?.sendContext(`Failed to create file ${filePath}`);
+    //             }
+    //         );
+    //     }
+    // );
 }
 
 function handleCreateFolder(actionData: any) {
-    // TODO: Implement
-    NEURO.client?.sendActionResult(actionData.id, true, 'Not implemented yet');
+    if(!vscode.workspace.getConfiguration('neuropilot').get('permission.create', false)) {
+        logOutput('WARNING', 'Neuro attempted to create a folder, but permission is disabled');
+        NEURO.client?.sendActionResult(actionData.id, true, 'You do not have folder creation permissions.');
+        return;
+    }
+
+    const relativePathParam = actionData.params?.folderPath;
+    if(relativePathParam === undefined) {
+        NEURO.client?.sendActionResult(actionData.id, false, 'Missing required parameter "folderPath"');
+        return;
+    }
+
+    const relativePath = normalizePath(relativePathParam).replace(/^\/|\/$/, '');
+    const absolutePath = getWorkspacePath() + '/' + relativePath;
+    if(!isPathNeuroSafe(absolutePath)) {
+        NEURO.client?.sendActionResult(actionData.id, true, 'You do not have permission to create a folder at this location');
+        return;
+    }
+
+    NEURO.client?.sendActionResult(actionData.id, true);
+    checkAndCreateFolderAsync(absolutePath, relativePath);
     return;
+
+    // Function to avoid pyramid of doom
+    async function checkAndCreateFolderAsync(absolutePath: string, relativePath: string) {
+        const folderUri = vscode.Uri.file(absolutePath);
+
+        // Check if the folder already exists
+        try {
+            await vscode.workspace.fs.stat(folderUri);
+            // If no error is thrown, the folder already exists
+            NEURO.client?.sendContext(`Could not create folder: Folder ${relativePath} already exists`);
+            return;
+        } catch { } // Folder does not exist, continue
+
+        // Create the folder
+        try {
+            await vscode.workspace.fs.createDirectory(folderUri);
+        } catch {
+            logOutput('ERROR', `Failed to create folder ${relativePath}`);
+            NEURO.client?.sendContext(`Failed to create folder ${relativePath}`);
+            return;
+        }
+
+        logOutput('INFO', `Created folder ${relativePath}`);
+        NEURO.client?.sendContext(`Created folder ${relativePath}`);
+    }
 }
 
 function handleRenameFileOrFolder(actionData: any) {

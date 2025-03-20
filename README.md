@@ -95,11 +95,6 @@ The files are returned as paths relative to the workspace root.
 *Requires Permission: Open files.*
 Opens a file inside the workspace (or focuses it if it is already open) and sends its contents to Neuro.
 
-### `find_in_workspace`
-
-*Requires Permission: Open files.*
-Searches all files in the workspace for the given text, and returns a list of files that contain that text with a line and character number.
-
 ### `place_cursor`
 
 *Requires Permission: Edit Active Document.*

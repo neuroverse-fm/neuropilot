@@ -2,5 +2,7 @@
     "neuropilot.permission.editActiveDocument": true,
     "neuropilot.permission.openFiles": true,
     "neuropilot.permission.runTasks": true,
-    "neuropilot.includePattern": "**/*"
+    "neuropilot.permission.create": true,
+    "neuropilot.permission.delete": true,
+    "neuropilot.permission.rename": true
 }
