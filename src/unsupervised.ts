@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 
 import { NEURO } from "./constants";
 import { combineGlobLines, formatActionID, getPositionContext, getWorkspacePath, isPathNeuroSafe, logOutput, normalizePath } from './utils';
+import { handleGitAdd, handleGitCommit } from './git';
 
 /**
  * Register unsupervised actions with the Neuro API.
@@ -23,7 +24,33 @@ export function registerUnsupervisedActions() {
         'rename_file_or_folder',
         'delete_file_or_folder',
         'terminate_task',
+        'git_add',
+        'git_commit',
         ...NEURO.tasks.map(task => task.id) // Just in case
+    ]);
+
+    NEURO.client?.registerActions([
+        {
+            name: 'git_add',
+            description: 'Add a file to the staging area',
+            schema: {
+                type: 'object',
+                properties: {
+                    filePath: { type: 'string' },
+                },
+            }
+        },
+        {
+            name: 'git_commit',
+            description: 'Commit staged changes with a message',
+            schema: {
+                type: 'object',
+                properties: {
+                    message: { type: 'string' },
+                },
+            }
+        },
+        // Register other Git actions similarly...
     ]);
 
     if(vscode.workspace.getConfiguration('neuropilot').get('permission.openFiles', false)) {
@@ -227,6 +254,10 @@ export function registerUnsupervisedHandlers() {
             case 'terminate_task':
                 handleTerminateTask(actionData);
                 break;
+            case 'git_add':
+                handleGitAdd(actionData);
+            case 'git_commit':
+                handleGitCommit(actionData);
             default:
                 if(NEURO.tasks.some(task => task.id === actionData.name))
                     handleRunTask(actionData);

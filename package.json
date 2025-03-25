@@ -162,6 +162,9 @@
 		"watch": "tsc -watch -p ./",
 		"test": "vscode-test"
 	},
+	"extensionDependencies": [
+		"vscode.git"
+	],
 	"devDependencies": {
 		"@eslint/js": "^9.13.0",
 		"@stylistic/eslint-plugin": "^2.9.0",
