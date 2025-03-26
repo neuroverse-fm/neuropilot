@@ -256,8 +256,10 @@ export function registerUnsupervisedHandlers() {
                 break;
             case 'git_add':
                 handleGitAdd(actionData);
+                break;
             case 'git_commit':
                 handleGitCommit(actionData);
+                break;
             default:
                 if(NEURO.tasks.some(task => task.id === actionData.name))
                     handleRunTask(actionData);
