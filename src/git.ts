@@ -62,10 +62,12 @@ export function handleNewGitRepo(actionData: any) {
 
     const folderPath = workspaceFolders[0].uri.fsPath;
 
+    NEURO.client?.sendActionResult(actionData.id, true)
+    
     git.init(vscode.Uri.file(folderPath)).then(() => {
-        NEURO.client?.sendActionResult(actionData.id, true, `Initialized a new Git repository in the workspace folder: ${folderPath}.`);
+        NEURO.client?.context(`Initialized a new Git repository in the workspace folder`);
     }, (err: string) => {
-        NEURO.client?.sendActionResult(actionData.id, false, `Failed to initialize Git repository: ${err}`);
+        NEURO.client?.context(`Failed to initialize Git repository: ${err}`);
     });
 }
 
