@@ -128,5 +128,3 @@ export function handleGitCommit(actionData: any) {
         NEURO.client?.sendActionResult(actionData.id, false, `Commit failed: ${err}`);
     });
 }
-
-// Define other Git operations similarly...
