@@ -155,6 +155,16 @@
 						"type": "boolean",
 						"default": false,
 						"markdownDescription": "Allow Neuro to perform Git operations in the workspace.\n\nRequires reloading permissions if changed."
+					},
+					"neuropilot.permission.gitRemotes": {
+						"type": "boolean",
+						"default": false,
+						"markdownDescription": "Allow Neuro to view and edit Git remotes in the workspace.\nAlso requires Git Operations permission to be enabled.\n\nRequires reloading permissions if changed."
+					},
+					"neuropilot.permission.gitConfigs": {
+						"type": "boolean",
+						"default": false,
+						"markdownDescription": "Allow Neuro to view and edit Git configuration in the workspace.\nAlso requires Git Operations permission to be enabled.\n\nRequires reloading permissions if changed."
 					}
 				}
 			}

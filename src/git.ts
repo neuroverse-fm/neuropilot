@@ -4,6 +4,8 @@ import { NEURO } from './constants';
 import { GitExtension } from './types/git';
 import { getNormalizedRepoPathForGit } from './utils';
 
+/* All actions located in here requires neuropilot.permission.gitOperations to be enabled. */
+
 // Get the Git extension
 const gitExtension = vscode.extensions.getExtension<GitExtension>('vscode.git')!.exports;
 const git = gitExtension.getAPI(1);
@@ -41,6 +43,11 @@ export async function activate(context: vscode.ExtensionContext) {
     }
 }
 
+/**
+ * Actions with the Git repo
+ * Requires neuropilot.permission.gitConfig to be enabled.
+ */
+
 export function handleNewGitRepo(actionData: any) {
     if (!git) {
         NEURO.client?.sendActionResult(actionData.id, false, 'Git extension not available.');
@@ -62,6 +69,57 @@ export function handleNewGitRepo(actionData: any) {
     });
 }
 
+export function handleGetGitConfig(actionData: any) {
+    if (!git) {
+        NEURO.client?.sendActionResult(actionData.id, false, 'Git extension not available.');
+        return;
+    }
+
+    const repo = git.repositories[0];
+    const configKey: string = actionData.params?.configKey;
+
+    if (!configKey) {
+        repo.getConfigs().then((configs: any) => {
+            NEURO.client?.sendActionResult(actionData.id, true, `Git config: ${JSON.stringify(configs)}`);
+            return;
+        });
+    }
+    else {
+        repo.getConfig(configKey).then((configValue: any) => {
+            NEURO.client?.sendActionResult(actionData.id, true, `Git config key "${configKey}": ${configValue}`);
+        }, (err: string) => {
+            NEURO.client?.sendActionResult(actionData.id, false, `Failed to get Git config key "${configKey}": ${err}`);
+        });
+    }
+}
+
+export function handleSetGitConfig(actionData: any) {
+    if (!git) {
+        NEURO.client?.sendActionResult(actionData.id, false, 'Git extension not available.');
+        return;
+    }
+
+    const repo = git.repositories[0];
+    const configKey: string = actionData.params?.configKey;
+    const configValue: string = actionData.params?.configValue;
+
+    if (!configKey || !configValue) {
+        NEURO.client?.sendActionResult(actionData.id, false, 'Config key or value missing.');
+        return;
+    }
+    else {
+        repo.setConfig(configKey, configValue).then(() => {
+            NEURO.client?.sendActionResult(actionData.id, true, `Set Git config key "${configKey}" to: ${configValue}`);
+        }, (err: string) => {
+            NEURO.client?.sendActionResult(actionData.id, false, `Failed to set Git config key "${configKey}": ${err}`);
+        });
+    }
+}
+
+/**
+ * Actions with Git branches
+ */
+
 export function handleNewGitBranch(actionData: any) {
     if (!git) {
         NEURO.client?.sendActionResult(actionData.id, false, 'Git extension not available.');
@@ -76,9 +134,68 @@ export function handleNewGitBranch(actionData: any) {
     }
 
     repo.createBranch(branchName, true).then(() => {
-        NEURO.client?.sendActionResult(actionData.id, true, `Created and switched to new branch: ${branchName}.`);
+        NEURO.client?.sendActionResult(actionData.id, true, `Created and switched to new branch ${branchName}.`);
     }, (err: string) => {
         NEURO.client?.sendActionResult(actionData.id, false, `Failed to create branch: ${err}`);
+    });
+}
+
+export function handleSwitchGitBranch(actionData: any) {
+    if (!git) {
+        NEURO.client?.sendActionResult(actionData.id, false, 'Git extension not available.');
+        return;
+    }
+
+    const repo = git.repositories[0];
+    const branchName: string = actionData.params?.branchName;
+    if (!branchName) {
+        NEURO.client?.sendActionResult(actionData.id, false, 'No branch name provided.');
+        return;
+    }
+
+    repo.checkout(branchName).then(() => {
+        NEURO.client?.sendActionResult(actionData.id, true, `Switched to branch ${branchName}.`);
+    }, (err: string) => {
+        NEURO.client?.sendActionResult(actionData.id, false, `Failed to switch branch: ${err}`);
+    });
+}
+
+export function handleDeleteGitBranch(actionData: any) {
+    if (!git) {
+        NEURO.client?.sendActionResult(actionData.id, false, 'Git extension not available.');
+        return;
+    }
+
+    const repo = git.repositories[0];
+    const branchName: string = actionData.params?.branchName;
+    if (!branchName) {
+        NEURO.client?.sendActionResult(actionData.id, false, 'No branch name provided.');
+        return;
+    }
+
+    repo.deleteBranch(branchName).then(() => {
+        NEURO.client?.sendActionResult(actionData.id, true, `Deleted branch ${branchName}.`);
+    }, (err: string) => {
+        NEURO.client?.sendActionResult(actionData.id, false, `Failed to delete branch: ${err}`);
+    });
+}
+
+/**
+ * Actions with the Git index
+ */
+
+export function handleGitStatus(actionData: any) {
+    if (!git) {
+        NEURO.client?.sendActionResult(actionData.id, false, 'Git extension not available.');
+        return;
+    }
+
+    const repo = git.repositories[0];
+    repo.status().then((status: any) => {
+        NEURO.client?.sendActionResult(actionData.id, true, `Git status: ${JSON.stringify(status)}`);
+    }
+    , (err: string) => {
+        NEURO.client?.sendActionResult(actionData.id, false, `Failed to get Git status: ${err}`);
     });
 }
 
@@ -90,7 +207,6 @@ export function handleGitAdd(actionData: any) {
 
     const repo = git.repositories[0];
     const filePath: string = actionData.params?.filePath;
-    console.log(`Original filePath: ${filePath}`);
 
     // Normalize the file path if provided; otherwise, use wildcard.
     const stageFiles: string = filePath ? getNormalizedRepoPathForGit(filePath) : `*`;
@@ -112,6 +228,35 @@ export function handleGitAdd(actionData: any) {
     });
 }
 
+export function handleGitRevert(actionData: any) {
+    if (!git) {
+        NEURO.client?.sendActionResult(actionData.id, false, 'Git extension not available.');
+        return;
+    }
+
+    const repo = git.repositories[0];
+    const filePath: string = actionData.params?.filePath;
+
+    // Normalize the file path if provided; otherwise, use wildcard.
+    const revertFiles: string = filePath ? getNormalizedRepoPathForGit(filePath) : `*`;
+
+    // Compute an absolute path. If the removeFiles is already absolute, use it.
+    // Otherwise, join it with the repository's root path.
+    let absolutePath: string;
+    if (path.isAbsolute(revertFiles)) {
+        absolutePath = revertFiles;
+    } else {
+        absolutePath = path.join(repo.rootUri.fsPath, revertFiles);
+    }
+
+    // Pass the absolute path to the Git remove command.
+    repo.revert([absolutePath]).then(() => {
+        NEURO.client?.sendActionResult(actionData.id, true, `Removed ${revertFiles} from the index.`);
+    }, (err: string) => {
+        NEURO.client?.sendActionResult(actionData.id, false, `Git remove failed: ${err}`);
+    });
+}
+
 export function handleGitCommit(actionData: any) {
     if (!git) {
         NEURO.client?.sendActionResult(actionData.id, false, 'Git extension not available.');
@@ -126,5 +271,121 @@ export function handleGitCommit(actionData: any) {
         NEURO.client?.sendActionResult(actionData.id, true, `Committed with message: "${message}"`);
     }, (err: string) => {
         NEURO.client?.sendActionResult(actionData.id, false, `Commit failed: ${err}`);
+    });
+}
+
+/**
+ * Actions with Git remotes
+ * Requires neuropilot.permission.gitRemotes to be enabled.
+ */
+
+export function handleAddGitRemote(actionData: any) {
+    if (!git) {
+        NEURO.client?.sendActionResult(actionData.id, false, 'Git extension not available.');
+        return;
+    }
+
+    const repo = git.repositories[0];
+    const remoteName: string = actionData.params?.remoteName;
+    const remoteUrl: string = actionData.params?.remoteUrl;
+
+    if (!remoteName || !remoteUrl) {
+        NEURO.client?.sendActionResult(actionData.id, false, 'Remote name or URL missing.');
+        return;
+    }
+
+    repo.addRemote(remoteName, remoteUrl).then(() => {
+        NEURO.client?.sendActionResult(actionData.id, true, `Added remote "${remoteName}" with URL: ${remoteUrl}`);
+    }, (err: string) => {
+        NEURO.client?.sendActionResult(actionData.id, false, `Failed to add remote "${remoteName}": ${err}`);
+    });
+}
+
+export function handleRemoveGitRemote(actionData: any) {
+    if (!git) {
+        NEURO.client?.sendActionResult(actionData.id, false, 'Git extension not available.');
+        return;
+    }
+
+    const repo = git.repositories[0];
+    const remoteName: string = actionData.params?.remoteName;
+
+    if (!remoteName) {
+        NEURO.client?.sendActionResult(actionData.id, false, 'Remote name missing.');
+        return;
+    }
+
+    repo.removeRemote(remoteName).then(() => {
+        NEURO.client?.sendActionResult(actionData.id, true, `Removed remote "${remoteName}".`);
+    }, (err: string) => {
+        NEURO.client?.sendActionResult(actionData.id, false, `Failed to remove remote "${remoteName}": ${err}`);
+    });
+}
+
+export function handleRenameGitRemote(actionData: any) {
+    if (!git) {
+        NEURO.client?.sendActionResult(actionData.id, false, 'Git extension not available.');
+        return;
+    }
+
+    const repo = git.repositories[0];
+    const oldRemoteName: string = actionData.params?.oldRemoteName;
+    const newRemoteName: string = actionData.params?.newRemoteName;
+    
+    repo.renameRemote(oldRemoteName, newRemoteName).then(() => {
+        NEURO.client?.sendActionResult(actionData.id, true, `Renamed remote "${oldRemoteName}" to "${newRemoteName}".`);
+    }, (err: string) => {
+        NEURO.client?.sendActionResult(actionData.id, false, `Failed to rename remote "${oldRemoteName}" to "${newRemoteName}": ${err}`);
+    });
+}
+
+export function handleFetchGitCommits(actionData: any) {
+    if (!git) {
+        NEURO.client?.sendActionResult(actionData.id, false, 'Git extension not available.');
+        return;
+    }
+
+    const repo = git.repositories[0];
+    const remoteName: string = actionData.params?.remoteName;
+    const branchName: string = actionData.params?.branchName;
+
+    repo.fetch(remoteName, branchName).then(() => {
+        NEURO.client?.sendActionResult(actionData.id, true, `Fetched commits from remote "${remoteName}"${branchName && `, branch "${branchName}"`}.`);
+    }, (err: string) => {
+        NEURO.client?.sendActionResult(actionData.id, false, `Failed to fetch commits from remote "${remoteName}": ${err}`);
+    });
+}
+
+export function handlePullGitCommits(actionData: any) {
+    if (!git) {
+        NEURO.client?.sendActionResult(actionData.id, false, 'Git extension not available.');
+        return;
+    }
+
+    const repo = git.repositories[0];
+
+    repo.pull().then(() => {
+        NEURO.client?.sendActionResult(actionData.id, true, `Pulled commits from remote.`);
+    }
+    , (err: string) => {
+        NEURO.client?.sendActionResult(actionData.id, false, `Failed to pull commits from remote: ${err}`);
+    });
+}
+
+export function handlePushGitCommits(actionData: any) {
+    if (!git) {
+        NEURO.client?.sendActionResult(actionData.id, false, 'Git extension not available.');
+        return;
+    }
+
+    const repo = git.repositories[0];
+    const remoteName: string = actionData.params?.remoteName;
+    const branchName: string = actionData.params?.branchName;
+    const forcePush: boolean = actionData.params?.forcePush || false;
+
+    repo.push(remoteName, branchName, forcePush).then(() => {
+        NEURO.client?.sendActionResult(actionData.id, true, `Pushed commits${remoteName && ` to remote "${remoteName}"`}${branchName && `, branch "${branchName}"`}.${forcePush === true && " (forced push)"}`);
+    }, (err: string) => {
+        NEURO.client?.sendActionResult(actionData.id, false, `Failed to push commits to remote "${remoteName}": ${err}`);
     });
 }

@@ -2,7 +2,24 @@ import * as vscode from 'vscode';
 
 import { NEURO } from "./constants";
 import { logOutput } from './utils';
-import { handleGitAdd, handleGitCommit, handleNewGitBranch, handleNewGitRepo } from './git';
+import {
+handleGitStatus,
+handleGitAdd,
+handleGitRevert,
+handleGitCommit,
+handleNewGitBranch,
+handleDeleteGitBranch,
+handleSwitchGitBranch,
+handleNewGitRepo,
+handleSetGitConfig,
+handleGetGitConfig,
+handleAddGitRemote,
+handleRenameGitRemote,
+handleRemoveGitRemote,
+handleFetchGitCommits,
+handlePullGitCommits,
+handlePushGitCommits,
+} from './git';
 
 import { handleTerminateTask, handleRunTask } from './tasks';
 import { handleCreateFile, handleCreateFolder, handleDeleteFileOrFolder, handleRenameFileOrFolder, handleGetFiles, handleOpenFile } from './file_actions';
@@ -28,39 +45,26 @@ export function registerUnsupervisedActions() {
         'rename_file_or_folder',
         'delete_file_or_folder',
         'terminate_task',
-        'git_add',
-        'git_commit',
+        'init_git_repo',
+        'new_git_branch',
+        'add_file_to_git',
+        'make_git_commit',
+        'set_git_config',
+        'get_git_config',
+        'add_git_remote',
+        'rename_git_remote',
+        'remove_git_remote',
+        'fetch_git_commits',
+        'pull_git_commits',
+        'push_git_commits',
+        'delete_git_branch',
+        'switch_git_branch',
+        'git_status',
         ...NEURO.tasks.map(task => task.id) // Just in case
     ]);
 
     if(vscode.workspace.getConfiguration('neuropilot').get('permission.gitOperations', false)) {
-    NEURO.client?.registerActions([
-            {
-                name: 'init_git_repo',
-                description: 'Initialize a new Git repository in the current workspace folder',
-                schema: {}
-            },
-            {
-                name: 'add_file_to_git',
-                description: 'Add a file to the staging area',
-                schema: {
-                    type: 'object',
-                    properties: {
-                        filePath: { type: 'string' },
-                    },
-                    required: ["filePath"]
-                }
-            },
-            {
-                name: 'make_git_commit',
-                description: 'Commit staged changes with a message',
-                schema: {
-                    type: 'object',
-                    properties: {
-                        message: { type: 'string' },
-                    },
-                }
-            },
+        NEURO.client?.registerActions([
             {
                 name: 'new_git_branch',
                 description: 'Create a new branch in the current Git repository',
@@ -71,8 +75,163 @@ export function registerUnsupervisedActions() {
                     },
                     required: ['branchName'],
                 }
+            },
+            {
+                name: 'add_file_to_git',
+                description: 'Add a file to the staging area',
+                schema: {
+                    type: 'object',
+                    properties: {
+                        filePath: { type: 'string' },
+                    },
+                    required: ['filePath']
+                }
+            },
+            {
+                name: 'make_git_commit',
+                description: 'Commit staged changes with a message',
+                schema: {
+                    type: 'object',
+                    properties: {
+                        message: { type: 'string' },
+                    },
+                    required: ['message']
+                }
+            },
+            {
+                name: 'git_status',
+                description: 'Get the current status of the Git repository',
+                schema: {}
+            },
+            {
+                name: 'git_remove',
+                description: 'Remove a file from the Git index',
+                schema: {
+                    type: 'object',
+                    properties: {
+                        filePath: { type: 'string' },
+                    },
+                    required: ['filePath']
+                }
+            },
+            {
+                name: 'git_revert',
+                description: 'Revert changes to a file in the Git repository',
+                schema: {
+                    type: 'object',
+                    properties: {
+                        filePath: { type: 'string' },
+                    },
+                    required: ['filePath']
+                }
+            },
+            {
+                name: 'delete_git_branch',
+                description: 'Delete a branch in the current Git repository',
+                schema: {
+                    type: 'object',
+                    properties: {
+                        branchName: { type: 'string' },
+                    },
+                    required: ['branchName']
+                }
+            },
+            {
+                name: 'switch_git_branch',
+                description: 'Switch to a different branch in the current Git repository',
+                schema: {
+                    type: 'object',
+                    properties: {
+                        branchName: { type: 'string' },
+                    },
+                    required: ['branchName']
+                }
             }
         ]);
+
+        if(vscode.workspace.getConfiguration('neuropilot').get('permission.gitConfigs', false)) {
+            NEURO.client?.registerActions([
+                {
+                    name: 'init_git_repo',
+                    description: 'Initialize a new Git repository in the current workspace folder',
+                    schema: {}
+                },
+                {
+                    name: 'set_git_config',
+                    description: 'Set a Git configuration value',
+                    schema: {
+                        type: 'object',
+                        properties: {
+                            key: { type: 'string' },
+                            value: { type: 'string' },
+                        },
+                        required: ['key', 'value'],
+                    }
+                },
+                {
+                    name: 'get_git_config',
+                    description: 'Get a Git configuration value',
+                    schema: {
+                        type: 'object',
+                        properties: {
+                            key: { type: 'string' },
+                        },
+                        required: ['key'],
+                    }
+                },
+            ]);
+        }
+
+        if(vscode.workspace.getConfiguration('neuropilot').get('permission.gitRemotes', false)) {
+            NEURO.client?.registerActions([
+                {
+                    name: 'add_git_remote',
+                    description: 'Add a new remote to the Git repository',
+                    schema: {
+                        type: 'object',
+                        properties: {
+                            remoteName: { type: 'string' },
+                            remoteURL: { type: 'string' },
+                        },
+                        required: ['remoteName', 'remoteURL'],
+                    }
+                },
+                {
+                    name: 'remove_git_remote',
+                    description: 'Remove a remote from the Git repository',
+                    schema: {
+                        type: 'object',
+                        properties: {
+                            remoteName: { type: 'string' },
+                        },
+                        required: ['remoteName'],
+                    }
+                },
+                {
+                    name: 'get_git_remotes',
+                    description: 'Get a list of remotes in the Git repository',
+                    schema: {}
+                },
+                {
+                    name: 'pull_git_commits',
+                    description: 'Pull commits from the remote repository',
+                    schema: {}
+                },
+                {
+                    name: 'push_git_commits',
+                    description: 'Push commits to the remote repository',
+                    schema: {
+                        type: 'object',
+                        properties: {
+                            remoteName: { type: 'string' },
+                            branchName: { type: 'string' },
+                            forcePush: { type: 'boolean' },
+                        },
+                        required: ['remoteName', 'branchName']
+                    }
+                }
+            ]);
+        }
     }
 
     if(vscode.workspace.getConfiguration('neuropilot').get('permission.openFiles', false)) {
@@ -94,6 +253,7 @@ export function registerUnsupervisedActions() {
             },
         ]);
     }
+
     if(vscode.workspace.getConfiguration('neuropilot').get('permission.editActiveDocument', false)) {
         NEURO.client?.registerActions([
             {
@@ -160,6 +320,7 @@ export function registerUnsupervisedActions() {
             },
         ]);
     }
+
     if(vscode.workspace.getConfiguration('neuropilot').get('permission.create', false)) {
         NEURO.client?.registerActions([
             {
@@ -186,6 +347,7 @@ export function registerUnsupervisedActions() {
             },
         ]);
     }
+
     if(vscode.workspace.getConfiguration('neuropilot').get('permission.rename', false)) {
         NEURO.client?.registerActions([
             {
@@ -202,6 +364,7 @@ export function registerUnsupervisedActions() {
             },
         ]);
     }
+
     if(vscode.workspace.getConfiguration('neuropilot').get('permission.delete', false)) {
         NEURO.client?.registerActions([
             {
@@ -218,6 +381,7 @@ export function registerUnsupervisedActions() {
             },
         ]);
     }
+
     if(vscode.workspace.getConfiguration('neuropilot').get('permission.runTasks', false)) {
         NEURO.client?.registerActions([
             {
@@ -287,6 +451,39 @@ export function registerUnsupervisedHandlers() {
                 break;
             case 'make_git_commit':
                 handleGitCommit(actionData);
+                break;
+            case 'set_git_config':
+                handleSetGitConfig(actionData);
+                break;
+            case 'get_git_config':
+                handleGetGitConfig(actionData);
+                break;
+            case 'add_git_remote':
+                handleAddGitRemote(actionData);
+                break;
+            case 'rename_git_remote':
+                handleRenameGitRemote(actionData);
+                break;
+            case 'remove_git_remote':
+                handleRemoveGitRemote(actionData);
+                break;
+            case 'fetch_git_commits':
+                handleFetchGitCommits(actionData);
+                break;
+            case 'pull_git_commits':
+                handlePullGitCommits(actionData);
+                break;
+            case 'push_git_commits':
+                handlePushGitCommits(actionData);
+                break;
+            case 'delete_git_branch':
+                handleDeleteGitBranch(actionData);
+                break;
+            case 'switch_git_branch':
+                handleSwitchGitBranch(actionData);
+                break;
+            case 'git_status':
+                handleGitStatus(actionData);
                 break;
             default:
                 if(NEURO.tasks.some(task => task.id === actionData.name))
