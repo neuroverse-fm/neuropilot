@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 
 import { NEURO } from "./constants";
 import { combineGlobLines, formatActionID, getPositionContext, getWorkspacePath, isPathNeuroSafe, logOutput, normalizePath } from './utils';
-import { handleGitAdd, handleGitCommit } from './git';
+import { handleGitAdd, handleGitCommit, handleNewGitBranch, handleNewGitRepo } from './git';
 
 /**
  * Register unsupervised actions with the Neuro API.
@@ -29,29 +29,47 @@ export function registerUnsupervisedActions() {
         ...NEURO.tasks.map(task => task.id) // Just in case
     ]);
 
+    if(vscode.workspace.getConfiguration('neuropilot').get('permission.gitOperations', false)) {
     NEURO.client?.registerActions([
-        {
-            name: 'git_add',
-            description: 'Add a file to the staging area',
-            schema: {
-                type: 'object',
-                properties: {
-                    filePath: { type: 'string' },
-                },
+            {
+                name: 'init_git_repo',
+                description: 'Initialize a new Git repository in the current workspace folder',
+                schema: {}
+            },
+            {
+                name: 'add_file_to_git',
+                description: 'Add a file to the staging area',
+                schema: {
+                    type: 'object',
+                    properties: {
+                        filePath: { type: 'string' },
+                    },
+                    required: ["filePath"]
+                }
+            },
+            {
+                name: 'make_git_commit',
+                description: 'Commit staged changes with a message',
+                schema: {
+                    type: 'object',
+                    properties: {
+                        message: { type: 'string' },
+                    },
+                }
+            },
+            {
+                name: 'new_git_branch',
+                description: 'Create a new branch in the current Git repository',
+                schema: {
+                    type: 'object',
+                    properties: {
+                        branchName: { type: 'string' },
+                    },
+                    required: ['branchName'],
+                }
             }
-        },
-        {
-            name: 'git_commit',
-            description: 'Commit staged changes with a message',
-            schema: {
-                type: 'object',
-                properties: {
-                    message: { type: 'string' },
-                },
-            }
-        },
-        // Register other Git actions similarly...
-    ]);
+        ]);
+    }
 
     if(vscode.workspace.getConfiguration('neuropilot').get('permission.openFiles', false)) {
         NEURO.client?.registerActions([
@@ -254,10 +272,16 @@ export function registerUnsupervisedHandlers() {
             case 'terminate_task':
                 handleTerminateTask(actionData);
                 break;
-            case 'git_add':
+            case 'init_git_repo':
+                handleNewGitRepo(actionData);
+                break;
+            case 'new_git_branch':
+                handleNewGitBranch(actionData);
+                break;
+            case 'add_file_to_git':
                 handleGitAdd(actionData);
                 break;
-            case 'git_commit':
+            case 'make_git_commit':
                 handleGitCommit(actionData);
                 break;
             default:

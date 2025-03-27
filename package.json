@@ -150,6 +150,11 @@
 						"type": "boolean",
 						"default": true,
 						"markdownDescription": "Neuro may ask for cookies while coding.\n\nRequires reloading permissions if changed."
+					},
+					"neuropilot.permission.gitOperations": {
+						"type": "boolean",
+						"default": false,
+						"markdownDescription": "Allow Neuro to perform Git operations in the workspace.\n\nRequires reloading permissions if changed."
 					}
 				}
 			}
