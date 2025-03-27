@@ -31,7 +31,7 @@ import { handleGetCursor, handleDeleteText, handleInsertText, handlePlaceCursor,
  * Will only register actions that the user has given permission to use.
  */
 
-const gitFiles: { [key: string]: (actionData: any) => void } = {
+const neuroActionHandlers: { [key: string]: (actionData: any) => void } = {
     'get_files': handleGetFiles,
     'open_file': handleOpenFile,
     'place_cursor': handlePlaceCursor,
