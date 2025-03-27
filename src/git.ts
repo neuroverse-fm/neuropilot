@@ -274,6 +274,100 @@ export function handleGitCommit(actionData: any) {
     });
 }
 
+export function handleGitDiff(actionData: any) {
+    if (!git) {
+        NEURO.client?.sendActionResult(actionData.id, false, 'Git extension not available.');
+        return;
+    }
+
+    const repo = git.repositories[0];
+    const ref1: string = actionData.params?.ref1;
+    const ref2: string = actionData.params?.ref2;
+    const filePath: string = actionData.params?.filePath;
+    const diffType: string = actionData.params?.diffType || 'diffWithHEAD'; // Default to diffWithHEAD
+
+    try {
+        switch (diffType) {
+            case 'diffWithHEAD':
+                if (filePath) {
+                    repo.diffWithHEAD(filePath).then((diff: string) => {
+                        NEURO.client?.sendActionResult(actionData.id, true, `Diff with HEAD for file "${filePath}":\n${diff}`);
+                    });
+                } else {
+                    repo.diffWithHEAD().then((changes: any) => {
+                        NEURO.client?.sendActionResult(actionData.id, true, `Diff with HEAD:\n${JSON.stringify(changes)}`);
+                    });
+                }
+                break;
+
+            case 'diffWith':
+                if (ref1 && filePath) {
+                    repo.diffWith(ref1, filePath).then((diff: string) => {
+                        NEURO.client?.sendActionResult(actionData.id, true, `Diff with ref "${ref1}" for file "${filePath}":\n${diff}`);
+                    });
+                } else if (ref1) {
+                    repo.diffWith(ref1).then((changes: any) => {
+                        NEURO.client?.sendActionResult(actionData.id, true, `Diff with ref "${ref1}":\n${JSON.stringify(changes)}`);
+                    });
+                } else {
+                    NEURO.client?.sendActionResult(actionData.id, false, 'Ref1 is required for diffWith.');
+                }
+                break;
+
+            case 'diffIndexWithHEAD':
+                if (filePath) {
+                    repo.diffIndexWithHEAD(filePath).then((diff: string) => {
+                        NEURO.client?.sendActionResult(actionData.id, true, `Diff index with HEAD for file "${filePath}":\n${diff}`);
+                    });
+                } else {
+                    repo.diffIndexWithHEAD().then((changes: any) => {
+                        NEURO.client?.sendActionResult(actionData.id, true, `Diff index with HEAD:\n${JSON.stringify(changes)}`);
+                    });
+                }
+                break;
+
+            case 'diffIndexWith':
+                if (ref1 && filePath) {
+                    repo.diffIndexWith(ref1, filePath).then((diff: string) => {
+                        NEURO.client?.sendActionResult(actionData.id, true, `Diff index with ref "${ref1}" for file "${filePath}":\n${diff}`);
+                    });
+                } else if (ref1) {
+                    repo.diffIndexWith(ref1).then((changes: any) => {
+                        NEURO.client?.sendActionResult(actionData.id, true, `Diff index with ref "${ref1}":\n${JSON.stringify(changes)}`);
+                    });
+                } else {
+                    NEURO.client?.sendActionResult(actionData.id, false, 'Ref1 is required for diffIndexWith.');
+                }
+                break;
+
+            case 'diffBetween':
+                if (ref1 && ref2 && filePath) {
+                    repo.diffBetween(ref1, ref2, filePath).then((diff: string) => {
+                        NEURO.client?.sendActionResult(actionData.id, true, `Diff between refs "${ref1}" and "${ref2}" for file "${filePath}":\n${diff}`);
+                    });
+                } else if (ref1 && ref2) {
+                    repo.diffBetween(ref1, ref2).then((changes: any) => {
+                        NEURO.client?.sendActionResult(actionData.id, true, `Diff between refs "${ref1}" and "${ref2}":\n${JSON.stringify(changes)}`);
+                    });
+                } else {
+                    NEURO.client?.sendActionResult(actionData.id, false, 'Both ref1 and ref2 are required for diffBetween.');
+                }
+                break;
+            
+            case 'fullDiff':
+                repo.diff().then((diff: string) => {
+                    NEURO.client?.sendActionResult(actionData.id, true, `Full diff:\n${diff}`);
+                });
+                break;
+            
+            default:
+                NEURO.client?.sendActionResult(actionData.id, false, `Invalid diffType "${diffType}".`);
+        }
+    } catch (err) {
+        NEURO.client?.sendActionResult(actionData.id, false, `Failed to perform git diff: ${err}`);
+    }
+}
+
 /**
  * Actions with Git remotes
  * Requires neuropilot.permission.gitRemotes to be enabled.

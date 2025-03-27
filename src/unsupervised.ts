@@ -19,6 +19,7 @@ handleRemoveGitRemote,
 handleFetchGitCommits,
 handlePullGitCommits,
 handlePushGitCommits,
+handleGitDiff,
 } from './git';
 
 import { handleTerminateTask, handleRunTask } from './tasks';
@@ -29,6 +30,41 @@ import { handleGetCursor, handleDeleteText, handleInsertText, handlePlaceCursor,
  * Register unsupervised actions with the Neuro API.
  * Will only register actions that the user has given permission to use.
  */
+
+const gitFiles: { [key: string]: (actionData: any) => void } = {
+    'get_files': handleGetFiles,
+    'open_file': handleOpenFile,
+    'place_cursor': handlePlaceCursor,
+    'get_cursor': handleGetCursor,
+    'insert_text': handleInsertText,
+    'replace_text': handleReplaceText,
+    'delete_text': handleDeleteText,
+    'place_cursor_at_text': handlePlaceCursorAtText,
+    'create_file': handleCreateFile,
+    'create_folder': handleCreateFolder,
+    'rename_file_or_folder': handleRenameFileOrFolder,
+    'delete_file_or_folder': handleDeleteFileOrFolder,
+    'run_task': handleRunTask, // This is a separate, unique handler, still need to find a new home for it
+    'terminate_task': handleTerminateTask,
+    'init_git_repo': handleNewGitRepo,
+    'new_git_branch': handleNewGitBranch,
+    'add_file_to_git': handleGitAdd,
+    'make_git_commit': handleGitCommit,
+    'set_git_config': handleSetGitConfig,
+    'get_git_config': handleGetGitConfig,
+    'add_git_remote': handleAddGitRemote,
+    'rename_git_remote': handleRenameGitRemote,
+    'remove_git_remote': handleRemoveGitRemote,
+    'fetch_git_commits': handleFetchGitCommits,
+    'pull_git_commits': handlePullGitCommits,
+    'push_git_commits': handlePushGitCommits,
+    'delete_git_branch': handleDeleteGitBranch,
+    'switch_git_branch': handleSwitchGitBranch,
+    'git_status': handleGitStatus,
+    'diff_files': handleGitDiff,
+    'git_revert': handleGitRevert,
+};
+
 export function registerUnsupervisedActions() {
     // Unregister all actions first
     NEURO.client?.unregisterActions([
@@ -60,22 +96,13 @@ export function registerUnsupervisedActions() {
         'delete_git_branch',
         'switch_git_branch',
         'git_status',
+        'see_file_diffs',
+        'git_revert',
         ...NEURO.tasks.map(task => task.id) // Just in case
     ]);
 
     if(vscode.workspace.getConfiguration('neuropilot').get('permission.gitOperations', false)) {
         NEURO.client?.registerActions([
-            {
-                name: 'new_git_branch',
-                description: 'Create a new branch in the current Git repository',
-                schema: {
-                    type: 'object',
-                    properties: {
-                        branchName: { type: 'string' },
-                    },
-                    required: ['branchName'],
-                }
-            },
             {
                 name: 'add_file_to_git',
                 description: 'Add a file to the staging area',
@@ -145,6 +172,30 @@ export function registerUnsupervisedActions() {
                         branchName: { type: 'string' },
                     },
                     required: ['branchName']
+                }
+            },
+            {
+                name: 'new_git_branch',
+                description: 'Create a new branch in the current Git repository',
+                schema: {
+                    type: 'object',
+                    properties: {
+                        branchName: { type: 'string' },
+                    },
+                    required: ['branchName'],
+                }
+            },
+            {
+                name: 'see_file_diffs',
+                description: 'Get the differences between two versions of a file in the Git repository',
+                schema: {
+                    type: 'object',
+                    properties: {
+                        ref1: { type: 'string' },
+                        ref2: { type: 'string' },
+                        filePath: { type: 'string' },
+                        diffType: { type: 'string', enum: ['diffWithHEAD', 'diffWith', 'diffIndexWithHEAD', 'diffIndexWith', 'diffBetween', 'fullDiff'] },
+                    }
                 }
             }
         ]);
@@ -398,99 +449,20 @@ export function registerUnsupervisedActions() {
  * The handlers will only handle actions that the user has given permission to use.
  */
 export function registerUnsupervisedHandlers() {
-    NEURO.client?.onAction((actionData) => {
+    NEURO.client?.onAction(async (actionData) => {
+        const actionName = actionData.name;
 
-        switch(actionData.name) {
-            case 'get_files':
-                handleGetFiles(actionData);
-                break;
-            case 'open_file':
-                handleOpenFile(actionData);
-                break;
-            case 'place_cursor':
-                handlePlaceCursor(actionData);
-                break;
-            case 'get_cursor':
-                handleGetCursor(actionData);
-                break;
-            case 'insert_text':
-                handleInsertText(actionData);
-                break;
-            case 'replace_text':
-                handleReplaceText(actionData);
-                break;
-            case 'delete_text':
-                handleDeleteText(actionData);
-                break;
-            case 'place_cursor_at_text':
-                handlePlaceCursorAtText(actionData);
-                break;
-            case 'create_file':
-                handleCreateFile(actionData);
-                break;
-            case 'create_folder':
-                handleCreateFolder(actionData);
-                break;
-            case 'rename_file_or_folder':
-                handleRenameFileOrFolder(actionData);
-                break;
-            case 'delete_file_or_folder':
-                handleDeleteFileOrFolder(actionData);
-                break;
-            case 'terminate_task':
-                handleTerminateTask(actionData);
-                break;
-            case 'init_git_repo':
-                handleNewGitRepo(actionData);
-                break;
-            case 'new_git_branch':
-                handleNewGitBranch(actionData);
-                break;
-            case 'add_file_to_git':
-                handleGitAdd(actionData);
-                break;
-            case 'make_git_commit':
-                handleGitCommit(actionData);
-                break;
-            case 'set_git_config':
-                handleSetGitConfig(actionData);
-                break;
-            case 'get_git_config':
-                handleGetGitConfig(actionData);
-                break;
-            case 'add_git_remote':
-                handleAddGitRemote(actionData);
-                break;
-            case 'rename_git_remote':
-                handleRenameGitRemote(actionData);
-                break;
-            case 'remove_git_remote':
-                handleRemoveGitRemote(actionData);
-                break;
-            case 'fetch_git_commits':
-                handleFetchGitCommits(actionData);
-                break;
-            case 'pull_git_commits':
-                handlePullGitCommits(actionData);
-                break;
-            case 'push_git_commits':
-                handlePushGitCommits(actionData);
-                break;
-            case 'delete_git_branch':
-                handleDeleteGitBranch(actionData);
-                break;
-            case 'switch_git_branch':
-                handleSwitchGitBranch(actionData);
-                break;
-            case 'git_status':
-                handleGitStatus(actionData);
-                break;
-            default:
-                if(NEURO.tasks.some(task => task.id === actionData.name))
-                    handleRunTask(actionData);
-                else
-                    logOutput('ERROR', `Unknown action: ${actionData.name}`);
-                break;
+        if (actionName === 'request_cookie') {
+            return;
+        } else if (NEURO.tasks.find(task => task.id === actionName)) {
+            try {
+                gitFiles[actionName](actionData);
+            } catch (err) {
+                NEURO.client?.sendActionResult(actionData.id, false, `Error handling action "${actionName}": ${err}`);
+                logOutput('ERROR', `Error handling action "${actionName}": ${err}`);
+            }
+        } else {
+            NEURO.client?.sendActionResult(actionData.id, false, `Unknown action: ${actionName}`);
         }
     });
 }
