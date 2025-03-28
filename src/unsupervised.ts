@@ -65,41 +65,11 @@ const neuroActionHandlers: { [key: string]: (actionData: any) => void } = {
     'git_revert': handleGitRevert,
 };
 
+const actionKeys: string[] = Object.keys(neuroActionHandlers);
+
 export function registerUnsupervisedActions() {
-    // Unregister all actions first
-    NEURO.client?.unregisterActions([
-        'get_files',
-        'open_file',
-        'place_cursor',
-        'get_cursor',
-        'insert_text',
-        'replace_text',
-        'delete_text',
-        'place_cursor_at_text',
-        'create_file',
-        'create_folder',
-        'rename_file_or_folder',
-        'delete_file_or_folder',
-        'terminate_task',
-        'init_git_repo',
-        'new_git_branch',
-        'add_file_to_git',
-        'make_git_commit',
-        'set_git_config',
-        'get_git_config',
-        'add_git_remote',
-        'rename_git_remote',
-        'remove_git_remote',
-        'fetch_git_commits',
-        'pull_git_commits',
-        'push_git_commits',
-        'delete_git_branch',
-        'switch_git_branch',
-        'git_status',
-        'see_file_diffs',
-        'git_revert',
-        ...NEURO.tasks.map(task => task.id) // Just in case
-    ]);
+    // Unregister all actions first to properly refresh everything
+    NEURO.client?.unregisterActions(actionKeys);
 
     if(vscode.workspace.getConfiguration('neuropilot').get('permission.gitOperations', false)) {
         NEURO.client?.registerActions([
@@ -159,6 +129,7 @@ export function registerUnsupervisedActions() {
                     type: 'object',
                     properties: {
                         branchName: { type: 'string' },
+                        force: { type: 'boolean' },
                     },
                     required: ['branchName']
                 }
@@ -234,35 +205,51 @@ export function registerUnsupervisedActions() {
         }
 
         if(vscode.workspace.getConfiguration('neuropilot').get('permission.gitRemotes', false)) {
+            if(vscode.workspace.getConfiguration('neuropilot').get('permission.editRemoteData', false)) {
+                NEURO.client?.registerActions([
+                    {
+                        name: 'add_git_remote',
+                        description: 'Add a new remote to the Git repository',
+                        schema: {
+                            type: 'object',
+                            properties: {
+                                remoteName: { type: 'string' },
+                                remoteURL: { type: 'string' },
+                            },
+                            required: ['remoteName', 'remoteURL'],
+                        }
+                    },
+                    {
+                        name: 'remove_git_remote',
+                        description: 'Remove a remote from the Git repository',
+                        schema: {
+                            type: 'object',
+                            properties: {
+                                remoteName: { type: 'string' },
+                            },
+                            required: ['remoteName'],
+                        }
+                    },
+                    {
+                        name: 'rename_git_remote',
+                        description: 'Rename a remote in the Git repository',
+                        schema: {
+                            type: 'object',
+                            properties: {
+                                oldRemoteName: { type: 'string' },
+                                newRemoteName: { type: 'string' },
+                            },
+                            required: ['oldRemoteName', 'newRemoteName'],
+                        }
+                    },
+                    {
+                        name: 'get_git_remotes',
+                        description: 'Get a list of remotes in the Git repository',
+                        schema: {}
+                    }
+                ]);
+            }
             NEURO.client?.registerActions([
-                {
-                    name: 'add_git_remote',
-                    description: 'Add a new remote to the Git repository',
-                    schema: {
-                        type: 'object',
-                        properties: {
-                            remoteName: { type: 'string' },
-                            remoteURL: { type: 'string' },
-                        },
-                        required: ['remoteName', 'remoteURL'],
-                    }
-                },
-                {
-                    name: 'remove_git_remote',
-                    description: 'Remove a remote from the Git repository',
-                    schema: {
-                        type: 'object',
-                        properties: {
-                            remoteName: { type: 'string' },
-                        },
-                        required: ['remoteName'],
-                    }
-                },
-                {
-                    name: 'get_git_remotes',
-                    description: 'Get a list of remotes in the Git repository',
-                    schema: {}
-                },
                 {
                     name: 'pull_git_commits',
                     description: 'Pull commits from the remote repository',
@@ -277,8 +264,7 @@ export function registerUnsupervisedActions() {
                             remoteName: { type: 'string' },
                             branchName: { type: 'string' },
                             forcePush: { type: 'boolean' },
-                        },
-                        required: ['remoteName', 'branchName']
+                        }
                     }
                 }
             ]);
@@ -451,18 +437,27 @@ export function registerUnsupervisedActions() {
 export function registerUnsupervisedHandlers() {
     NEURO.client?.onAction(async (actionData) => {
         const actionName = actionData.name;
-
+        
         if (actionName === 'request_cookie') {
             return;
-        } else if (NEURO.tasks.find(task => task.id === actionName)) {
+        } else if (NEURO.tasks.find(task => task.id !== actionName)) {
             try {
-                gitFiles[actionName](actionData);
+                neuroActionHandlers[actionName](actionData);
             } catch (err) {
                 NEURO.client?.sendActionResult(actionData.id, false, `Error handling action "${actionName}": ${err}`);
                 logOutput('ERROR', `Error handling action "${actionName}": ${err}`);
             }
         } else {
-            NEURO.client?.sendActionResult(actionData.id, false, `Unknown action: ${actionName}`);
+            try {
+                if (NEURO.tasks.find(task => task.id === actionName)) {
+                    handleRunTask(actionData);
+                } else {
+                    NEURO.client?.sendActionResult(actionData.id, false, `Unknown action: ${actionName}`);
+                }
+            } catch (err) {
+                NEURO.client?.sendActionResult(actionData.id, false, `Error handling action "${actionName}": ${err}`);
+                logOutput('ERROR', `Error handling action "${actionName}": ${err}`);
+            }
         }
     });
 }

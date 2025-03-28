@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import { NEURO } from './constants';
 import { GitExtension } from './types/git';
-import { getNormalizedRepoPathForGit } from './utils';
+import { getNormalizedRepoPathForGit, logOutput } from './utils';
 
 /* All actions located in here requires neuropilot.permission.gitOperations to be enabled. */
 
@@ -38,8 +38,6 @@ export async function activate(context: vscode.ExtensionContext) {
     for (const repo of git.repositories) {
         const rawPath = repo.rootUri.fsPath;
         const normalizedPath = getNormalizedRepoPathForGit(rawPath);
-        console.log(`Repository raw path: ${rawPath}`);
-        console.log(`Normalized repository path: ${normalizedPath}`);
     }
 }
 
@@ -50,7 +48,11 @@ export async function activate(context: vscode.ExtensionContext) {
 
 export function handleNewGitRepo(actionData: any) {
     if (!git) {
-        NEURO.client?.sendActionResult(actionData.id, false, 'Git extension not available.');
+        NEURO.client?.sendActionResult(actionData.id, true, 'Git extension not available.');
+        return;
+    }
+    if (!vscode.workspace.getConfiguration('neuropilot').get('permission.gitOperations', false) && (!vscode.workspace.getConfiguration('neuropilot').get('permission.gitConfig', false))) {
+        NEURO.client?.sendActionResult(actionData.id, true, 'You do not have permission to perform Git operations.');
         return;
     }
 
@@ -65,39 +67,51 @@ export function handleNewGitRepo(actionData: any) {
     NEURO.client?.sendActionResult(actionData.id, true)
     
     git.init(vscode.Uri.file(folderPath)).then(() => {
-        NEURO.client?.context(`Initialized a new Git repository in the workspace folder`);
+        NEURO.client?.sendContext(`Initialized a new Git repository in the workspace folder`);
     }, (err: string) => {
-        NEURO.client?.context(`Failed to initialize Git repository: ${err}`);
+        NEURO.client?.sendContext(`Failed to initialize Git repository`);
+        logOutput('ERROR', `Failed to initialize Git repository: ${err}`);
     });
 }
 
 export function handleGetGitConfig(actionData: any) {
     if (!git) {
-        NEURO.client?.sendActionResult(actionData.id, false, 'Git extension not available.');
+        NEURO.client?.sendActionResult(actionData.id, true, 'Git extension not available.');
+        return;
+    }
+    if (!vscode.workspace.getConfiguration('neuropilot').get('permission.gitOperations', false) && (!vscode.workspace.getConfiguration('neuropilot').get('permission.gitConfig', false))) {
+        NEURO.client?.sendActionResult(actionData.id, true, 'You do not have permission to perform Git operations.');
         return;
     }
 
     const repo = git.repositories[0];
     const configKey: string = actionData.params?.configKey;
 
+    NEURO.client?.sendActionResult(actionData.id, true);
+
     if (!configKey) {
         repo.getConfigs().then((configs: any) => {
-            NEURO.client?.sendActionResult(actionData.id, true, `Git config: ${JSON.stringify(configs)}`);
+            NEURO.client?.sendContext(`Git config: ${JSON.stringify(configs)}`);
             return;
         });
     }
     else {
         repo.getConfig(configKey).then((configValue: any) => {
-            NEURO.client?.sendActionResult(actionData.id, true, `Git config key "${configKey}": ${configValue}`);
+            NEURO.client?.sendContext(`Git config key "${configKey}": ${configValue}`);
         }, (err: string) => {
-            NEURO.client?.sendActionResult(actionData.id, false, `Failed to get Git config key "${configKey}": ${err}`);
+            NEURO.client?.sendContext(`Failed to get Git config key "${configKey}"`);
+            logOutput('ERROR', `Failed to get Git config key "${configKey}": ${err}`);
         });
     }
 }
 
 export function handleSetGitConfig(actionData: any) {
     if (!git) {
-        NEURO.client?.sendActionResult(actionData.id, false, 'Git extension not available.');
+        NEURO.client?.sendActionResult(actionData.id, true, 'Git extension not available.');
+        return;
+    }
+    if (!vscode.workspace.getConfiguration('neuropilot').get('permission.gitOperations', false) && (!vscode.workspace.getConfiguration('neuropilot').get('permission.gitConfig', false))) {
+        NEURO.client?.sendActionResult(actionData.id, true, 'You do not have permission to perform Git operations.');
         return;
     }
 
@@ -110,10 +124,12 @@ export function handleSetGitConfig(actionData: any) {
         return;
     }
     else {
+        NEURO.client?.sendActionResult(actionData.id, true);
         repo.setConfig(configKey, configValue).then(() => {
-            NEURO.client?.sendActionResult(actionData.id, true, `Set Git config key "${configKey}" to: ${configValue}`);
+            NEURO.client?.sendContext(`Set Git config key "${configKey}" to: ${configValue}`);
         }, (err: string) => {
-            NEURO.client?.sendActionResult(actionData.id, false, `Failed to set Git config key "${configKey}": ${err}`);
+            NEURO.client?.sendContext(`Failed to set Git config key "${configKey}"`);
+            logOutput('ERROR', `Failed to set Git config key "${configKey}": ${err}`);
         });
     }
 }
@@ -124,7 +140,11 @@ export function handleSetGitConfig(actionData: any) {
 
 export function handleNewGitBranch(actionData: any) {
     if (!git) {
-        NEURO.client?.sendActionResult(actionData.id, false, 'Git extension not available.');
+        NEURO.client?.sendActionResult(actionData.id, true, 'Git extension not available.');
+        return;
+    }
+    if (!vscode.workspace.getConfiguration('neuropilot').get('permission.gitOperations', false)) {
+        NEURO.client?.sendActionResult(actionData.id, true, 'You do not have permission to perform Git operations.');
         return;
     }
 
@@ -135,16 +155,22 @@ export function handleNewGitBranch(actionData: any) {
         return;
     }
 
+    NEURO.client?.sendActionResult(actionData.id, true);
     repo.createBranch(branchName, true).then(() => {
-        NEURO.client?.sendActionResult(actionData.id, true, `Created and switched to new branch ${branchName}.`);
+        NEURO.client?.sendContext(`Created and switched to new branch ${branchName}.`);
     }, (err: string) => {
-        NEURO.client?.sendActionResult(actionData.id, false, `Failed to create branch: ${err}`);
+        NEURO.client?.sendContext(`Failed to create branch ${branchName}`);
+        logOutput('ERROR', `Failed to create branch: ${err}`);
     });
 }
 
 export function handleSwitchGitBranch(actionData: any) {
     if (!git) {
-        NEURO.client?.sendActionResult(actionData.id, false, 'Git extension not available.');
+        NEURO.client?.sendActionResult(actionData.id, true, 'Git extension not available.');
+        return;
+    }
+    if (!vscode.workspace.getConfiguration('neuropilot').get('permission.gitOperations', false)) {
+        NEURO.client?.sendActionResult(actionData.id, true, 'You do not have permission to perform Git operations.');
         return;
     }
 
@@ -155,30 +181,39 @@ export function handleSwitchGitBranch(actionData: any) {
         return;
     }
 
+    NEURO.client?.sendActionResult(actionData.id, true);
     repo.checkout(branchName).then(() => {
-        NEURO.client?.sendActionResult(actionData.id, true, `Switched to branch ${branchName}.`);
+        NEURO.client?.sendContext(`Switched to branch ${branchName}.`);
     }, (err: string) => {
-        NEURO.client?.sendActionResult(actionData.id, false, `Failed to switch branch: ${err}`);
+        NEURO.client?.sendContext(`Failed to switch to branch ${branchName}`);
+        logOutput('ERROR', `Failed to switch branch: ${err}`);
     });
 }
 
 export function handleDeleteGitBranch(actionData: any) {
     if (!git) {
-        NEURO.client?.sendActionResult(actionData.id, false, 'Git extension not available.');
+        NEURO.client?.sendActionResult(actionData.id, true, 'Git extension not available.');
+        return;
+    }
+    if (!vscode.workspace.getConfiguration('neuropilot').get('permission.gitOperations', false)) {
+        NEURO.client?.sendActionResult(actionData.id, true, 'You do not have permission to perform Git operations.');
         return;
     }
 
     const repo = git.repositories[0];
     const branchName: string = actionData.params?.branchName;
+    const forceDelete: boolean = actionData.params?.forceDelete || false;
     if (!branchName) {
         NEURO.client?.sendActionResult(actionData.id, false, 'No branch name provided.');
         return;
     }
 
-    repo.deleteBranch(branchName).then(() => {
-        NEURO.client?.sendActionResult(actionData.id, true, `Deleted branch ${branchName}.`);
+    NEURO.client?.sendActionResult(actionData.id, true);
+    repo.deleteBranch(branchName, forceDelete).then(() => {
+        NEURO.client?.sendContext(`Deleted branch ${branchName}.`);
     }, (err: string) => {
-        NEURO.client?.sendActionResult(actionData.id, false, `Failed to delete branch: ${err}`);
+        NEURO.client?.sendContext(`Failed to delete branch${forceDelete === false && "\nEnsure the branch is merged before deleting, or force delete it to discard changes."}`);
+        logOutput('ERROR', `Failed to delete branch: ${err}`);
     });
 }
 
@@ -188,27 +223,40 @@ export function handleDeleteGitBranch(actionData: any) {
 
 export function handleGitStatus(actionData: any) {
     if (!git) {
-        NEURO.client?.sendActionResult(actionData.id, false, 'Git extension not available.');
+        NEURO.client?.sendActionResult(actionData.id, true, 'Git extension not available.');
+        return;
+    }
+    if (!vscode.workspace.getConfiguration('neuropilot').get('permission.gitOperations', false)) {
+        NEURO.client?.sendActionResult(actionData.id, true, 'You do not have permission to perform Git operations.');
         return;
     }
 
     const repo = git.repositories[0];
+    
+    NEURO.client?.sendActionResult(actionData.id, true)
     repo.status().then((status: any) => {
-        NEURO.client?.sendActionResult(actionData.id, true, `Git status: ${JSON.stringify(status)}`);
+        NEURO.client?.sendContext(`Git status: ${JSON.stringify(status)}`);
     }
     , (err: string) => {
-        NEURO.client?.sendActionResult(actionData.id, false, `Failed to get Git status: ${err}`);
+        NEURO.client?.sendContext(`Failed to get Git repository status`);
+        logOutput('ERROR', `Failed to get Git status: ${err}`);
     });
 }
 
 export function handleGitAdd(actionData: any) {
     if (!git) {
-        NEURO.client?.sendActionResult(actionData.id, false, 'Git extension not available.');
+        NEURO.client?.sendActionResult(actionData.id, true, 'Git extension not available.');
+        return;
+    }
+    if (!vscode.workspace.getConfiguration('neuropilot').get('permission.gitOperations', false)) {
+        NEURO.client?.sendActionResult(actionData.id, true, 'You do not have permission to perform Git operations.');
         return;
     }
 
     const repo = git.repositories[0];
     const filePath: string = actionData.params?.filePath;
+
+    NEURO.client?.sendActionResult(actionData.id, true)
 
     // Normalize the file path if provided; otherwise, use wildcard.
     const stageFiles: string = filePath ? getNormalizedRepoPathForGit(filePath) : `*`;
@@ -224,20 +272,27 @@ export function handleGitAdd(actionData: any) {
 
     // Pass the absolute path to the Git add command.
     repo.add([absolutePath]).then(() => {
-        NEURO.client?.sendActionResult(actionData.id, true, `Added ${stageFiles} to staging area.`);
+        NEURO.client?.sendContext(`Added ${stageFiles} to staging area.`);
     }, (err: string) => {
-        NEURO.client?.sendActionResult(actionData.id, false, `Git add failed: ${err}`);
+        NEURO.client?.sendContext(`Adding files to staging area failed`);
+        logOutput("ERROR", `Failed to git add: ${err}`)
     });
 }
 
 export function handleGitRevert(actionData: any) {
     if (!git) {
-        NEURO.client?.sendActionResult(actionData.id, false, 'Git extension not available.');
+        NEURO.client?.sendActionResult(actionData.id, true, 'Git extension not available.');
+        return;
+    }
+    if (!vscode.workspace.getConfiguration('neuropilot').get('permission.gitOperations', false)) {
+        NEURO.client?.sendActionResult(actionData.id, true, 'You do not have permission to perform Git operations.');
         return;
     }
 
     const repo = git.repositories[0];
     const filePath: string = actionData.params?.filePath;
+
+    NEURO.client?.sendActionResult(actionData.id, true)
 
     // Normalize the file path if provided; otherwise, use wildcard.
     const revertFiles: string = filePath ? getNormalizedRepoPathForGit(filePath) : `*`;
@@ -253,32 +308,49 @@ export function handleGitRevert(actionData: any) {
 
     // Pass the absolute path to the Git remove command.
     repo.revert([absolutePath]).then(() => {
-        NEURO.client?.sendActionResult(actionData.id, true, `Removed ${revertFiles} from the index.`);
+        NEURO.client?.sendContext(`Removed ${revertFiles} from the index.`);
     }, (err: string) => {
-        NEURO.client?.sendActionResult(actionData.id, false, `Git remove failed: ${err}`);
+        NEURO.client?.sendContext(`Reverting files failed`);
+        logOutput("ERROR", `Git revert failed: ${err}`)
     });
 }
 
 export function handleGitCommit(actionData: any) {
     if (!git) {
-        NEURO.client?.sendActionResult(actionData.id, false, 'Git extension not available.');
+        NEURO.client?.sendActionResult(actionData.id, true, 'Git extension not available.');
+        return;
+    }
+    if (!vscode.workspace.getConfiguration('neuropilot').get('permission.gitOperations', false)) {
+        NEURO.client?.sendActionResult(actionData.id, true, 'You do not have permission to perform Git operations.');
         return;
     }
 
     const repo = git.repositories[0];
-    const message = `Neuro: ${actionData.params?.message}` || 'Neuro commit via VS Code API';
+    const message = `Neuro commit: ${actionData.params?.message}`;
+
+    if (!message) {
+        NEURO.client?.sendActionResult(actionData.id, false, "No commit message provided.")
+        return;
+    }
+
+    NEURO.client?.sendActionResult(actionData.id, true)
 
     repo.inputBox.value = message;
     repo.commit(message).then(() => {
-        NEURO.client?.sendActionResult(actionData.id, true, `Committed with message: "${message}"`);
+        NEURO.client?.sendContext(`Committed with message: "${message}"`);
     }, (err: string) => {
-        NEURO.client?.sendActionResult(actionData.id, false, `Commit failed: ${err}`);
+        NEURO.client?.sendContext(`Failed to record commit`);
+        logOutput("ERROR", `Failed to commit: ${err}`)
     });
 }
 
 export function handleGitDiff(actionData: any) {
     if (!git) {
-        NEURO.client?.sendActionResult(actionData.id, false, 'Git extension not available.');
+        NEURO.client?.sendActionResult(actionData.id, true, 'Git extension not available.');
+        return;
+    }
+    if (!vscode.workspace.getConfiguration('neuropilot').get('permission.gitOperations', false)) {
+        NEURO.client?.sendActionResult(actionData.id, true, 'You do not have permission to perform Git operations.');
         return;
     }
 
@@ -366,7 +438,9 @@ export function handleGitDiff(actionData: any) {
                 NEURO.client?.sendActionResult(actionData.id, false, `Invalid diffType "${diffType}".`);
         }
     } catch (err) {
-        NEURO.client?.sendActionResult(actionData.id, false, `Failed to perform git diff: ${err}`);
+        NEURO.client?.sendActionResult(actionData.id, true);
+        NEURO.client?.sendContext("Failed to get diffs between files")
+        logOutput("ERROR", `Failed to diff files: ${err}`)
     }
 }
 
@@ -375,9 +449,90 @@ export function handleGitDiff(actionData: any) {
  * Requires neuropilot.permission.gitRemotes to be enabled.
  */
 
+export function handleFetchGitCommits(actionData: any) {
+    if (!git) {
+        NEURO.client?.sendActionResult(actionData.id, true, 'Git extension not available.');
+        return;
+    }
+    if (!vscode.workspace.getConfiguration('neuropilot').get('permission.gitOperations', false) && !vscode.workspace.getConfiguration('neuropilot').get('permission.gitRemotes')) {
+        NEURO.client?.sendActionResult(actionData.id, true, 'You do not have permission to perform Git operations.');
+        return;
+    }
+
+    const repo = git.repositories[0];
+    const remoteName: string = actionData.params?.remoteName;
+    const branchName: string = actionData.params?.branchName;
+
+    NEURO.client?.sendActionResult(actionData.id, true)
+
+    repo.fetch(remoteName, branchName).then(() => {
+        NEURO.client?.sendContext(`Fetched commits from remote "${remoteName}"${branchName && `, branch "${branchName}"`}.`);
+    }, (err: string) => {
+        NEURO.client?.sendContext(`Failed to fetch commits from remote "${remoteName}"`);
+        logOutput("ERROR", `Failed to fetch commits: ${err}`)
+    });
+}
+
+export function handlePullGitCommits(actionData: any) {
+    if (!git) {
+        NEURO.client?.sendActionResult(actionData.id, true, 'Git extension not available.');
+        return;
+    }
+    if (!vscode.workspace.getConfiguration('neuropilot').get('permission.gitOperations', false) && !vscode.workspace.getConfiguration('neuropilot').get('permission.gitRemotes')) {
+        NEURO.client?.sendActionResult(actionData.id, true, 'You do not have permission to perform Git operations.');
+        return;
+    }
+
+    const repo = git.repositories[0];
+
+    NEURO.client?.sendActionResult(actionData.id, true)
+
+    repo.pull().then(() => {
+        NEURO.client?.sendContext(`Pulled commits from remote.`);
+    }
+    , (err: string) => {
+        NEURO.client?.sendContext(`Failed to pull commits from remote`);
+        logOutput("ERROR", `Failed to pull commits: ${err}`)
+    });
+}
+
+export function handlePushGitCommits(actionData: any) {
+    if (!git) {
+        NEURO.client?.sendActionResult(actionData.id, true, 'Git extension not available.');
+        return;
+    }
+    if (!vscode.workspace.getConfiguration('neuropilot').get('permission.gitOperations', false) && !vscode.workspace.getConfiguration('neuropilot').get('permission.gitRemotes')) {
+        NEURO.client?.sendActionResult(actionData.id, true, 'You do not have permission to perform Git operations.');
+        return;
+    }
+
+    const repo = git.repositories[0];
+    const remoteName: string = actionData.params?.remoteName;
+    const branchName: string = actionData.params?.branchName;
+    const forcePush: boolean = actionData.params?.forcePush || false;
+
+    NEURO.client?.sendActionResult(actionData.id, true)
+
+    repo.push(remoteName, branchName, forcePush).then(() => {
+        NEURO.client?.sendContext(`Pushed commits${remoteName && ` to remote "${remoteName}"`}${branchName && `, branch "${branchName}"`}.${forcePush === true && " (forced push)"}`);
+    }, (err: string) => {
+        NEURO.client?.sendContext(`Failed to push commits to remote "${remoteName}"`);
+        logOutput("ERROR", `Failed to push commits: ${err}`)
+    });
+}
+
+/**
+ * THESE ACTIONS ARE CONSIDERED DANGEROUS REMOTE OPERATIONS
+ * Requires neuropilot.permission.editRemoteData to be enabled, IN ADDITION to neuropilot.permission.gitRemotes.
+ */
+
 export function handleAddGitRemote(actionData: any) {
     if (!git) {
-        NEURO.client?.sendActionResult(actionData.id, false, 'Git extension not available.');
+        NEURO.client?.sendActionResult(actionData.id, true, 'Git extension not available.');
+        return;
+    }
+    if (!vscode.workspace.getConfiguration('neuropilot').get('permission.gitOperations', false) && (!vscode.workspace.getConfiguration('neuropilot').get('permission.gitRemotes', false) && (!vscode.workspace.getConfiguration('neuropilot').get('permission.editRemoteData', false)))) {
+        NEURO.client?.sendActionResult(actionData.id, true, 'You do not have permission to perform Git operations.');
         return;
     }
 
@@ -390,16 +545,23 @@ export function handleAddGitRemote(actionData: any) {
         return;
     }
 
+    NEURO.client?.sendActionResult(actionData.id, true)
+
     repo.addRemote(remoteName, remoteUrl).then(() => {
-        NEURO.client?.sendActionResult(actionData.id, true, `Added remote "${remoteName}" with URL: ${remoteUrl}`);
+        NEURO.client?.sendContext(`Added remote "${remoteName}" with URL: ${remoteUrl}`);
     }, (err: string) => {
-        NEURO.client?.sendActionResult(actionData.id, false, `Failed to add remote "${remoteName}": ${err}`);
+        NEURO.client?.sendContext(`Failed to add remote "${remoteName}"`);
+        logOutput("ERROR", `Failed to add remote: ${err}`)
     });
 }
 
 export function handleRemoveGitRemote(actionData: any) {
     if (!git) {
-        NEURO.client?.sendActionResult(actionData.id, false, 'Git extension not available.');
+        NEURO.client?.sendActionResult(actionData.id, true, 'Git extension not available.');
+        return;
+    }
+    if (!vscode.workspace.getConfiguration('neuropilot').get('permission.gitOperations', false) && (!vscode.workspace.getConfiguration('neuropilot').get('permission.gitRemotes', false) && (!vscode.workspace.getConfiguration('neuropilot').get('permission.editRemoteData', false)))) {
+        NEURO.client?.sendActionResult(actionData.id, true, 'You do not have permission to perform Git operations.');
         return;
     }
 
@@ -411,77 +573,40 @@ export function handleRemoveGitRemote(actionData: any) {
         return;
     }
 
+    NEURO.client?.sendActionResult(actionData.id, true)
+
     repo.removeRemote(remoteName).then(() => {
-        NEURO.client?.sendActionResult(actionData.id, true, `Removed remote "${remoteName}".`);
+        NEURO.client?.sendContext(`Removed remote "${remoteName}".`);
     }, (err: string) => {
-        NEURO.client?.sendActionResult(actionData.id, false, `Failed to remove remote "${remoteName}": ${err}`);
+        NEURO.client?.sendContext(`Failed to remove remote "${remoteName}"`);
+        logOutput("ERROR", `Failed to remove remote: ${err}`)
     });
 }
 
 export function handleRenameGitRemote(actionData: any) {
     if (!git) {
-        NEURO.client?.sendActionResult(actionData.id, false, 'Git extension not available.');
+        NEURO.client?.sendActionResult(actionData.id, true, 'Git extension not available.');
+        return;
+    }
+    if (!vscode.workspace.getConfiguration('neuropilot').get('permission.gitOperations', false) && (!vscode.workspace.getConfiguration('neuropilot').get('permission.gitRemotes', false) && (!vscode.workspace.getConfiguration('neuropilot').get('permission.editRemoteData', false)))) {
+        NEURO.client?.sendActionResult(actionData.id, true, 'You do not have permission to perform Git operations.');
         return;
     }
 
     const repo = git.repositories[0];
     const oldRemoteName: string = actionData.params?.oldRemoteName;
     const newRemoteName: string = actionData.params?.newRemoteName;
+
+    if (!oldRemoteName || !newRemoteName) {
+        NEURO.client?.sendActionResult(actionData.id, false, "Both oldRemoteName and newRemoteName are required")
+    }
+
+    NEURO.client?.sendActionResult(actionData.id, true)
     
     repo.renameRemote(oldRemoteName, newRemoteName).then(() => {
-        NEURO.client?.sendActionResult(actionData.id, true, `Renamed remote "${oldRemoteName}" to "${newRemoteName}".`);
+        NEURO.client?.sendContext(`Renamed remote "${oldRemoteName}" to "${newRemoteName}".`);
     }, (err: string) => {
-        NEURO.client?.sendActionResult(actionData.id, false, `Failed to rename remote "${oldRemoteName}" to "${newRemoteName}": ${err}`);
-    });
-}
-
-export function handleFetchGitCommits(actionData: any) {
-    if (!git) {
-        NEURO.client?.sendActionResult(actionData.id, false, 'Git extension not available.');
-        return;
-    }
-
-    const repo = git.repositories[0];
-    const remoteName: string = actionData.params?.remoteName;
-    const branchName: string = actionData.params?.branchName;
-
-    repo.fetch(remoteName, branchName).then(() => {
-        NEURO.client?.sendActionResult(actionData.id, true, `Fetched commits from remote "${remoteName}"${branchName && `, branch "${branchName}"`}.`);
-    }, (err: string) => {
-        NEURO.client?.sendActionResult(actionData.id, false, `Failed to fetch commits from remote "${remoteName}": ${err}`);
-    });
-}
-
-export function handlePullGitCommits(actionData: any) {
-    if (!git) {
-        NEURO.client?.sendActionResult(actionData.id, false, 'Git extension not available.');
-        return;
-    }
-
-    const repo = git.repositories[0];
-
-    repo.pull().then(() => {
-        NEURO.client?.sendActionResult(actionData.id, true, `Pulled commits from remote.`);
-    }
-    , (err: string) => {
-        NEURO.client?.sendActionResult(actionData.id, false, `Failed to pull commits from remote: ${err}`);
-    });
-}
-
-export function handlePushGitCommits(actionData: any) {
-    if (!git) {
-        NEURO.client?.sendActionResult(actionData.id, false, 'Git extension not available.');
-        return;
-    }
-
-    const repo = git.repositories[0];
-    const remoteName: string = actionData.params?.remoteName;
-    const branchName: string = actionData.params?.branchName;
-    const forcePush: boolean = actionData.params?.forcePush || false;
-
-    repo.push(remoteName, branchName, forcePush).then(() => {
-        NEURO.client?.sendActionResult(actionData.id, true, `Pushed commits${remoteName && ` to remote "${remoteName}"`}${branchName && `, branch "${branchName}"`}.${forcePush === true && " (forced push)"}`);
-    }, (err: string) => {
-        NEURO.client?.sendActionResult(actionData.id, false, `Failed to push commits to remote "${remoteName}": ${err}`);
+        NEURO.client?.sendContext(`Failed to rename remote "${oldRemoteName}" to "${newRemoteName}"`);
+        logOutput("ERROR", `Failed to rename remote ${oldRemoteName}: ${err}`)
     });
 }

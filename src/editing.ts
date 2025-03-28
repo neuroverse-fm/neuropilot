@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 
 import { NEURO } from "./constants";
-import { combineGlobLines, formatActionID, getPositionContext, getWorkspacePath, isPathNeuroSafe, logOutput, normalizePath } from './utils';
+import { getPositionContext, isPathNeuroSafe, logOutput } from './utils';
 
 
 export function handlePlaceCursor(actionData: any) {

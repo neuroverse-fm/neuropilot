@@ -25,7 +25,7 @@ export function handleTerminateTask(actionData: any) {
 
 export function handleRunTask(actionData: any) {
     if(!vscode.workspace.getConfiguration('neuropilot').get('permission.runTasks', false)) {
-        logOutput('WARNING', 'Neuro attempted to terminate a task, but permission is disabled');
+        logOutput('WARNING', 'Neuro attempted to run a task, but permission is disabled');
         NEURO.client?.sendActionResult(actionData.id, true, 'You do not have task permissions.');
         return;
     }
