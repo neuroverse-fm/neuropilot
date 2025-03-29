@@ -3,6 +3,22 @@ import * as vscode from 'vscode';
 import { NEURO } from "./constants";
 import { combineGlobLines, formatActionID, getPositionContext, getWorkspacePath, isPathNeuroSafe, logOutput, normalizePath } from './utils';
 
+const NEURO_ACTION_NAMES = [
+    'get_files',
+    'open_file',
+    'place_cursor',
+    'get_cursor',
+    'insert_text',
+    'replace_text',
+    'delete_text',
+    'place_cursor_at_text',
+    'create_file',
+    'create_folder',
+    'rename_file_or_folder',
+    'delete_file_or_folder',
+    'terminate_task',
+]
+
 /**
  * Register unsupervised actions with the Neuro API.
  * Will only register actions that the user has given permission to use.
@@ -10,19 +26,7 @@ import { combineGlobLines, formatActionID, getPositionContext, getWorkspacePath,
 export function registerUnsupervisedActions() {
     // Unregister all actions first
     NEURO.client?.unregisterActions([
-        'get_files',
-        'open_file',
-        'place_cursor',
-        'get_cursor',
-        'insert_text',
-        'replace_text',
-        'delete_text',
-        'place_cursor_at_text',
-        'create_file',
-        'create_folder',
-        'rename_file_or_folder',
-        'delete_file_or_folder',
-        'terminate_task',
+        ...NEURO_ACTION_NAMES,
         ...NEURO.tasks.map(task => task.id) // Just in case
     ]);
 
@@ -186,6 +190,9 @@ export function registerUnsupervisedActions() {
  */
 export function registerUnsupervisedHandlers() {
     NEURO.client?.onAction((actionData) => {
+        if(NEURO_ACTION_NAMES.includes(actionData.name)) {
+            NEURO.actionHandled = true;
+        }
 
         switch(actionData.name) {
             case 'get_files':
@@ -228,10 +235,10 @@ export function registerUnsupervisedHandlers() {
                 handleTerminateTask(actionData);
                 break;
             default:
-                if(NEURO.tasks.some(task => task.id === actionData.name))
+                if(NEURO.tasks.some(task => task.id === actionData.name)) {
+                    NEURO.actionHandled = true;
                     handleRunTask(actionData);
-                else
-                    logOutput('ERROR', `Unknown action: ${actionData.name}`);
+                }
                 break;
         }
     });

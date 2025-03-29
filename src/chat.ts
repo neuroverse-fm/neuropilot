@@ -22,6 +22,8 @@ let lastChatResponse: string = '';
 export function registerChatResponseHandler() {
     NEURO.client?.onAction((actionData) => {
         if(actionData.name === 'chat') {
+            NEURO.actionHandled = true;
+            
             const answer = actionData.params?.answer;
             if(answer === undefined) {
                 NEURO.client?.sendActionResult(actionData.id, false, 'Missing required parameter "answer"');

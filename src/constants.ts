@@ -29,6 +29,8 @@ interface Neuro {
     waitingForCookie: boolean;
     tasks: NeuroTask[];
     currentTaskExecution: vscode.TaskExecution | null;
+    /** Whether the current action has been handled. */
+    actionHandled: boolean;
 }
 
 export const NEURO: Neuro = {
@@ -43,4 +45,5 @@ export const NEURO: Neuro = {
     waitingForCookie: false,
     tasks: [],
     currentTaskExecution: null,
+    actionHandled: false,
 };
