@@ -74,6 +74,8 @@ export function registerCompletionResultHandler() {
         assert(NEURO.client instanceof NeuroClient);
 
         if(actionData.name === 'complete_code') {
+            NEURO.actionHandled = true;
+            
             const suggestions = actionData.params?.suggestions;
 
             if(suggestions === undefined) {

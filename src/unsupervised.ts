@@ -435,29 +435,15 @@ export function registerUnsupervisedActions() {
  * The handlers will only handle actions that the user has given permission to use.
  */
 export function registerUnsupervisedHandlers() {
-    NEURO.client?.onAction(async (actionData) => {
-        const actionName = actionData.name;
-        
-        if (actionName === 'request_cookie') {
-            return;
-        } else if (NEURO.tasks.find(task => task.id !== actionName)) {
-            try {
-                neuroActionHandlers[actionName](actionData);
-            } catch (err) {
-                NEURO.client?.sendActionResult(actionData.id, false, `Error handling action "${actionName}": ${err}`);
-                logOutput('ERROR', `Error handling action "${actionName}": ${err}`);
-            }
-        } else {
-            try {
-                if (NEURO.tasks.find(task => task.id === actionName)) {
-                    handleRunTask(actionData);
-                } else {
-                    NEURO.client?.sendActionResult(actionData.id, false, `Unknown action: ${actionName}`);
-                }
-            } catch (err) {
-                NEURO.client?.sendActionResult(actionData.id, false, `Error handling action "${actionName}": ${err}`);
-                logOutput('ERROR', `Error handling action "${actionName}": ${err}`);
-            }
+    NEURO.client?.onAction((actionData) => {
+        if(actionKeys.includes(actionData.name)) {
+            NEURO.actionHandled = true;
+            neuroActionHandlers[actionData.name](actionData)
+        }
+
+        if(NEURO.tasks.find(task => task.id === actionData.name)) {
+            NEURO.actionHandled = true;
+            handleRunTask(actionData);
         }
     });
 }

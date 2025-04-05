@@ -28,6 +28,7 @@ export function activate(context: vscode.ExtensionContext) {
 
     registerChatParticipant(context);
 
+    onClientConnected(registerPreActionHandler);
     onClientConnected(registerCompletionResultHandler);
     onClientConnected(registerChatResponseHandler);
     onClientConnected(registerRequestCookieAction);
@@ -35,6 +36,7 @@ export function activate(context: vscode.ExtensionContext) {
     onClientConnected(reloadTasks);
     onClientConnected(registerUnsupervisedActions);
     onClientConnected(registerUnsupervisedHandlers);
+    onClientConnected(registerPostActionHandler);
 
     vscode.tasks.onDidEndTask(taskEndedHandler);
 
@@ -45,4 +47,18 @@ function reloadPermissions() {
     reloadTasks();
     registerRequestCookieAction();
     registerUnsupervisedActions();
+}
+
+function registerPreActionHandler() {
+    NEURO.client?.onAction((_actionData) => {
+        NEURO.actionHandled = false;
+    });
+}
+
+function registerPostActionHandler() {
+    NEURO.client?.onAction((actionData) => {
+        if(NEURO.actionHandled) return;
+        
+        NEURO.client?.sendActionResult(actionData.id, true, 'Unknown action');
+    });
 }
