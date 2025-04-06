@@ -119,8 +119,12 @@ export function handleSetGitConfig(actionData: any) {
     const configKey: string = actionData.params?.key;
     const configValue: string = actionData.params?.value;
 
-    if (!configKey || !configValue) {
-        NEURO.client?.sendActionResult(actionData.id, false, 'Config key or value missing.');
+    if (!configKey) {
+        NEURO.client?.sendActionResult(actionData.id, false, 'Missing required parameter "key"');
+        return;
+    }
+    if (!configValue) {
+        NEURO.client?.sendActionResult(actionData.id, false, 'Missing required parameter "value"');
         return;
     }
     else {
