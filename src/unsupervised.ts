@@ -441,7 +441,7 @@ export function registerUnsupervisedHandlers() {
             neuroActionHandlers[actionData.name](actionData)
         }
 
-        if(NEURO.tasks.find(task => task.id === actionData.name)) {
+        else if(NEURO.tasks.find(task => task.id === actionData.name)) {
             NEURO.actionHandled = true;
             handleRunTask(actionData);
         }
