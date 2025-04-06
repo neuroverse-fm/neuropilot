@@ -539,8 +539,12 @@ export function handleAddGitRemote(actionData: any) {
     const remoteName: string = actionData.params?.remoteName;
     const remoteUrl: string = actionData.params?.remoteURL;
 
-    if (!remoteName || !remoteUrl) {
-        NEURO.client?.sendActionResult(actionData.id, false, 'Remote name or URL missing.');
+    if (!remoteName) {
+        NEURO.client?.sendActionResult(actionData.id, false, 'Missing required parameter "remoteName"');
+        return;
+    }
+    if (!remoteUrl) {
+        NEURO.client?.sendActionResult(actionData.id, false, 'Missing required parameter "remoteURL"');
         return;
     }
 
