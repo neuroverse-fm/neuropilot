@@ -438,9 +438,8 @@ export function handleGitDiff(actionData: any) {
                 NEURO.client?.sendActionResult(actionData.id, false, `Invalid diffType "${diffType}".`);
         }
     } catch (err) {
-        NEURO.client?.sendActionResult(actionData.id, true);
-        NEURO.client?.sendContext("Failed to get diffs between files")
-        logOutput("ERROR", `Failed to diff files: ${err}`)
+        NEURO.client?.sendActionResult(actionData.id, true, "Failed to get diffs between files");
+        logOutput("ERROR", `Failed to diff files: ${err}`);
     }
 }
 
