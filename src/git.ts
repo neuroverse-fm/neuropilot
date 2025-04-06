@@ -116,8 +116,8 @@ export function handleSetGitConfig(actionData: any) {
     }
 
     const repo = git.repositories[0];
-    const configKey: string = actionData.params?.configKey;
-    const configValue: string = actionData.params?.configValue;
+    const configKey: string = actionData.params?.key;
+    const configValue: string = actionData.params?.value;
 
     if (!configKey || !configValue) {
         NEURO.client?.sendActionResult(actionData.id, false, 'Config key or value missing.');
