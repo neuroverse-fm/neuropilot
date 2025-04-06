@@ -537,7 +537,7 @@ export function handleAddGitRemote(actionData: any) {
 
     const repo = git.repositories[0];
     const remoteName: string = actionData.params?.remoteName;
-    const remoteUrl: string = actionData.params?.remoteUrl;
+    const remoteUrl: string = actionData.params?.remoteURL;
 
     if (!remoteName || !remoteUrl) {
         NEURO.client?.sendActionResult(actionData.id, false, 'Remote name or URL missing.');
