@@ -157,7 +157,7 @@ export function registerUnsupervisedActions() {
                 }
             },
             {
-                name: 'see_file_diffs',
+                name: 'diff_files',
                 description: 'Get the differences between two versions of a file in the Git repository',
                 schema: {
                     type: 'object',
