@@ -50,6 +50,15 @@ export function registerGitCommands() {
     if(vscode.workspace.getConfiguration('neuropilot').get('permission.gitOperations', false)) {
         NEURO.client?.registerActions([
             {
+                name: 'init_git_repo',
+                description: 'Initialize a new Git repository in the current workspace folder',
+                schema: {}
+            }
+        ]);
+
+        if (repo) {
+        NEURO.client?.registerActions([
+            {
                 name: 'add_file_to_git',
                 description: 'Add a file to the staging area',
                 schema: {
@@ -139,11 +148,6 @@ export function registerGitCommands() {
         if(vscode.workspace.getConfiguration('neuropilot').get('permission.gitConfigs', false)) {
             NEURO.client?.registerActions([
                 {
-                    name: 'init_git_repo',
-                    description: 'Initialize a new Git repository in the current workspace folder',
-                    schema: {}
-                },
-                {
                     name: 'set_git_config',
                     description: 'Set a Git configuration value',
                     schema: {
@@ -229,7 +233,7 @@ export function registerGitCommands() {
                 }
             ]);
         }
-    }
+    }}
 }
 
 /**
@@ -259,7 +263,8 @@ export function handleNewGitRepo(actionData: any) {
     
     git.init(vscode.Uri.file(folderPath)).then(() => {
         NEURO.client?.sendContext(`Initialized a new Git repository in the workspace folder`);
-        repo = git.repositories[0]; // Update the repo reference to the new repository
+        repo = git.repositories[0]; // Update the repo reference to the new repository, just in case
+        registerGitCommands(); // Re-register commands
     }, (err: string) => {
         NEURO.client?.sendContext(`Failed to initialize Git repository`);
         logOutput('ERROR', `Failed to initialize Git repository: ${err}`);
