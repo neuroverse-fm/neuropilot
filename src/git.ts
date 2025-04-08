@@ -92,7 +92,12 @@ export function registerGitActions() {
                 {
                     name: 'merge_to_current_branch',
                     description: 'Merge another branch into the current branch.',
-                    schema: {}
+                    schema: {
+                        type: 'object',
+                        properties: {
+                            ref_to_merge: { type: 'string' }
+                        }
+                    }
                 },
                 {
                     name: 'git_status',
@@ -707,7 +712,7 @@ export function handleGitMerge(actionData: any) {
     NEURO.client?.sendActionResult(actionData.id, true)
 
     repo.merge(refToMerge).then(() => {
-        NEURO.client?.sendContext(`Merging ${refToMerge} into the current branch.`)
+        NEURO.client?.sendContext(`Cleanly merged ${refToMerge} into the current branch.`)
     }, (err: string) => {
         NEURO.client?.registerActions([
             {
