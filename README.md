@@ -164,104 +164,119 @@ Terminates the currently running task that was started using a task action.
 
 ### `init_git_repo`
 
-*Requires Permission: Git Operations*
+*Requires Permission: Git Operations.*
 Initialises a Git repository in the workspace folder and registers git commands.
 
 ### `add_file_to_git`
 
-*Requires Permission: Git Operations*
+*Requires Permission: Git Operations.*
 Add a file to Git's staging index
 
 ### `remove_file_from_git`
 
-*Requires Permission: Git Operations*
+*Requires Permission: Git Operations.*
 Remove a file from Git's staging index
 
 ### `make_git_commit`
 
-*Requires Permission: Git Operations*
+*Requires Permission: Git Operations.*
 Makes a commit. Messsages are prefixed to differentiate between Neuro committing and the user committing.
 
 ### `git_status`
 
-*Requires Permission: Git Operations*
+*Requires Permission: Git Operations.*
 Returns the current status of the workspace.
 
 ### `diff_files`
 
-*Requires Permission: Git Operations*
+*Requires Permission: Git Operations.*
 Returns the diff between files.
 
 ### `merge_to_current_branch`
 
-*Requires Permission: Git Operations*
+*Requires Permission: Git Operations.*
 Merges another branch into the current branch.
 
 ### `abort_merge`
 
-*Requires Permission: Git Operations*
+*Requires Permission: Git Operations.*
 *Note: This is only registered if a merge failed to happen cleanly*
 Aborts a merge currently in progress.
 
 ### `git_log`
 
-*Requires Permission: Git Operations*
+*Requires Permission: Git Operations.*
 Returns the commit history of the current branch.
+
+### `git_blame`
+
+*Requires Permission: Git Operations.*
+Returns commit attributions for each line in a file.
+
+### `tag_head`
+
+*Requires Permission: Git Operations & Git Tags.*
+Tags the commit currently at HEAD.
+
+### `delete_tag`
+
+*Requires Permission: Git Operations & Git Tags.*
+Deletes an existing tag.
 
 ### `new_git_branch`
 
-*Requires Permission: Git Operations*
+*Requires Permission: Git Operations.*
 Creates a new git branch and switches to it.
 
 ### `switch_git_branch`
 
-*Requires Permission: Git Operations*
+*Requires Permission: Git Operations.*
 Switches to an existing branch.
 
 ### `delete_git_branch`
 
-*Requires Permission: Git Operations*
+*Requires Permission: Git Operations.*
 Deletes a branch from the repository.
 
 ### `fetch_git_commits`
 
-*Requires Permissions: Git Operations & Git Remotes*
+*Requires Permissions: Git Operations & Git Remotes.*
 Fetches info about missing commits from the specified/default remote.
 
 ### `pull_git_commits`
 
-*Requires Permissions: Git Operations & Git Remotes*
+*Requires Permissions: Git Operations & Git Remotes.*
 Pulls new git commits from the specified/default remote.
 
 ### `push_git_commits`
 
-*Requires Permissions: Git Operations & Git Remotes*
+*Requires Permissions: Git Operations & Git Remotes.*
 Pushes unpublished commits to the remote server. If a remote branch is not set as the upstream, this will automatically do so.
 
 ### `add_git_remote`
 
-*Requires Permissions: Git Operations, Git Remotes & Edit Remote Data*
+*Requires Permissions: Git Operations, Git Remotes & Edit Remote Data.*
 Adds a new git remote.
 
 ### `remove_git_remote`
 
-*Requires Permissions: Git Operations, Git Remotes & Edit Remote Data*
+*Requires Permissions: Git Operations, Git Remotes & Edit Remote Data.*
 Removes a git remote.
 
 ### `rename_git_remote`
 
-*Requires Permissions: Git Operations, Git Remotes & Edit Remote Data*
+*Requires Permissions: Git Operations, Git Remotes & Edit Remote Data.*
 Renames a git remote. This only changes the name of the remote, not the location.
 
 ### `get_git_config`
 
-*Requires Permissions: Git Operations & Git Config*
+*Requires Permissions: Git Operations & Git Config.*
 Gets a key's value from the git configuration. Neuro can only see the repository's configurations, never global configs.
 If no key is specified, returns the entire git config.
 
 ### `set_git_config`
 
-*Requires Permissions: Git Operations & Git Config*
+*Requires Permissions: Git Operations & Git Config.*
 Sets a key's value in the git configuration. Neuro can only change the repository's configurations, never global configs.
 
 ## Further Info

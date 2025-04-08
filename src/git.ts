@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import { NEURO } from './constants';
-import { GitExtension, Change, ForcePushMode, CommitOptions, Commit } from './types/git';
+import { GitExtension, Change, ForcePushMode, CommitOptions, Commit, Repository } from './types/git';
 import { StatusStrings, RefTypeStrings } from './types/git_status';
 import { getNormalizedRepoPathForGit, logOutput, simpleFileName } from './utils';
 
@@ -11,9 +11,6 @@ import { getNormalizedRepoPathForGit, logOutput, simpleFileName } from './utils'
 const gitExtension = vscode.extensions.getExtension<GitExtension>('vscode.git')!.exports;
 const git = gitExtension.getAPI(1);
 
-/**
- * Update state of `repo` based on git repository
- */
 export const gitActionHandlers: { [key: string]: (actionData: any) => void } = {
     'init_git_repo': handleNewGitRepo,
     'new_git_branch': handleNewGitBranch,
@@ -35,12 +32,13 @@ export const gitActionHandlers: { [key: string]: (actionData: any) => void } = {
     'merge_to_another_branch': handleGitMerge,
     'abort_merge': handleAbortMerge,
     'git_log': handleGitLog,
+    'git_blame': handleGitBlame,
     'tag_head': handleTagHEAD,
     'delete_tag': handleDeleteTag
 };
 
 // Get the current Git repository
-let repo = git.repositories[0];
+let repo: Repository | undefined = git.repositories[0];
 // Handle git repo checks in each handler
 // eg. 
 // if (!repo) {
@@ -52,7 +50,7 @@ let repo = git.repositories[0];
 export function registerGitActions() {
     NEURO.client?.unregisterActions(Object.keys(gitActionHandlers));
 
-    if(vscode.workspace.getConfiguration('neuropilot').get('permission.gitOperations', false)) {
+    if (vscode.workspace.getConfiguration('neuropilot').get('permission.gitOperations', false)) {
         NEURO.client?.registerActions([
             {
                 name: 'init_git_repo',
@@ -61,232 +59,255 @@ export function registerGitActions() {
             }
         ]);
 
-        if (repo) {
-            NEURO.client?.registerActions([
-                {
-                    name: 'add_file_to_git',
-                    description: 'Add a file to the staging area',
-                    schema: {
-                        type: 'object',
-                        properties: {
-                            filePath: { type: 'string' },
-                        },
-                        required: ['filePath']
-                    }
-                },
-                {
-                    name: 'make_git_commit',
-                    description: 'Commit staged changes with a message',
-                    schema: {
-                        type: 'object',
-                        properties: {
-                            message: { type: 'string' },
-                            options: {
-                                type: 'array',
-                                items: { type: 'string', enum: ["signoff", "verbose", "amend"] },
+        const root = vscode.workspace.workspaceFolders?.[0].uri;
+        if (!root) return;
+
+        git.openRepository(root).then((r) => {
+            if (r === null) {
+                repo = undefined;
+                return;
+            }
+
+            repo = r;
+
+            if (repo) {
+                NEURO.client?.registerActions([
+                    {
+                        name: 'add_file_to_git',
+                        description: 'Add a file to the staging area',
+                        schema: {
+                            type: 'object',
+                            properties: {
+                                filePath: { type: 'string' },
+                            },
+                            required: ['filePath']
+                        }
+                    },
+                    {
+                        name: 'make_git_commit',
+                        description: 'Commit staged changes with a message',
+                        schema: {
+                            type: 'object',
+                            properties: {
+                                message: { type: 'string' },
+                                options: {
+                                    type: 'array',
+                                    items: { type: 'string', enum: ["signoff", "verbose", "amend"] },
+                                }
+                            },
+                            required: ['message']
+                        }
+                    },
+                    {
+                        name: 'merge_to_current_branch',
+                        description: 'Merge another branch into the current branch.',
+                        schema: {
+                            type: 'object',
+                            properties: {
+                                ref_to_merge: { type: 'string' }
                             }
-                        },
-                        required: ['message']
-                    }
-                },
-                {
-                    name: 'merge_to_current_branch',
-                    description: 'Merge another branch into the current branch.',
-                    schema: {
-                        type: 'object',
-                        properties: {
-                            ref_to_merge: { type: 'string' }
-                        }
-                    }
-                },
-                {
-                    name: 'git_status',
-                    description: 'Get the current status of the Git repository',
-                    schema: {}
-                },
-                {
-                    name: 'remove_file_from_git',
-                    description: 'Remove a file from the staging area',
-                    schema: {
-                        type: 'object',
-                        properties: {
-                            filePath: { type: 'string' },
-                        },
-                        required: ['filePath']
-                    }
-                },
-                {
-                    name: 'delete_git_branch',
-                    description: 'Delete a branch in the current Git repository',
-                    schema: {
-                        type: 'object',
-                        properties: {
-                            branchName: { type: 'string' },
-                            force: { type: 'boolean' },
-                        },
-                        required: ['branchName']
-                    }
-                },
-                {
-                    name: 'switch_git_branch',
-                    description: 'Switch to a different branch in the current Git repository',
-                    schema: {
-                        type: 'object',
-                        properties: {
-                            branchName: { type: 'string' },
-                        },
-                        required: ['branchName']
-                    }
-                },
-                {
-                    name: 'new_git_branch',
-                    description: 'Create a new branch in the current Git repository',
-                    schema: {
-                        type: 'object',
-                        properties: {
-                            branchName: { type: 'string' },
-                        },
-                        required: ['branchName'],
-                    }
-                },
-                {
-                    name: 'diff_files',
-                    description: 'Get the differences between two versions of a file in the Git repository',
-                    schema: {
-                        type: 'object',
-                        properties: {
-                            ref1: { type: 'string' },
-                            ref2: { type: 'string' },
-                            filePath: { type: 'string' },
-                            diffType: { type: 'string', enum: ['diffWithHEAD', 'diffWith', 'diffIndexWithHEAD', 'diffIndexWith', 'diffBetween', 'fullDiff'] },
-                        }
-                    }
-                },
-                {
-                    name: 'git_log',
-                    description: 'Get the commit history of the current branch',
-                    schema: {}
-                }
-            ]);
-
-            if(vscode.workspace.getConfiguration('neuropilot').get('permission.gitTags', false)) {
-                NEURO.client?.registerActions([
-                    {
-                        name: 'tag_head',
-                        description: "Tag the current commit using Git.",
-                        schema: {
-                            type: 'object',
-                            properties: {
-                                name: { type: 'string' },
-                                upstream: { type: 'string' }
-                            },
-                            required: ["name", "upstream"]
                         }
                     },
                     {
-                        name: 'delete_tag',
-                        description: "Delete a tag from Git.",
-                        schema: {
-                            type: 'object',
-                            properties: {
-                                name: { type: 'string' }
-                            },
-                            required: ["name"]
-                        }
-                    }
-                ])
-            }
-
-            if(vscode.workspace.getConfiguration('neuropilot').get('permission.gitConfigs', false)) {
-                NEURO.client?.registerActions([
-                    {
-                        name: 'set_git_config',
-                        description: 'Set a Git configuration value',
-                        schema: {
-                            type: 'object',
-                            properties: {
-                                key: { type: 'string' },
-                                value: { type: 'string' },
-                            },
-                            required: ['key', 'value'],
-                        }
-                    },
-                    {
-                        name: 'get_git_config',
-                        description: 'Get a Git configuration value',
-                        schema: {
-                            type: 'object',
-                            properties: {
-                                key: { type: 'string' },
-                            },
-                            required: ['key'],
-                        }
-                    },
-                ]);
-            }
-
-            if(vscode.workspace.getConfiguration('neuropilot').get('permission.gitRemotes', false)) {
-                NEURO.client?.registerActions([
-                    {
-                        name: 'pull_git_commits',
-                        description: 'Pull commits from the remote repository',
+                        name: 'git_status',
+                        description: 'Get the current status of the Git repository',
                         schema: {}
                     },
                     {
-                        name: 'push_git_commits',
-                        description: 'Push commits to the remote repository',
+                        name: 'remove_file_from_git',
+                        description: 'Remove a file from the staging area',
                         schema: {
                             type: 'object',
                             properties: {
-                                remoteName: { type: 'string' },
+                                filePath: { type: 'string' },
+                            },
+                            required: ['filePath']
+                        }
+                    },
+                    {
+                        name: 'delete_git_branch',
+                        description: 'Delete a branch in the current Git repository',
+                        schema: {
+                            type: 'object',
+                            properties: {
                                 branchName: { type: 'string' },
-                                forcePush: { type: 'boolean' },
+                                force: { type: 'boolean' },
+                            },
+                            required: ['branchName']
+                        }
+                    },
+                    {
+                        name: 'switch_git_branch',
+                        description: 'Switch to a different branch in the current Git repository',
+                        schema: {
+                            type: 'object',
+                            properties: {
+                                branchName: { type: 'string' },
+                            },
+                            required: ['branchName']
+                        }
+                    },
+                    {
+                        name: 'new_git_branch',
+                        description: 'Create a new branch in the current Git repository',
+                        schema: {
+                            type: 'object',
+                            properties: {
+                                branchName: { type: 'string' },
+                            },
+                            required: ['branchName'],
+                        }
+                    },
+                    {
+                        name: 'diff_files',
+                        description: 'Get the differences between two versions of a file in the Git repository',
+                        schema: {
+                            type: 'object',
+                            properties: {
+                                ref1: { type: 'string' },
+                                ref2: { type: 'string' },
+                                filePath: { type: 'string' },
+                                diffType: { type: 'string', enum: ['diffWithHEAD', 'diffWith', 'diffIndexWithHEAD', 'diffIndexWith', 'diffBetween', 'fullDiff'] },
                             }
+                        }
+                    },
+                    {
+                        name: 'git_log',
+                        description: 'Get the commit history of the current branch',
+                        schema: {}
+                    },
+                    {
+                        name: 'git_blame',
+                        description: 'Get commit attributions for each line in a file.',
+                        schema: {
+                            type: "object",
+                            properties: {
+                                filePath: { type: 'string' }
+                            },
+                            required: ["filePath"]
                         }
                     }
                 ]);
 
-                if(vscode.workspace.getConfiguration('neuropilot').get('permission.editRemoteData', false)) {
+                if (vscode.workspace.getConfiguration('neuropilot').get('permission.gitTags', false)) {
                     NEURO.client?.registerActions([
                         {
-                            name: 'add_git_remote',
-                            description: 'Add a new remote to the Git repository',
+                            name: 'tag_head',
+                            description: "Tag the current commit using Git.",
                             schema: {
                                 type: 'object',
                                 properties: {
-                                    remoteName: { type: 'string' },
-                                    remoteURL: { type: 'string' },
+                                    name: { type: 'string' },
+                                    upstream: { type: 'string' }
                                 },
-                                required: ['remoteName', 'remoteURL'],
+                                required: ["name", "upstream"]
                             }
                         },
                         {
-                            name: 'remove_git_remote',
-                            description: 'Remove a remote from the Git repository',
+                            name: 'delete_tag',
+                            description: "Delete a tag from Git.",
                             schema: {
                                 type: 'object',
                                 properties: {
-                                    remoteName: { type: 'string' },
+                                    name: { type: 'string' }
                                 },
-                                required: ['remoteName'],
-                            }
-                        },
-                        {
-                            name: 'rename_git_remote',
-                            description: 'Rename a remote in the Git repository',
-                            schema: {
-                                type: 'object',
-                                properties: {
-                                    oldRemoteName: { type: 'string' },
-                                    newRemoteName: { type: 'string' },
-                                },
-                                required: ['oldRemoteName', 'newRemoteName'],
+                                required: ["name"]
                             }
                         }
                     ]);
                 }
+
+                if (vscode.workspace.getConfiguration('neuropilot').get('permission.gitConfigs', false)) {
+                    NEURO.client?.registerActions([
+                        {
+                            name: 'set_git_config',
+                            description: 'Set a Git configuration value',
+                            schema: {
+                                type: 'object',
+                                properties: {
+                                    key: { type: 'string' },
+                                    value: { type: 'string' },
+                                },
+                                required: ['key', 'value'],
+                            }
+                        },
+                        {
+                            name: 'get_git_config',
+                            description: 'Get a Git configuration value',
+                            schema: {
+                                type: 'object',
+                                properties: {
+                                    key: { type: 'string' },
+                                },
+                                required: ['key'],
+                            }
+                        },
+                    ]);
+                }
+
+                if (vscode.workspace.getConfiguration('neuropilot').get('permission.gitRemotes', false)) {
+                    NEURO.client?.registerActions([
+                        {
+                            name: 'pull_git_commits',
+                            description: 'Pull commits from the remote repository',
+                            schema: {}
+                        },
+                        {
+                            name: 'push_git_commits',
+                            description: 'Push commits to the remote repository',
+                            schema: {
+                                type: 'object',
+                                properties: {
+                                    remoteName: { type: 'string' },
+                                    branchName: { type: 'string' },
+                                    forcePush: { type: 'boolean' },
+                                }
+                            }
+                        }
+                    ]);
+
+                    if (vscode.workspace.getConfiguration('neuropilot').get('permission.editRemoteData', false)) {
+                        NEURO.client?.registerActions([
+                            {
+                                name: 'add_git_remote',
+                                description: 'Add a new remote to the Git repository',
+                                schema: {
+                                    type: 'object',
+                                    properties: {
+                                        remoteName: { type: 'string' },
+                                        remoteURL: { type: 'string' },
+                                    },
+                                    required: ['remoteName', 'remoteURL'],
+                                }
+                            },
+                            {
+                                name: 'remove_git_remote',
+                                description: 'Remove a remote from the Git repository',
+                                schema: {
+                                    type: 'object',
+                                    properties: {
+                                        remoteName: { type: 'string' },
+                                    },
+                                    required: ['remoteName'],
+                                }
+                            },
+                            {
+                                name: 'rename_git_remote',
+                                description: 'Rename a remote in the Git repository',
+                                schema: {
+                                    type: 'object',
+                                    properties: {
+                                        oldRemoteName: { type: 'string' },
+                                        newRemoteName: { type: 'string' },
+                                    },
+                                    required: ['oldRemoteName', 'newRemoteName'],
+                                }
+                            }
+                        ]);
+                    }
+                }
             }
-        }
+        });
     }
 }
 
@@ -524,6 +545,7 @@ export function handleGitStatus(actionData: any) {
             };
         }
         // Can't stringify the repo state directly (because of getters I assume)
+        if (!repo) return;
         const state = {
             indexChanges: repo.state.indexChanges.map((change: Change) => translateChange(change)),
             workingTreeChanges: repo.state.workingTreeChanges.map((change: Change) => translateChange(change)),
@@ -765,7 +787,6 @@ export function handleGitDiff(actionData: any) {
         return;
     }
 
-    
     const ref1: string = actionData.params?.ref1;
     const ref2: string = actionData.params?.ref2;
     const filePath: string = actionData.params?.filePath;
@@ -778,86 +799,136 @@ export function handleGitDiff(actionData: any) {
         NEURO.client?.sendActionResult(actionData.id, true);
     }
 
-    try {
-        switch (diffType) {
-            case 'diffWithHEAD':
-                if (filePath) {
-                    repo.diffWithHEAD(filePath).then((diff: string) => {
+    switch (diffType) {
+        case 'diffWithHEAD':
+            if (filePath) {
+                repo.diffWithHEAD(filePath)
+                    .then((diff: string) => {
                         NEURO.client?.sendContext(`Diff with HEAD for file "${filePath}":\n${diff}`);
+                    })
+                    .catch((err: string) => {
+                        NEURO.client?.sendContext(`Failed to get diff with HEAD for file "${filePath}".`);
+                        logOutput("ERROR", `Failed to get diff with HEAD for file "${filePath}": ${err}`);
                     });
-                } else {
-                    repo.diffWithHEAD().then((changes: Change[]) => {
+            } else {
+                repo.diffWithHEAD()
+                    .then((changes: Change[]) => {
                         NEURO.client?.sendContext(`Diff with HEAD:\n${JSON.stringify(changes)}`);
+                    })
+                    .catch((err: string) => {
+                        NEURO.client?.sendContext(`Failed to get diff with HEAD.`);
+                        logOutput("ERROR", `Failed to get diff with HEAD: ${err}`);
                     });
-                }
-                break;
+            }
+            break;
 
-            case 'diffWith':
-                if (ref1 && filePath) {
-                    repo.diffWith(ref1, filePath).then((diff: string) => {
+        case 'diffWith':
+            if (ref1 && filePath) {
+                repo.diffWith(ref1, filePath)
+                    .then((diff: string) => {
                         NEURO.client?.sendContext(`Diff with ref "${ref1}" for file "${filePath}":\n${diff}`);
+                    })
+                    .catch((err: string) => {
+                        NEURO.client?.sendContext(`Failed to get diff with ref "${ref1}" for file "${filePath}".`);
+                        logOutput("ERROR", `Failed to get diff with ref "${ref1}" for file "${filePath}": ${err}`);
                     });
-                } else if (ref1) {
-                    repo.diffWith(ref1).then((changes: Change[]) => {
+            } else if (ref1) {
+                repo.diffWith(ref1)
+                    .then((changes: Change[]) => {
                         NEURO.client?.sendContext(`Diff with ref "${ref1}":\n${JSON.stringify(changes)}`);
+                    })
+                    .catch((err: string) => {
+                        NEURO.client?.sendContext(`Failed to get diff with ref "${ref1}".`);
+                        logOutput("ERROR", `Failed to get diff with ref "${ref1}": ${err}`);
                     });
-                } else {
-                    NEURO.client?.sendContext('Ref1 is required for diffWith.');
-                }
-                break;
+            } else {
+                NEURO.client?.sendContext('Ref1 is required for diffWith.');
+            }
+            break;
 
-            case 'diffIndexWithHEAD':
-                if (filePath) {
-                    repo.diffIndexWithHEAD(filePath).then((diff: string) => {
+        case 'diffIndexWithHEAD':
+            if (filePath) {
+                repo.diffIndexWithHEAD(filePath)
+                    .then((diff: string) => {
                         NEURO.client?.sendContext(`Diff index with HEAD for file "${filePath}":\n${diff}`);
+                    })
+                    .catch((err: string) => {
+                        NEURO.client?.sendContext(`Failed to get diff index with HEAD for file "${filePath}".`);
+                        logOutput("ERROR", `Failed to get diff index with HEAD for file "${filePath}": ${err}`);
                     });
-                } else {
-                    repo.diffIndexWithHEAD().then((changes: Change[]) => {
+            } else {
+                repo.diffIndexWithHEAD()
+                    .then((changes: Change[]) => {
                         NEURO.client?.sendContext(`Diff index with HEAD:\n${JSON.stringify(changes)}`);
+                    })
+                    .catch((err: string) => {
+                        NEURO.client?.sendContext(`Failed to get diff index with HEAD.`);
+                        logOutput("ERROR", `Failed to get diff index with HEAD: ${err}`);
                     });
-                }
-                break;
+            }
+            break;
 
-            case 'diffIndexWith':
-                if (ref1 && filePath) {
-                    repo.diffIndexWith(ref1, filePath).then((diff: string) => {
+        case 'diffIndexWith':
+            if (ref1 && filePath) {
+                repo.diffIndexWith(ref1, filePath)
+                    .then((diff: string) => {
                         NEURO.client?.sendContext(`Diff index with ref "${ref1}" for file "${filePath}":\n${diff}`);
+                    })
+                    .catch((err: string) => {
+                        NEURO.client?.sendContext(`Failed to get diff index with ref "${ref1}" for file "${filePath}".`);
+                        logOutput("ERROR", `Failed to get diff index with ref "${ref1}" for file "${filePath}": ${err}`);
                     });
-                } else if (ref1) {
-                    repo.diffIndexWith(ref1).then((changes: Change[]) => {
+            } else if (ref1) {
+                repo.diffIndexWith(ref1)
+                    .then((changes: Change[]) => {
                         NEURO.client?.sendContext(`Diff index with ref "${ref1}":\n${JSON.stringify(changes)}`);
+                    })
+                    .catch((err: string) => {
+                        NEURO.client?.sendContext(`Failed to get diff index with ref "${ref1}".`);
+                        logOutput("ERROR", `Failed to get diff index with ref "${ref1}": ${err}`);
                     });
-                } else {
-                    NEURO.client?.sendContext('Ref1 is required for diffIndexWith.');
-                }
-                break;
+            } else {
+                NEURO.client?.sendContext('Ref1 is required for diffIndexWith.');
+            }
+            break;
 
-            case 'diffBetween':
-                if (ref1 && ref2 && filePath) {
-                    repo.diffBetween(ref1, ref2, filePath).then((diff: string) => {
+        case 'diffBetween':
+            if (ref1 && ref2 && filePath) {
+                repo.diffBetween(ref1, ref2, filePath)
+                    .then((diff: string) => {
                         NEURO.client?.sendContext(`Diff between refs "${ref1}" and "${ref2}" for file "${filePath}":\n${diff}`);
+                    })
+                    .catch((err: string) => {
+                        NEURO.client?.sendContext(`Failed to get diff between refs "${ref1}" and "${ref2}" for file "${filePath}".`);
+                        logOutput("ERROR", `Failed to get diff between refs "${ref1}" and "${ref2}" for file "${filePath}": ${err}`);
                     });
-                } else if (ref1 && ref2) {
-                    repo.diffBetween(ref1, ref2).then((changes: Change[]) => {
+            } else if (ref1 && ref2) {
+                repo.diffBetween(ref1, ref2)
+                    .then((changes: Change[]) => {
                         NEURO.client?.sendContext(`Diff between refs "${ref1}" and "${ref2}":\n${JSON.stringify(changes)}`);
+                    })
+                    .catch((err: string) => {
+                        NEURO.client?.sendContext(`Failed to get diff between refs "${ref1}" and "${ref2}".`);
+                        logOutput("ERROR", `Failed to get diff between refs "${ref1}" and "${ref2}": ${err}`);
                     });
-                } else {
-                    NEURO.client?.sendContext('Both ref1 and ref2 are required for diffBetween.');
-                }
-                break;
-            
-            case 'fullDiff':
-                repo.diff().then((diff: string) => {
+            } else {
+                NEURO.client?.sendContext('Both ref1 and ref2 are required for diffBetween.');
+            }
+            break;
+
+        case 'fullDiff':
+            repo.diff()
+                .then((diff: string) => {
                     NEURO.client?.sendContext(`Full diff:\n${diff}`);
+                })
+                .catch((err: string) => {
+                    NEURO.client?.sendContext(`Failed to get full diff.`);
+                    logOutput("ERROR", `Failed to get full diff: ${err}`);
                 });
-                break;
-            
-            default:
-                NEURO.client?.sendContext(`Invalid diffType "${diffType}".`);
-        }
-    } catch (err) {
-        NEURO.client?.sendContext("Failed to get diffs between files");
-        logOutput("ERROR", `Failed to diff files: ${err}`);
+            break;
+
+        default:
+            NEURO.client?.sendContext(`Invalid diffType "${diffType}".`);
     }
 }
 
