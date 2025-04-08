@@ -3,6 +3,23 @@ import * as vscode from 'vscode';
 import { NEURO } from "./constants";
 import { logOutput, formatActionID } from './utils';
 
+export const taskHandlers: { [key: string]: (actionData: any) => void } = {
+    // handleRunTask is used separately and not on this list
+    'terminate_task': handleTerminateTask,
+}
+
+export function registerTaskHandlers() {
+    if(vscode.workspace.getConfiguration('neuropilot').get('permission.runTasks', false)) {
+        NEURO.client?.registerActions([
+            {
+                name: 'terminate_task',
+                description: 'Terminate the currently running task',
+            },
+        ]);
+        // Tasks are registered asynchronously in reloadTasks()
+    }
+}
+
 export function handleTerminateTask(actionData: any) {
     if(!vscode.workspace.getConfiguration('neuropilot').get('permission.runTasks', false)) {
         logOutput('WARNING', 'Neuro attempted to terminate a task, but permission is disabled');

@@ -57,183 +57,185 @@ export function registerGitCommands() {
         ]);
 
         if (repo) {
-        NEURO.client?.registerActions([
-            {
-                name: 'add_file_to_git',
-                description: 'Add a file to the staging area',
-                schema: {
-                    type: 'object',
-                    properties: {
-                        filePath: { type: 'string' },
-                    },
-                    required: ['filePath']
-                }
-            },
-            {
-                name: 'make_git_commit',
-                description: 'Commit staged changes with a message',
-                schema: {
-                    type: 'object',
-                    properties: {
-                        message: { type: 'string' },
-                    },
-                    required: ['message']
-                }
-            },
-            {
-                name: 'git_status',
-                description: 'Get the current status of the Git repository',
-                schema: {}
-            },
-            {
-                name: 'remove_file_from_git',
-                description: 'Remove a file from the staging area',
-                schema: {
-                    type: 'object',
-                    properties: {
-                        filePath: { type: 'string' },
-                    },
-                    required: ['filePath']
-                }
-            },
-            {
-                name: 'delete_git_branch',
-                description: 'Delete a branch in the current Git repository',
-                schema: {
-                    type: 'object',
-                    properties: {
-                        branchName: { type: 'string' },
-                        force: { type: 'boolean' },
-                    },
-                    required: ['branchName']
-                }
-            },
-            {
-                name: 'switch_git_branch',
-                description: 'Switch to a different branch in the current Git repository',
-                schema: {
-                    type: 'object',
-                    properties: {
-                        branchName: { type: 'string' },
-                    },
-                    required: ['branchName']
-                }
-            },
-            {
-                name: 'new_git_branch',
-                description: 'Create a new branch in the current Git repository',
-                schema: {
-                    type: 'object',
-                    properties: {
-                        branchName: { type: 'string' },
-                    },
-                    required: ['branchName'],
-                }
-            },
-            {
-                name: 'diff_files',
-                description: 'Get the differences between two versions of a file in the Git repository',
-                schema: {
-                    type: 'object',
-                    properties: {
-                        ref1: { type: 'string' },
-                        ref2: { type: 'string' },
-                        filePath: { type: 'string' },
-                        diffType: { type: 'string', enum: ['diffWithHEAD', 'diffWith', 'diffIndexWithHEAD', 'diffIndexWith', 'diffBetween', 'fullDiff'] },
-                    }
-                }
-            }
-        ]);
-
-        if(vscode.workspace.getConfiguration('neuropilot').get('permission.gitConfigs', false)) {
             NEURO.client?.registerActions([
                 {
-                    name: 'set_git_config',
-                    description: 'Set a Git configuration value',
+                    name: 'add_file_to_git',
+                    description: 'Add a file to the staging area',
                     schema: {
                         type: 'object',
                         properties: {
-                            key: { type: 'string' },
-                            value: { type: 'string' },
+                            filePath: { type: 'string' },
                         },
-                        required: ['key', 'value'],
+                        required: ['filePath']
                     }
                 },
                 {
-                    name: 'get_git_config',
-                    description: 'Get a Git configuration value',
+                    name: 'make_git_commit',
+                    description: 'Commit staged changes with a message',
                     schema: {
                         type: 'object',
                         properties: {
-                            key: { type: 'string' },
+                            message: { type: 'string' },
                         },
-                        required: ['key'],
+                        required: ['message']
                     }
                 },
-            ]);
-        }
-
-        if(vscode.workspace.getConfiguration('neuropilot').get('permission.gitRemotes', false)) {
-            if(vscode.workspace.getConfiguration('neuropilot').get('permission.editRemoteData', false)) {
-                NEURO.client?.registerActions([
-                    {
-                        name: 'add_git_remote',
-                        description: 'Add a new remote to the Git repository',
-                        schema: {
-                            type: 'object',
-                            properties: {
-                                remoteName: { type: 'string' },
-                                remoteURL: { type: 'string' },
-                            },
-                            required: ['remoteName', 'remoteURL'],
-                        }
-                    },
-                    {
-                        name: 'remove_git_remote',
-                        description: 'Remove a remote from the Git repository',
-                        schema: {
-                            type: 'object',
-                            properties: {
-                                remoteName: { type: 'string' },
-                            },
-                            required: ['remoteName'],
-                        }
-                    },
-                    {
-                        name: 'rename_git_remote',
-                        description: 'Rename a remote in the Git repository',
-                        schema: {
-                            type: 'object',
-                            properties: {
-                                oldRemoteName: { type: 'string' },
-                                newRemoteName: { type: 'string' },
-                            },
-                            required: ['oldRemoteName', 'newRemoteName'],
-                        }
-                    }
-                ]);
-            }
-            NEURO.client?.registerActions([
                 {
-                    name: 'pull_git_commits',
-                    description: 'Pull commits from the remote repository',
+                    name: 'git_status',
+                    description: 'Get the current status of the Git repository',
                     schema: {}
                 },
                 {
-                    name: 'push_git_commits',
-                    description: 'Push commits to the remote repository',
+                    name: 'remove_file_from_git',
+                    description: 'Remove a file from the staging area',
                     schema: {
                         type: 'object',
                         properties: {
-                            remoteName: { type: 'string' },
+                            filePath: { type: 'string' },
+                        },
+                        required: ['filePath']
+                    }
+                },
+                {
+                    name: 'delete_git_branch',
+                    description: 'Delete a branch in the current Git repository',
+                    schema: {
+                        type: 'object',
+                        properties: {
                             branchName: { type: 'string' },
-                            forcePush: { type: 'boolean' },
+                            force: { type: 'boolean' },
+                        },
+                        required: ['branchName']
+                    }
+                },
+                {
+                    name: 'switch_git_branch',
+                    description: 'Switch to a different branch in the current Git repository',
+                    schema: {
+                        type: 'object',
+                        properties: {
+                            branchName: { type: 'string' },
+                        },
+                        required: ['branchName']
+                    }
+                },
+                {
+                    name: 'new_git_branch',
+                    description: 'Create a new branch in the current Git repository',
+                    schema: {
+                        type: 'object',
+                        properties: {
+                            branchName: { type: 'string' },
+                        },
+                        required: ['branchName'],
+                    }
+                },
+                {
+                    name: 'diff_files',
+                    description: 'Get the differences between two versions of a file in the Git repository',
+                    schema: {
+                        type: 'object',
+                        properties: {
+                            ref1: { type: 'string' },
+                            ref2: { type: 'string' },
+                            filePath: { type: 'string' },
+                            diffType: { type: 'string', enum: ['diffWithHEAD', 'diffWith', 'diffIndexWithHEAD', 'diffIndexWith', 'diffBetween', 'fullDiff'] },
                         }
                     }
                 }
             ]);
+
+            if(vscode.workspace.getConfiguration('neuropilot').get('permission.gitConfigs', false)) {
+                NEURO.client?.registerActions([
+                    {
+                        name: 'set_git_config',
+                        description: 'Set a Git configuration value',
+                        schema: {
+                            type: 'object',
+                            properties: {
+                                key: { type: 'string' },
+                                value: { type: 'string' },
+                            },
+                            required: ['key', 'value'],
+                        }
+                    },
+                    {
+                        name: 'get_git_config',
+                        description: 'Get a Git configuration value',
+                        schema: {
+                            type: 'object',
+                            properties: {
+                                key: { type: 'string' },
+                            },
+                            required: ['key'],
+                        }
+                    },
+                ]);
+            }
+
+            if(vscode.workspace.getConfiguration('neuropilot').get('permission.gitRemotes', false)) {
+                NEURO.client?.registerActions([
+                    {
+                        name: 'pull_git_commits',
+                        description: 'Pull commits from the remote repository',
+                        schema: {}
+                    },
+                    {
+                        name: 'push_git_commits',
+                        description: 'Push commits to the remote repository',
+                        schema: {
+                            type: 'object',
+                            properties: {
+                                remoteName: { type: 'string' },
+                                branchName: { type: 'string' },
+                                forcePush: { type: 'boolean' },
+                            }
+                        }
+                    }
+                ]);
+
+                if(vscode.workspace.getConfiguration('neuropilot').get('permission.editRemoteData', false)) {
+                    NEURO.client?.registerActions([
+                        {
+                            name: 'add_git_remote',
+                            description: 'Add a new remote to the Git repository',
+                            schema: {
+                                type: 'object',
+                                properties: {
+                                    remoteName: { type: 'string' },
+                                    remoteURL: { type: 'string' },
+                                },
+                                required: ['remoteName', 'remoteURL'],
+                            }
+                        },
+                        {
+                            name: 'remove_git_remote',
+                            description: 'Remove a remote from the Git repository',
+                            schema: {
+                                type: 'object',
+                                properties: {
+                                    remoteName: { type: 'string' },
+                                },
+                                required: ['remoteName'],
+                            }
+                        },
+                        {
+                            name: 'rename_git_remote',
+                            description: 'Rename a remote in the Git repository',
+                            schema: {
+                                type: 'object',
+                                properties: {
+                                    oldRemoteName: { type: 'string' },
+                                    newRemoteName: { type: 'string' },
+                                },
+                                required: ['oldRemoteName', 'newRemoteName'],
+                            }
+                        }
+                    ]);
+                }
+            }
         }
-    }}
+    }
 }
 
 /**
@@ -262,9 +264,9 @@ export function handleNewGitRepo(actionData: any) {
     NEURO.client?.sendActionResult(actionData.id, true)
     
     git.init(vscode.Uri.file(folderPath)).then(() => {
-        NEURO.client?.sendContext(`Initialized a new Git repository in the workspace folder`);
         repo = git.repositories[0]; // Update the repo reference to the new repository, just in case
         registerGitCommands(); // Re-register commands
+        NEURO.client?.sendContext(`Initialized a new Git repository in the workspace folder. You should now be able to use git commands.`);
     }, (err: string) => {
         NEURO.client?.sendContext(`Failed to initialize Git repository`);
         logOutput('ERROR', `Failed to initialize Git repository: ${err}`);
@@ -286,7 +288,7 @@ export function handleGetGitConfig(actionData: any) {
     }
 
     
-    const configKey: string = actionData.params?.configKey;
+    const configKey: string = actionData.params?.key;
 
     NEURO.client?.sendActionResult(actionData.id, true);
 

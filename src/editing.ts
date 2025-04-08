@@ -3,6 +3,83 @@ import * as vscode from 'vscode';
 import { NEURO } from "./constants";
 import { getPositionContext, isPathNeuroSafe, logOutput } from './utils';
 
+export const editingFileHandlers: { [key: string]: (actionData: any) => void } = {
+    'place_cursor': handlePlaceCursor,
+    'get_cursor': handleGetCursor,
+    'insert_text': handleInsertText,
+    'replace_text': handleReplaceText,
+    'delete_text': handleDeleteText,
+    'place_cursor_at_text': handlePlaceCursorAtText,
+}
+
+export function registerEditingActions() {
+    if(vscode.workspace.getConfiguration('neuropilot').get('permission.editActiveDocument', false)) {
+        NEURO.client?.registerActions([
+            {
+                name: 'place_cursor',
+                description: 'Place the cursor in the current file. Line and character are zero-based.',
+                schema: {
+                    type: 'object',
+                    properties: {
+                        line: { type: 'integer' },
+                        character: { type: 'integer' },
+                    },
+                    required: ['line', 'character'],
+                }
+            },
+            {
+                name: 'get_cursor',
+                description: 'Get the current cursor position and the text surrounding it',
+            },
+            {
+                name: 'insert_text',
+                description: 'Insert code at the current cursor position',
+                schema: {
+                    type: 'object',
+                    properties: {
+                        text: { type: 'string' },
+                    },
+                    required: ['text'],
+                }
+            },
+            {
+                name: 'replace_text',
+                description: 'Replace the first occurrence of the specified code',
+                schema: {
+                    type: 'object',
+                    properties: {
+                        oldText: { type: 'string' },
+                        newText: { type: 'string' },
+                    },
+                    required: ['oldText', 'newText'],
+                }
+            },
+            {
+                name: 'delete_text',
+                description: 'Delete the first occurrence of the specified code',
+                schema: {
+                    type: 'object',
+                    properties: {
+                        textToDelete: { type: 'string' },
+                    },
+                    required: ['textToDelete'],
+                }
+            },
+            {
+                name: 'place_cursor_at_text',
+                description: 'Place the cursor before or after the first occurrence of the specified text',
+                schema: {
+                    type: 'object',
+                    properties: {
+                        text: { type: 'string' },
+                        position: { type: 'string', enum: ['before', 'after'] },
+                    },
+                    required: ['text', 'position'],
+                }
+            },
+        ]);
+    }
+}
 
 export function handlePlaceCursor(actionData: any) {
     if(!vscode.workspace.getConfiguration('neuropilot').get('permission.editActiveDocument', false)) {

@@ -1,7 +1,99 @@
 import * as vscode from 'vscode';
 
 import { NEURO } from "./constants";
-import { combineGlobLines, formatActionID, getPositionContext, getWorkspacePath, isPathNeuroSafe, logOutput, normalizePath } from './utils';
+import { combineGlobLines, getWorkspacePath, isPathNeuroSafe, logOutput, normalizePath } from './utils';
+
+export const fileActionHandlers: { [key: string]: (actionData: any) => void } = {
+    'get_files': handleGetFiles,
+    'open_file': handleOpenFile,
+    'create_file': handleCreateFile,
+    'create_folder': handleCreateFolder,
+    'rename_file_or_folder': handleRenameFileOrFolder,
+    'delete_file_or_folder': handleDeleteFileOrFolder,
+}
+
+export function registerFileActions() {
+    if(vscode.workspace.getConfiguration('neuropilot').get('permission.openFiles', false)) {
+        NEURO.client?.registerActions([
+            {
+                name: 'get_files',
+                description: 'Get a list of files in the workspace',
+            },
+            {
+                name: 'open_file',
+                description: 'Open a file in the workspace',
+                schema: {
+                    type: 'object',
+                    properties: {
+                        path: { type: 'string' },
+                    },
+                    required: ['path'],
+                 }
+            },
+        ]);
+    }
+    
+    if(vscode.workspace.getConfiguration('neuropilot').get('permission.create', false)) {
+        NEURO.client?.registerActions([
+            {
+                name: 'create_file',
+                description: 'Create a new file at the specified path. The path should include the name of the new file.',
+                schema: {
+                    type: 'object',
+                    properties: {
+                        filePath: { type: 'string' },
+                    },
+                    required: ['filePath'],
+                }
+            },
+            {
+                name: 'create_folder',
+                description: 'Create a new folder at the specified path. The path should include the name of the new folder.',
+                schema: {
+                    type: 'object',
+                    properties: {
+                        folderPath: { type: 'string' },
+                    },
+                    required: ['folderPath'],
+                }
+            },
+        ]);
+    }
+
+    if(vscode.workspace.getConfiguration('neuropilot').get('permission.rename', false)) {
+        NEURO.client?.registerActions([
+            {
+                name: 'rename_file_or_folder',
+                description: 'Rename a file or folder. Specify the full relative path for both the old and new names.',
+                schema: {
+                    type: 'object',
+                    properties: {
+                        oldPath: { type: 'string' },
+                        newPath: { type: 'string' },
+                    },
+                    required: ['oldPath', 'newPath'],
+                }
+            },
+        ]);
+    }
+
+    if(vscode.workspace.getConfiguration('neuropilot').get('permission.delete', false)) {
+        NEURO.client?.registerActions([
+            {
+                name: 'delete_file_or_folder',
+                description: 'Delete a file or folder. If you want to delete a folder, set the "recursive" parameter to true.',
+                schema: {
+                    type: 'object',
+                    properties: {
+                        pathToDelete: { type: 'string' },
+                        recursive: { type: 'boolean' },
+                    },
+                    required: ['pathToDelete'],
+                }
+            },
+        ]);
+    }
+}
 
 export function handleCreateFile(actionData: any) {
     if(!vscode.workspace.getConfiguration('neuropilot').get('permission.create', false)) {
