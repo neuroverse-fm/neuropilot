@@ -156,6 +156,11 @@
 						"default": false,
 						"markdownDescription": "Allow Neuro to perform Git operations in the workspace.\n\nRequires reloading permissions if changed."
 					},
+					"neuropilot.permission.gitTags": {
+						"type": "boolean",
+						"default": false,
+						"markdownDescription": "Allow Neuro to create and delete tags in Git repositories.\n\nRequires reloading permissions if changed."
+					},
 					"neuropilot.permission.gitRemotes": {
 						"type": "boolean",
 						"default": false,

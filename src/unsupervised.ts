@@ -1,8 +1,8 @@
 import { NEURO } from "./constants";
 
-import { handleRunTask, registerTaskHandlers, taskHandlers } from './tasks';
+import { handleRunTask, registerTaskActions, taskHandlers } from './tasks';
 import { fileActionHandlers, registerFileActions } from './file_actions';
-import { gitActionHandlers, registerGitCommands } from './git';
+import { gitActionHandlers, registerGitActions } from './git';
 import { editingFileHandlers, registerEditingActions } from './editing';
 
 /**
@@ -24,8 +24,8 @@ export function registerUnsupervisedActions() {
     NEURO.client?.unregisterActions(actionKeys);
 
     registerFileActions();
-    registerGitCommands();
-    registerTaskHandlers();
+    registerGitActions();
+    registerTaskActions();
     registerEditingActions();
 }
 

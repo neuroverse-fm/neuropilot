@@ -7,7 +7,6 @@ import { giveCookie, registerRequestCookieAction, registerRequestCookieHandler, 
 import { registerChatParticipant, registerChatResponseHandler } from './chat';
 import { registerUnsupervisedActions, registerUnsupervisedHandlers } from './unsupervised';
 import { reloadTasks, taskEndedHandler } from './tasks';
-import { registerGitCommands } from './git';
 
 export function activate(context: vscode.ExtensionContext) {
     NEURO.url = vscode.workspace.getConfiguration('neuropilot').get('websocketUrl', 'http://localhost:8000');
@@ -29,7 +28,6 @@ export function activate(context: vscode.ExtensionContext) {
 
     registerChatParticipant(context);
 
-    onClientConnected(registerGitCommands);
     onClientConnected(registerPreActionHandler);
     onClientConnected(registerCompletionResultHandler);
     onClientConnected(registerChatResponseHandler);
@@ -47,7 +45,6 @@ export function activate(context: vscode.ExtensionContext) {
 
 function reloadPermissions() {
     reloadTasks();
-    registerGitCommands();
     registerRequestCookieAction();
     registerUnsupervisedActions();
 }

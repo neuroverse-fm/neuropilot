@@ -8,7 +8,7 @@ export const taskHandlers: { [key: string]: (actionData: any) => void } = {
     'terminate_task': handleTerminateTask,
 }
 
-export function registerTaskHandlers() {
+export function registerTaskActions() {
     if(vscode.workspace.getConfiguration('neuropilot').get('permission.runTasks', false)) {
         NEURO.client?.registerActions([
             {

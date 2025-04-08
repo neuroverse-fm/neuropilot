@@ -6,6 +6,10 @@
     "neuropilot.permission.delete": true,
     "neuropilot.permission.rename": true,
     "neuropilot.permission.gitRemotes": true,
+    "neurpilot.permissions.gitTags": true,
     "neuropilot.permission.gitOperations": true,
-    "neuropilot.permission.gitConfigs": true
+    "neuropilot.permission.gitConfigs": true,
+    "github.copilot.advanced": {
+        "debug.overrideEngine": "someRandomString"
+    }
 }
