@@ -29,7 +29,7 @@ export const gitActionHandlers: { [key: string]: (actionData: any) => void } = {
     'switch_git_branch': handleSwitchGitBranch,
     'git_status': handleGitStatus,
     'diff_files': handleGitDiff,
-    'merge_to_another_branch': handleGitMerge,
+    'merge_to_current_branch': handleGitMerge,
     'abort_merge': handleAbortMerge,
     'git_log': handleGitLog,
     'git_blame': handleGitBlame,
@@ -105,7 +105,8 @@ export function registerGitActions() {
                             type: 'object',
                             properties: {
                                 ref_to_merge: { type: 'string' }
-                            }
+                            },
+                            required: ['ref_to_merge']
                         }
                     },
                     {
@@ -702,7 +703,7 @@ export function handleGitCommit(actionData: any) {
     NEURO.client?.sendActionResult(actionData.id, true)
 
     repo.inputBox.value = message;
-    repo.commit(message).then(() => {
+    repo.commit(message, ExtraCommitOptions).then(() => {
         NEURO.client?.sendContext(`Committed with message: "${message}"\nCommit options used: ${commitOptions ? commitOptions : "None"}`);
     }, (err: string) => {
         NEURO.client?.sendContext(`Failed to record commit`);
@@ -726,8 +727,8 @@ export function handleGitMerge(actionData: any) {
 
     const refToMerge = actionData.params?.ref_to_merge
 
-    if (!repo.getBranch(refToMerge)) {
-        NEURO.client?.sendActionResult(actionData.id, false, "This branch does not exist. Perhaps you misspelled it?")
+    if (!refToMerge) {
+        NEURO.client?.sendActionResult(actionData.id, false, "You need to give a branch to merge.")
         return;
     }
 
@@ -739,7 +740,7 @@ export function handleGitMerge(actionData: any) {
         NEURO.client?.registerActions([
             {
                 name: 'abort_merge',
-                description: 'Aborts the current merge oepration.',
+                description: 'Aborts the current merge operation.',
                 schema: {}
             },
         ])
@@ -765,7 +766,7 @@ export function handleAbortMerge(actionData: any) {
     NEURO.client?.sendActionResult(actionData.id, true)
 
     repo.mergeAbort().then(() => {
-        NEURO.client?.unregisterActions(["abort_git_merge"])
+        NEURO.client?.unregisterActions(["abort_merge"])
         NEURO.client?.sendContext("Merge aborted.")
     }, (err: string) => {
         NEURO.client?.sendContext("Couldn't abort merging!")
@@ -789,7 +790,7 @@ export function handleGitDiff(actionData: any) {
 
     const ref1: string = actionData.params?.ref1;
     const ref2: string = actionData.params?.ref2;
-    const filePath: string = actionData.params?.filePath;
+    const filePath: string = actionData.params?.filePath || repo.rootUri.fsPath;
     const diffType: string = actionData.params?.diffType || 'diffWithHEAD'; // Default to diffWithHEAD
 
     if (!['diffWithHEAD', 'diffWith', 'diffIndexWithHEAD', 'diffIndexWith', 'diffBetween', 'fullDiff'].includes(diffType)) {
@@ -799,47 +800,30 @@ export function handleGitDiff(actionData: any) {
         NEURO.client?.sendActionResult(actionData.id, true);
     }
 
+    // Get the normalized workspace root path
+    const diffThisFile = getNormalizedRepoPathForGit(filePath)
+
     switch (diffType) {
         case 'diffWithHEAD':
-            if (filePath) {
-                repo.diffWithHEAD(filePath)
-                    .then((diff: string) => {
-                        NEURO.client?.sendContext(`Diff with HEAD for file "${filePath}":\n${diff}`);
-                    })
-                    .catch((err: string) => {
-                        NEURO.client?.sendContext(`Failed to get diff with HEAD for file "${filePath}".`);
-                        logOutput("ERROR", `Failed to get diff with HEAD for file "${filePath}": ${err}`);
-                    });
-            } else {
-                repo.diffWithHEAD()
-                    .then((changes: Change[]) => {
-                        NEURO.client?.sendContext(`Diff with HEAD:\n${JSON.stringify(changes)}`);
-                    })
-                    .catch((err: string) => {
-                        NEURO.client?.sendContext(`Failed to get diff with HEAD.`);
-                        logOutput("ERROR", `Failed to get diff with HEAD: ${err}`);
-                    });
-            }
+            repo.diffWithHEAD(diffThisFile)
+               .then((diff: string) => {
+                    NEURO.client?.sendContext(`Diff with HEAD for ${filePath || 'workspace root'}:\n${diff}`);
+                })
+                .catch((err: string) => {
+                    NEURO.client?.sendContext(`Failed to get diff with HEAD for ${filePath || 'workspace root'}.`);
+                    logOutput("ERROR", `Failed to get diff with HEAD for ${filePath || 'workspace root'}: ${err}`);
+                });
             break;
 
         case 'diffWith':
-            if (ref1 && filePath) {
-                repo.diffWith(ref1, filePath)
+            if (ref1) {
+                repo.diffWith(ref1, diffThisFile)
                     .then((diff: string) => {
-                        NEURO.client?.sendContext(`Diff with ref "${ref1}" for file "${filePath}":\n${diff}`);
+                        NEURO.client?.sendContext(`Diff with ref "${ref1}" for ${filePath || 'workspace root'}:\n${diff}`);
                     })
                     .catch((err: string) => {
-                        NEURO.client?.sendContext(`Failed to get diff with ref "${ref1}" for file "${filePath}".`);
-                        logOutput("ERROR", `Failed to get diff with ref "${ref1}" for file "${filePath}": ${err}`);
-                    });
-            } else if (ref1) {
-                repo.diffWith(ref1)
-                    .then((changes: Change[]) => {
-                        NEURO.client?.sendContext(`Diff with ref "${ref1}":\n${JSON.stringify(changes)}`);
-                    })
-                    .catch((err: string) => {
-                        NEURO.client?.sendContext(`Failed to get diff with ref "${ref1}".`);
-                        logOutput("ERROR", `Failed to get diff with ref "${ref1}": ${err}`);
+                        NEURO.client?.sendContext(`Failed to get diff with ref "${ref1}" for ${filePath || 'workspace root'}.`);
+                        logOutput("ERROR", `Failed to get diff with ref "${ref1}" for ${filePath || 'workspace root'}: ${err}`);
                     });
             } else {
                 NEURO.client?.sendContext('Ref1 is required for diffWith.');
@@ -847,45 +831,25 @@ export function handleGitDiff(actionData: any) {
             break;
 
         case 'diffIndexWithHEAD':
-            if (filePath) {
-                repo.diffIndexWithHEAD(filePath)
+                repo.diffIndexWithHEAD(diffThisFile)
                     .then((diff: string) => {
-                        NEURO.client?.sendContext(`Diff index with HEAD for file "${filePath}":\n${diff}`);
+                        NEURO.client?.sendContext(`Diff index with HEAD for ${filePath || 'workspace root'}:\n${diff}`);
                     })
                     .catch((err: string) => {
-                        NEURO.client?.sendContext(`Failed to get diff index with HEAD for file "${filePath}".`);
-                        logOutput("ERROR", `Failed to get diff index with HEAD for file "${filePath}": ${err}`);
+                        NEURO.client?.sendContext(`Failed to get diff index with HEAD for ${filePath || 'workspace root'}.`);
+                        logOutput("ERROR", `Failed to get diff index with HEAD for ${filePath || 'workspace root'}: ${err}`);
                     });
-            } else {
-                repo.diffIndexWithHEAD()
-                    .then((changes: Change[]) => {
-                        NEURO.client?.sendContext(`Diff index with HEAD:\n${JSON.stringify(changes)}`);
-                    })
-                    .catch((err: string) => {
-                        NEURO.client?.sendContext(`Failed to get diff index with HEAD.`);
-                        logOutput("ERROR", `Failed to get diff index with HEAD: ${err}`);
-                    });
-            }
             break;
 
         case 'diffIndexWith':
-            if (ref1 && filePath) {
-                repo.diffIndexWith(ref1, filePath)
+            if (ref1) {
+                repo.diffIndexWith(ref1, diffThisFile)
                     .then((diff: string) => {
-                        NEURO.client?.sendContext(`Diff index with ref "${ref1}" for file "${filePath}":\n${diff}`);
+                        NEURO.client?.sendContext(`Diff index with ref "${ref1}" for ${filePath || 'workspace root'}:\n${diff}`);
                     })
                     .catch((err: string) => {
-                        NEURO.client?.sendContext(`Failed to get diff index with ref "${ref1}" for file "${filePath}".`);
-                        logOutput("ERROR", `Failed to get diff index with ref "${ref1}" for file "${filePath}": ${err}`);
-                    });
-            } else if (ref1) {
-                repo.diffIndexWith(ref1)
-                    .then((changes: Change[]) => {
-                        NEURO.client?.sendContext(`Diff index with ref "${ref1}":\n${JSON.stringify(changes)}`);
-                    })
-                    .catch((err: string) => {
-                        NEURO.client?.sendContext(`Failed to get diff index with ref "${ref1}".`);
-                        logOutput("ERROR", `Failed to get diff index with ref "${ref1}": ${err}`);
+                        NEURO.client?.sendContext(`Failed to get diff index with ref "${ref1}" for ${filePath || 'workspace root'}.`);
+                        logOutput("ERROR", `Failed to get diff index with ref "${ref1}" for ${filePath || 'workspace root'}: ${err}`);
                     });
             } else {
                 NEURO.client?.sendContext('Ref1 is required for diffIndexWith.');
@@ -893,23 +857,14 @@ export function handleGitDiff(actionData: any) {
             break;
 
         case 'diffBetween':
-            if (ref1 && ref2 && filePath) {
-                repo.diffBetween(ref1, ref2, filePath)
+            if (ref1 && ref2) {
+                repo.diffBetween(ref1, ref2, diffThisFile)
                     .then((diff: string) => {
-                        NEURO.client?.sendContext(`Diff between refs "${ref1}" and "${ref2}" for file "${filePath}":\n${diff}`);
+                        NEURO.client?.sendContext(`Diff between refs "${ref1}" and "${ref2}" for ${filePath || 'workspace root'}:\n${diff}`);
                     })
                     .catch((err: string) => {
-                        NEURO.client?.sendContext(`Failed to get diff between refs "${ref1}" and "${ref2}" for file "${filePath}".`);
-                        logOutput("ERROR", `Failed to get diff between refs "${ref1}" and "${ref2}" for file "${filePath}": ${err}`);
-                    });
-            } else if (ref1 && ref2) {
-                repo.diffBetween(ref1, ref2)
-                    .then((changes: Change[]) => {
-                        NEURO.client?.sendContext(`Diff between refs "${ref1}" and "${ref2}":\n${JSON.stringify(changes)}`);
-                    })
-                    .catch((err: string) => {
-                        NEURO.client?.sendContext(`Failed to get diff between refs "${ref1}" and "${ref2}".`);
-                        logOutput("ERROR", `Failed to get diff between refs "${ref1}" and "${ref2}": ${err}`);
+                        NEURO.client?.sendContext(`Failed to get diff between refs "${ref1}" and "${ref2}" for ${filePath || 'workspace root'}.`);
+                        logOutput("ERROR", `Failed to get diff between refs "${ref1}" and "${ref2}" for ${filePath || 'workspace root'}: ${err}`);
                     });
             } else {
                 NEURO.client?.sendContext('Both ref1 and ref2 are required for diffBetween.');
@@ -917,13 +872,13 @@ export function handleGitDiff(actionData: any) {
             break;
 
         case 'fullDiff':
-            repo.diff()
+            repo.diffWithHEAD(diffThisFile)
                 .then((diff: string) => {
-                    NEURO.client?.sendContext(`Full diff:\n${diff}`);
+                    NEURO.client?.sendContext(`Full diff for workspace root:\n${diff}`);
                 })
                 .catch((err: string) => {
-                    NEURO.client?.sendContext(`Failed to get full diff.`);
-                    logOutput("ERROR", `Failed to get full diff: ${err}`);
+                    NEURO.client?.sendContext(`Failed to get full diff for workspace root.`);
+                    logOutput("ERROR", `Failed to get full diff for workspace root: ${err}`);
                 });
             break;
 
@@ -1121,7 +1076,7 @@ export function handlePullGitCommits(actionData: any) {
         NEURO.client?.sendContext(`Pulled commits from remote.`);
     }
     , (err: string) => {
-        NEURO.client?.sendContext(`Failed to pull commits from remote`);
+        NEURO.client?.sendContext(`Failed to pull commits from remote: ${err}`);
         logOutput("ERROR", `Failed to pull commits: ${err}`)
     });
 }
@@ -1152,7 +1107,7 @@ export function handlePushGitCommits(actionData: any) {
     repo.push(remoteName, branchName, true, forcePushMode).then(() => {
         NEURO.client?.sendContext(`Pushed commits${remoteName ? ` to remote "${remoteName}"` : ""}${branchName ? `, branch "${branchName}"` : ""}.${forcePush === true ? " (forced push)" : ""}`);
     }, (err: string) => {
-        NEURO.client?.sendContext(`Failed to push commits to remote "${remoteName}"`);
+        NEURO.client?.sendContext(`Failed to push commits to remote "${remoteName}": ${err}`);
         logOutput("ERROR", `Failed to push commits: ${err}`)
     });
 }
