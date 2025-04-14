@@ -4,13 +4,14 @@ import { handleRunTask, registerTaskActions, taskHandlers } from './tasks';
 import { fileActionHandlers, registerFileActions } from './file_actions';
 import { gitActionHandlers, registerGitActions } from './git';
 import { editingFileHandlers, registerEditingActions } from './editing';
+import { ActionData, ActionResult } from "./neuro_client_helper";
 
 /**
  * Register unsupervised actions with the Neuro API.
  * Will only register actions that the user has given permission to use.
  */
 
-const neuroActionHandlers: { [key: string]: (actionData: any) => void } = {
+const neuroActionHandlers: { [key: string]: (actionData: ActionData) => ActionResult } = {
     ...gitActionHandlers,
     ...fileActionHandlers,
     ...taskHandlers,
@@ -34,14 +35,15 @@ export function registerUnsupervisedActions() {
  * The handlers will only handle actions that the user has given permission to use.
  */
 export function registerUnsupervisedHandlers() {
-    NEURO.client?.onAction((actionData) => {
+    NEURO.client?.onAction((actionData: ActionData) => {
         if(actionKeys.includes(actionData.name)) {
             NEURO.actionHandled = true;
-            neuroActionHandlers[actionData.name](actionData)
+            const result = neuroActionHandlers[actionData.name](actionData);
+            NEURO.client?.sendActionResult(actionData.id, result.success, result.message);
         }
         else if(NEURO.tasks.find(task => task.id === actionData.name)) {
             NEURO.actionHandled = true;
-            handleRunTask(actionData);
+            const result = handleRunTask(actionData);
         }
     });
 }
