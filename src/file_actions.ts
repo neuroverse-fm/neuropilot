@@ -2,8 +2,9 @@ import * as vscode from 'vscode';
 
 import { NEURO } from "./constants";
 import { combineGlobLines, getWorkspacePath, isPathNeuroSafe, logOutput, normalizePath } from './utils';
+import { ActionData, ActionResult, actionResultAccept, actionResultFailure, actionResultMissingParameter, actionResultNoPermission, PERMISSION_STRINGS } from './neuro_client_helper';
 
-export const fileActionHandlers: { [key: string]: (actionData: any) => void } = {
+export const fileActionHandlers: { [key: string]: (actionData: ActionData) => ActionResult } = {
     'get_files': handleGetFiles,
     'open_file': handleOpenFile,
     'create_file': handleCreateFile,
@@ -32,7 +33,7 @@ export function registerFileActions() {
             },
         ]);
     }
-    
+
     if(vscode.workspace.getConfiguration('neuropilot').get('permission.create', false)) {
         NEURO.client?.registerActions([
             {
@@ -95,30 +96,24 @@ export function registerFileActions() {
     }
 }
 
-export function handleCreateFile(actionData: any) {
+export function handleCreateFile(actionData: ActionData): ActionResult {
     if(!vscode.workspace.getConfiguration('neuropilot').get('permission.create', false)) {
         logOutput('WARNING', 'Neuro attempted to create a file, but permission is disabled');
-        NEURO.client?.sendActionResult(actionData.id, true, 'You do not have file creation permissions.');
-        return;
+        return actionResultNoPermission(PERMISSION_STRINGS.create);
     }
 
     const relativePathParam = actionData.params?.filePath;
-    if(relativePathParam === undefined) {
-        NEURO.client?.sendActionResult(actionData.id, false, 'Missing required parameter "filePath"');
-        return;
-    }
+    if(relativePathParam === undefined)
+        return actionResultMissingParameter('filePath');
 
     const relativePath = normalizePath(relativePathParam).replace(/^\//, '');
     const absolutePath = getWorkspacePath() + '/' + relativePath;
-    if(!isPathNeuroSafe(absolutePath)) {
-        NEURO.client?.sendActionResult(actionData.id, true, 'You do not have permission to create a file at this location');
-        return;
-    }
-
-    NEURO.client?.sendActionResult(actionData.id, true);
+    if(!isPathNeuroSafe(absolutePath))
+        return actionResultNoPermission('create a file at this location');
 
     checkAndOpenFileAsync(absolutePath, relativePath);
-    return;
+
+    return actionResultAccept();
 
     // Function to avoid pyramid of doom
     async function checkAndOpenFileAsync(absolutePath: string, relativePath: string) {
@@ -158,60 +153,26 @@ export function handleCreateFile(actionData: any) {
             NEURO.client?.sendContext(`Failed to open file ${relativePath}`);
         }
     }
-    // vscode.workspace.fs.stat(vscode.Uri.file(getWorkspacePath() + '/' + normalizePath(filePath))).then(
-    //     (_) => {
-    //         NEURO.client?.sendContext(`Could not create file: File ${filePath} already exists`);
-    //     },
-    //     (_erm) => {
-    //         vscode.workspace.fs.writeFile(vscode.Uri.file(normalizedPath), new Uint8Array(0)).then(
-    //             (_) => {
-    //                 logOutput('INFO', `Created file ${filePath}`);
-    //                 NEURO.client?.sendContext(`Created file ${filePath}`);
-
-    //                 if(vscode.workspace.getConfiguration('neuropilot').get('permission.openFiles', false)) {
-    //                     vscode.workspace.openTextDocument(vscode.Uri.file(getWorkspacePath() + '/' + normalizePath(filePath))).then(
-    //                         (document) => {
-    //                             vscode.window.showTextDocument(document).then((_) => {
-    //                                 logOutput('INFO', `Opened file ${filePath}`);
-    //                                 const cursor = vscode.window.activeTextEditor!.selection
-    //                                 NEURO.client?.sendContext(`Opened file ${filePath}\n\nContent:\n\n\`\`\`${document.languageId}\n${document.getText()}\n\`\`\``);
-    //                             })
-    //                         }
-    //                     );
-    //                 }
-    //             },
-    //             (_erm) => {
-    //                 logOutput('ERROR', `Failed to create file ${filePath}`);
-    //                 NEURO.client?.sendContext(`Failed to create file ${filePath}`);
-    //             }
-    //         );
-    //     }
-    // );
 }
 
-export function handleCreateFolder(actionData: any) {
+export function handleCreateFolder(actionData: ActionData): ActionResult {
     if(!vscode.workspace.getConfiguration('neuropilot').get('permission.create', false)) {
         logOutput('WARNING', 'Neuro attempted to create a folder, but permission is disabled');
-        NEURO.client?.sendActionResult(actionData.id, true, 'You do not have folder creation permissions.');
-        return;
+        return actionResultNoPermission(PERMISSION_STRINGS.create);
     }
 
     const relativePathParam = actionData.params?.folderPath;
-    if(relativePathParam === undefined) {
-        NEURO.client?.sendActionResult(actionData.id, false, 'Missing required parameter "folderPath"');
-        return;
-    }
+    if(relativePathParam === undefined)
+        return actionResultMissingParameter('folderPath');
 
     const relativePath = normalizePath(relativePathParam).replace(/^\/|\/$/g, '');
     const absolutePath = getWorkspacePath() + '/' + relativePath;
-    if(!isPathNeuroSafe(absolutePath)) {
-        NEURO.client?.sendActionResult(actionData.id, true, 'You do not have permission to create a folder at this location');
-        return;
-    }
+    if(!isPathNeuroSafe(absolutePath))
+        return actionResultNoPermission('create a folder at this location');
 
-    NEURO.client?.sendActionResult(actionData.id, true);
     checkAndCreateFolderAsync(absolutePath, relativePath);
-    return;
+
+    return actionResultAccept();
 
     // Function to avoid pyramid of doom
     async function checkAndCreateFolderAsync(absolutePath: string, relativePath: string) {
@@ -239,41 +200,33 @@ export function handleCreateFolder(actionData: any) {
     }
 }
 
-export function handleRenameFileOrFolder(actionData: any) {
+export function handleRenameFileOrFolder(actionData: ActionData): ActionResult {
     if(!vscode.workspace.getConfiguration('neuropilot').get('permission.rename', false)) {
         logOutput('WARNING', 'Neuro attempted to rename a file or folder, but permission is disabled');
-        NEURO.client?.sendActionResult(actionData.id, true, 'You do not have rename permissions.');
-        return;
+        return actionResultNoPermission(PERMISSION_STRINGS.rename);
     }
 
     const oldRelativePathParam = actionData.params?.oldPath;
     const newRelativePathParam = actionData.params?.newPath;
-    if(oldRelativePathParam === undefined) {
-        NEURO.client?.sendActionResult(actionData.id, false, 'Missing required parameter "oldPath"');
-        return;
-    }
-    if(newRelativePathParam === undefined) {
-        NEURO.client?.sendActionResult(actionData.id, false, 'Missing required parameter "newPath"');
-        return;
-    }
+    if(oldRelativePathParam === undefined)
+        return actionResultMissingParameter('oldPath');
+    if(newRelativePathParam === undefined)
+        return actionResultMissingParameter('newPath');
 
     const oldRelativePath = normalizePath(oldRelativePathParam).replace(/^\/|\/$/g, '');
     const newRelativePath = normalizePath(newRelativePathParam).replace(/^\/|\/$/g, '');
     const oldAbsolutePath = getWorkspacePath() + '/' + oldRelativePath;
     const newAbsolutePath = getWorkspacePath() + '/' + newRelativePath;
-    if(!isPathNeuroSafe(oldAbsolutePath)) {
-        NEURO.client?.sendActionResult(actionData.id, true, 'You do not have permission to rename this element');
-        return;
-    }
-    if(!isPathNeuroSafe(newAbsolutePath)) {
-        NEURO.client?.sendActionResult(actionData.id, true, 'You do not have permission to rename the element to this name');
-        return;
-    }
+    if(!isPathNeuroSafe(oldAbsolutePath))
+        return actionResultNoPermission('rename this element');
+    if(!isPathNeuroSafe(newAbsolutePath))
+        return actionResultNoPermission('rename this element to this name');
 
     NEURO.client?.sendActionResult(actionData.id, true);
 
     checkAndRenameAsync(oldAbsolutePath, oldRelativePath, newAbsolutePath, newRelativePath);
-    return;
+
+    return actionResultAccept();
 
     // Function to avoid pyramid of doom
     async function checkAndRenameAsync(oldAbsolutePath: string, oldRelativePath: string, newAbsolutePath: string, newRelativePath: string) {
@@ -302,31 +255,27 @@ export function handleRenameFileOrFolder(actionData: any) {
     }
 }
 
-export function handleDeleteFileOrFolder(actionData: any) {
+export function handleDeleteFileOrFolder(actionData: ActionData): ActionResult {
     if(!vscode.workspace.getConfiguration('neuropilot').get('permission.delete', false)) {
         logOutput('WARNING', 'Neuro attempted to delete a file or folder, but permission is disabled');
-        NEURO.client?.sendActionResult(actionData.id, true, 'You do not have delete permissions.');
-        return;
+        return actionResultNoPermission(PERMISSION_STRINGS.delete);
     }
 
     const relativePathParam = actionData.params?.pathToDelete;
     const recursive = actionData.params?.recursive ?? false;
-    if(relativePathParam === undefined) {
-        NEURO.client?.sendActionResult(actionData.id, false, 'Missing required parameter "pathToDelete"');
-        return;
-    }
+    if(relativePathParam === undefined)
+        return actionResultMissingParameter('pathToDelete');
 
     const relativePath = normalizePath(relativePathParam).replace(/^\/|\/$/g, '');
     const absolutePath = getWorkspacePath() + '/' + relativePath;
-    if(!isPathNeuroSafe(absolutePath)) {
-        NEURO.client?.sendActionResult(actionData.id, true, 'You do not have permission to delete this element');
-        return;
-    }
+    if(!isPathNeuroSafe(absolutePath))
+        return actionResultNoPermission('delete this element');
 
     NEURO.client?.sendActionResult(actionData.id, true);
 
     checkAndDeleteAsync(absolutePath, relativePath, recursive);
-    return;
+
+    return actionResultAccept();
 
     // Function to avoid pyramid of doom
     async function checkAndDeleteAsync(absolutePath: string, relativePath: string, recursive: boolean) {
@@ -361,19 +310,15 @@ export function handleDeleteFileOrFolder(actionData: any) {
     }
 }
 
-export function handleGetFiles(actionData: any) {
+export function handleGetFiles(actionData: ActionData): ActionResult {
     if(!vscode.workspace.getConfiguration('neuropilot').get('permission.openFiles', false)) {
         logOutput('WARNING', 'Neuro attempted to get files, but permission is disabled');
-        NEURO.client?.sendActionResult(actionData.id, true, 'You do not have file open permissions.');
-        return;
+        return actionResultNoPermission(PERMISSION_STRINGS.openFiles);
     }
 
     const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-    if(workspaceFolder === undefined) {
-        NEURO.client?.sendActionResult(actionData.id, true, 'No workspace open to get files from');
-        return;
-    }
-    NEURO.client?.sendActionResult(actionData.id, true);
+    if(workspaceFolder === undefined)
+        return actionResultFailure('No open workspace to get files from.');
 
     const includePattern = combineGlobLines(vscode.workspace.getConfiguration('neuropilot').get('includePattern', '**'));
     const excludePattern = combineGlobLines(vscode.workspace.getConfiguration('neuropilot').get('excludePattern', ''));
@@ -398,29 +343,24 @@ export function handleGetFiles(actionData: any) {
             logOutput('INFO', `Sending list of files in workspace to Neuro`);
             NEURO.client?.sendContext(`Files in workspace:\n\n${paths.join('\n')}`);
         }
-    )
+    );
+
+    return actionResultAccept();
 }
 
-export function handleOpenFile(actionData: any) {
+export function handleOpenFile(actionData: ActionData): ActionResult {
     if(!vscode.workspace.getConfiguration('neuropilot').get('permission.openFiles', false)) {
         logOutput('WARNING', 'Neuro attempted to open a file, but permission is disabled');
-        NEURO.client?.sendActionResult(actionData.id, true, 'You do not have file open permissions.');
-        return;
+        return actionResultNoPermission(PERMISSION_STRINGS.openFiles);
     }
 
     const relativePath = actionData.params?.path;
-    if(relativePath === undefined) {
-        NEURO.client?.sendActionResult(actionData.id, false, 'Missing required parameter "fileName"');
-        return;
-    }
+    if(relativePath === undefined)
+        return actionResultMissingParameter('path');
 
     const uri = vscode.Uri.file(getWorkspacePath() + '/' + normalizePath(relativePath));
-    if(!isPathNeuroSafe(uri.fsPath)) {
-        NEURO.client?.sendActionResult(actionData.id, true, 'You do not have permission to access this file');
-        return;
-    }
-
-    NEURO.client?.sendActionResult(actionData.id, true);
+    if(!isPathNeuroSafe(uri.fsPath))
+        return actionResultNoPermission('access this file');
 
     vscode.workspace.openTextDocument(uri).then(
         (document) => {
@@ -428,9 +368,11 @@ export function handleOpenFile(actionData: any) {
             logOutput('INFO', `Opened file ${relativePath}`);
             NEURO.client?.sendContext(`Opened file ${relativePath}\n\nContent:\n\n\`\`\`${document.languageId}\n${document.getText()}\n\`\`\``);
         },
-        (_) => {
+        (_erm) => {
             logOutput('ERROR', `Failed to open file ${relativePath}`);
             NEURO.client?.sendContext(`Failed to open file ${relativePath}`);
         }
     );
+
+    return actionResultAccept();
 }
