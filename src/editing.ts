@@ -86,10 +86,8 @@ export function registerEditingActions() {
 }
 
 export function handlePlaceCursor(actionData: ActionData): ActionResult {
-    if(!hasPermissions('editActiveDocument')) {
-        logOutput('WARNING', 'Neuro attempted to place the cursor, but permission is disabled');
+    if(!hasPermissions('editActiveDocument'))
         return actionResultNoPermission(PERMISSION_STRINGS.editActiveDocument);
-    }
 
     const line = actionData.params?.line;
     const character = actionData.params?.character;
@@ -111,16 +109,14 @@ export function handlePlaceCursor(actionData: ActionData): ActionResult {
 
     vscode.window.activeTextEditor!.selection = new vscode.Selection(line, character, line, character);
     const cursorContext = getPositionContext(document, new vscode.Position(line, character));
-    logOutput('INFO', `Placed cursor at line ${line}, character ${character}`);
+    logOutput('INFO', `Placed cursor at (${line}:${character}).`);
 
     return actionResultAccept(`Cursor placed at line ${line}, character ${character}\n\nContext before:\n\n\`\`\`\n${cursorContext.contextBefore}\n\`\`\`\n\nContext after:\n\n\`\`\`\n${cursorContext.contextAfter}\n\`\`\``);
 }
 
 export function handleGetCursor(actionData: ActionData): ActionResult {
-    if(!hasPermissions('editActiveDocument')) {
-        logOutput('WARNING', 'Neuro attempted to get the cursor position, but permission is disabled');
+    if(!hasPermissions('editActiveDocument'))
         return actionResultNoPermission(PERMISSION_STRINGS.editActiveDocument);
-    }
 
     const document = vscode.window.activeTextEditor?.document;
     if(document === undefined)
@@ -138,10 +134,8 @@ export function handleGetCursor(actionData: ActionData): ActionResult {
 }
 
 export function handleInsertText(actionData: ActionData): ActionResult {
-    if(!hasPermissions('editActiveDocument')) {
-        logOutput('WARNING', 'Neuro attempted to insert text, but permission is disabled');
+    if(!hasPermissions('editActiveDocument'))
         return actionResultNoPermission(PERMISSION_STRINGS.editActiveDocument);
-    }
 
     const text = actionData.params?.text;
     if(text === undefined)
@@ -170,10 +164,8 @@ export function handleInsertText(actionData: ActionData): ActionResult {
 }
 
 export function handleReplaceText(actionData: ActionData): ActionResult {
-    if(!hasPermissions('editActiveDocument')) {
-        logOutput('WARNING', 'Neuro attempted to replace text, but permission is disabled');
+    if(!hasPermissions('editActiveDocument'))
         return actionResultNoPermission(PERMISSION_STRINGS.editActiveDocument);
-    }
 
     const oldText = actionData.params?.oldText;
     const newText = actionData.params?.newText;
@@ -209,10 +201,8 @@ export function handleReplaceText(actionData: ActionData): ActionResult {
 }
 
 export function handleDeleteText(actionData: ActionData): ActionResult {
-    if(!hasPermissions('editActiveDocument')) {
-        logOutput('WARNING', 'Neuro attempted to delete text, but permission is disabled');
+    if(!hasPermissions('editActiveDocument'))
         return actionResultNoPermission(PERMISSION_STRINGS.editActiveDocument);
-    }
 
     const document = vscode.window.activeTextEditor?.document;
     if(document === undefined)
@@ -245,10 +235,8 @@ export function handleDeleteText(actionData: ActionData): ActionResult {
 }
 
 export function handlePlaceCursorAtText(actionData: ActionData): ActionResult {
-    if(!hasPermissions('editActiveDocument')) {
-        logOutput('WARNING', 'Neuro attempted to place the cursor at text, but permission is disabled');
+    if(!hasPermissions('editActiveDocument'))
         return actionResultNoPermission(PERMISSION_STRINGS.editActiveDocument);
-    }
 
     const text = actionData.params?.text;
     const position = actionData.params?.position;
@@ -277,6 +265,6 @@ export function handlePlaceCursorAtText(actionData: ActionData): ActionResult {
     vscode.window.activeTextEditor!.selection = new vscode.Selection(line, character, line, character);
     const cursorContext = getPositionContext(document, new vscode.Position(line, character));
     logOutput('INFO', `Placed cursor at text ${position} the first occurrence`);
-    
+
     return actionResultAccept(`Cursor placed at text ${position} the first occurrence (line ${line}, character ${character})\n\nContext before:\n\n\`\`\`\n${cursorContext.contextBefore}\n\`\`\`\n\nContext after:\n\n\`\`\`\n${cursorContext.contextAfter}\n\`\`\``);
 }

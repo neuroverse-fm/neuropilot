@@ -22,15 +22,11 @@ export function registerTaskActions() {
 }
 
 export function handleTerminateTask(actionData: ActionData): ActionResult {
-    if(!hasPermissions('runTasks')) {
-        logOutput('WARNING', 'Neuro attempted to terminate a task, but permission is disabled');
+    if(!hasPermissions('runTasks'))
         return actionResultNoPermission(PERMISSION_STRINGS.runTasks);
-    }
 
-    if(NEURO.currentTaskExecution === null) {
-        logOutput('INFO', 'No task currently running');
+    if(NEURO.currentTaskExecution === null)
         return actionResultFailure('No task to terminate.');
-    }
 
     const exe = NEURO.currentTaskExecution;
     NEURO.currentTaskExecution = null;
@@ -40,21 +36,15 @@ export function handleTerminateTask(actionData: ActionData): ActionResult {
 }
 
 export function handleRunTask(actionData: ActionData): ActionResult {
-    if(!hasPermissions('runTasks')) {
-        logOutput('WARNING', 'Neuro attempted to run a task, but permission is disabled');
+    if(!hasPermissions('runTasks'))
         return actionResultNoPermission(PERMISSION_STRINGS.runTasks);
-    }
 
-    if(NEURO.currentTaskExecution !== null) {
-        logOutput('INFO', 'A task is already running');
-        return actionResultFailure('A task is already running');
-    }
+    if(NEURO.currentTaskExecution !== null)
+        return actionResultFailure('A task is already running.');
 
     const task = NEURO.tasks.find(task => task.id === actionData.name);
-    if(task === undefined) {
-        logOutput('ERROR', `Task ${actionData.name} not found`);
-        return actionResultRetry(`Task ${actionData.name} not found`);
-    }
+    if(task === undefined)
+        return actionResultRetry(`Task ${actionData.name} not found.`);
 
     try {
         vscode.tasks.executeTask(task.task).then(value => {
@@ -63,9 +53,8 @@ export function handleRunTask(actionData: ActionData): ActionResult {
         });
         return actionResultAccept(`Executing task ${task.id}`);
     } catch(erm) {
-        logOutput('ERROR', `Failed to execute task ${task.id}`);
         logOutput('DEBUG', JSON.stringify(erm));
-        return actionResultFailure(`Failed to execute task ${task.id}`);
+        return actionResultFailure(`Failed to execute task ${task.id}.`, 'ERROR');
     }
 }
 

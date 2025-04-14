@@ -2,7 +2,9 @@ import * as vscode from 'vscode';
 
 import { NEURO } from "./constants";
 import { combineGlobLines, getWorkspacePath, hasPermissions, isPathNeuroSafe, logOutput, normalizePath } from './utils';
-import { ActionData, ActionResult, actionResultAccept, actionResultFailure, actionResultMissingParameter, actionResultNoPermission, PERMISSION_STRINGS } from './neuro_client_helper';
+import { ActionData, ActionResult, actionResultAccept, actionResultFailure, actionResultMissingParameter, actionResultNoAccess, actionResultNoPermission, PERMISSION_STRINGS } from './neuro_client_helper';
+
+const ACTION_RESULT_NO_ACCESS = actionResultFailure('You do not have permission to access this location.');
 
 export const fileActionHandlers: { [key: string]: (actionData: ActionData) => ActionResult } = {
     'get_files': handleGetFiles,
@@ -97,10 +99,8 @@ export function registerFileActions() {
 }
 
 export function handleCreateFile(actionData: ActionData): ActionResult {
-    if(!hasPermissions('create')) {
-        logOutput('WARNING', 'Neuro attempted to create a file, but permission is disabled');
+    if(!hasPermissions('create'))
         return actionResultNoPermission(PERMISSION_STRINGS.create);
-    }
 
     const relativePathParam = actionData.params?.filePath;
     if(relativePathParam === undefined)
@@ -109,7 +109,7 @@ export function handleCreateFile(actionData: ActionData): ActionResult {
     const relativePath = normalizePath(relativePathParam).replace(/^\//, '');
     const absolutePath = getWorkspacePath() + '/' + relativePath;
     if(!isPathNeuroSafe(absolutePath))
-        return actionResultNoPermission('create a file at this location');
+        return actionResultNoAccess(absolutePath);
 
     checkAndOpenFileAsync(absolutePath, relativePath);
 
@@ -156,10 +156,8 @@ export function handleCreateFile(actionData: ActionData): ActionResult {
 }
 
 export function handleCreateFolder(actionData: ActionData): ActionResult {
-    if(!hasPermissions('create')) {
-        logOutput('WARNING', 'Neuro attempted to create a folder, but permission is disabled');
+    if(!hasPermissions('create'))
         return actionResultNoPermission(PERMISSION_STRINGS.create);
-    }
 
     const relativePathParam = actionData.params?.folderPath;
     if(relativePathParam === undefined)
@@ -168,7 +166,7 @@ export function handleCreateFolder(actionData: ActionData): ActionResult {
     const relativePath = normalizePath(relativePathParam).replace(/^\/|\/$/g, '');
     const absolutePath = getWorkspacePath() + '/' + relativePath;
     if(!isPathNeuroSafe(absolutePath))
-        return actionResultNoPermission('create a folder at this location');
+        return actionResultNoAccess(absolutePath);
 
     checkAndCreateFolderAsync(absolutePath, relativePath);
 
@@ -201,10 +199,8 @@ export function handleCreateFolder(actionData: ActionData): ActionResult {
 }
 
 export function handleRenameFileOrFolder(actionData: ActionData): ActionResult {
-    if(!hasPermissions('rename')) {
-        logOutput('WARNING', 'Neuro attempted to rename a file or folder, but permission is disabled');
+    if(!hasPermissions('rename'))
         return actionResultNoPermission(PERMISSION_STRINGS.rename);
-    }
 
     const oldRelativePathParam = actionData.params?.oldPath;
     const newRelativePathParam = actionData.params?.newPath;
@@ -218,9 +214,9 @@ export function handleRenameFileOrFolder(actionData: ActionData): ActionResult {
     const oldAbsolutePath = getWorkspacePath() + '/' + oldRelativePath;
     const newAbsolutePath = getWorkspacePath() + '/' + newRelativePath;
     if(!isPathNeuroSafe(oldAbsolutePath))
-        return actionResultNoPermission('rename this element');
+        return actionResultNoAccess(oldAbsolutePath);
     if(!isPathNeuroSafe(newAbsolutePath))
-        return actionResultNoPermission('rename this element to this name');
+        return actionResultNoAccess(newAbsolutePath);
 
     NEURO.client?.sendActionResult(actionData.id, true);
 
@@ -256,10 +252,8 @@ export function handleRenameFileOrFolder(actionData: ActionData): ActionResult {
 }
 
 export function handleDeleteFileOrFolder(actionData: ActionData): ActionResult {
-    if(!hasPermissions('delete')) {
-        logOutput('WARNING', 'Neuro attempted to delete a file or folder, but permission is disabled');
+    if(!hasPermissions('delete'))
         return actionResultNoPermission(PERMISSION_STRINGS.delete);
-    }
 
     const relativePathParam = actionData.params?.pathToDelete;
     const recursive = actionData.params?.recursive ?? false;
@@ -269,7 +263,7 @@ export function handleDeleteFileOrFolder(actionData: ActionData): ActionResult {
     const relativePath = normalizePath(relativePathParam).replace(/^\/|\/$/g, '');
     const absolutePath = getWorkspacePath() + '/' + relativePath;
     if(!isPathNeuroSafe(absolutePath))
-        return actionResultNoPermission('delete this element');
+        return actionResultNoAccess(absolutePath);
 
     NEURO.client?.sendActionResult(actionData.id, true);
 
@@ -311,10 +305,8 @@ export function handleDeleteFileOrFolder(actionData: ActionData): ActionResult {
 }
 
 export function handleGetFiles(actionData: ActionData): ActionResult {
-    if(!hasPermissions('openFiles')) {
-        logOutput('WARNING', 'Neuro attempted to get files, but permission is disabled');
+    if(!hasPermissions('openFiles'))
         return actionResultNoPermission(PERMISSION_STRINGS.openFiles);
-    }
 
     const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
     if(workspaceFolder === undefined)
@@ -349,10 +341,8 @@ export function handleGetFiles(actionData: ActionData): ActionResult {
 }
 
 export function handleOpenFile(actionData: ActionData): ActionResult {
-    if(!hasPermissions('openFiles')) {
-        logOutput('WARNING', 'Neuro attempted to open a file, but permission is disabled');
+    if(!hasPermissions('openFiles'))
         return actionResultNoPermission(PERMISSION_STRINGS.openFiles);
-    }
 
     const relativePath = actionData.params?.path;
     if(relativePath === undefined)
@@ -360,7 +350,7 @@ export function handleOpenFile(actionData: ActionData): ActionResult {
 
     const uri = vscode.Uri.file(getWorkspacePath() + '/' + normalizePath(relativePath));
     if(!isPathNeuroSafe(uri.fsPath))
-        return actionResultNoPermission('access this file');
+        return actionResultNoAccess(uri.fsPath);
 
     vscode.workspace.openTextDocument(uri).then(
         (document) => {
