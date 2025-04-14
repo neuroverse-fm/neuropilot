@@ -1,4 +1,6 @@
 import * as vscode from 'vscode';
+import * as fs from "fs";
+import * as path from "path";
 
 import { NEURO } from './constants';
 import { logOutput, createClient, onClientConnected } from './utils';
@@ -25,6 +27,7 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand('neuropilot.sendCurrentFile', sendCurrentFile);
     vscode.commands.registerCommand('neuropilot.giveCookie', giveCookie);
     vscode.commands.registerCommand('neuropilot.reloadPermissions', reloadPermissions);
+    vscode.commands.registerCommand('neuropilot.disableAllPermissions', disableAllPermissions);
 
     registerChatParticipant(context);
 
@@ -61,4 +64,22 @@ function registerPostActionHandler() {
         
         NEURO.client?.sendActionResult(actionData.id, true, 'Unknown action');
     });
+}
+
+function disableAllPermissions() {
+    const config = vscode.workspace.getConfiguration('neuropilot');
+
+    const permissionKeys = config.get<{ [key: string]: boolean }>('permission')
+
+    // Disable each permission one-by-one
+    if (permissionKeys) {
+        for (const key of Object.keys(permissionKeys)) {
+            config.update(`permission.${key}`, false, vscode.ConfigurationTarget.Workspace);
+        }
+    }
+
+    // Send context and reload
+    reloadPermissions();
+    NEURO.client?.sendContext("Vedal has turned off all dangerous permissions.");
+    vscode.window.showInformationMessage("All dangerous permissions have been turned off and actions have been re-registered.");
 }
