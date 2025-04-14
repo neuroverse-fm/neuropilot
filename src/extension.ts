@@ -1,6 +1,4 @@
 import * as vscode from 'vscode';
-import * as fs from "fs";
-import * as path from "path";
 
 import { NEURO } from './constants';
 import { logOutput, createClient, onClientConnected } from './utils';
@@ -68,18 +66,19 @@ function registerPostActionHandler() {
 
 function disableAllPermissions() {
     const config = vscode.workspace.getConfiguration('neuropilot');
-
-    const permissionKeys = config.get<{ [key: string]: boolean }>('permission')
-
+    const permissionKeys = config.get<{ [key: string]: boolean }>('permission');
     // Disable each permission one-by-one
+    let promises: Thenable<void>[] = [];
     if (permissionKeys) {
         for (const key of Object.keys(permissionKeys)) {
-            config.update(`permission.${key}`, false, vscode.ConfigurationTarget.Workspace);
+            promises.push(config.update(`permission.${key}`, false, vscode.ConfigurationTarget.Workspace));
         }
     }
+    Promise.all(promises).then(() => {
 
-    // Send context and reload
-    reloadPermissions();
-    NEURO.client?.sendContext("Vedal has turned off all dangerous permissions.");
-    vscode.window.showInformationMessage("All dangerous permissions have been turned off and actions have been re-registered.");
+        // Send context and reload
+        reloadPermissions();
+        NEURO.client?.sendContext("Vedal has turned off all dangerous permissions.");
+        vscode.window.showInformationMessage("All dangerous permissions have been turned off and actions have been re-registered.");
+    });
 }
