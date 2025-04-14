@@ -665,7 +665,7 @@ export function handleGitCommit(actionData: any) {
 
     
     const message = `Neuro commit: ${actionData.params?.message}`;
-    const commitOptions: string[] | undefined = actionData.params?.commitOptions;
+    const commitOptions: string[] | undefined = actionData.params?.options;
     let ExtraCommitOptions: CommitOptions | undefined = {}
 
     if (!message) {
@@ -737,13 +737,15 @@ export function handleGitMerge(actionData: any) {
     repo.merge(refToMerge).then(() => {
         NEURO.client?.sendContext(`Cleanly merged ${refToMerge} into the current branch.`)
     }, (err: string) => {
-        NEURO.client?.registerActions([
-            {
-                name: 'abort_merge',
-                description: 'Aborts the current merge operation.',
-                schema: {}
-            },
-        ])
+        if (repo?.state.mergeChanges.some(() => true)) {
+            NEURO.client?.registerActions([
+                {
+                    name: 'abort_merge',
+                    description: 'Aborts the current merge operation.',
+                    schema: {}
+                },
+            ])
+        }
         NEURO.client?.sendContext(`Couldn't merge ${refToMerge}: ${err}`)
         logOutput("ERROR", `Encountered an error when merging ${refToMerge}: ${err}`)
     })
@@ -790,7 +792,7 @@ export function handleGitDiff(actionData: any) {
 
     const ref1: string = actionData.params?.ref1;
     const ref2: string = actionData.params?.ref2;
-    const filePath: string = actionData.params?.filePath || repo.rootUri.fsPath;
+    const filePath: string = actionData.params?.filePath || ".";
     const diffType: string = actionData.params?.diffType || 'diffWithHEAD'; // Default to diffWithHEAD
 
     if (!['diffWithHEAD', 'diffWith', 'diffIndexWithHEAD', 'diffIndexWith', 'diffBetween', 'fullDiff'].includes(diffType)) {
