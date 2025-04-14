@@ -9,7 +9,7 @@
         "sama"
     ],
     "github.copilot.enable": {
-        "*": false,
+        "*": true,
         "plaintext": false,
         "markdown": false,
         "scminput": false,
