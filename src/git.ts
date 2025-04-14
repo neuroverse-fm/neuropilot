@@ -3,7 +3,7 @@ import * as path from 'path';
 import { NEURO } from './constants';
 import { GitExtension, Change, ForcePushMode, CommitOptions, Commit, Repository } from './types/git';
 import { StatusStrings, RefTypeStrings } from './types/git_status';
-import { getNormalizedRepoPathForGit, logOutput, simpleFileName } from './utils';
+import { getNormalizedRepoPathForGit, hasPermissions, logOutput, simpleFileName } from './utils';
 import { ActionData, ActionResult, actionResultAccept, actionResultFailure, actionResultMissingParameter, actionResultNoPermission, actionResultRetry, PERMISSION_STRINGS } from './neuro_client_helper';
 
 /* All actions located in here requires neuropilot.permission.gitOperations to be enabled. */
@@ -52,7 +52,7 @@ let repo: Repository | undefined = git.repositories[0];
 export function registerGitActions() {
     NEURO.client?.unregisterActions(Object.keys(gitActionHandlers));
 
-    if (vscode.workspace.getConfiguration('neuropilot').get('permission.gitOperations', false)) {
+    if (hasPermissions('gitOperations')) {
         NEURO.client?.registerActions([
             {
                 name: 'init_git_repo',
@@ -192,7 +192,7 @@ export function registerGitActions() {
                     }
                 ]);
 
-                if (vscode.workspace.getConfiguration('neuropilot').get('permission.gitTags', false)) {
+                if (hasPermissions('gitTags')) {
                     NEURO.client?.registerActions([
                         {
                             name: 'tag_head',
@@ -220,7 +220,7 @@ export function registerGitActions() {
                     ]);
                 }
 
-                if (vscode.workspace.getConfiguration('neuropilot').get('permission.gitConfigs', false)) {
+                if (hasPermissions('gitConfigs')) {
                     NEURO.client?.registerActions([
                         {
                             name: 'set_git_config',
@@ -248,7 +248,7 @@ export function registerGitActions() {
                     ]);
                 }
 
-                if (vscode.workspace.getConfiguration('neuropilot').get('permission.gitRemotes', false)) {
+                if (hasPermissions('gitRemotes')) {
                     NEURO.client?.registerActions([
                         {
                             name: 'pull_git_commits',
@@ -269,7 +269,7 @@ export function registerGitActions() {
                         }
                     ]);
 
-                    if (vscode.workspace.getConfiguration('neuropilot').get('permission.editRemoteData', false)) {
+                    if (hasPermissions('editRemoteData')) {
                         NEURO.client?.registerActions([
                             {
                                 name: 'add_git_remote',
@@ -322,7 +322,7 @@ export function registerGitActions() {
 export function handleNewGitRepo(actionData: ActionData): ActionResult {
     if (!git)
         return ACTION_RESULT_NO_GIT;
-    if (!vscode.workspace.getConfiguration('neuropilot').get('permission.gitOperations', false) && (!vscode.workspace.getConfiguration('neuropilot').get('permission.gitConfig', false)))
+    if (!hasPermissions('gitOperations', 'gitConfig'))
         return actionResultNoPermission(PERMISSION_STRINGS.gitOperations);
 
 
@@ -347,7 +347,7 @@ export function handleNewGitRepo(actionData: ActionData): ActionResult {
 export function handleGetGitConfig(actionData: ActionData): ActionResult {
     if (!git)
         return ACTION_RESULT_NO_GIT;
-    if (!vscode.workspace.getConfiguration('neuropilot').get('permission.gitOperations', false) && (!vscode.workspace.getConfiguration('neuropilot').get('permission.gitConfig', false)))
+    if (!hasPermissions('gitOperations', 'gitConfig'))
         return actionResultNoPermission(PERMISSION_STRINGS.gitConfigs);
     if (!repo)
         return ACTION_RESULT_NO_REPO;
@@ -376,7 +376,7 @@ export function handleGetGitConfig(actionData: ActionData): ActionResult {
 export function handleSetGitConfig(actionData: ActionData): ActionResult {
     if (!git)
         return ACTION_RESULT_NO_GIT;
-    if (!vscode.workspace.getConfiguration('neuropilot').get('permission.gitOperations', false) && (!vscode.workspace.getConfiguration('neuropilot').get('permission.gitConfig', false)))
+    if (!hasPermissions('gitOperations', 'gitConfig'))
         return actionResultNoPermission(PERMISSION_STRINGS.gitConfigs);
     if (!repo)
         return ACTION_RESULT_NO_REPO;
@@ -407,7 +407,7 @@ export function handleSetGitConfig(actionData: ActionData): ActionResult {
 export function handleNewGitBranch(actionData: ActionData): ActionResult {
     if (!git)
         return ACTION_RESULT_NO_GIT;
-    if (!vscode.workspace.getConfiguration('neuropilot').get('permission.gitOperations', false))
+    if (!hasPermissions('gitOperations'))
         return actionResultNoPermission(PERMISSION_STRINGS.gitOperations);
     if (!repo)
         return ACTION_RESULT_NO_REPO;
@@ -430,7 +430,7 @@ export function handleNewGitBranch(actionData: ActionData): ActionResult {
 export function handleSwitchGitBranch(actionData: ActionData): ActionResult {
     if (!git)
         return ACTION_RESULT_NO_GIT;
-    if (!vscode.workspace.getConfiguration('neuropilot').get('permission.gitOperations', false))
+    if (!hasPermissions('gitOperations'))
         return actionResultNoPermission(PERMISSION_STRINGS.gitOperations);
     if (!repo)
         return ACTION_RESULT_NO_REPO;
@@ -453,7 +453,7 @@ export function handleSwitchGitBranch(actionData: ActionData): ActionResult {
 export function handleDeleteGitBranch(actionData: ActionData): ActionResult {
     if (!git)
         return ACTION_RESULT_NO_GIT;
-    if (!vscode.workspace.getConfiguration('neuropilot').get('permission.gitOperations', false))
+    if (!hasPermissions('gitOperations'))
         return actionResultNoPermission(PERMISSION_STRINGS.gitOperations);
     if (!repo)
         return ACTION_RESULT_NO_REPO;
@@ -481,7 +481,7 @@ export function handleDeleteGitBranch(actionData: ActionData): ActionResult {
 export function handleGitStatus(actionData: ActionData): ActionResult {
     if (!git)
         return ACTION_RESULT_NO_GIT;
-    if (!vscode.workspace.getConfiguration('neuropilot').get('permission.gitOperations', false))
+    if (!hasPermissions('gitOperations'))
         return actionResultNoPermission(PERMISSION_STRINGS.gitOperations);
     if (!repo)
         return ACTION_RESULT_NO_REPO;
@@ -525,7 +525,7 @@ export function handleGitStatus(actionData: ActionData): ActionResult {
 export function handleGitAdd(actionData: ActionData): ActionResult {
     if (!git)
         return ACTION_RESULT_NO_GIT;
-    if (!vscode.workspace.getConfiguration('neuropilot').get('permission.gitOperations', false))
+    if (!hasPermissions('gitOperations'))
         return actionResultNoPermission(PERMISSION_STRINGS.gitOperations);
     if (!repo)
         return ACTION_RESULT_NO_REPO;
@@ -559,7 +559,7 @@ export function handleGitAdd(actionData: ActionData): ActionResult {
 export function handleGitRemove(actionData: ActionData): ActionResult {
     if (!git)
         return ACTION_RESULT_NO_GIT;
-    if (!vscode.workspace.getConfiguration('neuropilot').get('permission.gitOperations', false))
+    if (!hasPermissions('gitOperations'))
         return actionResultNoPermission(PERMISSION_STRINGS.gitOperations);
     if (!repo)
         return ACTION_RESULT_NO_REPO;
@@ -593,7 +593,7 @@ export function handleGitRemove(actionData: ActionData): ActionResult {
 export function handleGitCommit(actionData: ActionData): ActionResult {
     if (!git)
         return ACTION_RESULT_NO_GIT;
-    if (!vscode.workspace.getConfiguration('neuropilot').get('permission.gitOperations', false))
+    if (!hasPermissions('gitOperations'))
         return actionResultNoPermission(PERMISSION_STRINGS.gitOperations);
     if (!repo)
         return ACTION_RESULT_NO_REPO;
@@ -646,7 +646,7 @@ export function handleGitCommit(actionData: ActionData): ActionResult {
 export function handleGitMerge(actionData: ActionData): ActionResult {
     if (!git)
         return ACTION_RESULT_NO_GIT;
-    if (!vscode.workspace.getConfiguration('neuropilot').get('permission.gitOperations', false))
+    if (!hasPermissions('gitOperations'))
         return actionResultNoPermission(PERMISSION_STRINGS.gitOperations);
     if (!repo)
         return ACTION_RESULT_NO_REPO;
@@ -678,7 +678,7 @@ export function handleGitMerge(actionData: ActionData): ActionResult {
 export function handleAbortMerge(actionData: ActionData): ActionResult {
     if (!git)
         return ACTION_RESULT_NO_GIT;
-    if (!vscode.workspace.getConfiguration('neuropilot').get('permission.gitOperations', false))
+    if (!hasPermissions('gitOperations'))
         return actionResultNoPermission(PERMISSION_STRINGS.gitOperations);
     if (!repo)
         return ACTION_RESULT_NO_REPO;
@@ -698,7 +698,7 @@ export function handleAbortMerge(actionData: ActionData): ActionResult {
 export function handleGitDiff(actionData: ActionData): ActionResult {
     if (!git)
         return ACTION_RESULT_NO_GIT;
-    if (!vscode.workspace.getConfiguration('neuropilot').get('permission.gitOperations', false))
+    if (!hasPermissions('gitOperations'))
         return actionResultNoPermission(PERMISSION_STRINGS.gitOperations);
     if (!repo)
         return ACTION_RESULT_NO_REPO;
@@ -803,7 +803,7 @@ export function handleGitDiff(actionData: ActionData): ActionResult {
 export function handleGitLog(actionData: ActionData): ActionResult {
     if (!git)
         return ACTION_RESULT_NO_GIT;
-    if (!vscode.workspace.getConfiguration('neuropilot').get('permission.gitOperations', false))
+    if (!hasPermissions('gitOperations'))
         return actionResultNoPermission(PERMISSION_STRINGS.gitOperations);
     if (!repo)
         return ACTION_RESULT_NO_REPO;
@@ -822,7 +822,7 @@ export function handleGitLog(actionData: ActionData): ActionResult {
 export function handleGitBlame(actionData: ActionData): ActionResult {
     if (!git)
         return ACTION_RESULT_NO_GIT;
-    if (!vscode.workspace.getConfiguration('neuropilot').get('permission.gitOperations', false))
+    if (!hasPermissions('gitOperations'))
         return actionResultNoPermission(PERMISSION_STRINGS.gitOperations);
     if (!repo)
         return ACTION_RESULT_NO_REPO;
@@ -860,7 +860,7 @@ export function handleGitBlame(actionData: ActionData): ActionResult {
 export function handleTagHEAD(actionData: ActionData): ActionResult {
     if (!git)
         return ACTION_RESULT_NO_GIT;
-    if (!vscode.workspace.getConfiguration('neuropilot').get('permission.gitOperations', false) || !vscode.workspace.getConfiguration('neuropilot').get('permission.gitTags', false))
+    if (!hasPermissions('gitOperations', 'gitTags'))
         return actionResultNoPermission(PERMISSION_STRINGS.gitTags);
     if (!repo)
         return ACTION_RESULT_NO_REPO;
@@ -887,7 +887,7 @@ export function handleTagHEAD(actionData: ActionData): ActionResult {
 export function handleDeleteTag(actionData: ActionData): ActionResult {
     if (!git)
         return ACTION_RESULT_NO_GIT;
-    if (!vscode.workspace.getConfiguration('neuropilot').get('permission.gitOperations', false) || !vscode.workspace.getConfiguration('neuropilot').get('permission.gitTags', false))
+    if (!hasPermissions('gitOperations', 'gitTags'))
         return actionResultNoPermission(PERMISSION_STRINGS.gitTags);
     if (!repo)
         return ACTION_RESULT_NO_REPO;
@@ -916,7 +916,7 @@ export function handleDeleteTag(actionData: ActionData): ActionResult {
 export function handleFetchGitCommits(actionData: ActionData): ActionResult {
     if (!git)
         return ACTION_RESULT_NO_GIT;
-    if (!vscode.workspace.getConfiguration('neuropilot').get('permission.gitOperations', false) && !vscode.workspace.getConfiguration('neuropilot').get('permission.gitRemotes'))
+    if (!hasPermissions('gitOperations') && !vscode.workspace.getConfiguration('neuropilot').get('permission.gitRemotes'))
         return actionResultNoPermission(PERMISSION_STRINGS.gitRemotes);
     if (!repo)
         return ACTION_RESULT_NO_REPO;
@@ -938,7 +938,7 @@ export function handleFetchGitCommits(actionData: ActionData): ActionResult {
 export function handlePullGitCommits(actionData: ActionData): ActionResult {
     if (!git)
         return ACTION_RESULT_NO_GIT;
-    if (!vscode.workspace.getConfiguration('neuropilot').get('permission.gitOperations', false) && !vscode.workspace.getConfiguration('neuropilot').get('permission.gitRemotes'))
+    if (!hasPermissions('gitOperations') && !vscode.workspace.getConfiguration('neuropilot').get('permission.gitRemotes'))
         return actionResultNoPermission(PERMISSION_STRINGS.gitRemotes);
     if (!repo)
         return ACTION_RESULT_NO_REPO;
@@ -957,7 +957,7 @@ export function handlePullGitCommits(actionData: ActionData): ActionResult {
 export function handlePushGitCommits(actionData: ActionData): ActionResult {
     if (!git)
         return ACTION_RESULT_NO_GIT;
-    if (!vscode.workspace.getConfiguration('neuropilot').get('permission.gitOperations', false) && !vscode.workspace.getConfiguration('neuropilot').get('permission.gitRemotes'))
+    if (!hasPermissions('gitOperations') && !vscode.workspace.getConfiguration('neuropilot').get('permission.gitRemotes'))
         return actionResultNoPermission(PERMISSION_STRINGS.gitRemotes);
     if (!repo)
         return ACTION_RESULT_NO_REPO;
@@ -987,7 +987,7 @@ export function handlePushGitCommits(actionData: ActionData): ActionResult {
 export function handleAddGitRemote(actionData: ActionData): ActionResult {
     if (!git)
         return ACTION_RESULT_NO_GIT;
-    if (!vscode.workspace.getConfiguration('neuropilot').get('permission.gitOperations', false) && (!vscode.workspace.getConfiguration('neuropilot').get('permission.gitRemotes', false) && (!vscode.workspace.getConfiguration('neuropilot').get('permission.editRemoteData', false))))
+    if (!hasPermissions('gitOperations', 'gitRemotes', 'editRemoteData'))
         return actionResultNoPermission(PERMISSION_STRINGS.editRemoteData);
     if (!repo)
         return ACTION_RESULT_NO_REPO;
@@ -1014,7 +1014,7 @@ export function handleAddGitRemote(actionData: ActionData): ActionResult {
 export function handleRemoveGitRemote(actionData: ActionData): ActionResult {
     if (!git)
         return ACTION_RESULT_NO_GIT;
-    if (!vscode.workspace.getConfiguration('neuropilot').get('permission.gitOperations', false) && (!vscode.workspace.getConfiguration('neuropilot').get('permission.gitRemotes', false) && (!vscode.workspace.getConfiguration('neuropilot').get('permission.editRemoteData', false))))
+    if (!hasPermissions('gitOperations', 'gitRemotes', 'editRemoteData'))
         return actionResultNoPermission(PERMISSION_STRINGS.editRemoteData);
     if (!repo)
         return ACTION_RESULT_NO_REPO;
@@ -1038,7 +1038,7 @@ export function handleRemoveGitRemote(actionData: ActionData): ActionResult {
 export function handleRenameGitRemote(actionData: ActionData): ActionResult {
     if (!git)
         return ACTION_RESULT_NO_GIT;
-    if (!vscode.workspace.getConfiguration('neuropilot').get('permission.gitOperations', false) && (!vscode.workspace.getConfiguration('neuropilot').get('permission.gitRemotes', false) && (!vscode.workspace.getConfiguration('neuropilot').get('permission.editRemoteData', false))))
+    if (!hasPermissions('gitOperations', 'gitRemotes', 'editRemoteData'))
         return actionResultNoPermission(PERMISSION_STRINGS.editRemoteData);
     if (!repo)
         return ACTION_RESULT_NO_REPO;

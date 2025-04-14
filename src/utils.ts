@@ -185,3 +185,12 @@ export function getNormalizedRepoPathForGit(repoPath: string): string {
   normalized = normalized.replace(/\\/g, '/');
   return normalized;
 }
+
+/**
+ * Checks whether the specified permission is enabled.
+ * @param permissions The permissions to query.
+ * @returns `true` if all the permission are enabled, otherwise `false`.
+ */
+export function hasPermissions(...permissions: string[]): boolean {
+    return permissions.every(permission => vscode.workspace.getConfiguration('neuropilot').get('permission.' + permission, false));
+}

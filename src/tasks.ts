@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 
 import { NEURO } from "./constants";
-import { logOutput, formatActionID } from './utils';
+import { logOutput, formatActionID, hasPermissions } from './utils';
 import { ActionData, ActionResult, actionResultAccept, actionResultFailure, actionResultNoPermission, actionResultRetry, PERMISSION_STRINGS } from './neuro_client_helper';
 
 export const taskHandlers: { [key: string]: (actionData: ActionData) => ActionResult } = {
@@ -10,7 +10,7 @@ export const taskHandlers: { [key: string]: (actionData: ActionData) => ActionRe
 }
 
 export function registerTaskActions() {
-    if(vscode.workspace.getConfiguration('neuropilot').get('permission.runTasks', false)) {
+    if(hasPermissions('runTasks')) {
         NEURO.client?.registerActions([
             {
                 name: 'terminate_task',
@@ -22,7 +22,7 @@ export function registerTaskActions() {
 }
 
 export function handleTerminateTask(actionData: ActionData): ActionResult {
-    if(!vscode.workspace.getConfiguration('neuropilot').get('permission.runTasks', false)) {
+    if(!hasPermissions('runTasks')) {
         logOutput('WARNING', 'Neuro attempted to terminate a task, but permission is disabled');
         return actionResultNoPermission(PERMISSION_STRINGS.runTasks);
     }
@@ -40,7 +40,7 @@ export function handleTerminateTask(actionData: ActionData): ActionResult {
 }
 
 export function handleRunTask(actionData: ActionData): ActionResult {
-    if(!vscode.workspace.getConfiguration('neuropilot').get('permission.runTasks', false)) {
+    if(!hasPermissions('runTasks')) {
         logOutput('WARNING', 'Neuro attempted to run a task, but permission is disabled');
         return actionResultNoPermission(PERMISSION_STRINGS.runTasks);
     }
@@ -89,7 +89,7 @@ export function reloadTasks() {
 
     NEURO.tasks = [];
 
-    if(!vscode.workspace.getConfiguration('neuropilot').get('permission.runTasks', false)) {
+    if(!hasPermissions('runTasks')) {
         return;
     }
 
@@ -110,7 +110,7 @@ export function reloadTasks() {
             }
         }
 
-        if(!vscode.workspace.getConfiguration('neuropilot').get('permission.runTasks', false)) {
+        if(!hasPermissions('runTasks')) {
             return;
         }
 

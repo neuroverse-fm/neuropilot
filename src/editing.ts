@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 
 import { NEURO } from "./constants";
-import { getPositionContext, isPathNeuroSafe, logOutput } from './utils';
+import { getPositionContext, hasPermissions, isPathNeuroSafe, logOutput } from './utils';
 import { ActionData, ActionResult, actionResultAccept, actionResultFailure, actionResultMissingParameter, actionResultNoPermission, actionResultRetry, PERMISSION_STRINGS } from './neuro_client_helper';
 
 const ACTION_RESULT_NO_ACCESS = actionResultFailure('You do not have permission to access this file.');
@@ -17,7 +17,7 @@ export const editingFileHandlers: { [key: string]: (actionData: ActionData) => A
 }
 
 export function registerEditingActions() {
-    if(vscode.workspace.getConfiguration('neuropilot').get('permission.editActiveDocument', false)) {
+    if(hasPermissions('editActiveDocument')) {
         NEURO.client?.registerActions([
             {
                 name: 'place_cursor',
@@ -86,7 +86,7 @@ export function registerEditingActions() {
 }
 
 export function handlePlaceCursor(actionData: ActionData): ActionResult {
-    if(!vscode.workspace.getConfiguration('neuropilot').get('permission.editActiveDocument', false)) {
+    if(!hasPermissions('editActiveDocument')) {
         logOutput('WARNING', 'Neuro attempted to place the cursor, but permission is disabled');
         return actionResultNoPermission(PERMISSION_STRINGS.editActiveDocument);
     }
@@ -117,7 +117,7 @@ export function handlePlaceCursor(actionData: ActionData): ActionResult {
 }
 
 export function handleGetCursor(actionData: ActionData): ActionResult {
-    if(!vscode.workspace.getConfiguration('neuropilot').get('permission.editActiveDocument', false)) {
+    if(!hasPermissions('editActiveDocument')) {
         logOutput('WARNING', 'Neuro attempted to get the cursor position, but permission is disabled');
         return actionResultNoPermission(PERMISSION_STRINGS.editActiveDocument);
     }
@@ -138,7 +138,7 @@ export function handleGetCursor(actionData: ActionData): ActionResult {
 }
 
 export function handleInsertText(actionData: ActionData): ActionResult {
-    if(!vscode.workspace.getConfiguration('neuropilot').get('permission.editActiveDocument', false)) {
+    if(!hasPermissions('editActiveDocument')) {
         logOutput('WARNING', 'Neuro attempted to insert text, but permission is disabled');
         return actionResultNoPermission(PERMISSION_STRINGS.editActiveDocument);
     }
@@ -170,7 +170,7 @@ export function handleInsertText(actionData: ActionData): ActionResult {
 }
 
 export function handleReplaceText(actionData: ActionData): ActionResult {
-    if(!vscode.workspace.getConfiguration('neuropilot').get('permission.editActiveDocument', false)) {
+    if(!hasPermissions('editActiveDocument')) {
         logOutput('WARNING', 'Neuro attempted to replace text, but permission is disabled');
         return actionResultNoPermission(PERMISSION_STRINGS.editActiveDocument);
     }
@@ -209,7 +209,7 @@ export function handleReplaceText(actionData: ActionData): ActionResult {
 }
 
 export function handleDeleteText(actionData: ActionData): ActionResult {
-    if(!vscode.workspace.getConfiguration('neuropilot').get('permission.editActiveDocument', false)) {
+    if(!hasPermissions('editActiveDocument')) {
         logOutput('WARNING', 'Neuro attempted to delete text, but permission is disabled');
         return actionResultNoPermission(PERMISSION_STRINGS.editActiveDocument);
     }
@@ -245,7 +245,7 @@ export function handleDeleteText(actionData: ActionData): ActionResult {
 }
 
 export function handlePlaceCursorAtText(actionData: ActionData): ActionResult {
-    if(!vscode.workspace.getConfiguration('neuropilot').get('permission.editActiveDocument', false)) {
+    if(!hasPermissions('editActiveDocument')) {
         logOutput('WARNING', 'Neuro attempted to place the cursor at text, but permission is disabled');
         return actionResultNoPermission(PERMISSION_STRINGS.editActiveDocument);
     }

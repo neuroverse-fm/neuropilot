@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 
 import { NEURO } from "./constants";
-import { combineGlobLines, getWorkspacePath, isPathNeuroSafe, logOutput, normalizePath } from './utils';
+import { combineGlobLines, getWorkspacePath, hasPermissions, isPathNeuroSafe, logOutput, normalizePath } from './utils';
 import { ActionData, ActionResult, actionResultAccept, actionResultFailure, actionResultMissingParameter, actionResultNoPermission, PERMISSION_STRINGS } from './neuro_client_helper';
 
 export const fileActionHandlers: { [key: string]: (actionData: ActionData) => ActionResult } = {
@@ -14,7 +14,7 @@ export const fileActionHandlers: { [key: string]: (actionData: ActionData) => Ac
 }
 
 export function registerFileActions() {
-    if(vscode.workspace.getConfiguration('neuropilot').get('permission.openFiles', false)) {
+    if(hasPermissions('openFiles')) {
         NEURO.client?.registerActions([
             {
                 name: 'get_files',
@@ -34,7 +34,7 @@ export function registerFileActions() {
         ]);
     }
 
-    if(vscode.workspace.getConfiguration('neuropilot').get('permission.create', false)) {
+    if(hasPermissions('create')) {
         NEURO.client?.registerActions([
             {
                 name: 'create_file',
@@ -61,7 +61,7 @@ export function registerFileActions() {
         ]);
     }
 
-    if(vscode.workspace.getConfiguration('neuropilot').get('permission.rename', false)) {
+    if(hasPermissions('rename')) {
         NEURO.client?.registerActions([
             {
                 name: 'rename_file_or_folder',
@@ -78,7 +78,7 @@ export function registerFileActions() {
         ]);
     }
 
-    if(vscode.workspace.getConfiguration('neuropilot').get('permission.delete', false)) {
+    if(hasPermissions('delete')) {
         NEURO.client?.registerActions([
             {
                 name: 'delete_file_or_folder',
@@ -97,7 +97,7 @@ export function registerFileActions() {
 }
 
 export function handleCreateFile(actionData: ActionData): ActionResult {
-    if(!vscode.workspace.getConfiguration('neuropilot').get('permission.create', false)) {
+    if(!hasPermissions('create')) {
         logOutput('WARNING', 'Neuro attempted to create a file, but permission is disabled');
         return actionResultNoPermission(PERMISSION_STRINGS.create);
     }
@@ -140,7 +140,7 @@ export function handleCreateFile(actionData: ActionData): ActionResult {
         NEURO.client?.sendContext(`Created file ${relativePath}`);
 
         // Open the file if Neuro has permission to do so
-        if(!vscode.workspace.getConfiguration('neuropilot').get('permission.openFiles', false))
+        if(!hasPermissions('openFiles'))
             return;
 
         try {
@@ -156,7 +156,7 @@ export function handleCreateFile(actionData: ActionData): ActionResult {
 }
 
 export function handleCreateFolder(actionData: ActionData): ActionResult {
-    if(!vscode.workspace.getConfiguration('neuropilot').get('permission.create', false)) {
+    if(!hasPermissions('create')) {
         logOutput('WARNING', 'Neuro attempted to create a folder, but permission is disabled');
         return actionResultNoPermission(PERMISSION_STRINGS.create);
     }
@@ -201,7 +201,7 @@ export function handleCreateFolder(actionData: ActionData): ActionResult {
 }
 
 export function handleRenameFileOrFolder(actionData: ActionData): ActionResult {
-    if(!vscode.workspace.getConfiguration('neuropilot').get('permission.rename', false)) {
+    if(!hasPermissions('rename')) {
         logOutput('WARNING', 'Neuro attempted to rename a file or folder, but permission is disabled');
         return actionResultNoPermission(PERMISSION_STRINGS.rename);
     }
@@ -256,7 +256,7 @@ export function handleRenameFileOrFolder(actionData: ActionData): ActionResult {
 }
 
 export function handleDeleteFileOrFolder(actionData: ActionData): ActionResult {
-    if(!vscode.workspace.getConfiguration('neuropilot').get('permission.delete', false)) {
+    if(!hasPermissions('delete')) {
         logOutput('WARNING', 'Neuro attempted to delete a file or folder, but permission is disabled');
         return actionResultNoPermission(PERMISSION_STRINGS.delete);
     }
@@ -311,7 +311,7 @@ export function handleDeleteFileOrFolder(actionData: ActionData): ActionResult {
 }
 
 export function handleGetFiles(actionData: ActionData): ActionResult {
-    if(!vscode.workspace.getConfiguration('neuropilot').get('permission.openFiles', false)) {
+    if(!hasPermissions('openFiles')) {
         logOutput('WARNING', 'Neuro attempted to get files, but permission is disabled');
         return actionResultNoPermission(PERMISSION_STRINGS.openFiles);
     }
@@ -349,7 +349,7 @@ export function handleGetFiles(actionData: ActionData): ActionResult {
 }
 
 export function handleOpenFile(actionData: ActionData): ActionResult {
-    if(!vscode.workspace.getConfiguration('neuropilot').get('permission.openFiles', false)) {
+    if(!hasPermissions('openFiles')) {
         logOutput('WARNING', 'Neuro attempted to open a file, but permission is disabled');
         return actionResultNoPermission(PERMISSION_STRINGS.openFiles);
     }

@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 
-import { logOutput, simpleFileName } from "./utils";
+import { hasPermissions, logOutput, simpleFileName } from "./utils";
 import { NEURO } from './constants';
 
 export function sendCurrentFile() {
@@ -28,7 +28,7 @@ export function sendCurrentFile() {
 export function registerRequestCookieAction() {
     NEURO.client?.unregisterActions(['request_cookie']);
 
-    if(!vscode.workspace.getConfiguration('neuropilot').get('permission.requestCookies', true))
+    if(!hasPermissions('requestCookies'))
         return;
     
     NEURO.client?.registerActions([
@@ -44,7 +44,7 @@ export function registerRequestCookieHandler() {
         if(actionData.name === 'request_cookie') {
             NEURO.actionHandled = true;
             
-            if(!vscode.workspace.getConfiguration('neuropilot').get('permission.requestCookies', true)) {
+            if(!hasPermissions('requestCookies')) {
                 logOutput('WARNING', 'Neuro attempted to request a cookie, but permission is disabled');
                 NEURO.client?.sendActionResult(actionData.id, true, 'Permission to request cookies is disabled.');
             }
