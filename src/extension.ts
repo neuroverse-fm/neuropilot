@@ -25,6 +25,7 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand('neuropilot.sendCurrentFile', sendCurrentFile);
     vscode.commands.registerCommand('neuropilot.giveCookie', giveCookie);
     vscode.commands.registerCommand('neuropilot.reloadPermissions', reloadPermissions);
+    vscode.commands.registerCommand('neuropilot.disableAllPermissions', disableAllPermissions);
 
     registerChatParticipant(context);
 
@@ -60,5 +61,29 @@ function registerPostActionHandler() {
         if(NEURO.actionHandled) return;
         
         NEURO.client?.sendActionResult(actionData.id, true, 'Unknown action');
+    });
+}
+
+function disableAllPermissions() {
+    const config = vscode.workspace.getConfiguration('neuropilot');
+    const permissionKeys = config.get<{ [key: string]: boolean }>('permission');
+    // Disable each permission one-by-one
+    let promises: Thenable<void>[] = [];
+    if (permissionKeys) {
+        for (const key of Object.keys(permissionKeys)) {
+            promises.push(config.update(`permission.${key}`, false, vscode.ConfigurationTarget.Workspace));
+        }
+    }
+    Promise.all(promises).then(() => {
+        const exe = NEURO.currentTaskExecution;
+        if (exe) {
+            exe.terminate();
+            NEURO.currentTaskExecution = null;
+        }
+        // TO-DO: Terminate currently running terminal command.
+        // Send context and reload
+        reloadPermissions();
+        NEURO.client?.sendContext("Vedal has turned off all dangerous permissions.");
+        vscode.window.showInformationMessage("All dangerous permissions have been turned off and actions have been re-registered.");
     });
 }

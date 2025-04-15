@@ -49,6 +49,11 @@
 				"command": "neuropilot.reloadPermissions",
 				"title": "Reload Permissions",
 				"category": "NeuroPilot"
+			},
+			{
+				"command": "neuropilot.disableAllPermissions",
+				"title": "Disable All Permissions",
+				"category": "NeuroPilot"
 			}
 		],
 		"configuration": [
