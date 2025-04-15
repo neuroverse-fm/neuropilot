@@ -11,5 +11,6 @@
     "neuropilot.permission.gitConfigs": true,
     "github.copilot.advanced": {
         "debug.overrideEngine": "someRandomString"
-    }
+    },
+    "neuropilot.permission.directTerminalAccess": true
 }

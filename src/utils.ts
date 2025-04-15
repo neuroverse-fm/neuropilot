@@ -3,6 +3,8 @@ import * as path from 'path';
 import { NeuroClient } from "neuro-game-sdk";
 var globToRegExp = require('glob-to-regexp');
 
+import { ChildProcessWithoutNullStreams } from 'child_process';
+
 import { NEURO } from './constants';
 import { Range } from 'vscode';
 
@@ -184,4 +186,18 @@ export function getNormalizedRepoPathForGit(repoPath: string): string {
   // Convert backslashes to forward slashes if needed by your Git library
   normalized = normalized.replace(/\\/g, '/');
   return normalized;
+}
+
+/**
+ * Extended interface for terminal sessions.
+ * We now explicitly store the event emitter along with the pseudoterminal.
+ */
+export interface TerminalSession {
+    terminal: vscode.Terminal;
+    pty: vscode.Pseudoterminal;
+    emitter: vscode.EventEmitter<string>;
+    outputStdout?: string;
+    outputStderr?: string;
+    processStarted: boolean;
+    shellProcess?: ChildProcessWithoutNullStreams;
 }
