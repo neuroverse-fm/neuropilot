@@ -44,6 +44,7 @@ export function registerUnsupervisedHandlers() {
         else if(NEURO.tasks.find(task => task.id === actionData.name)) {
             NEURO.actionHandled = true;
             const result = handleRunTask(actionData);
+            NEURO.client?.sendActionResult(actionData.id, result.success, result.message);
         }
     });
 }
