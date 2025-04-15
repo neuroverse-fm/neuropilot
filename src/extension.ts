@@ -75,7 +75,12 @@ function disableAllPermissions() {
         }
     }
     Promise.all(promises).then(() => {
-
+        const exe = NEURO.currentTaskExecution;
+        if (exe) {
+            exe.terminate();
+            NEURO.currentTaskExecution = null;
+        }
+        // TO-DO: Terminate currently running terminal command.
         // Send context and reload
         reloadPermissions();
         NEURO.client?.sendContext("Vedal has turned off all dangerous permissions.");
