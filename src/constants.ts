@@ -32,7 +32,6 @@ interface Neuro {
     currentTaskExecution: vscode.TaskExecution | null;
     /** Whether the current action has been handled. */
     actionHandled: boolean;
-    terminalEnabled: boolean;
     terminalRegistry: Map<string, TerminalSession>;
 }
 
@@ -50,6 +49,5 @@ export const NEURO: Neuro = {
     tasks: [],
     currentTaskExecution: null,
     actionHandled: false,
-    terminalEnabled: false,
-    terminalRegistry: new Map()
+    terminalRegistry: new Map<string, TerminalSession>()
 };
