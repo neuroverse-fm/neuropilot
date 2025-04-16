@@ -11,7 +11,7 @@ export const terminalAccessHandlers: { [key: string]: (actionData: any) => void 
 export function registerTerminalAction() {
     NEURO.client?.unregisterActions(["execute_in_terminal"])
 
-    if (!vscode.workspace.getConfiguration('neuropilot').get('permission.terminalAccess', false)) {
+    if (vscode.workspace.getConfiguration('neuropilot').get('permission.terminalAccess') === true) {
         NEURO.client?.registerActions([
             {
                 name: "execute_in_terminal",
