@@ -11,7 +11,7 @@ export const terminalAccessHandlers: { [key: string]: (actionData: any) => void 
 export function registerTerminalAction() {
     NEURO.client?.unregisterActions(["execute_in_terminal"])
 
-    if (!vscode.workspace.getConfiguration('neuropilot').get('permission.terminalAccess')) {
+    if (!vscode.workspace.getConfiguration('neuropilot').get('permission.terminalAccess', false)) {
         NEURO.client?.registerActions([
             {
                 name: "execute_in_terminal",
@@ -20,13 +20,31 @@ export function registerTerminalAction() {
                     type: 'object',
                     properties: {
                         command: { type: 'string' },
-                        shell: { type: 'string' }
+                        shell: { type: 'string', enum: getAvailableShellProfileNames() }
                     },
                     required: ['command', 'shell']
                 }
             }
         ])
     }
+}
+
+export function getAvailableShellProfileNames(): string[] {
+  const config = vscode.workspace.getConfiguration('terminal.integrated');
+  const platform = os.platform();
+  let profilesObj: Record<string, any> | undefined;
+
+  if (platform === 'win32') {
+    profilesObj = config.get('profiles.windows') as Record<string, any> | undefined;
+  } else if (platform === 'darwin') {
+    profilesObj = config.get('profiles.osx') as Record<string, any> | undefined;
+  } else {
+    profilesObj = config.get('profiles.linux') as Record<string, any> | undefined;
+  }
+
+  const profileNames = profilesObj ? Object.keys(profilesObj) : [];
+  // Prepend "default" to the array so that Neuro sees it as a valid option.
+  return ["default", ...profileNames];
 }
 
 /**
@@ -120,11 +138,17 @@ export function handleRunCommand(actionData: any) {
     return;
   }
 
-  // Determine the shell type; default to "bash" if unspecified.
+  // Determine the shell type.
   let shellType: string = actionData.params?.shell;
   if (!shellType) {
-    shellType = "bash";
+    NEURO.client?.sendActionResult(actionData.id, false, "You didn't give a shell profile to run this in.")
+    return;
+  } else if (!getAvailableShellProfileNames().includes(shellType)) {
+    NEURO.client?.sendActionResult(actionData.id, false, "Invalid shell type.")
+    return;
   }
+
+  NEURO.client?.sendActionResult(actionData.id, true)
 
   // Get or create the terminal session for this shell.
   const session = getOrCreateTerminal(shellType, `Terminal: ${shellType}`);
