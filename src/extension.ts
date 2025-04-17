@@ -9,7 +9,7 @@ import { registerUnsupervisedActions, registerUnsupervisedHandlers } from './uns
 import { reloadTasks, taskEndedHandler } from './tasks';
 
 export function activate(context: vscode.ExtensionContext) {
-    NEURO.url = vscode.workspace.getConfiguration('neuropilot').get('websocketUrl', 'http://localhost:8000');
+    NEURO.url = vscode.workspace.getConfiguration('neuropilot').get('websocketUrl', 'ws://localhost:8000');
     NEURO.gameName = vscode.workspace.getConfiguration('neuropilot').get('gameName', 'Visual Studio Code');
     NEURO.connected = false;
     NEURO.waiting = false;

@@ -36,8 +36,8 @@ interface Neuro {
 export const NEURO: Neuro = {
     initialized: false,
     client: null,
-    url: "https://api.neuro-codex.com",
-    gameName: "neuro-vscode",
+    url: "ws://localhost:8000",
+    gameName: "Visual Studio Code",
     connected: false,
     waiting: false,
     cancelled: false,
