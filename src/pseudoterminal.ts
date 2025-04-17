@@ -1,12 +1,11 @@
 import * as vscode from 'vscode';
-import { spawn, ChildProcessWithoutNullStreams } from 'child_process';
+import { spawn } from 'child_process';
 import * as os from 'os';
 import { NEURO } from './constants';
 import { TerminalSession, logOutput } from './utils';
 
 export const terminalAccessHandlers: { [key: string]: (actionData: any) => void } = {
-    "execute_in_terminal": handleRunCommand,
-    "kill_terminal_process": handleKillTerminal
+    "execute_in_terminal": handleRunCommand
 }
 
 export function registerTerminalAction() {
@@ -25,17 +24,6 @@ export function registerTerminalAction() {
                     },
                     required: ['command', 'shell']
                 }
-            },
-            {
-              name: "kill_terminal_process",
-              description: "Kill an already running terminal process.",
-              schema: {
-                type: 'object',
-                properties: {
-                  shell: { type: 'string' }
-                },
-                enum: ["shell"]
-              }
             }
         ])
     }
@@ -74,98 +62,57 @@ function getDefaultShellProfile(): { shellPath: string; shellArgs?: string[] } {
 }
 
 /**
- * Returns the shell profile (path and args) for a given shellType.
- * If shellType is "default", returns the default shell profile.
- * Otherwise, it attempts to fetch the profile from the user's configuration.
- */
-function getShellProfileForType(shellType: string): { shellPath: string; shellArgs?: string[] } {
-  if (shellType === "default") {
-    return getDefaultShellProfile();
-  }
-
-  const config = vscode.workspace.getConfiguration('terminal.integrated');
-  const platform = os.platform();
-  let profilesObj: Record<string, any> | undefined;
-
-  if (platform === 'win32') {
-    profilesObj = config.get('profiles.windows') as Record<string, any> | undefined;
-  } else if (platform === 'darwin') {
-    profilesObj = config.get('profiles.osx') as Record<string, any> | undefined;
-  } else {
-    profilesObj = config.get('profiles.linux') as Record<string, any> | undefined;
-  }
-
-  if (profilesObj && profilesObj[shellType]) {
-    const profile = profilesObj[shellType];
-    return { shellPath: profile.path, shellArgs: profile.args };
-  }
-  // Fallback
-  return getDefaultShellProfile();
-}
-
-/**
  * Creates a new pseudoterminal-based session.
- * Fixes the crash by declaring `session` up‐front, and remembers the shellType.
+ * This version captures output in separate STDOUT and STDERR properties.
  */
 function createPseudoterminal(shellType: string, terminalName: string): TerminalSession {
-  // We declare `session` first so that `pty.close` can see it.
-  let session!: TerminalSession;
-
   const emitter = new vscode.EventEmitter<string>();
-  let procRef: ChildProcessWithoutNullStreams | undefined;
 
+  // Define the pseudoterminal.
   const pty: vscode.Pseudoterminal = {
     onDidWrite: emitter.event,
     open: () => {
+      // Write an initial message when the terminal opens.
       emitter.fire(`Terminal "${terminalName}" ready. Waiting for command...\r\n`);
     },
     close: () => {
-      if (procRef) {
-        procRef.kill();
+      // On terminal close, kill the spawned process if it exists.
+      if (session.shellProcess) {
+        session.shellProcess.kill();
       }
     }
   };
 
+  // Create the terminal using VS Code's API.
   const terminal = vscode.window.createTerminal({
     name: terminalName,
     pty: pty
   });
 
-  session = {
+  // Create the session object.
+  const session: TerminalSession = {
     terminal,
     pty,
     emitter,
     outputStdout: "",
     outputStderr: "",
     processStarted: false,
-    shellProcess: undefined,
-    shellType  // now stored
+    shellProcess: undefined
   };
 
   return session;
 }
 
-
 /**
  * Returns an existing session for the given shell type or creates a new one.
- * Uses the global NEURO.terminalRegistry and enforces the user-defined maxTerminalCount.
- * If the max count is reached and no session exists for the given shellType, returns undefined.
+ * Uses the global NEURO.terminalRegistry.
  */
-function getOrCreateTerminal(shellType: string, terminalName: string): TerminalSession | undefined {
+function getOrCreateTerminal(shellType: string, terminalName: string): TerminalSession {
   let session = NEURO.terminalRegistry.get(shellType);
   if (!session) {
-    // Check against the maximum allowed terminal count.
-    const maxTerminalCount = vscode.workspace
-      .getConfiguration("neuropilot")
-      .get("maxTerminalCount", 3) as number;
-    if (NEURO.terminalRegistry.size >= maxTerminalCount) {
-      // Maximum reached; send a message and return undefined.
-      return undefined;
-    } else {
-      session = createPseudoterminal(shellType, terminalName);
-      NEURO.terminalRegistry.set(shellType, session);
-      session.terminal.show();
-    }
+    session = createPseudoterminal(shellType, terminalName);
+    NEURO.terminalRegistry.set(shellType, session);
+    session.terminal.show();
   } else {
     session.terminal.show();
   }
@@ -179,132 +126,84 @@ function getOrCreateTerminal(shellType: string, terminalName: string): TerminalS
  */
 export function handleRunCommand(actionData: any) {
   // Check terminal access permission.
-  if (!vscode.workspace
-        .getConfiguration("neuropilot")
-        .get("permission.terminalAccess", false)) {
-    NEURO.client?.sendActionResult(
-      actionData.id,
-      true,
-      "You are not allowed to run commands."
-    );
+  if (!vscode.workspace.getConfiguration("neuropilot").get("permission.terminalAccess", false)) {
+    NEURO.client?.sendActionResult(actionData.id, true, "You are not allowed to run commands.");
     return;
   }
 
+  // Validate command parameter.
   const command: string = actionData.params?.command;
   if (!command) {
-    NEURO.client?.sendActionResult(
-      actionData.id,
-      false,
-      "You didn't give a command to execute."
-    );
+    NEURO.client?.sendActionResult(actionData.id, false, "You didn't give a command to execute.");
+    return;
+  }
+
+  // Determine the shell type.
+  let shellType: string = actionData.params?.shell;
+  if (!shellType) {
+    NEURO.client?.sendActionResult(actionData.id, false, "You didn't give a shell profile to run this in.")
+    return;
+  } else if (!getAvailableShellProfileNames().includes(shellType)) {
+    NEURO.client?.sendActionResult(actionData.id, false, "Invalid shell type.")
     return;
   }
 
   NEURO.client?.sendActionResult(actionData.id, true)
 
-  // Determine the shell type; default to "bash" if unspecified.
-  let shellType: string = actionData.params?.shell;
-  if (!shellType) {
-    shellType = "bash";
-  }
-
   // Get or create the terminal session for this shell.
   const session = getOrCreateTerminal(shellType, `Terminal: ${shellType}`);
-  if (!session) {
-    // Hit maxTerminalCount and could not create new session.
-    return;
-  }
 
   // Reset previous outputs.
   session.outputStdout = "";
   session.outputStderr = "";
 
-  // First‐time launch: spawn the shell process using the right profile.
+  // Helper to send captured output via NEURO.client.
+  const sendCapturedOutput = () => {
+    NEURO.client?.sendContext(`Terminal output: ${session.outputStdout}\nstderr: ${session.outputStderr}`);
+  };
+
+  // If no process has been started, spawn it.
   if (!session.processStarted) {
     session.processStarted = true;
+    const { shellPath, shellArgs } = getDefaultShellProfile();
+    const args = shellArgs ? [...shellArgs] : [];
+    // For most shells, use -c to execute the command.
+    args.push('-c', command);
 
-    const profile = getShellProfileForType(session.shellType);
-    const args = profile.shellArgs ? [...profile.shellArgs] : [];
-    args.push("-c", command);
-
-    const shellProcess = spawn(profile.shellPath, args);
+    const shellProcess = spawn(shellPath, args);
     session.shellProcess = shellProcess;
 
-    shellProcess.stdout.on("data", (data: Buffer) => {
+    shellProcess.stdout.on('data', (data: Buffer) => {
       const text = data.toString();
       session.outputStdout += text;
       session.emitter.fire(text);
       logOutput("DEBUG", `STDOUT: ${text}`);
     });
 
-    shellProcess.stderr.on("data", (data: Buffer) => {
+    shellProcess.stderr.on('data', (data: Buffer) => {
       const text = data.toString();
       session.outputStderr += text;
       session.emitter.fire(text);
       logOutput("ERROR", `STDERR: ${text}`);
     });
 
-    shellProcess.on("exit", (code) => {
+    shellProcess.on('exit', (code) => {
       logOutput("INFO", `Process exited with code ${code}`);
-      NEURO.client?.sendContext(
-        `Terminal output: ${session.outputStdout}\n` +
-        `stderr: ${session.outputStderr}\n` +
-        `Exit code: ${code}`
-      );
+      sendCapturedOutput();
     });
-
   } else {
-    // Already running: send the command via stdin.
+    // Process is already running; send the new command via stdin.
     const shellProcess = session.shellProcess;
     if (shellProcess && shellProcess.stdin.writable) {
       shellProcess.stdin.write(command + "\n");
       logOutput("DEBUG", `Sent command: ${command}`);
-      setTimeout(() => {
-        NEURO.client?.sendContext(
-          `Terminal output: ${session.outputStdout}\n` +
-          `stderr: ${session.outputStderr}\n` +
-          `Exit code: Running`
-        );
-      }, 1000);
+      // Optionally delay before sending output.
+      setTimeout(sendCapturedOutput, 1000);
     } else {
       logOutput("ERROR", "Shell process stdin is not writable.");
       NEURO.client?.sendContext("Error: Unable to write to shell process.");
     }
   }
-}
-
-export function handleKillTerminal(actionData: any) {
-  if (!vscode.workspace.getConfiguration("neuropilot").get("permission.terminalAccess", false)) {
-    NEURO.client?.sendActionResult(actionData.id, true, "You are not allowed to run commands.");
-    return;
-  }
-
-  const sessionToKill = actionData.params?.shell
-  if (!sessionToKill) {
-    NEURO.client?.sendActionResult(actionData.id, false, "You didn't specify a shell type to kill.")
-    return;
-  }
-  const session = NEURO.terminalRegistry.get(sessionToKill);
-  if (!session) {
-    NEURO.client?.sendActionResult(actionData.id, true, `No terminal session found for shell type "${sessionToKill}".`);
-    return;
-  }
-
-  NEURO.client?.sendActionResult(actionData.id, true)
-
-  // Dispose the VS Code terminal (which will trigger pty.close()).
-  session.terminal.dispose();
-  // Kill the underlying process if it exists.
-  if (session.shellProcess) {
-    session.shellProcess.kill();
-  }
-  // Remove from the registry.
-  NEURO.terminalRegistry.delete(sessionToKill);
-  NEURO.client?.sendContext(`Terminal session for shell type "${sessionToKill}" has been terminated.`);
-}
-
-export function emergencyKill() {
-  const sessions = NEURO.terminalRegistry
 }
 
 /**

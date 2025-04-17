@@ -116,11 +116,6 @@
 						"markdownDescription": "A glob pattern for files Neuro is not allowed to open. Applied after the include pattern. Files and folders beginning with a dot are always excluded, regardless of this setting. Separate multiple patterns with a newline.",
 						"editPresentation": "multilineText"
 					},
-					"neuropilot.maxTerminalCount": {
-						"type": "number",
-						"default": 5,
-						"markdownDescription": "The maximum amount of terminals Neuro is allowd to open."
-					}, 
 					"neuropilot.permission.openFiles": {
 						"type": "boolean",
 						"default": false,
