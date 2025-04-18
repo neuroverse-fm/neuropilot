@@ -11,7 +11,7 @@ export const terminalAccessHandlers: { [key: string]: (actionData: any) => void 
 export function registerTerminalAction() {
     NEURO.client?.unregisterActions(["execute_in_terminal"])
 
-    if (!vscode.workspace.getConfiguration('neuropilot').get('permission.terminalAccess', false)) {
+    if (vscode.workspace.getConfiguration('neuropilot').get('permission.terminalAccess')) {
         NEURO.client?.registerActions([
             {
                 name: "execute_in_terminal",
@@ -151,7 +151,7 @@ export function handleRunCommand(actionData: any) {
   NEURO.client?.sendActionResult(actionData.id, true)
 
   // Get or create the terminal session for this shell.
-  const session = getOrCreateTerminal(shellType, `Terminal: ${shellType}`);
+  const session = getOrCreateTerminal(shellType, `NeuroPilot: ${shellType}`);
 
   // Reset previous outputs.
   session.outputStdout = "";
@@ -159,7 +159,7 @@ export function handleRunCommand(actionData: any) {
 
   // Helper to send captured output via NEURO.client.
   const sendCapturedOutput = () => {
-    NEURO.client?.sendContext(`Terminal output: ${session.outputStdout}\nstderr: ${session.outputStderr}`);
+    NEURO.client?.sendContext(`The terminal outputted the following. ${session.outputStdout ? `\nstdout: ${session.outputStdout}` : ""}${session.outputStderr ? `\nstderr: ${session.outputStderr}` : ""}`);
   };
 
   // If no process has been started, spawn it.
