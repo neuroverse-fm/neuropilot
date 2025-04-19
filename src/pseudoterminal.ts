@@ -5,7 +5,8 @@ import { NEURO } from './constants';
 import { TerminalSession, logOutput } from './utils';
 
 export const terminalAccessHandlers: { [key: string]: (actionData: any) => void } = {
-    "execute_in_terminal": handleRunCommand
+    "execute_in_terminal": handleRunCommand,
+    //"kill_terminal_process": handleKillTerminal
 }
 
 export function registerTerminalAction() {
@@ -31,6 +32,7 @@ export function registerTerminalAction() {
 
 export function getAvailableShellProfileNames(): string[] {
   const config = vscode.workspace.getConfiguration('terminal.integrated');
+  logOutput("DEBUG", `terminal.integrated config: ${JSON.stringify(config)}`);
   const platform = os.platform();
   let profilesObj: Record<string, any> | undefined;
 
@@ -48,8 +50,51 @@ export function getAvailableShellProfileNames(): string[] {
 }
 
 /**
+ * Look up the shell executable + args for a given profile name.
+ * Falls back to getDefaultShellProfile() if nothing is found.
+ */
+function getShellProfileForType(shellType: string): { shellPath: string; shellArgs?: string[] } {
+  if (shellType === "default") {
+    return getDefaultShellProfile();
+  }
+
+  const cfg = vscode.workspace.getConfiguration('terminal.integrated');
+  type ProfilesConfig = {
+    windows?: Record<string, any>;
+    osx?: Record<string, any>;
+    linux?: Record<string, any>;
+  };
+  const profilesSection = cfg.get<ProfilesConfig>('profiles') 
+    || { windows: {}, osx: {}, linux: {} };
+  const platform = os.platform();
+  const platformProfiles = platform === 'win32'
+    ? profilesSection.windows
+    : platform === 'darwin'
+      ? profilesSection.osx
+      : profilesSection.linux;
+
+  const p = platformProfiles?.[shellType];
+  if (p) {
+    // pick real path if present
+    let shellPath: string|undefined;
+    if (typeof p.path === 'string') {
+      shellPath = p.path;
+    } else if (Array.isArray(p.path) && p.path.length) {
+      shellPath = p.path[0];
+    } else if (typeof p.source === 'string') {
+      shellPath = p.source;
+    }
+    if (shellPath) {
+      return { shellPath, shellArgs: p.args };
+    }
+  }
+
+  // fallback
+  return getDefaultShellProfile();
+}
+
+/**
  * Returns the default shell profile for the current platform.
- * Adjust this function to merge user settings or custom profiles as needed.
  */
 function getDefaultShellProfile(): { shellPath: string; shellArgs?: string[] } {
   const platform = os.platform();
@@ -73,7 +118,7 @@ function createPseudoterminal(shellType: string, terminalName: string): Terminal
     onDidWrite: emitter.event,
     open: () => {
       // Write an initial message when the terminal opens.
-      emitter.fire(`Terminal "${terminalName}" ready. Waiting for command...\r\n`);
+      emitter.fire(`Terminal "${terminalName}" ready.\r\n`);
     },
     close: () => {
       // On terminal close, kill the spawned process if it exists.
@@ -97,7 +142,8 @@ function createPseudoterminal(shellType: string, terminalName: string): Terminal
     outputStdout: "",
     outputStderr: "",
     processStarted: false,
-    shellProcess: undefined
+    shellProcess: undefined,
+    shellType
   };
 
   return session;
@@ -165,29 +211,38 @@ export function handleRunCommand(actionData: any) {
   // If no process has been started, spawn it.
   if (!session.processStarted) {
     session.processStarted = true;
-    const { shellPath, shellArgs } = getDefaultShellProfile();
-    const args = shellArgs ? [...shellArgs] : [];
-    // For most shells, use -c to execute the command.
-    args.push('-c', command);
+    const { shellPath, shellArgs } = getShellProfileForType(shellType);
 
-    const shellProcess = spawn(shellPath, args);
-    session.shellProcess = shellProcess;
+    logOutput("DEBUG", `Shell: ${shellPath} ${shellArgs}`)
 
-    shellProcess.stdout.on('data', (data: Buffer) => {
+    if (!shellPath || typeof shellPath !== "string") {
+      NEURO.client?.sendContext(`Error: couldn't determine executable for shell profile ${shellType}`);
+      return;
+    }
+    
+    const cwd = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+    session.shellProcess = spawn(
+      shellPath,
+      shellArgs || [],
+      { cwd, env: process.env }
+    );
+    const proc = session.shellProcess;
+
+    proc.stdout.on('data', (data: Buffer) => {
       const text = data.toString();
       session.outputStdout += text;
       session.emitter.fire(text);
       logOutput("DEBUG", `STDOUT: ${text}`);
     });
 
-    shellProcess.stderr.on('data', (data: Buffer) => {
+    proc.stderr.on('data', (data: Buffer) => {
       const text = data.toString();
       session.outputStderr += text;
       session.emitter.fire(text);
       logOutput("ERROR", `STDERR: ${text}`);
     });
 
-    shellProcess.on('exit', (code) => {
+    proc.on('exit', (code) => {
       logOutput("INFO", `Process exited with code ${code}`);
       sendCapturedOutput();
     });

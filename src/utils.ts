@@ -200,4 +200,5 @@ export interface TerminalSession {
     outputStderr?: string;
     processStarted: boolean;
     shellProcess?: ChildProcessWithoutNullStreams;
+    shellType: string;
 }
