@@ -205,7 +205,7 @@ export function handleRunCommand(actionData: any) {
 
   // Helper to send captured output via NEURO.client.
   const sendCapturedOutput = () => {
-    NEURO.client?.sendContext(`The terminal outputted the following. ${session.outputStdout ? `\nstdout: ${session.outputStdout}` : ""}${session.outputStderr ? `\nstderr: ${session.outputStderr}` : ""}`);
+    NEURO.client?.sendContext(`The ${shellType} terminal outputted the following. ${session.outputStdout ? `\nstdout: ${session.outputStdout}` : ""}${session.outputStderr ? `\nstderr: ${session.outputStderr}` : ""}`, false);
   };
 
   // If no process has been started, spawn it.
@@ -216,7 +216,7 @@ export function handleRunCommand(actionData: any) {
     logOutput("DEBUG", `Shell: ${shellPath} ${shellArgs}`)
 
     if (!shellPath || typeof shellPath !== "string") {
-      NEURO.client?.sendContext(`Error: couldn't determine executable for shell profile ${shellType}`);
+      NEURO.client?.sendContext(`Error: couldn't determine executable for shell profile ${shellType}`, false);
       return;
     }
     
@@ -231,7 +231,7 @@ export function handleRunCommand(actionData: any) {
     proc.stdout.on('data', (data: Buffer) => {
       const text = data.toString();
       session.outputStdout += text;
-      session.emitter.fire(text);
+      session.emitter.fire(text.replace(/(?<!\r)\n/g, "\r\n"));
       logOutput("DEBUG", `STDOUT: ${text}`);
     });
 
@@ -256,7 +256,7 @@ export function handleRunCommand(actionData: any) {
       setTimeout(sendCapturedOutput, 1000);
     } else {
       logOutput("ERROR", "Shell process stdin is not writable.");
-      NEURO.client?.sendContext("Error: Unable to write to shell process.");
+      NEURO.client?.sendContext("Error: Unable to write to shell process.", false);
     }
   }
 }
