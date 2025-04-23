@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { spawn } from 'child_process';
 import * as os from 'os';
 import { NEURO } from './constants';
-import { TerminalSession, logOutput } from './utils';
+import { TerminalSession, logOutput, delayAsync } from './utils';
 
 export const terminalAccessHandlers: { [key: string]: (actionData: any) => void } = {
     "execute_in_terminal": handleRunCommand,
@@ -208,6 +208,24 @@ export function handleRunCommand(actionData: any) {
     NEURO.client?.sendContext(`The ${shellType} terminal outputted the following. ${session.outputStdout ? `\nstdout: ${session.outputStdout}` : ""}${session.outputStderr ? `\nstderr: ${session.outputStderr}` : ""}`, false);
   };
 
+  async function sendStdoutIfUnchangedAsync(delay: number) {
+    const cachedOutput = session.outputStdout;
+    await delayAsync(delay);
+    if (session.outputStdout === cachedOutput) {
+      NEURO.client?.sendContext(`The ${shellType} terminal outputted the following to stdout:\n\n\`\`\`\n${session.outputStdout}\n\`\`\``, false);
+      session.outputStdout = "";
+    }
+  }
+  
+  async function sendStderrIfUnchangedAsync(delay: number) {
+    const cachedOutput = session.outputStderr;
+    await delayAsync(delay);
+    if (session.outputStderr === cachedOutput) {
+      NEURO.client?.sendContext(`The ${shellType} terminal outputted the following to stderr:\n\n\`\`\`\n${session.outputStderr}\n\`\`\``, false);
+      session.outputStderr = "";
+    }
+  }
+
   // If no process has been started, spawn it.
   if (!session.processStarted) {
     session.processStarted = true;
@@ -235,15 +253,17 @@ export function handleRunCommand(actionData: any) {
       const text = data.toString();
       session.outputStdout += text;
       session.emitter.fire(text.replace(/(?<!\r)\n/g, "\r\n"));
-      sendCapturedOutput();
+      // sendCapturedOutput();
+      sendStdoutIfUnchangedAsync(250);
       logOutput("DEBUG", `STDOUT: ${text}`);
     });
-
+    
     proc.stderr.on('data', (data: Buffer) => {
       const text = data.toString();
       session.outputStderr += text;
       session.emitter.fire(text.replace(/(?<!\r)\n/g, "\r\n"));
-      sendCapturedOutput();
+      // sendCapturedOutput();
+      sendStderrIfUnchangedAsync(250);
       logOutput("ERROR", `STDERR: ${text}`);
     });
 

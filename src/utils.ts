@@ -202,3 +202,5 @@ export interface TerminalSession {
     shellProcess?: ChildProcessWithoutNullStreams;
     shellType: string;
 }
+
+export const delayAsync = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
