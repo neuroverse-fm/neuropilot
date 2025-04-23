@@ -1,212 +1,258 @@
 {
-	"name": "neuropilot",
-	"displayName": "NeuroPilot",
-	"description": "Lets Neuro-sama provide inline completions in VS Code",
-	"icon": "icon.png",
-	"version": "1.4.1",
-	"publisher": "Pasu4",
-	"repository": "https://github.com/Pasu4/neuropilot",
-	"license": "MIT",
-	"engines": {
-		"vscode": "^1.95.0"
-	},
-	"categories": [
-		"AI",
-		"Programming Languages",
-		"Machine Learning"
-	],
-	"activationEvents": [
-		"*"
-	],
-	"main": "./out/extension.js",
-	"contributes": {
-		"chatParticipants": [
-			{
-				"id": "neuropilot.neuro",
-				"name": "neuro",
-				"fullName": "Neuro-sama",
-				"description": "Chat with Neuro-sama",
-				"isSticky": true
-			}
-		],
-		"commands": [
-			{
-				"command": "neuropilot.reconnect",
-				"title": "Reconnect",
-				"category": "NeuroPilot"
-			},
-			{
-				"command": "neuropilot.sendCurrentFile",
-				"title": "Send Current File As Context",
-				"category": "NeuroPilot"
-			},
-			{
-				"command": "neuropilot.giveCookie",
-				"title": "Give Cookie",
-				"category": "NeuroPilot"
-			},
-			{
-				"command": "neuropilot.reloadPermissions",
-				"title": "Reload Permissions",
-				"category": "NeuroPilot"
-			}
-		],
-		"configuration": [
-			{
-				"title": "NeuroPilot",
-				"properties": {
-					"neuropilot.websocketUrl": {
-						"type": "string",
-						"default": "ws://localhost:8000",
-						"description": "The URL to connect to the Neuro API"
-					},
-					"neuropilot.gameName": {
-						"type": "string",
-						"default": "Visual Studio Code",
-						"description": "The name to use for this \"game\""
-					},
-					"neuropilot.beforeContext": {
-						"type": "integer",
-						"default": 10,
-						"description": "The number of lines before the cursor position to include in the completion request"
-					},
-					"neuropilot.afterContext": {
-						"type": "integer",
-						"default": 10,
-						"description": "The number of lines after the cursor position to include in the completion request"
-					},
-					"neuropilot.maxCompletions": {
-						"type": "integer",
-						"default": 3,
-						"description": "The maximum number of completions to request"
-					},
-					"neuropilot.completionTrigger": {
-						"type": "string",
-						"default": "invokeOnly",
-						"description": "When to trigger completions",
-						"enum": [
-							"invokeOnly",
-							"automatic"
-						],
-						"enumDescriptions": [
-							"Only request completions when the user explicitly invokes the completion provider",
-							"Automatically request completions when the user stops typing"
-						]
-					},
-					"neuropilot.initialContext": {
-						"type": "string",
-						"default": "You are using an extension in Visual Studio Code that allows you to code together with Vedal.",
-						"description": "The initial context to sent to Neuro-sama",
-						"editPresentation": "multilineText"
-					},
-					"neuropilot.timeout": {
-						"type": "integer",
-						"default": 10000,
-						"description": "The timeout in milliseconds for completions and chat responses in ms"
-					},
-					"neuropilot.includePattern": {
-						"type": "string",
-						"default": "**/*",
-						"markdownDescription": "A glob pattern for files Neuro is allowed to open, i.e. she will be unable to open files that don't match this pattern. Separate multiple patterns with a newline.",
-						"editPresentation": "multilineText"
-					},
-					"neuropilot.excludePattern": {
-						"type": "string",
-						"default": "**/node_modules/**\n**/venv/**",
-						"markdownDescription": "A glob pattern for files Neuro is not allowed to open. Applied after the include pattern. Files and folders beginning with a dot are always excluded, regardless of this setting. Separate multiple patterns with a newline.",
-						"editPresentation": "multilineText"
-					},
-					"neuropilot.permission.openFiles": {
-						"type": "boolean",
-						"default": false,
-						"markdownDescription": "Let Neuro open files in the workspace. For security reasons, Neuro cannot open anything that starts with a dot or has a parent folder that starts with a dot (e.g. `.git`, `.vscode`, ...).\n\nRequires reloading permissions if changed."
-					},
-					"neuropilot.permission.editActiveDocument": {
-						"type": "boolean",
-						"default": false,
-						"markdownDescription": "Let Neuro edit the active file directly.\n\nRequires reloading permissions if changed."
-					},
-					"neuropilot.permission.create": {
-						"type": "boolean",
-						"default": false,
-						"markdownDescription": "Let Neuro create new files and folders in the workspace.\n\nRequires reloading permissions if changed."
-					},
-					"neuropilot.permission.rename": {
-						"type": "boolean",
-						"default": false,
-						"markdownDescription": "Let Neuro rename files and folders in the workspace.\n\nRequires reloading permissions if changed."
-					},
-					"neuropilot.permission.delete": {
-						"type": "boolean",
-						"default": false,
-						"markdownDescription": "Let Neuro delete files and folders in the workspace.\n\nRequires reloading permissions if changed."
-					},
-					"neuropilot.permission.runTasks": {
-						"type": "boolean",
-						"default": false,
-						"markdownDescription": "Let Neuro run workspace tasks defined in `tasks.json`.\n\nRequires reloading permissions if changed."
-					},
-					"neuropilot.permission.requestCookies": {
-						"type": "boolean",
-						"default": true,
-						"markdownDescription": "Neuro may ask for cookies while coding.\n\nRequires reloading permissions if changed."
-					},
-					"neuropilot.permission.gitOperations": {
-						"type": "boolean",
-						"default": false,
-						"markdownDescription": "Allow Neuro to perform Git operations in the workspace.\n\nRequires reloading permissions if changed."
-					},
-					"neuropilot.permission.gitTags": {
-						"type": "boolean",
-						"default": false,
-						"markdownDescription": "Allow Neuro to create and delete tags in Git repositories.\n\nRequires reloading permissions if changed."
-					},
-					"neuropilot.permission.gitRemotes": {
-						"type": "boolean",
-						"default": false,
-						"markdownDescription": "Allow Neuro to push, pull and fetch commits.\nAlso requires Git Operations permission to be enabled.\n\nRequires reloading permissions if changed."
-					},
-					"neuropilot.permission.editRemoteData": {
-						"type": "boolean",
-						"default": false,
-						"markdownDescription": "Allow Neuro to add, remove and rename remotes.\nAlso requires Git Operations & Git Remotes permissions to be enabled.\n\nRequires reloading permissions if changed."
-					},
-					"neuropilot.permission.gitConfigs": {
-						"type": "boolean",
-						"default": false,
-						"markdownDescription": "Allow Neuro to view and edit Git configuration in the workspace.\nAlso requires Git Operations permission to be enabled.\n\nRequires reloading permissions if changed."
-					},
-					"neuropilot.permission.terminalAccess": {
-						"type": "boolean",
-						"default": false,
-						"markdownDescription": "Allow Neuro __direct terminal access__. Be very careful with this."
-					}
-				}
-			}
-		]
-	},
-	"scripts": {
-		"vscode:prepublish": "npm run compile",
-		"compile": "tsc -p ./",
-		"lint": "eslint --fix",
-		"watch": "tsc -watch -p ./",
-		"test": "vscode-test"
-	},
-	"extensionDependencies": [
-		"vscode.git"
-	],
-	"devDependencies": {
-		"@eslint/js": "^9.13.0",
-		"@stylistic/eslint-plugin": "^2.9.0",
-		"@types/node": "^20",
-		"@types/vscode": "^1.95.0",
-		"@types/ws": "^8.18.0",
-		"eslint": "^9.13.0",
-		"typescript": "^5.8.2",
-		"typescript-eslint": "^8.26.0"
-	},
-	"dependencies": {
-		"glob-to-regexp": "^0.4.1",
-		"neuro-game-sdk": "github:AriesAlex/typescript-neuro-game-sdk#49a4a711e031447bcf4c9e5bd8caab3922ed02b5"
-	}
+  "name": "neuropilot",
+  "displayName": "NeuroPilot",
+  "description": "Lets Neuro-sama provide inline completions in VS Code",
+  "icon": "icon.png",
+  "version": "1.4.1",
+  "publisher": "Pasu4",
+  "repository": "https://github.com/Pasu4/neuropilot",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.95.0"
+  },
+  "categories": [
+    "AI",
+    "Programming Languages",
+    "Machine Learning"
+  ],
+  "activationEvents": [
+    "*"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "chatParticipants": [
+      {
+        "id": "neuropilot.neuro",
+        "name": "neuro",
+        "fullName": "Neuro-sama",
+        "description": "Chat with Neuro-sama",
+        "isSticky": true
+      }
+    ],
+    "commands": [
+      {
+        "command": "neuropilot.reconnect",
+        "title": "Reconnect",
+        "category": "NeuroPilot"
+      },
+      {
+        "command": "neuropilot.sendCurrentFile",
+        "title": "Send Current File As Context",
+        "category": "NeuroPilot"
+      },
+      {
+        "command": "neuropilot.giveCookie",
+        "title": "Give Cookie",
+        "category": "NeuroPilot"
+      },
+      {
+        "command": "neuropilot.reloadPermissions",
+        "title": "Reload Permissions",
+        "category": "NeuroPilot"
+      }
+    ],
+    "configuration": [
+      {
+        "title": "NeuroPilot",
+        "properties": {
+          "neuropilot.websocketUrl": {
+            "type": "string",
+            "default": "ws://localhost:8000",
+            "description": "The URL to connect to the Neuro API"
+          },
+          "neuropilot.gameName": {
+            "type": "string",
+            "default": "Visual Studio Code",
+            "description": "The name to use for this \"game\""
+          },
+          "neuropilot.beforeContext": {
+            "type": "integer",
+            "default": 10,
+            "description": "The number of lines before the cursor position to include in the completion request"
+          },
+          "neuropilot.afterContext": {
+            "type": "integer",
+            "default": 10,
+            "description": "The number of lines after the cursor position to include in the completion request"
+          },
+          "neuropilot.maxCompletions": {
+            "type": "integer",
+            "default": 3,
+            "description": "The maximum number of completions to request"
+          },
+          "neuropilot.completionTrigger": {
+            "type": "string",
+            "default": "invokeOnly",
+            "description": "When to trigger completions",
+            "enum": [
+              "invokeOnly",
+              "automatic"
+            ],
+            "enumDescriptions": [
+              "Only request completions when the user explicitly invokes the completion provider",
+              "Automatically request completions when the user stops typing"
+            ]
+          },
+          "neuropilot.initialContext": {
+            "type": "string",
+            "default": "You are using an extension in Visual Studio Code that allows you to code together with Vedal.",
+            "description": "The initial context to sent to Neuro-sama",
+            "editPresentation": "multilineText"
+          },
+          "neuropilot.timeout": {
+            "type": "integer",
+            "default": 10000,
+            "description": "The timeout in milliseconds for completions and chat responses in ms"
+          },
+          "neuropilot.includePattern": {
+            "type": "string",
+            "default": "**/*",
+            "markdownDescription": "A glob pattern for files Neuro is allowed to open, i.e. she will be unable to open files that don't match this pattern. Separate multiple patterns with a newline.",
+            "editPresentation": "multilineText"
+          },
+          "neuropilot.excludePattern": {
+            "type": "string",
+            "default": "**/node_modules/**\n**/venv/**",
+            "markdownDescription": "A glob pattern for files Neuro is not allowed to open. Applied after the include pattern. Files and folders beginning with a dot are always excluded, regardless of this setting. Separate multiple patterns with a newline.",
+            "editPresentation": "multilineText"
+          },
+          "neuropilot.terminals": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "The name Neuro can reference this terminal by"
+                },
+                "path": {
+                  "type": "string",
+                  "description": "The path to the terminal executable"
+                },
+                "args": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "The arguments to pass to the terminal executable"
+                }
+              },
+              "required": [
+                "name",
+                "path"
+              ],
+              "additionalProperties": false
+            },
+            "description": "A list of terminals Neuro can use.",
+            "default": [
+              {
+                "name": "PowerShell",
+                "path": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+                "args": []
+              },
+              {
+                "name": "Command Prompt",
+                "path": "C:\\Windows\\System32\\cmd.exe",
+                "args": []
+              },
+              {
+                "name": "Git Bash",
+                "path": "C:\\Program Files\\Git\\bin\\bash.exe",
+                "args": []
+              }
+            ]
+          },
+          "neuropilot.permission.openFiles": {
+            "type": "boolean",
+            "default": false,
+            "markdownDescription": "Let Neuro open files in the workspace. For security reasons, Neuro cannot open anything that starts with a dot or has a parent folder that starts with a dot (e.g. `.git`, `.vscode`, ...).\n\nRequires reloading permissions if changed."
+          },
+          "neuropilot.permission.editActiveDocument": {
+            "type": "boolean",
+            "default": false,
+            "markdownDescription": "Let Neuro edit the active file directly.\n\nRequires reloading permissions if changed."
+          },
+          "neuropilot.permission.create": {
+            "type": "boolean",
+            "default": false,
+            "markdownDescription": "Let Neuro create new files and folders in the workspace.\n\nRequires reloading permissions if changed."
+          },
+          "neuropilot.permission.rename": {
+            "type": "boolean",
+            "default": false,
+            "markdownDescription": "Let Neuro rename files and folders in the workspace.\n\nRequires reloading permissions if changed."
+          },
+          "neuropilot.permission.delete": {
+            "type": "boolean",
+            "default": false,
+            "markdownDescription": "Let Neuro delete files and folders in the workspace.\n\nRequires reloading permissions if changed."
+          },
+          "neuropilot.permission.runTasks": {
+            "type": "boolean",
+            "default": false,
+            "markdownDescription": "Let Neuro run workspace tasks defined in `tasks.json`.\n\nRequires reloading permissions if changed."
+          },
+          "neuropilot.permission.requestCookies": {
+            "type": "boolean",
+            "default": true,
+            "markdownDescription": "Neuro may ask for cookies while coding.\n\nRequires reloading permissions if changed."
+          },
+          "neuropilot.permission.gitOperations": {
+            "type": "boolean",
+            "default": false,
+            "markdownDescription": "Allow Neuro to perform Git operations in the workspace.\n\nRequires reloading permissions if changed."
+          },
+          "neuropilot.permission.gitTags": {
+            "type": "boolean",
+            "default": false,
+            "markdownDescription": "Allow Neuro to create and delete tags in Git repositories.\n\nRequires reloading permissions if changed."
+          },
+          "neuropilot.permission.gitRemotes": {
+            "type": "boolean",
+            "default": false,
+            "markdownDescription": "Allow Neuro to push, pull and fetch commits.\nAlso requires Git Operations permission to be enabled.\n\nRequires reloading permissions if changed."
+          },
+          "neuropilot.permission.editRemoteData": {
+            "type": "boolean",
+            "default": false,
+            "markdownDescription": "Allow Neuro to add, remove and rename remotes.\nAlso requires Git Operations & Git Remotes permissions to be enabled.\n\nRequires reloading permissions if changed."
+          },
+          "neuropilot.permission.gitConfigs": {
+            "type": "boolean",
+            "default": false,
+            "markdownDescription": "Allow Neuro to view and edit Git configuration in the workspace.\nAlso requires Git Operations permission to be enabled.\n\nRequires reloading permissions if changed."
+          },
+          "neuropilot.permission.terminalAccess": {
+            "type": "boolean",
+            "default": false,
+            "markdownDescription": "Allow Neuro __direct terminal access__. Be very careful with this."
+          }
+        }
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "lint": "eslint --fix",
+    "watch": "tsc -watch -p ./",
+    "test": "vscode-test"
+  },
+  "extensionDependencies": [
+    "vscode.git"
+  ],
+  "devDependencies": {
+    "@eslint/js": "^9.13.0",
+    "@stylistic/eslint-plugin": "^2.9.0",
+    "@types/node": "^20",
+    "@types/vscode": "^1.95.0",
+    "@types/ws": "^8.18.0",
+    "eslint": "^9.13.0",
+    "typescript": "^5.8.2",
+    "typescript-eslint": "^8.26.0"
+  },
+  "dependencies": {
+    "glob-to-regexp": "^0.4.1",
+    "neuro-game-sdk": "github:AriesAlex/typescript-neuro-game-sdk#49a4a711e031447bcf4c9e5bd8caab3922ed02b5"
+  }
 }

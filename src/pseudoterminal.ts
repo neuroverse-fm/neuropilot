@@ -30,80 +30,41 @@ export function registerTerminalAction() {
     }
 }
 
-export function getAvailableShellProfileNames(): string[] {
-  const config = vscode.workspace.getConfiguration('terminal.integrated');
-  logOutput("DEBUG", `terminal.integrated config: ${JSON.stringify(config)}`);
-  const platform = os.platform();
-  let profilesObj: Record<string, any> | undefined;
-
-  if (platform === 'win32') {
-    profilesObj = config.get('profiles.windows') as Record<string, any> | undefined;
-  } else if (platform === 'darwin') {
-    profilesObj = config.get('profiles.osx') as Record<string, any> | undefined;
-  } else {
-    profilesObj = config.get('profiles.linux') as Record<string, any> | undefined;
-  }
-
-  const profileNames = profilesObj ? Object.keys(profilesObj) : [];
-  // Prepend "default" to the array so that Neuro sees it as a valid option.
-  return ["default", ...profileNames];
+/**
+ * Fetches the list of terminal configurations from the `neuropilot.terminals` setting.
+ */
+function getCustomTerminalConfigs(): Array<{ name: string; path: string; args?: string[] }> {
+    const config = vscode.workspace.getConfiguration('neuropilot');
+    const terminals = config.get<Array<{ name: string; path: string; args?: string[] }>>('terminals', []);
+    return terminals;
 }
 
 /**
- * Look up the shell executable + args for a given profile name.
- * Falls back to getDefaultShellProfile() if nothing is found.
+ * Returns the names of all available terminal profiles from the custom configuration.
+ */
+export function getAvailableShellProfileNames(): string[] {
+    const terminalConfigs = getCustomTerminalConfigs();
+    return terminalConfigs.map((terminal) => terminal.name);
+}
+
+/**
+ * Look up the shell executable and arguments for a given profile name.
+ * Falls back to the first terminal in the list if the profile name is not found.
  */
 function getShellProfileForType(shellType: string): { shellPath: string; shellArgs?: string[] } {
-  if (shellType === "default") {
-    return getDefaultShellProfile();
-  }
+    const terminalConfigs = getCustomTerminalConfigs();
+    const terminal = terminalConfigs.find((t) => t.name === shellType);
 
-  const cfg = vscode.workspace.getConfiguration('terminal.integrated');
-  type ProfilesConfig = {
-    windows?: Record<string, any>;
-    osx?: Record<string, any>;
-    linux?: Record<string, any>;
-  };
-  const profilesSection = cfg.get<ProfilesConfig>('profiles') 
-    || { windows: {}, osx: {}, linux: {} };
-  const platform = os.platform();
-  const platformProfiles = platform === 'win32'
-    ? profilesSection.windows
-    : platform === 'darwin'
-      ? profilesSection.osx
-      : profilesSection.linux;
-
-  const p = platformProfiles?.[shellType];
-  if (p) {
-    // pick real path if present
-    let shellPath: string|undefined;
-    if (typeof p.path === 'string') {
-      shellPath = p.path;
-    } else if (Array.isArray(p.path) && p.path.length) {
-      shellPath = p.path[0];
-    } else if (typeof p.source === 'string') {
-      shellPath = p.source;
+    if (terminal) {
+        return { shellPath: terminal.path, shellArgs: terminal.args || [] };
     }
-    if (shellPath) {
-      return { shellPath, shellArgs: p.args };
+
+    // Fallback to the first terminal in the list if no match is found
+    if (terminalConfigs.length > 0) {
+        return { shellPath: terminalConfigs[0].path, shellArgs: terminalConfigs[0].args || [] };
     }
-  }
 
-  // fallback
-  return getDefaultShellProfile();
-}
-
-/**
- * Returns the default shell profile for the current platform.
- */
-function getDefaultShellProfile(): { shellPath: string; shellArgs?: string[] } {
-  const platform = os.platform();
-  if (platform === 'win32') {
-    // For example, using Git Bash on Windows.
-    return { shellPath: "C:\\Program Files\\Git\\bin\\bash.exe", shellArgs: [] };
-  } else {
-    return { shellPath: "/bin/bash", shellArgs: ["-l"] };
-  }
+    throw new Error(`No terminal configuration found for shell type: ${shellType}`);
 }
 
 /**
@@ -171,119 +132,123 @@ function getOrCreateTerminal(shellType: string, terminalName: string): TerminalS
  * captures STDOUT and STDERR, logs the output, and sends it via NEURO.client.
  */
 export function handleRunCommand(actionData: any) {
-  // Check terminal access permission.
-  if (!vscode.workspace.getConfiguration("neuropilot").get("permission.terminalAccess", false)) {
-    NEURO.client?.sendActionResult(actionData.id, true, "You are not allowed to run commands.");
-    return;
-  }
-
-  // Validate command parameter.
-  const command: string = actionData.params?.command;
-  if (!command) {
-    NEURO.client?.sendActionResult(actionData.id, false, "You didn't give a command to execute.");
-    return;
-  }
-
-  // Determine the shell type.
-  let shellType: string = actionData.params?.shell;
-  if (!shellType) {
-    NEURO.client?.sendActionResult(actionData.id, false, "You didn't give a shell profile to run this in.")
-    return;
-  } else if (!getAvailableShellProfileNames().includes(shellType)) {
-    NEURO.client?.sendActionResult(actionData.id, false, "Invalid shell type.")
-    return;
-  }
-
-  NEURO.client?.sendActionResult(actionData.id, true)
-
-  // Get or create the terminal session for this shell.
-  const session = getOrCreateTerminal(shellType, `NeuroPilot: ${shellType}`);
-
-  // Reset previous outputs.
-  session.outputStdout = "";
-  session.outputStderr = "";
-
-  // Helper to send captured output via NEURO.client.
-  const sendCapturedOutput = () => {
-    NEURO.client?.sendContext(`The ${shellType} terminal outputted the following. ${session.outputStdout ? `\nstdout: ${session.outputStdout}` : ""}${session.outputStderr ? `\nstderr: ${session.outputStderr}` : ""}`, false);
-  };
-
-  async function sendStdoutIfUnchangedAsync(delay: number) {
-    const cachedOutput = session.outputStdout;
-    await delayAsync(delay);
-    if (session.outputStdout === cachedOutput) {
-      NEURO.client?.sendContext(`The ${shellType} terminal outputted the following to stdout:\n\n\`\`\`\n${session.outputStdout}\n\`\`\``, false);
-      session.outputStdout = "";
+    // Check terminal access permission.
+    if (!vscode.workspace.getConfiguration("neuropilot").get("permission.terminalAccess", false)) {
+        NEURO.client?.sendActionResult(actionData.id, true, "You are not allowed to run commands.");
+        return;
     }
-  }
-  
-  async function sendStderrIfUnchangedAsync(delay: number) {
-    const cachedOutput = session.outputStderr;
-    await delayAsync(delay);
-    if (session.outputStderr === cachedOutput) {
-      NEURO.client?.sendContext(`The ${shellType} terminal outputted the following to stderr:\n\n\`\`\`\n${session.outputStderr}\n\`\`\``, false);
-      session.outputStderr = "";
+
+    // Validate command parameter.
+    const command: string = actionData.params?.command;
+    if (!command) {
+        NEURO.client?.sendActionResult(actionData.id, false, "You didn't give a command to execute.");
+        return;
     }
-  }
 
-  // If no process has been started, spawn it.
-  if (!session.processStarted) {
-    session.processStarted = true;
-    const { shellPath, shellArgs } = getShellProfileForType(shellType);
-
-    logOutput("DEBUG", `Shell: ${shellPath} ${shellArgs}`)
-
-    if (!shellPath || typeof shellPath !== "string") {
-      NEURO.client?.sendContext(`Error: couldn't determine executable for shell profile ${shellType}`, false);
-      return;
+    // Determine the shell type.
+    let shellType: string = actionData.params?.shell;
+    if (!shellType) {
+        NEURO.client?.sendActionResult(actionData.id, false, "You didn't give a shell profile to run this in.");
+        return;
+    } else if (!getAvailableShellProfileNames().includes(shellType)) {
+        NEURO.client?.sendActionResult(actionData.id, false, "Invalid shell type.");
+        return;
     }
-    
-    const cwd = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-    session.shellProcess = spawn(
-      shellPath,
-      shellArgs || [],
-      { cwd, env: process.env }
-    );
-    const proc = session.shellProcess;
 
-    proc.stdin.write(command + "\n");
-    logOutput("DEBUG", `Sent command: ${command}`);
+    NEURO.client?.sendActionResult(actionData.id, true);
 
-    proc.stdout.on('data', (data: Buffer) => {
-      const text = data.toString();
-      session.outputStdout += text;
-      session.emitter.fire(text.replace(/(?<!\r)\n/g, "\r\n"));
-      // sendCapturedOutput();
-      sendStdoutIfUnchangedAsync(250);
-      logOutput("DEBUG", `STDOUT: ${text}`);
-    });
-    
-    proc.stderr.on('data', (data: Buffer) => {
-      const text = data.toString();
-      session.outputStderr += text;
-      session.emitter.fire(text.replace(/(?<!\r)\n/g, "\r\n"));
-      // sendCapturedOutput();
-      sendStderrIfUnchangedAsync(250);
-      logOutput("ERROR", `STDERR: ${text}`);
-    });
+    // Get or create the terminal session for this shell.
+    const session = getOrCreateTerminal(shellType, `NeuroPilot: ${shellType}`);
 
-    proc.on('exit', (code) => {
-      logOutput("INFO", `Process exited with code ${code}`);
-      sendCapturedOutput();
-    });
-  } else {
-    // Process is already running; send the new command via stdin.
-    const shellProcess = session.shellProcess;
-    if (shellProcess && shellProcess.stdin.writable) {
-      shellProcess.stdin.write(command + "\n");
-      logOutput("DEBUG", `Sent command: ${command}`);
-      // Optionally delay before sending output.
-      setTimeout(sendCapturedOutput, 1000);
+    // Reset previous outputs.
+    session.outputStdout = "";
+    session.outputStderr = "";
+
+    // Helper to send captured output via NEURO.client.
+    const sendCapturedOutput = () => {
+        NEURO.client?.sendContext(
+            `The ${shellType} terminal outputted the following. ${
+                session.outputStdout ? `\nstdout: ${session.outputStdout}` : ""
+            }${session.outputStderr ? `\nstderr: ${session.outputStderr}` : ""}`,
+            false
+        );
+    };
+
+    async function sendStdoutIfUnchangedAsync(delay: number) {
+        const cachedOutput = session.outputStdout;
+        await delayAsync(delay);
+        if (session.outputStdout === cachedOutput) {
+            NEURO.client?.sendContext(
+                `The ${shellType} terminal outputted the following to stdout:\n\n\`\`\`\n${session.outputStdout}\n\`\`\``,
+                false
+            );
+            session.outputStdout = "";
+        }
+    }
+
+    async function sendStderrIfUnchangedAsync(delay: number) {
+        const cachedOutput = session.outputStderr;
+        await delayAsync(delay);
+        if (session.outputStderr === cachedOutput) {
+            NEURO.client?.sendContext(
+                `The ${shellType} terminal outputted the following to stderr:\n\n\`\`\`\n${session.outputStderr}\n\`\`\``,
+                false
+            );
+            session.outputStderr = "";
+        }
+    }
+
+    // If no process has been started, spawn it.
+    if (!session.processStarted) {
+        session.processStarted = true;
+        const { shellPath, shellArgs } = getShellProfileForType(shellType);
+
+        logOutput("DEBUG", `Shell: ${shellPath} ${shellArgs}`);
+
+        if (!shellPath || typeof shellPath !== "string") {
+            NEURO.client?.sendContext(`Error: couldn't determine executable for shell profile ${shellType}`, false);
+            return;
+        }
+
+        const cwd = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+        session.shellProcess = spawn(shellPath, shellArgs || [], { cwd, env: process.env, stdio: ["pipe", "pipe", "pipe"] });
+        const proc = session.shellProcess;
+
+        proc.stdin.write(command + "\n");
+        logOutput("DEBUG", `Sent command: ${command}`);
+
+        proc.stdout.on("data", (data: Buffer) => {
+            const text = data.toString().replace(/\n/g, "\r\n");
+            session.outputStdout += text;
+            session.emitter.fire(text.replace(/(?<!\r)\n/g, "\r\n"));
+            sendStdoutIfUnchangedAsync(250);
+            logOutput("DEBUG", `STDOUT: ${text}`);
+        });
+
+        proc.stderr.on("data", (data: Buffer) => {
+            const text = data.toString().replace(/\n/g, "\r\n");
+            session.outputStderr += text;
+            session.emitter.fire(text.replace(/(?<!\r)\n/g, "\r\n"));
+            sendStderrIfUnchangedAsync(250);
+            logOutput("ERROR", `STDERR: ${text}`);
+        });
+
+        proc.on("exit", (code) => {
+            logOutput("INFO", `Process exited with code ${code}`);
+            sendCapturedOutput();
+        });
     } else {
-      logOutput("ERROR", "Shell process stdin is not writable.");
-      NEURO.client?.sendContext("Error: Unable to write to shell process.", false);
+        // Process is already running; send the new command via stdin.
+        const shellProcess = session.shellProcess;
+        if (shellProcess && shellProcess.stdin.writable) {
+            shellProcess.stdin.write(command + "\n");
+            logOutput("DEBUG", `Sent command: ${command}`);
+            setTimeout(sendCapturedOutput, 1000);
+        } else {
+            logOutput("ERROR", "Shell process stdin is not writable.");
+            NEURO.client?.sendContext("Error: Unable to write to shell process.", false);
+        }
     }
-  }
 }
 
 /**
