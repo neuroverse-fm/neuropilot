@@ -228,17 +228,22 @@ export function handleRunCommand(actionData: any) {
     );
     const proc = session.shellProcess;
 
+    proc.stdin.write(command + "\n");
+    logOutput("DEBUG", `Sent command: ${command}`);
+
     proc.stdout.on('data', (data: Buffer) => {
       const text = data.toString();
       session.outputStdout += text;
       session.emitter.fire(text.replace(/(?<!\r)\n/g, "\r\n"));
+      sendCapturedOutput();
       logOutput("DEBUG", `STDOUT: ${text}`);
     });
 
     proc.stderr.on('data', (data: Buffer) => {
       const text = data.toString();
       session.outputStderr += text;
-      session.emitter.fire(text);
+      session.emitter.fire(text.replace(/(?<!\r)\n/g, "\r\n"));
+      sendCapturedOutput();
       logOutput("ERROR", `STDERR: ${text}`);
     });
 
