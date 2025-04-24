@@ -44,6 +44,12 @@ export function registerTerminalActions() {
 	}
 }
 
+let extContext: vscode.ExtensionContext
+
+export function saveContextForTerminal(context: vscode.ExtensionContext) {
+	extContext = context
+}
+
 /**
 * Fetches the list of terminal configurations from the `neuropilot.terminals` setting.
 */
@@ -85,7 +91,7 @@ function getShellProfileForType(shellType: string): { shellPath: string; shellAr
 * Creates a new pseudoterminal-based session.
 * This version captures output in separate STDOUT and STDERR properties.
 */
-function createPseudoterminal(shellType: string, terminalName: string): TerminalSession {
+function createPseudoterminal(shellType: string, terminalName: string, vscContext: vscode.ExtensionContext = extContext): TerminalSession {
 	const emitter = new vscode.EventEmitter<string>();
 	
 	// Define the pseudoterminal.
@@ -102,11 +108,16 @@ function createPseudoterminal(shellType: string, terminalName: string): Terminal
 			}
 		}
 	};
+
+	// 50/50 chance of icon selection
+	const iconFile = Math.random() < 0.5 ? "icon.png" : "neuropilot.png"
+	const icon = vscode.Uri.joinPath(vscContext.extensionUri, iconFile)
 	
 	// Create the terminal using VS Code's API.
 	const terminal = vscode.window.createTerminal({
 		name: terminalName,
-		pty: pty
+		pty: pty,
+		iconPath: icon
 	});
 	
 	// Create the session object.
@@ -178,16 +189,6 @@ export function handleRunCommand(actionData: any) {
 	session.outputStdout = "";
 	session.outputStderr = "";
 	
-	// Helper to send captured output via NEURO.client.
-	const sendCapturedOutput = () => {
-		NEURO.client?.sendContext(
-			`The ${shellType} terminal outputted the following. ${
-				session.outputStdout ? `\nstdout: ${session.outputStdout}` : ""
-			}${session.outputStderr ? `\nstderr: ${session.outputStderr}` : ""}`,
-			false
-		);
-	};
-	
 	async function sendStdoutIfUnchangedAsync(delay: number) {
 		const cachedOutput = session.outputStdout;
 		await delayAsync(delay);
@@ -232,7 +233,7 @@ export function handleRunCommand(actionData: any) {
 		logOutput("DEBUG", `Sent command: ${command}`);
 		
 		proc.stdout.on("data", (data: Buffer) => {
-			const text = data.toString().replace(/\n/g, "\r\n");
+			const text = data.toString();
 			session.outputStdout += text;
 			session.emitter.fire(text.replace(/(?<!\r)\n/g, "\r\n"));
 			sendStdoutIfUnchangedAsync(250);
@@ -240,7 +241,7 @@ export function handleRunCommand(actionData: any) {
 		});
 		
 		proc.stderr.on("data", (data: Buffer) => {
-			const text = data.toString().replace(/\n/g, "\r\n");
+			const text = data.toString();
 			session.outputStderr += text;
 			session.emitter.fire(text.replace(/(?<!\r)\n/g, "\r\n"));
 			sendStderrIfUnchangedAsync(250);
@@ -248,8 +249,8 @@ export function handleRunCommand(actionData: any) {
 		});
 		
 		proc.on("exit", (code) => {
+			NEURO.client?.sendContext(code === null ? `The ${shellType} terminal closed with a null exit code. Did Vedal close it?` : `Terminal ${shellType} exited with code ${code}.`)
 			logOutput("INFO", `Process exited with code ${code}`);
-			sendCapturedOutput();
 		});
 	} else {
 		// Process is already running; send the new command via stdin.
@@ -257,7 +258,6 @@ export function handleRunCommand(actionData: any) {
 		if (shellProcess && shellProcess.stdin.writable) {
 			shellProcess.stdin.write(command + "\n");
 			logOutput("DEBUG", `Sent command: ${command}`);
-			setTimeout(sendCapturedOutput, 1000);
 		} else {
 			logOutput("ERROR", "Shell process stdin is not writable.");
 			NEURO.client?.sendContext("Error: Unable to write to shell process.", false);

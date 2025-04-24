@@ -158,7 +158,7 @@
 							{
 								"name": "Command Prompt",
 								"path": "C:\\Windows\\System32\\cmd.exe",
-								"args": []
+								"args": ["/K"]
 							},
 							{
 								"name": "Git Bash",

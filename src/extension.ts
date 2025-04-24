@@ -7,7 +7,7 @@ import { giveCookie, registerRequestCookieAction, registerRequestCookieHandler, 
 import { registerChatParticipant, registerChatResponseHandler } from './chat';
 import { registerUnsupervisedActions, registerUnsupervisedHandlers } from './unsupervised';
 import { reloadTasks, taskEndedHandler } from './tasks';
-import { emergencyTerminalShutdown } from './pseudoterminal';
+import { emergencyTerminalShutdown, saveContextForTerminal } from './pseudoterminal';
 
 export function activate(context: vscode.ExtensionContext) {
     NEURO.url = vscode.workspace.getConfiguration('neuropilot').get('websocketUrl', 'ws://localhost:8000');
@@ -29,6 +29,7 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand('neuropilot.disableAllPermissions', disableAllPermissions);
 
     registerChatParticipant(context);
+    saveContextForTerminal(context);
 
     onClientConnected(registerPreActionHandler);
     onClientConnected(registerCompletionResultHandler);
