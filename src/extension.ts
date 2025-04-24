@@ -7,6 +7,7 @@ import { giveCookie, registerRequestCookieAction, registerRequestCookieHandler, 
 import { registerChatParticipant, registerChatResponseHandler } from './chat';
 import { registerUnsupervisedActions, registerUnsupervisedHandlers } from './unsupervised';
 import { reloadTasks, taskEndedHandler } from './tasks';
+import { emergencyTerminalShutdown } from './pseudoterminal';
 
 export function activate(context: vscode.ExtensionContext) {
     NEURO.url = vscode.workspace.getConfiguration('neuropilot').get('websocketUrl', 'ws://localhost:8000');
@@ -80,7 +81,7 @@ function disableAllPermissions() {
             exe.terminate();
             NEURO.currentTaskExecution = null;
         }
-        // TO-DO: Terminate currently running terminal command.
+        emergencyTerminalShutdown();
         // Send context and reload
         reloadPermissions();
         NEURO.client?.sendContext("Vedal has turned off all dangerous permissions.");

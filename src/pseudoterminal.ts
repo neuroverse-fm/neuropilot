@@ -5,12 +5,11 @@ import { TerminalSession, logOutput, delayAsync } from './utils';
 
 export const terminalAccessHandlers: { [key: string]: (actionData: any) => void } = {
 	"execute_in_terminal": handleRunCommand,
-	//"kill_terminal_process": handleKillTerminal
+	"kill_terminal_process": handleKillTerminal,
+	"get_currently_running_shells": handleGetCurrentlyRunningShells
 }
 
 export function registerTerminalAction() {
-	NEURO.client?.unregisterActions(["execute_in_terminal"])
-	
 	if (vscode.workspace.getConfiguration('neuropilot').get('permission.terminalAccess')) {
 		NEURO.client?.registerActions([
 			{
@@ -24,6 +23,22 @@ export function registerTerminalAction() {
 					},
 					required: ['command', 'shell']
 				}
+			},
+			{
+				name: "kill_terminal_process",
+				description: "Kill a terminal process that is running.",
+				schema: {
+					type: 'object',
+					properties: {
+						shell: { type: 'string' }
+					},
+					required: ['shell']
+				}
+			},
+			{
+				name: "get_currently_running_shells",
+				description: "Get the list of terminal processes that are spawned.",
+				schema: {}
 			}
 		])
 	}
@@ -126,9 +141,9 @@ function getOrCreateTerminal(shellType: string, terminalName: string): TerminalS
 }
 
 /**
-* Main command handler.
+* Run command handler.
 * Checks permissions, executes the command in the requested shell,
-* captures STDOUT and STDERR, logs the output, and sends it via NEURO.client.
+* captures STDOUT and STDERR, logs the output, and sends it to nwero.
 */
 export function handleRunCommand(actionData: any) {
 	// Check terminal access permission.
@@ -247,6 +262,98 @@ export function handleRunCommand(actionData: any) {
 			logOutput("ERROR", "Shell process stdin is not writable.");
 			NEURO.client?.sendContext("Error: Unable to write to shell process.", false);
 		}
+	}
+}
+
+/**
+ * Kill terminal handler.
+ * Checks if the terminal registry contains the open shell and forcefully kills the shell if found.
+ */
+export function handleKillTerminal(actionData: any) {
+    // Check terminal access permission.
+    if (!vscode.workspace.getConfiguration("neuropilot").get("permission.terminalAccess", false)) {
+        NEURO.client?.sendActionResult(actionData.id, true, "You are not allowed to manage terminals.");
+        return;
+    }
+
+    // Validate shell type parameter.
+    const shellType: string = actionData.params?.shell;
+    if (!shellType) {
+        NEURO.client?.sendActionResult(actionData.id, false, "You didn't specify a shell type to kill.");
+        return;
+    }
+
+    // Check if the terminal session exists in the registry.
+    const session = NEURO.terminalRegistry.get(shellType);
+    if (!session) {
+        NEURO.client?.sendActionResult(actionData.id, true, `No terminal session found for shell type "${shellType}".`);
+        return;
+    }
+
+	NEURO.client?.sendActionResult(actionData.id, true)
+
+    // Dispose of the terminal and remove it from the registry.
+    session.terminal.dispose();
+    NEURO.terminalRegistry.delete(shellType);
+
+    // Notify Neuro and the user.
+    NEURO.client?.sendContext(`Terminal session for shell type "${shellType}" has been terminated.`);
+    logOutput("INFO", `Terminal session for shell type "${shellType}" has been terminated.`);
+}
+
+/**
+ * Returns a list of currently running shell types.
+ * Each entry includes the shell type and its status.
+ */
+export function handleGetCurrentlyRunningShells(): Array<{ shellType: string; status: string }> {
+    const runningShells: Array<{ shellType: string; status: string }> = [];
+
+    for (const [shellType, session] of NEURO.terminalRegistry.entries()) {
+        const status = session.shellProcess && !session.shellProcess.killed ? "Running" : "Stopped";
+        runningShells.push({ shellType, status });
+    }
+
+    logOutput("INFO", `Currently running shells: ${JSON.stringify(runningShells)}`);
+    return runningShells;
+}
+
+/**
+ * Forcefully kills all active terminals in the NEURO.terminalRegistry.
+ * This function is intended for emergency use and will terminate all terminals regardless of their state.
+ * Use with caution. Killing multiple active shells can corrupt your files.
+ */
+export function emergencyTerminalShutdown() {
+    // Check if there are any active terminals in the registry.
+    if (NEURO.terminalRegistry.size === 0) {
+        logOutput("INFO", "No active terminals to shut down.");
+        return;
+    }
+
+    logOutput("INFO", "Initiating emergency shutdown of all terminals...");
+
+	let failedShutdownCount: number = 0
+
+    // Iterate through all terminal sessions in the registry.
+    for (const [shellType, session] of NEURO.terminalRegistry.entries()) {
+        try {
+            // Dispose of the terminal.
+            session.terminal.dispose();
+            logOutput("INFO", `Terminal session for shell type "${shellType}" has been terminated.`);
+        } catch (error) {
+            logOutput("ERROR", `Failed to terminate terminal session for shell type "${shellType}": ${error}`);
+			failedShutdownCount += 1
+        }
+    }
+
+    // Clear the terminal registry.
+    NEURO.terminalRegistry.clear();
+
+    // Notify Neuro and log the shutdown.
+    NEURO.client?.sendContext("Emergency shutdown: All terminal sessions have been forcefully terminated.");
+	if (failedShutdownCount == 0) {
+    	logOutput("INFO", "Emergency shutdown complete. All terminals have been terminated.");
+	} else {
+		logOutput("WARN", `Failed to terminate ${failedShutdownCount} shells.`)
 	}
 }
 
