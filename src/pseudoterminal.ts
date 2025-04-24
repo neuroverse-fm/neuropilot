@@ -160,7 +160,7 @@ export function handleRunCommand(actionData: any) {
 	}
 	
 	// Determine the shell type.
-	let shellType: string = actionData.params?.shell;
+	const shellType: string = actionData.params?.shell;
 	if (!shellType) {
 		NEURO.client?.sendActionResult(actionData.id, false, "You didn't give a shell profile to run this in.");
 		return;
