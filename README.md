@@ -91,211 +91,219 @@ Sends the entire current file as context to Neuro, along with the file name and 
 
 ## Actions
 
+### Tasks
+
 Neuro has access to the following actions.
 Tasks that Neuro can run are registered as additional actions.
 Neuro can only run one task at a time.
 
-### `get_files`
+#### `terminate_task`
+
+*Requires Permission: Run Tasks.*
+Terminates the currently running task that was started using a task action.
+
+### File Interactions
+
+#### `get_files`
 
 *Requires Permission: Open files.*
 Gets a list of files in the workspace.
 The files are returned as paths relative to the workspace root.
 
-### `open_file`
+#### `open_file`
 
 *Requires Permission: Open files.*
 Opens a file inside the workspace (or focuses it if it is already open) and sends its contents to Neuro.
 
-### `place_cursor`
+#### `place_cursor`
 
 *Requires Permission: Edit Active Document.*
 Places the cursor at the specified line and character (zero-based).
 
-### `get_cursor`
+#### `get_cursor`
 
 *Requires Permission: Edit Active Document.*
 Returns the current cursor position, as well as the lines before and after the cursor.
 The number of lines returned can be controlled with the settings `neuropilot.beforeContext` and `neuropilot.afterContext`.
 
-### `insert_text`
+#### `insert_text`
 
 *Requires Permission: Edit Active Document.*
 Inserts text at the current cursor position and places the cursor after the inserted text.
 
-### `replace_text`
+#### `replace_text`
 
 *Requires Permission: Edit Active Document.*
 Replaces the first occurence of the specified text with new text and places the cursor after the inserted text.
 
-### `delete_text`
+#### `delete_text`
 
 *Requires Permission: Edit Active Document.*
 Deletes the first occurence of the specified text and places the cursor where the text was.
 
-### `place_cursor_at_text`
+#### `place_cursor_at_text`
 
 *Requires Permission: Edit Active Document.*
 Places the cursor before or after the first occurence of the specified text.
 
-### `create_file`
+#### `create_file`
 
 *Requires Permission: Create.*
 Creates a new file in the workspace.
 If *permission to open file* is given, the file is immediately opened.
 The file name cannot start with a dot, and cannot be created in a folder that starts with a dot.
 
-### `create_folder`
+#### `create_folder`
 
 *Requires Permission: Create.*
 Creates a new folder in the workspace.
 A folder starting with a dot cannot be created this way.
 
-### `rename_file_or_folder`
+#### `rename_file_or_folder`
 
 *Requires Permission: Rename.*
 Renames a file or folder in the workspace.
 This cannot rename to or from a name starting with a dot, or within a folder that starts with a dot.
 
-### `delete_file_or_folder`
+#### `delete_file_or_folder`
 
 *Requires Permission: Delete.*
 Deletes a file or folder in the workspace.
 This cannot delete anything starting with a dot, or inside a folder starting with a dot.
 
-### `terminate_task`
+### Git interactions
 
-*Requires Permission: Run Tasks.*
-Terminates the currently running task that was started using a task action.
-
-### `init_git_repo`
+#### `init_git_repo`
 
 *Requires Permission: Git Operations.*
 Initialises a Git repository in the workspace folder and registers git commands.
 
-### `add_file_to_git`
+#### `add_file_to_git`
 
 *Requires Permission: Git Operations.*
 Add a file to Git's staging index
 
-### `remove_file_from_git`
+#### `remove_file_from_git`
 
 *Requires Permission: Git Operations.*
 Remove a file from Git's staging index
 
-### `make_git_commit`
+#### `make_git_commit`
 
 *Requires Permission: Git Operations.*
 Makes a commit. Messsages are prefixed to differentiate between Neuro committing and the user committing.
 
-### `git_status`
+#### `git_status`
 
 *Requires Permission: Git Operations.*
 Returns the current status of the workspace.
 
-### `diff_files`
+#### `diff_files`
 
 *Requires Permission: Git Operations.*
 Returns the diff between files.
 
-### `merge_to_current_branch`
+#### `merge_to_current_branch`
 
 *Requires Permission: Git Operations.*
 Merges another branch into the current branch.
 
-### `abort_merge`
+#### `abort_merge`
 
 *Requires Permission: Git Operations.*
 *Note: This is only registered if a merge failed to happen cleanly*
 Aborts a merge currently in progress.
 
-### `git_log`
+#### `git_log`
 
 *Requires Permission: Git Operations.*
 Returns the commit history of the current branch.
 
-### `git_blame`
+#### `git_blame`
 
 *Requires Permission: Git Operations.*
 Returns commit attributions for each line in a file.
 
-### `tag_head`
+#### `tag_head`
 
 *Requires Permission: Git Operations & Git Tags.*
 Tags the commit currently at HEAD.
 
-### `delete_tag`
+#### `delete_tag`
 
 *Requires Permission: Git Operations & Git Tags.*
 Deletes an existing tag.
 
-### `new_git_branch`
+#### `new_git_branch`
 
 *Requires Permission: Git Operations.*
 Creates a new git branch and switches to it.
 
-### `switch_git_branch`
+#### `switch_git_branch`
 
 *Requires Permission: Git Operations.*
 Switches to an existing branch.
 
-### `delete_git_branch`
+#### `delete_git_branch`
 
 *Requires Permission: Git Operations.*
 Deletes a branch from the repository.
 
-### `fetch_git_commits`
+#### `fetch_git_commits`
 
 *Requires Permissions: Git Operations & Git Remotes.*
 Fetches info about missing commits from the specified/default remote.
 
-### `pull_git_commits`
+#### `pull_git_commits`
 
 *Requires Permissions: Git Operations & Git Remotes.*
 Pulls new git commits from the specified/default remote.
 
-### `push_git_commits`
+#### `push_git_commits`
 
 *Requires Permissions: Git Operations & Git Remotes.*
 Pushes unpublished commits to the remote server. If a remote branch is not set as the upstream, this will automatically do so.
 
-### `add_git_remote`
+#### `add_git_remote`
 
 *Requires Permissions: Git Operations, Git Remotes & Edit Remote Data.*
 Adds a new git remote.
 
-### `remove_git_remote`
+#### `remove_git_remote`
 
 *Requires Permissions: Git Operations, Git Remotes & Edit Remote Data.*
 Removes a git remote.
 
-### `rename_git_remote`
+#### `rename_git_remote`
 
 *Requires Permissions: Git Operations, Git Remotes & Edit Remote Data.*
 Renames a git remote. This only changes the name of the remote, not the location.
 
-### `get_git_config`
+#### `get_git_config`
 
 *Requires Permissions: Git Operations & Git Config.*
 Gets a key's value from the git configuration. Neuro can only see the repository's configurations, never global configs.
 If no key is specified, returns the entire git config.
 
-### `set_git_config`
+#### `set_git_config`
 
 *Requires Permissions: Git Operations & Git Config.*
 Sets a key's value in the git configuration. Neuro can only change the repository's configurations, never global configs.
 
-### `execute_in_terminal`
+### Shell interactions
+
+#### `execute_in_terminal`
 
 *Requires Permissions: Terminal Access.*
 Executes a command into a shell process. The available shell processes can be configured in extension settings.
 If the terminal isn't already running, it will also initialise a terminal instance with the specified shell.
 
-### `kill_terminal_process`
+#### `kill_terminal_process`
 
 *Requires Permissions: Terminal Access.*
 Kills a running shell. If a shell isn't already running, Neuro will be notified.
 
-### `get_currently_running_shells`
+#### `get_currently_running_shells`
 
 *Requires Permissions: Terminal Access.*
 Returns the list of currently running shells to Neuro.
