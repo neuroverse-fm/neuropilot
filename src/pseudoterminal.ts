@@ -9,7 +9,7 @@ export const terminalAccessHandlers: { [key: string]: (actionData: any) => void 
 	"get_currently_running_shells": handleGetCurrentlyRunningShells
 }
 
-export function registerTerminalAction() {
+export function registerTerminalActions() {
 	if (vscode.workspace.getConfiguration('neuropilot').get('permission.terminalAccess')) {
 		NEURO.client?.registerActions([
 			{

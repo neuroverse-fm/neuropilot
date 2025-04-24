@@ -82,7 +82,7 @@ Reregisters all actions according to the permissions.
 
 ### Disable all permissions
 
-Disable all permissions for Neuro immediately and reloads permissions. Also kills currently running tasks.
+Disable all permissions for Neuro immediately and reloads permissions. Also kills currently running tasks and any open shells.
 Since it's intended to be a panic button, it is recommended to bind that command to a keyboard shortcut.
 
 ### Send File As Context
@@ -283,6 +283,22 @@ If no key is specified, returns the entire git config.
 
 *Requires Permissions: Git Operations & Git Config.*
 Sets a key's value in the git configuration. Neuro can only change the repository's configurations, never global configs.
+
+### `execute_in_terminal`
+
+*Requires Permissions: Terminal Access.*
+Executes a command into a shell process. The available shell processes can be configured in extension settings.
+If the terminal isn't already running, it will also initialise a terminal instance with the specified shell.
+
+### `kill_terminal_process`
+
+*Requires Permissions: Terminal Access.*
+Kills a running shell. If a shell isn't already running, Neuro will be notified.
+
+### `get_currently_running_shells`
+
+*Requires Permissions: Terminal Access.*
+Returns the list of currently running shells to Neuro.
 
 ## Further Info
 

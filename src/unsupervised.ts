@@ -4,7 +4,7 @@ import { handleRunTask, registerTaskActions, taskHandlers } from './tasks';
 import { fileActionHandlers, registerFileActions } from './file_actions';
 import { gitActionHandlers, registerGitActions } from './git';
 import { editingFileHandlers, registerEditingActions } from './editing';
-import { registerTerminalAction, terminalAccessHandlers } from "./pseudoterminal";
+import { registerTerminalActions, terminalAccessHandlers } from "./pseudoterminal";
 
 /**
  * Register unsupervised actions with the Neuro API.
@@ -29,7 +29,7 @@ export function registerUnsupervisedActions() {
     registerGitActions();
     registerTaskActions();
     registerEditingActions();
-    registerTerminalAction();
+    registerTerminalActions();
 }
 
 /**
