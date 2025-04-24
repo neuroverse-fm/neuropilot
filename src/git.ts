@@ -48,8 +48,6 @@ let repo: Repository | undefined = git.repositories[0];
 
 // Register all git commands
 export function registerGitActions() {
-    NEURO.client?.unregisterActions(Object.keys(gitActionHandlers));
-
     if (vscode.workspace.getConfiguration('neuropilot').get('permission.gitOperations', false)) {
         NEURO.client?.registerActions([
             {

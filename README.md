@@ -80,6 +80,11 @@ Shows a notification when it succeeds or fails.
 
 Reregisters all actions according to the permissions.
 
+### Disable all permissions
+
+Disable all permissions for Neuro immediately and reloads permissions. Also kills currently running tasks.
+Since it's intended to be a panic button, it is recommended to bind that command to a keyboard shortcut.
+
 ### Send File As Context
 
 Sends the entire current file as context to Neuro, along with the file name and configured language.
