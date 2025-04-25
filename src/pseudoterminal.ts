@@ -187,7 +187,7 @@ export function handleRunCommand(actionData: any) {
 	NEURO.client?.sendActionResult(actionData.id, true);
 	
 	// Get or create the terminal session for this shell.
-	const session = getOrCreateTerminal(shellType, `NeuroPilot: ${shellType}`);
+	const session = getOrCreateTerminal(shellType, `Neuro: ${shellType}`);
 	
 	// Reset previous outputs.
 	session.outputStdout = "";
