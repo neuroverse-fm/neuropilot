@@ -236,6 +236,11 @@
 						"type": "boolean",
 						"default": true,
 						"markdownDescription": "Display the date and time of when a terminal is started by Neuro."
+					},
+					"neuropilot.terminalContextDelay": {
+						"type": "number",
+						"default": 400,
+						"markdownDescription": "The delay to wait before sending stdout/stderr context to Neuro."
 					}
 				}
 			}

@@ -102,7 +102,7 @@ function createPseudoterminal(shellType: string, terminalName: string, vscContex
 		onDidWrite: emitter.event,
 		open: () => {
 			// Write an initial message when the terminal opens.
-			emitter.fire(`Terminal "${terminalName}" ready${startTimePermission ? `at ${startTime}` : ""}.\r\n`);
+			emitter.fire(`Terminal "${terminalName}" ready${startTimePermission ? ` at ${startTime}` : ""}.\r\n`);
 		},
 		close: () => {
 			// On terminal close, kill the spawned process if it exists.
@@ -188,6 +188,7 @@ export function handleRunCommand(actionData: any) {
 	
 	// Get or create the terminal session for this shell.
 	const session = getOrCreateTerminal(shellType, `Neuro: ${shellType}`);
+	const outputDelay = vscode.workspace.getConfiguration('neuropilot').get('terminalContextDelay', 400);
 	
 	// Reset previous outputs.
 	session.outputStdout = "";
@@ -237,7 +238,7 @@ export function handleRunCommand(actionData: any) {
 			const text = data.toString();
 			session.outputStdout += text;
 			session.emitter.fire(text.replace(/(?<!\r)\n/g, "\r\n"));
-			sendStdoutIfUnchangedAsync(250);
+			sendStdoutIfUnchangedAsync(outputDelay);
 			logOutput("DEBUG", `STDOUT: ${text}`);
 		});
 		
@@ -245,7 +246,7 @@ export function handleRunCommand(actionData: any) {
 			const text = data.toString();
 			session.outputStderr += text;
 			session.emitter.fire(text.replace(/(?<!\r)\n/g, "\r\n"));
-			sendStderrIfUnchangedAsync(250);
+			sendStderrIfUnchangedAsync(outputDelay);
 			logOutput("ERROR", `STDERR: ${text}`);
 		});		
 		
