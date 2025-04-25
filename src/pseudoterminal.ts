@@ -310,16 +310,28 @@ export function handleKillTerminal(actionData: any) {
  * Returns a list of currently running shell types.
  * Each entry includes the shell type and its status.
  */
-export function handleGetCurrentlyRunningShells(): Array<{ shellType: string; status: string }> {
+export function handleGetCurrentlyRunningShells(actionData: any) {
+	if (!vscode.workspace.getConfiguration('neuropilot').get("permission.terminalAccess", false)) {
+		NEURO.client?.sendActionResult(actionData.id, true, "You don't have permission to manage terminals.")
+		return
+	}
+	
+	NEURO.client?.sendActionResult(actionData.id, true)
+
     const runningShells: Array<{ shellType: string; status: string }> = [];
 
     for (const [shellType, session] of NEURO.terminalRegistry.entries()) {
         const status = session.shellProcess && !session.shellProcess.killed ? "Running" : "Stopped";
         runningShells.push({ shellType, status });
     }
-
-    logOutput("INFO", `Currently running shells: ${JSON.stringify(runningShells)}`);
-    return runningShells;
+	
+	if (runningShells.length === 0) {
+		NEURO.client?.sendContext("No shells are spawned.")
+		return
+	} else {
+		NEURO.client?.sendContext(`Currently running shells: ${JSON.stringify(runningShells)}`)
+		return
+	}
 }
 
 /**
