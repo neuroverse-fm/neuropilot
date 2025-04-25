@@ -639,14 +639,17 @@ export function handleGitRemove(actionData: any) {
         absolutePath = revertFiles;
     } else {
         absolutePath = path.join(repo.rootUri.fsPath, revertFiles);
+        if (revertFiles === ".") {
+            absolutePath = `${absolutePath}\\${revertFiles}`
+        }
     }
 
     // Pass the absolute path to the Git remove command.
     repo.revert([absolutePath]).then(() => {
         NEURO.client?.sendContext(`Removed ${revertFiles} from the index.`);
     }, (err: string) => {
-        NEURO.client?.sendContext(`Reverting files failed`);
-        logOutput("ERROR", `Git revert failed: ${err}`)
+        NEURO.client?.sendContext(`Removing files from the index failed`);
+        logOutput("ERROR", `Git remove failed: ${err}\nTried to remove ${absolutePath}`)
     });
 }
 
