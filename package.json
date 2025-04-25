@@ -231,6 +231,11 @@
 						"type": "boolean",
 						"default": false,
 						"markdownDescription": "Allow Neuro __direct terminal access__. Be very careful with this."
+					},
+					"neuropilot.showTimeOnTerminalStart": {
+						"type": "boolean",
+						"default": true,
+						"markdownDescription": "Display the date and time of when a terminal is started by Neuro."
 					}
 				}
 			}

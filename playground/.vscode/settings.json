@@ -14,20 +14,21 @@
     },
     "neuropilot.permission.terminalAccess": true,
     "neuropilot.terminals": [
-    {
-        "name": "PowerShell",
-        "path": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
-        "args": []
-    },
-    {
-        "name": "Command Prompt",
-        "path": "C:\\Windows\\System32\\cmd.exe",
-        "args": ["/K"]
-    },
-    {
-        "name": "Git Bash",
-        "path": "C:\\Program Files\\Git\\bin\\bash.exe",
-        "args": []
-    }
-]
+        {
+            "name": "PowerShell",
+            "path": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+            "args": []
+        },
+        {
+            "name": "Command Prompt",
+            "path": "C:\\Windows\\System32\\cmd.exe",
+            "args": ["/K"]
+        },
+        {
+            "name": "Git Bash",
+            "path": "C:\\Program Files\\Git\\bin\\bash.exe",
+            "args": []
+        }
+    ],
+    "neuropilot.showTimeOnTerminalStart": true
 }

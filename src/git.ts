@@ -596,6 +596,9 @@ export function handleGitAdd(actionData: any) {
         absolutePath = stageFiles;
     } else {
         absolutePath = path.join(repo.rootUri.fsPath, stageFiles);
+        if (stageFiles === ".") {
+            absolutePath = `${absolutePath}\\${stageFiles}`
+        }
     }
 
     // Pass the absolute path to the Git add command.
@@ -603,7 +606,7 @@ export function handleGitAdd(actionData: any) {
         NEURO.client?.sendContext(`Added ${stageFiles} to staging area.`);
     }, (err: string) => {
         NEURO.client?.sendContext(`Adding files to staging area failed`);
-        logOutput("ERROR", `Failed to git add: ${err}`)
+        logOutput("ERROR", `Failed to git add: ${err}\nTried to add ${absolutePath}`)
     });
 }
 

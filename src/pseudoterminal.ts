@@ -93,13 +93,16 @@ function getShellProfileForType(shellType: string): { shellPath: string; shellAr
 */
 function createPseudoterminal(shellType: string, terminalName: string, vscContext: vscode.ExtensionContext = extContext): TerminalSession {
 	const emitter = new vscode.EventEmitter<string>();
+
+	const startTime: string = new Date().toLocaleString()
+	const startTimePermission: boolean = vscode.workspace.getConfiguration('neuropilot').get("showTimeOnTerminalStart", false)
 	
 	// Define the pseudoterminal.
 	const pty: vscode.Pseudoterminal = {
 		onDidWrite: emitter.event,
 		open: () => {
 			// Write an initial message when the terminal opens.
-			emitter.fire(`Terminal "${terminalName}" ready.\r\n`);
+			emitter.fire(`Terminal "${terminalName}" ready${startTimePermission ? `at ${startTime}` : ""}.\r\n`);
 		},
 		close: () => {
 			// On terminal close, kill the spawned process if it exists.
@@ -117,7 +120,8 @@ function createPseudoterminal(shellType: string, terminalName: string, vscContex
 	const terminal = vscode.window.createTerminal({
 		name: terminalName,
 		pty: pty,
-		iconPath: icon
+		iconPath: icon,
+		isTransient: false
 	});
 	
 	// Create the session object.
@@ -131,7 +135,7 @@ function createPseudoterminal(shellType: string, terminalName: string, vscContex
 		shellProcess: undefined,
 		shellType
 	};
-	
+
 	return session;
 }
 
@@ -229,9 +233,6 @@ export function handleRunCommand(actionData: any) {
 		session.shellProcess = spawn(shellPath, shellArgs || [], { cwd, env: process.env, stdio: ["pipe", "pipe", "pipe"] });
 		const proc = session.shellProcess;
 		
-		proc.stdin.write(command + "\n");
-		logOutput("DEBUG", `Sent command: ${command}`);
-		
 		proc.stdout.on("data", (data: Buffer) => {
 			const text = data.toString();
 			session.outputStdout += text;
@@ -246,12 +247,16 @@ export function handleRunCommand(actionData: any) {
 			session.emitter.fire(text.replace(/(?<!\r)\n/g, "\r\n"));
 			sendStderrIfUnchangedAsync(250);
 			logOutput("ERROR", `STDERR: ${text}`);
-		});
+		});		
 		
 		proc.on("exit", (code) => {
 			NEURO.client?.sendContext(code === null ? `The ${shellType} terminal closed with a null exit code. Did Vedal close it?` : `Terminal ${shellType} exited with code ${code}.`)
-			logOutput("INFO", `Process exited with code ${code}`);
+			logOutput("INFO", `${shellType} process exited with code ${code}`);
 		});
+		
+		proc.stdin.write(command + "\n");
+		logOutput("DEBUG", `Sent command: ${command}`);
+
 	} else {
 		// Process is already running; send the new command via stdin.
 		const shellProcess = session.shellProcess;
