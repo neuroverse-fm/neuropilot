@@ -11,5 +11,4 @@ node_modules
 *.*~
 
 # Inkscape
-icon.svg
-neuropilot.svg
+*.svg
