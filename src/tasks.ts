@@ -1,15 +1,16 @@
 import * as vscode from 'vscode';
 
 import { NEURO } from "./constants";
-import { logOutput, formatActionID } from './utils';
+import { logOutput, formatActionID, hasPermissions, PERMISSIONS } from './utils';
+import { ActionData, ActionResult, actionResultAccept, actionResultFailure, actionResultNoPermission, actionResultRetry } from './neuro_client_helper';
 
-export const taskHandlers: { [key: string]: (actionData: any) => void } = {
+export const taskHandlers: { [key: string]: (actionData: ActionData) => ActionResult } = {
     // handleRunTask is used separately and not on this list
     'terminate_task': handleTerminateTask,
 }
 
 export function registerTaskActions() {
-    if(vscode.workspace.getConfiguration('neuropilot').get('permission.runTasks', false)) {
+    if(hasPermissions(PERMISSIONS.runTasks)) {
         NEURO.client?.registerActions([
             {
                 name: 'terminate_task',
@@ -20,57 +21,40 @@ export function registerTaskActions() {
     }
 }
 
-export function handleTerminateTask(actionData: any) {
-    if(!vscode.workspace.getConfiguration('neuropilot').get('permission.runTasks', false)) {
-        logOutput('WARNING', 'Neuro attempted to terminate a task, but permission is disabled');
-        NEURO.client?.sendActionResult(actionData.id, true, 'You do not have task permissions.');
-        return;
-    }
+export function handleTerminateTask(actionData: ActionData): ActionResult {
+    if(!hasPermissions(PERMISSIONS.runTasks))
+        return actionResultNoPermission(PERMISSIONS.runTasks);
 
-    if(NEURO.currentTaskExecution === null) {
-        logOutput('INFO', 'No task currently running');
-        NEURO.client?.sendActionResult(actionData.id, true, 'No task to terminate');
-        return;
-    }
+    if(NEURO.currentTaskExecution === null)
+        return actionResultFailure('No task to terminate.');
 
     const exe = NEURO.currentTaskExecution;
     NEURO.currentTaskExecution = null;
     exe.terminate();
     logOutput('INFO', 'Terminated current task');
-    NEURO.client?.sendActionResult(actionData.id, true, 'Terminated current task');
+    return actionResultAccept('Terminated current task');
 }
 
-export function handleRunTask(actionData: any) {
-    if(!vscode.workspace.getConfiguration('neuropilot').get('permission.runTasks', false)) {
-        logOutput('WARNING', 'Neuro attempted to run a task, but permission is disabled');
-        NEURO.client?.sendActionResult(actionData.id, true, 'You do not have task permissions.');
-        return;
-    }
+export function handleRunTask(actionData: ActionData): ActionResult {
+    if(!hasPermissions(PERMISSIONS.runTasks))
+        return actionResultNoPermission(PERMISSIONS.runTasks);
 
-    if(NEURO.currentTaskExecution !== null) {
-        logOutput('INFO', 'A task is already running');
-        NEURO.client?.sendActionResult(actionData.id, true, 'A task is already running');
-        return;
-    }
+    if(NEURO.currentTaskExecution !== null)
+        return actionResultFailure('A task is already running.');
 
     const task = NEURO.tasks.find(task => task.id === actionData.name);
-    if(task === undefined) {
-        logOutput('ERROR', `Task ${actionData.name} not found`);
-        NEURO.client?.sendActionResult(actionData.id, false, `Task ${actionData.name} not found`);
-        return;
-    }
+    if(task === undefined)
+        return actionResultRetry(`Task ${actionData.name} not found.`);
 
     try {
         vscode.tasks.executeTask(task.task).then(value => {
             logOutput('INFO', `Executing task ${task.id}`);
             NEURO.currentTaskExecution = value;
         });
-        NEURO.client?.sendActionResult(actionData.id, true, `Executing task ${task.id}`);
+        return actionResultAccept(`Executing task ${task.id}`);
     } catch(erm) {
-        logOutput('ERROR', `Failed to execute task ${task.id}`);
         logOutput('DEBUG', JSON.stringify(erm));
-        NEURO.client?.sendActionResult(actionData.id, false, `Failed to execute task ${task.id}`);
-        return;
+        return actionResultFailure(`Failed to execute task ${task.id}.`, 'ERROR');
     }
 }
 
@@ -95,7 +79,7 @@ export function reloadTasks() {
 
     NEURO.tasks = [];
 
-    if(!vscode.workspace.getConfiguration('neuropilot').get('permission.runTasks', false)) {
+    if(!hasPermissions(PERMISSIONS.runTasks)) {
         return;
     }
 
@@ -116,7 +100,7 @@ export function reloadTasks() {
             }
         }
 
-        if(!vscode.workspace.getConfiguration('neuropilot').get('permission.runTasks', false)) {
+        if(!hasPermissions(PERMISSIONS.runTasks)) {
             return;
         }
 

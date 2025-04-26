@@ -1,9 +1,13 @@
 import * as vscode from 'vscode';
 
 import { NEURO } from "./constants";
-import { getPositionContext, isPathNeuroSafe, logOutput } from './utils';
+import { getPositionContext, hasPermissions, isPathNeuroSafe, logOutput, PERMISSIONS } from './utils';
+import { ActionData, ActionResult, actionResultAccept, actionResultEnumFailure, actionResultFailure, actionResultMissingParameter, actionResultNoPermission, actionResultRetry } from './neuro_client_helper';
 
-export const editingFileHandlers: { [key: string]: (actionData: any) => void } = {
+const ACTION_RESULT_NO_ACCESS = actionResultFailure('You do not have permission to access this file.');
+const ACTION_RESULT_NO_ACTIVE_DOCUMENT = actionResultFailure('No active document to edit.');
+
+export const editingFileHandlers: { [key: string]: (actionData: ActionData) => ActionResult } = {
     'place_cursor': handlePlaceCursor,
     'get_cursor': handleGetCursor,
     'insert_text': handleInsertText,
@@ -13,7 +17,7 @@ export const editingFileHandlers: { [key: string]: (actionData: any) => void } =
 }
 
 export function registerEditingActions() {
-    if(vscode.workspace.getConfiguration('neuropilot').get('permission.editActiveDocument', false)) {
+    if(hasPermissions(PERMISSIONS.editActiveDocument)) {
         NEURO.client?.registerActions([
             {
                 name: 'place_cursor',
@@ -81,101 +85,71 @@ export function registerEditingActions() {
     }
 }
 
-export function handlePlaceCursor(actionData: any) {
-    if(!vscode.workspace.getConfiguration('neuropilot').get('permission.editActiveDocument', false)) {
-        logOutput('WARNING', 'Neuro attempted to place the cursor, but permission is disabled');
-        NEURO.client?.sendActionResult(actionData.id, true, 'You do not have edit permissions.');
-        return;
-    }
+export function handlePlaceCursor(actionData: ActionData): ActionResult {
+    if(!hasPermissions(PERMISSIONS.editActiveDocument))
+        return actionResultNoPermission(PERMISSIONS.editActiveDocument);
 
     const line = actionData.params?.line;
     const character = actionData.params?.character;
 
-    if(line === undefined) {
-        NEURO.client?.sendActionResult(actionData.id, false, 'Missing required parameter "line"');
-        return;
-    }
-    if(character === undefined) {
-        NEURO.client?.sendActionResult(actionData.id, false, 'Missing required parameter "character"');
-        return;
-    }
+    if(line === undefined)
+        return actionResultMissingParameter('line');
+    if(character === undefined)
+        return actionResultMissingParameter('character');
 
     const document = vscode.window.activeTextEditor?.document;
-    if(document === undefined) {
-        NEURO.client?.sendActionResult(actionData.id, true, 'No active document to place the cursor in');
-        return;
-    }
-    if(!isPathNeuroSafe(document.fileName)) {
-        NEURO.client?.sendActionResult(actionData.id, true, 'You do not have permission to access this file');
-        return;
-    }
-    if(line >= document.lineCount) {
-        NEURO.client?.sendActionResult(actionData.id, false, `Line is out of bounds, the last line of the document is ${document.lineCount - 1}`);
-        return;
-    }
-    if(character >= document.lineAt(line).text.length) {
-        NEURO.client?.sendActionResult(actionData.id, false, `Character is out of bounds, the last character of the line is ${document.lineAt(line).text.length - 1}`);
-        return;
-    }
+    if(document === undefined)
+        return ACTION_RESULT_NO_ACTIVE_DOCUMENT;
+    if(!isPathNeuroSafe(document.fileName))
+        return ACTION_RESULT_NO_ACCESS;
+    if(line >= document.lineCount)
+        return actionResultRetry(`Line is out of bounds, the last line of the document is ${document.lineCount - 1}.`);
+    if(character >= document.lineAt(line).text.length)
+        return actionResultRetry(`Character is out of bounds, the last character of line ${line} is ${document.lineAt(line).text.length - 1}.`);
 
     vscode.window.activeTextEditor!.selection = new vscode.Selection(line, character, line, character);
     const cursorContext = getPositionContext(document, new vscode.Position(line, character));
-    logOutput('INFO', `Placed cursor at line ${line}, character ${character}`);
-    NEURO.client?.sendActionResult(actionData.id, true, `Cursor placed at line ${line}, character ${character}\n\nContext before:\n\n\`\`\`\n${cursorContext.contextBefore}\n\`\`\`\n\nContext after:\n\n\`\`\`\n${cursorContext.contextAfter}\n\`\`\``);
+    logOutput('INFO', `Placed cursor at (${line}:${character}).`);
+
+    return actionResultAccept(`Cursor placed at line ${line}, character ${character}\n\nContext before:\n\n\`\`\`\n${cursorContext.contextBefore}\n\`\`\`\n\nContext after:\n\n\`\`\`\n${cursorContext.contextAfter}\n\`\`\``);
 }
 
-export function handleGetCursor(actionData: any) {
-    if(!vscode.workspace.getConfiguration('neuropilot').get('permission.editActiveDocument', false)) {
-        logOutput('WARNING', 'Neuro attempted to get the cursor position, but permission is disabled');
-        NEURO.client?.sendActionResult(actionData.id, true, 'You do not have edit permissions.');
-        return;
-    }
+export function handleGetCursor(actionData: ActionData): ActionResult {
+    if(!hasPermissions(PERMISSIONS.editActiveDocument))
+        return actionResultNoPermission(PERMISSIONS.editActiveDocument);
 
     const document = vscode.window.activeTextEditor?.document;
-    if(document === undefined) {
-        NEURO.client?.sendActionResult(actionData.id, true, 'No active document to get the cursor position from');
-        return;
-    }
-    if(!isPathNeuroSafe(document.fileName)) {
-        NEURO.client?.sendActionResult(actionData.id, true, 'You do not have permission to access this file');
-        return;
-    }
-    
+    if(document === undefined)
+        return ACTION_RESULT_NO_ACTIVE_DOCUMENT;
+    if(!isPathNeuroSafe(document.fileName))
+        return ACTION_RESULT_NO_ACCESS;
+
     const cursorContext = getPositionContext(document, vscode.window.activeTextEditor!.selection.active);
     const line = vscode.window.activeTextEditor!.selection.active.line;
     const character = vscode.window.activeTextEditor!.selection.active.character;
     const relativePath = vscode.workspace.asRelativePath(document.uri);
     logOutput('INFO', `Sending cursor position to Neuro`);
-    NEURO.client?.sendActionResult(actionData.id, true, `In file ${relativePath}\n\nCursor is at line ${line}, character ${character}\n\nContext before:\n\n\`\`\`\n${cursorContext.contextBefore}\n\`\`\`\n\nContext after:\n\n\`\`\`\n${cursorContext.contextAfter}\n\`\`\``);
+
+    return actionResultAccept(`In file ${relativePath}\n\nCursor is at line ${line}, character ${character}\n\nContext before:\n\n\`\`\`\n${cursorContext.contextBefore}\n\`\`\`\n\nContext after:\n\n\`\`\`\n${cursorContext.contextAfter}\n\`\`\``);
 }
 
-export function handleInsertText(actionData: any) {
-    if(!vscode.workspace.getConfiguration('neuropilot').get('permission.editActiveDocument', false)) {
-        logOutput('WARNING', 'Neuro attempted to insert text, but permission is disabled');
-        NEURO.client?.sendActionResult(actionData.id, true, 'You do not have edit permissions.');
-        return;
-    }
+export function handleInsertText(actionData: ActionData): ActionResult {
+    if(!hasPermissions(PERMISSIONS.editActiveDocument))
+        return actionResultNoPermission(PERMISSIONS.editActiveDocument);
 
     const text = actionData.params?.text;
-    if(text === undefined) {
-        NEURO.client?.sendActionResult(actionData.id, false, 'Missing required parameter "text"');
-        return;
-    }
+    if(text === undefined)
+        return actionResultMissingParameter('text');
 
     const document = vscode.window.activeTextEditor?.document;
-    if(document === undefined) {
-        NEURO.client?.sendActionResult(actionData.id, true, 'No active document to insert text into');
-        return;
-    }
-    if(!isPathNeuroSafe(document.fileName)) {
-        NEURO.client?.sendActionResult(actionData.id, true, 'You do not have permission to access this file');
-        return;
-    }
+    if(document === undefined)
+        return ACTION_RESULT_NO_ACTIVE_DOCUMENT;
+    if(!isPathNeuroSafe(document.fileName))
+        return ACTION_RESULT_NO_ACCESS;
 
     const edit = new vscode.WorkspaceEdit();
     edit.insert(document.uri, vscode.window.activeTextEditor!.selection.active, text);
 
-    NEURO.client?.sendActionResult(actionData.id, true);
     vscode.workspace.applyEdit(edit).then(success => {
         if(success) {
             logOutput('INFO', `Inserting text into document`);
@@ -185,43 +159,30 @@ export function handleInsertText(actionData: any) {
             NEURO.client?.sendContext('Failed to insert text');
         }
     });
+
+    return actionResultAccept();
 }
 
-export function handleReplaceText(actionData: any) {
-    if(!vscode.workspace.getConfiguration('neuropilot').get('permission.editActiveDocument', false)) {
-        logOutput('WARNING', 'Neuro attempted to replace text, but permission is disabled');
-        NEURO.client?.sendActionResult(actionData.id, true, 'You do not have edit permissions.');
-        return;
-    }
+export function handleReplaceText(actionData: ActionData): ActionResult {
+    if(!hasPermissions(PERMISSIONS.editActiveDocument))
+        return actionResultNoPermission(PERMISSIONS.editActiveDocument);
 
     const oldText = actionData.params?.oldText;
     const newText = actionData.params?.newText;
-    if(oldText === undefined) {
-        NEURO.client?.sendActionResult(actionData.id, false, 'Missing required parameter "oldText"');
-        return;
-    }
-    if(newText === undefined) {
-        NEURO.client?.sendActionResult(actionData.id, false, 'Missing required parameter "newText"');
-        return;
-    }
+    if(oldText === undefined)
+        return actionResultMissingParameter('oldText');
+    if(newText === undefined)
+        return actionResultMissingParameter('newText');
 
     const document = vscode.window.activeTextEditor?.document;
-    if(document === undefined) {
-        NEURO.client?.sendActionResult(actionData.id, true, 'No active document to replace text in');
-        return;
-    }
-    if(!isPathNeuroSafe(document.fileName)) {
-        NEURO.client?.sendActionResult(actionData.id, true, 'You do not have permission to access this file');
-        return;
-    }
+    if(document === undefined)
+        return actionResultFailure('No active document to replace text in.');
+    if(!isPathNeuroSafe(document.fileName))
+        return actionResultFailure('You do not have permission to access this file.');
 
     const oldStart = document.getText().indexOf(oldText);
-    if(oldStart === -1) {
-        NEURO.client?.sendActionResult(actionData.id, false, 'Old text not found in document');
-        return;
-    }
-
-    NEURO.client?.sendActionResult(actionData.id, true);
+    if(oldStart === -1)
+        return actionResultFailure('Text to replace not found in document.');
 
     const edit = new vscode.WorkspaceEdit();
     edit.replace(document.uri, new vscode.Range(document.positionAt(oldStart), document.positionAt(oldStart + oldText.length)), newText);
@@ -235,38 +196,27 @@ export function handleReplaceText(actionData: any) {
             NEURO.client?.sendContext('Failed to replace text');
         }
     });
+
+    return actionResultAccept();
 }
 
-export function handleDeleteText(actionData: any) {
-    if(!vscode.workspace.getConfiguration('neuropilot').get('permission.editActiveDocument', false)) {
-        logOutput('WARNING', 'Neuro attempted to delete text, but permission is disabled');
-        NEURO.client?.sendActionResult(actionData.id, true, 'You do not have edit permissions.');
-        return;
-    }
+export function handleDeleteText(actionData: ActionData): ActionResult {
+    if(!hasPermissions(PERMISSIONS.editActiveDocument))
+        return actionResultNoPermission(PERMISSIONS.editActiveDocument);
 
     const document = vscode.window.activeTextEditor?.document;
-    if(document === undefined) {
-        NEURO.client?.sendActionResult(actionData.id, true, 'No active document to delete text from');
-        return;
-    }
-    if(!isPathNeuroSafe(document.fileName)) {
-        NEURO.client?.sendActionResult(actionData.id, true, 'You do not have permission to access this file');
-        return;
-    }
+    if(document === undefined)
+        return ACTION_RESULT_NO_ACTIVE_DOCUMENT;
+    if(!isPathNeuroSafe(document.fileName))
+        return ACTION_RESULT_NO_ACCESS;
 
     const textToDelete = actionData.params?.textToDelete;
-    if(textToDelete === undefined) {
-        NEURO.client?.sendActionResult(actionData.id, false, 'Missing required parameter "textToDelete"');
-        return;
-    }
+    if(textToDelete === undefined)
+        return actionResultMissingParameter('textToDelete');
 
     const textStart = document.getText().indexOf(textToDelete);
-    if(textStart === -1) {
-        NEURO.client?.sendActionResult(actionData.id, false, 'Text to delete not found in document');
-        return;
-    }
-
-    NEURO.client?.sendActionResult(actionData.id, true);
+    if(textStart === -1)
+        return actionResultFailure('Text to delete not found in document.');
 
     const edit = new vscode.WorkspaceEdit();
     edit.delete(document.uri, new vscode.Range(document.positionAt(textStart), document.positionAt(textStart + textToDelete.length)));
@@ -280,45 +230,32 @@ export function handleDeleteText(actionData: any) {
             NEURO.client?.sendContext('Failed to delete text');
         }
     });
+
+    return actionResultAccept();
 }
 
-export function handlePlaceCursorAtText(actionData: any) {
-    if(!vscode.workspace.getConfiguration('neuropilot').get('permission.editActiveDocument', false)) {
-        logOutput('WARNING', 'Neuro attempted to place the cursor at text, but permission is disabled');
-        NEURO.client?.sendActionResult(actionData.id, true, 'You do not have edit permissions.');
-        return;
-    }
+export function handlePlaceCursorAtText(actionData: ActionData): ActionResult {
+    if(!hasPermissions(PERMISSIONS.editActiveDocument))
+        return actionResultNoPermission(PERMISSIONS.editActiveDocument);
 
     const text = actionData.params?.text;
     const position = actionData.params?.position;
-    if(text === undefined) {
-        NEURO.client?.sendActionResult(actionData.id, false, 'Missing required parameter "text"');
-        return;
-    }
-    if(position === undefined) {
-        NEURO.client?.sendActionResult(actionData.id, false, 'Missing required parameter "position"');
-        return;
-    }
-    if(position !== 'before' && position !== 'after') {
-        NEURO.client?.sendActionResult(actionData.id, false, 'Invalid value for parameter "position" (must be one of ["before", "after"])');
-        return;
-    }
+    if(text === undefined)
+        return actionResultMissingParameter('text');
+    if(position === undefined)
+        return actionResultMissingParameter('position');
+    if(position !== 'before' && position !== 'after')
+        return actionResultEnumFailure('position', ['before', 'after'], position);
 
     const document = vscode.window.activeTextEditor?.document;
-    if(document === undefined) {
-        NEURO.client?.sendActionResult(actionData.id, true, 'No active document to place the cursor in');
-        return;
-    }
-    if(!isPathNeuroSafe(document.fileName)) {
-        NEURO.client?.sendActionResult(actionData.id, true, 'You do not have permission to access this file');
-        return;
-    }
+    if(document === undefined)
+        return ACTION_RESULT_NO_ACTIVE_DOCUMENT;
+    if(!isPathNeuroSafe(document.fileName))
+        return ACTION_RESULT_NO_ACCESS;
 
     const textStart = document.getText().indexOf(text);
-    if(textStart === -1) {
-        NEURO.client?.sendActionResult(actionData.id, true, 'Text not found in document');
-        return;
-    }
+    if(textStart === -1)
+        return actionResultFailure('Text to place cursor at not found in document.');
 
     let pos = position === 'before' ? textStart : textStart + text.length;
     const line = document.positionAt(pos).line;
@@ -327,5 +264,6 @@ export function handlePlaceCursorAtText(actionData: any) {
     vscode.window.activeTextEditor!.selection = new vscode.Selection(line, character, line, character);
     const cursorContext = getPositionContext(document, new vscode.Position(line, character));
     logOutput('INFO', `Placed cursor at text ${position} the first occurrence`);
-    NEURO.client?.sendActionResult(actionData.id, true, `Cursor placed at text ${position} the first occurrence (line ${line}, character ${character})\n\nContext before:\n\n\`\`\`\n${cursorContext.contextBefore}\n\`\`\`\n\nContext after:\n\n\`\`\`\n${cursorContext.contextAfter}\n\`\`\``);
+
+    return actionResultAccept(`Cursor placed at text ${position} the first occurrence (line ${line}, character ${character})\n\nContext before:\n\n\`\`\`\n${cursorContext.contextBefore}\n\`\`\`\n\nContext after:\n\n\`\`\`\n${cursorContext.contextAfter}\n\`\`\``);
 }

@@ -189,6 +189,15 @@ export function getNormalizedRepoPathForGit(repoPath: string): string {
 }
 
 /**
+ * Checks whether the specified permission is enabled.
+ * @param permissions The permissions to query.
+ * @returns `true` if all the permission are enabled, otherwise `false`.
+ */
+export function hasPermissions(...permissions: Permission[]): boolean {
+    return permissions.every(permission => vscode.workspace.getConfiguration('neuropilot').get('permission.' + permission.id, false));
+}
+
+/*
  * Extended interface for terminal sessions.
  * We now explicitly store the event emitter along with the pseudoterminal.
  */
@@ -204,3 +213,27 @@ export interface TerminalSession {
 }
 
 export const delayAsync = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+export interface Permission {
+    /** The ID of the permission in package.json, without the `neuropilot.permission.` prefix. */
+    id: string;
+    /** The infinitive of the permission to construct sentences (should fit the scheme "permission to {something}"). */
+    infinitive: string;
+}
+
+/** Collection of strings for use in {@link actionResultNoPermission}. */
+export const PERMISSIONS: Record<string, Permission> = {
+    openFiles:          { id: 'openFiles',          infinitive: 'open files' },
+    editActiveDocument: { id: 'editActiveDocument', infinitive: 'edit documents' },
+    create:             { id: 'create',             infinitive: 'create files or folders' },
+    rename:             { id: 'rename',             infinitive: 'rename files or folders' },
+    delete:             { id: 'delete',             infinitive: 'delete files or folders' },
+    runTasks:           { id: 'runTasks',           infinitive: 'run or terminate tasks' },
+    requestCookies:     { id: 'requestCookies',     infinitive: 'request cookies' },
+    gitOperations:      { id: 'gitOperations',      infinitive: 'use Git' },
+    gitTags:            { id: 'gitTags',            infinitive: 'tag commits' },
+    gitRemotes:         { id: 'gitRemotes',         infinitive: 'interact with Git remotes' },
+    editRemoteData:     { id: 'editRemoteData',     infinitive: 'edit remote data' },
+    gitConfigs:         { id: 'gitConfigs',         infinitive: 'edit the Git configuration' },
+    terminalAccess:     { id: 'terminalAccess',     infinitive: 'access the terminal' },
+};
