@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 
 import { NEURO } from "./constants";
-import { logOutput, formatActionID, hasPermissions } from './utils';
-import { ActionData, ActionResult, actionResultAccept, actionResultFailure, actionResultNoPermission, actionResultRetry, PERMISSION_STRINGS } from './neuro_client_helper';
+import { logOutput, formatActionID, hasPermissions, PERMISSIONS } from './utils';
+import { ActionData, ActionResult, actionResultAccept, actionResultFailure, actionResultNoPermission, actionResultRetry } from './neuro_client_helper';
 
 export const taskHandlers: { [key: string]: (actionData: ActionData) => ActionResult } = {
     // handleRunTask is used separately and not on this list
@@ -10,7 +10,7 @@ export const taskHandlers: { [key: string]: (actionData: ActionData) => ActionRe
 }
 
 export function registerTaskActions() {
-    if(hasPermissions('runTasks')) {
+    if(hasPermissions(PERMISSIONS.runTasks)) {
         NEURO.client?.registerActions([
             {
                 name: 'terminate_task',
@@ -22,8 +22,8 @@ export function registerTaskActions() {
 }
 
 export function handleTerminateTask(actionData: ActionData): ActionResult {
-    if(!hasPermissions('runTasks'))
-        return actionResultNoPermission(PERMISSION_STRINGS.runTasks);
+    if(!hasPermissions(PERMISSIONS.runTasks))
+        return actionResultNoPermission(PERMISSIONS.runTasks);
 
     if(NEURO.currentTaskExecution === null)
         return actionResultFailure('No task to terminate.');
@@ -36,8 +36,8 @@ export function handleTerminateTask(actionData: ActionData): ActionResult {
 }
 
 export function handleRunTask(actionData: ActionData): ActionResult {
-    if(!hasPermissions('runTasks'))
-        return actionResultNoPermission(PERMISSION_STRINGS.runTasks);
+    if(!hasPermissions(PERMISSIONS.runTasks))
+        return actionResultNoPermission(PERMISSIONS.runTasks);
 
     if(NEURO.currentTaskExecution !== null)
         return actionResultFailure('A task is already running.');
@@ -79,7 +79,7 @@ export function reloadTasks() {
 
     NEURO.tasks = [];
 
-    if(!hasPermissions('runTasks')) {
+    if(!hasPermissions(PERMISSIONS.runTasks)) {
         return;
     }
 
@@ -100,7 +100,7 @@ export function reloadTasks() {
             }
         }
 
-        if(!hasPermissions('runTasks')) {
+        if(!hasPermissions(PERMISSIONS.runTasks)) {
             return;
         }
 

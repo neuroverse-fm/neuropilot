@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 import { spawn } from 'child_process';
 import { NEURO } from './constants';
-import { TerminalSession, logOutput, delayAsync, hasPermissions } from './utils';
-import { ActionData, ActionResult, actionResultAccept, actionResultEnumFailure, actionResultFailure, actionResultMissingParameter, actionResultNoPermission, PERMISSION_STRINGS } from './neuro_client_helper';
+import { TerminalSession, logOutput, delayAsync, hasPermissions, PERMISSIONS } from './utils';
+import { ActionData, ActionResult, actionResultAccept, actionResultEnumFailure, actionResultFailure, actionResultMissingParameter, actionResultNoPermission } from './neuro_client_helper';
 
 export const terminalAccessHandlers: { [key: string]: (actionData: ActionData) => ActionResult } = {
 	"execute_in_terminal": handleRunCommand,
@@ -162,8 +162,8 @@ function getOrCreateTerminal(shellType: string, terminalName: string): TerminalS
 */
 export function handleRunCommand(actionData: ActionData): ActionResult {
 	// Check terminal access permission.
-	if (!hasPermissions("terminalAccess"))
-		return actionResultNoPermission(PERMISSION_STRINGS.terminalAccess);
+	if (!hasPermissions(PERMISSIONS.terminalAccess))
+		return actionResultNoPermission(PERMISSIONS.terminalAccess);
 	
 	// Validate command parameter.
 	const command: string = actionData.params?.command;
@@ -267,8 +267,8 @@ export function handleRunCommand(actionData: ActionData): ActionResult {
  */
 export function handleKillTerminal(actionData: ActionData): ActionResult {
     // Check terminal access permission.
-    if (!hasPermissions("terminalAccess"))
-		return actionResultNoPermission(PERMISSION_STRINGS.terminalAccess);
+    if (!hasPermissions(PERMISSIONS.terminalAccess))
+		return actionResultNoPermission(PERMISSIONS.terminalAccess);
 
     // Validate shell type parameter.
     const shellType: string = actionData.params?.shell;
@@ -294,8 +294,8 @@ export function handleKillTerminal(actionData: ActionData): ActionResult {
  * Each entry includes the shell type and its status.
  */
 export function handleGetCurrentlyRunningShells(actionData: ActionData): ActionResult {
-	if (!hasPermissions("terminalAccess"))
-		return actionResultNoPermission(PERMISSION_STRINGS.terminalAccess);
+	if (!hasPermissions(PERMISSIONS.terminalAccess))
+		return actionResultNoPermission(PERMISSIONS.terminalAccess);
 
     const runningShells: Array<{ shellType: string; status: string }> = [];
 

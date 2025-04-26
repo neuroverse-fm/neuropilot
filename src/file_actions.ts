@@ -1,10 +1,8 @@
 import * as vscode from 'vscode';
 
 import { NEURO } from "./constants";
-import { combineGlobLines, getWorkspacePath, hasPermissions, isPathNeuroSafe, logOutput, normalizePath } from './utils';
-import { ActionData, ActionResult, actionResultAccept, actionResultFailure, actionResultMissingParameter, actionResultNoAccess, actionResultNoPermission, PERMISSION_STRINGS } from './neuro_client_helper';
-
-const ACTION_RESULT_NO_ACCESS = actionResultFailure('You do not have permission to access this location.');
+import { combineGlobLines, getWorkspacePath, hasPermissions, isPathNeuroSafe, logOutput, normalizePath, PERMISSIONS } from './utils';
+import { ActionData, ActionResult, actionResultAccept, actionResultFailure, actionResultMissingParameter, actionResultNoAccess, actionResultNoPermission } from './neuro_client_helper';
 
 export const fileActionHandlers: { [key: string]: (actionData: ActionData) => ActionResult } = {
     'get_files': handleGetFiles,
@@ -16,7 +14,7 @@ export const fileActionHandlers: { [key: string]: (actionData: ActionData) => Ac
 }
 
 export function registerFileActions() {
-    if(hasPermissions('openFiles')) {
+    if(hasPermissions(PERMISSIONS.openFiles)) {
         NEURO.client?.registerActions([
             {
                 name: 'get_files',
@@ -36,7 +34,7 @@ export function registerFileActions() {
         ]);
     }
 
-    if(hasPermissions('create')) {
+    if(hasPermissions(PERMISSIONS.create)) {
         NEURO.client?.registerActions([
             {
                 name: 'create_file',
@@ -63,7 +61,7 @@ export function registerFileActions() {
         ]);
     }
 
-    if(hasPermissions('rename')) {
+    if(hasPermissions(PERMISSIONS.rename)) {
         NEURO.client?.registerActions([
             {
                 name: 'rename_file_or_folder',
@@ -80,7 +78,7 @@ export function registerFileActions() {
         ]);
     }
 
-    if(hasPermissions('delete')) {
+    if(hasPermissions(PERMISSIONS.delete)) {
         NEURO.client?.registerActions([
             {
                 name: 'delete_file_or_folder',
@@ -99,8 +97,8 @@ export function registerFileActions() {
 }
 
 export function handleCreateFile(actionData: ActionData): ActionResult {
-    if(!hasPermissions('create'))
-        return actionResultNoPermission(PERMISSION_STRINGS.create);
+    if(!hasPermissions(PERMISSIONS.create))
+        return actionResultNoPermission(PERMISSIONS.create);
 
     const relativePathParam = actionData.params?.filePath;
     if(relativePathParam === undefined)
@@ -140,7 +138,7 @@ export function handleCreateFile(actionData: ActionData): ActionResult {
         NEURO.client?.sendContext(`Created file ${relativePath}`);
 
         // Open the file if Neuro has permission to do so
-        if(!hasPermissions('openFiles'))
+        if(!hasPermissions(PERMISSIONS.openFiles))
             return;
 
         try {
@@ -156,8 +154,8 @@ export function handleCreateFile(actionData: ActionData): ActionResult {
 }
 
 export function handleCreateFolder(actionData: ActionData): ActionResult {
-    if(!hasPermissions('create'))
-        return actionResultNoPermission(PERMISSION_STRINGS.create);
+    if(!hasPermissions(PERMISSIONS.create))
+        return actionResultNoPermission(PERMISSIONS.create);
 
     const relativePathParam = actionData.params?.folderPath;
     if(relativePathParam === undefined)
@@ -199,8 +197,8 @@ export function handleCreateFolder(actionData: ActionData): ActionResult {
 }
 
 export function handleRenameFileOrFolder(actionData: ActionData): ActionResult {
-    if(!hasPermissions('rename'))
-        return actionResultNoPermission(PERMISSION_STRINGS.rename);
+    if(!hasPermissions(PERMISSIONS.rename))
+        return actionResultNoPermission(PERMISSIONS.rename);
 
     const oldRelativePathParam = actionData.params?.oldPath;
     const newRelativePathParam = actionData.params?.newPath;
@@ -252,8 +250,8 @@ export function handleRenameFileOrFolder(actionData: ActionData): ActionResult {
 }
 
 export function handleDeleteFileOrFolder(actionData: ActionData): ActionResult {
-    if(!hasPermissions('delete'))
-        return actionResultNoPermission(PERMISSION_STRINGS.delete);
+    if(!hasPermissions(PERMISSIONS.delete))
+        return actionResultNoPermission(PERMISSIONS.delete);
 
     const relativePathParam = actionData.params?.pathToDelete;
     const recursive = actionData.params?.recursive ?? false;
@@ -305,8 +303,8 @@ export function handleDeleteFileOrFolder(actionData: ActionData): ActionResult {
 }
 
 export function handleGetFiles(actionData: ActionData): ActionResult {
-    if(!hasPermissions('openFiles'))
-        return actionResultNoPermission(PERMISSION_STRINGS.openFiles);
+    if(!hasPermissions(PERMISSIONS.openFiles))
+        return actionResultNoPermission(PERMISSIONS.openFiles);
 
     const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
     if(workspaceFolder === undefined)
@@ -341,8 +339,8 @@ export function handleGetFiles(actionData: ActionData): ActionResult {
 }
 
 export function handleOpenFile(actionData: ActionData): ActionResult {
-    if(!hasPermissions('openFiles'))
-        return actionResultNoPermission(PERMISSION_STRINGS.openFiles);
+    if(!hasPermissions(PERMISSIONS.openFiles))
+        return actionResultNoPermission(PERMISSIONS.openFiles);
 
     const relativePath = actionData.params?.path;
     if(relativePath === undefined)

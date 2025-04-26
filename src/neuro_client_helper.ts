@@ -2,7 +2,7 @@
  * Helper functions and types for interacting with the Neuro Game SDK.
  */
 
-import { logOutput } from "./utils";
+import { logOutput, Permission } from "./utils";
 
 /** Data used by an action handler. */
 export interface ActionData {
@@ -83,16 +83,14 @@ export function actionResultMissingParameter(parameterName: string): ActionResul
 
 /**
  * Create an action result that tells Neuro that she doesn't have the required permission.
- * @param permission The permission.
- * Use a string from {@link PERMISSION_STRINGS} if possible,
- * otherwise it should fit in the sentence "You do not have permission to {permission}.".
+ * @param permission The permission Neuro doesn't have.
  * @returns A successful action result with a message pointing out the missing permission.
  */
-export function actionResultNoPermission(permission: string): ActionResult {
-    logOutput('WARNING', `Action failed: Neuro attempted to ${permission}, but permission is disabled.`);
+export function actionResultNoPermission(permission: Permission): ActionResult {
+    logOutput('WARNING', `Action failed: Neuro attempted to ${permission.infinitive}, but permission is disabled.`);
     return {
         success: true,
-        message: `Action failed: You do not have permission to ${permission}.`
+        message: `Action failed: You do not have permission to ${permission.infinitive}.`
     };
 }
 
@@ -116,20 +114,3 @@ export function actionResultEnumFailure(parameterName: string, validValues: any[
         message: `Action failed: "${parameterName}" must be one of ${JSON.stringify(validValues)}, but got ${JSON.stringify(value)}.`,
     }
 }
-
-/** Collection of strings for use in {@link actionResultNoPermission}. */
-export const PERMISSION_STRINGS = {
-    openFiles:          'open files',
-    editActiveDocument: 'edit the current document',
-    create:             'create files or folders',
-    rename:             'rename files or folders',
-    delete:             'delete files or folders',
-    runTasks:           'run or terminate tasks',
-    requestCookies:     'request cookies',
-    gitOperations:      'use Git',
-    gitTags:            'tag commits',
-    gitRemotes:         'interact with Git remotes',
-    editRemoteData:     'edit remote data',
-    gitConfigs:         'edit the Git configuration',
-    terminalAccess:     'access the terminal',
-};

@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 
 import { NEURO } from "./constants";
-import { getPositionContext, hasPermissions, isPathNeuroSafe, logOutput } from './utils';
-import { ActionData, ActionResult, actionResultAccept, actionResultEnumFailure, actionResultFailure, actionResultMissingParameter, actionResultNoPermission, actionResultRetry, PERMISSION_STRINGS } from './neuro_client_helper';
+import { getPositionContext, hasPermissions, isPathNeuroSafe, logOutput, PERMISSIONS } from './utils';
+import { ActionData, ActionResult, actionResultAccept, actionResultEnumFailure, actionResultFailure, actionResultMissingParameter, actionResultNoPermission, actionResultRetry } from './neuro_client_helper';
 
 const ACTION_RESULT_NO_ACCESS = actionResultFailure('You do not have permission to access this file.');
 const ACTION_RESULT_NO_ACTIVE_DOCUMENT = actionResultFailure('No active document to edit.');
@@ -17,7 +17,7 @@ export const editingFileHandlers: { [key: string]: (actionData: ActionData) => A
 }
 
 export function registerEditingActions() {
-    if(hasPermissions('editActiveDocument')) {
+    if(hasPermissions(PERMISSIONS.editActiveDocument)) {
         NEURO.client?.registerActions([
             {
                 name: 'place_cursor',
@@ -86,8 +86,8 @@ export function registerEditingActions() {
 }
 
 export function handlePlaceCursor(actionData: ActionData): ActionResult {
-    if(!hasPermissions('editActiveDocument'))
-        return actionResultNoPermission(PERMISSION_STRINGS.editActiveDocument);
+    if(!hasPermissions(PERMISSIONS.editActiveDocument))
+        return actionResultNoPermission(PERMISSIONS.editActiveDocument);
 
     const line = actionData.params?.line;
     const character = actionData.params?.character;
@@ -115,8 +115,8 @@ export function handlePlaceCursor(actionData: ActionData): ActionResult {
 }
 
 export function handleGetCursor(actionData: ActionData): ActionResult {
-    if(!hasPermissions('editActiveDocument'))
-        return actionResultNoPermission(PERMISSION_STRINGS.editActiveDocument);
+    if(!hasPermissions(PERMISSIONS.editActiveDocument))
+        return actionResultNoPermission(PERMISSIONS.editActiveDocument);
 
     const document = vscode.window.activeTextEditor?.document;
     if(document === undefined)
@@ -134,8 +134,8 @@ export function handleGetCursor(actionData: ActionData): ActionResult {
 }
 
 export function handleInsertText(actionData: ActionData): ActionResult {
-    if(!hasPermissions('editActiveDocument'))
-        return actionResultNoPermission(PERMISSION_STRINGS.editActiveDocument);
+    if(!hasPermissions(PERMISSIONS.editActiveDocument))
+        return actionResultNoPermission(PERMISSIONS.editActiveDocument);
 
     const text = actionData.params?.text;
     if(text === undefined)
@@ -164,8 +164,8 @@ export function handleInsertText(actionData: ActionData): ActionResult {
 }
 
 export function handleReplaceText(actionData: ActionData): ActionResult {
-    if(!hasPermissions('editActiveDocument'))
-        return actionResultNoPermission(PERMISSION_STRINGS.editActiveDocument);
+    if(!hasPermissions(PERMISSIONS.editActiveDocument))
+        return actionResultNoPermission(PERMISSIONS.editActiveDocument);
 
     const oldText = actionData.params?.oldText;
     const newText = actionData.params?.newText;
@@ -178,7 +178,7 @@ export function handleReplaceText(actionData: ActionData): ActionResult {
     if(document === undefined)
         return actionResultFailure('No active document to replace text in.');
     if(!isPathNeuroSafe(document.fileName))
-        return actionResultNoPermission('You do not have permission to access this file.');
+        return actionResultFailure('You do not have permission to access this file.');
 
     const oldStart = document.getText().indexOf(oldText);
     if(oldStart === -1)
@@ -201,8 +201,8 @@ export function handleReplaceText(actionData: ActionData): ActionResult {
 }
 
 export function handleDeleteText(actionData: ActionData): ActionResult {
-    if(!hasPermissions('editActiveDocument'))
-        return actionResultNoPermission(PERMISSION_STRINGS.editActiveDocument);
+    if(!hasPermissions(PERMISSIONS.editActiveDocument))
+        return actionResultNoPermission(PERMISSIONS.editActiveDocument);
 
     const document = vscode.window.activeTextEditor?.document;
     if(document === undefined)
@@ -235,8 +235,8 @@ export function handleDeleteText(actionData: ActionData): ActionResult {
 }
 
 export function handlePlaceCursorAtText(actionData: ActionData): ActionResult {
-    if(!hasPermissions('editActiveDocument'))
-        return actionResultNoPermission(PERMISSION_STRINGS.editActiveDocument);
+    if(!hasPermissions(PERMISSIONS.editActiveDocument))
+        return actionResultNoPermission(PERMISSIONS.editActiveDocument);
 
     const text = actionData.params?.text;
     const position = actionData.params?.position;
