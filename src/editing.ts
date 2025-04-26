@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 
 import { NEURO } from "./constants";
 import { getPositionContext, hasPermissions, isPathNeuroSafe, logOutput } from './utils';
-import { ActionData, ActionResult, actionResultAccept, actionResultFailure, actionResultMissingParameter, actionResultNoPermission, actionResultRetry, PERMISSION_STRINGS } from './neuro_client_helper';
+import { ActionData, ActionResult, actionResultAccept, actionResultEnumFailure, actionResultFailure, actionResultMissingParameter, actionResultNoPermission, actionResultRetry, PERMISSION_STRINGS } from './neuro_client_helper';
 
 const ACTION_RESULT_NO_ACCESS = actionResultFailure('You do not have permission to access this file.');
 const ACTION_RESULT_NO_ACTIVE_DOCUMENT = actionResultFailure('No active document to edit.');
@@ -244,9 +244,8 @@ export function handlePlaceCursorAtText(actionData: ActionData): ActionResult {
         return actionResultMissingParameter('text');
     if(position === undefined)
         return actionResultMissingParameter('position');
-    if(position !== 'before' && position !== 'after') {
-        return actionResultRetry('Invalid value for parameter "position" (must be one of ["before", "after"]).');
-    }
+    if(position !== 'before' && position !== 'after')
+        return actionResultEnumFailure('position', ['before', 'after'], position);
 
     const document = vscode.window.activeTextEditor?.document;
     if(document === undefined)

@@ -4,7 +4,7 @@ import { NEURO } from './constants';
 import { GitExtension, Change, ForcePushMode, CommitOptions, Commit, Repository } from './types/git';
 import { StatusStrings, RefTypeStrings } from './types/git_status';
 import { getNormalizedRepoPathForGit, hasPermissions, logOutput, simpleFileName } from './utils';
-import { ActionData, ActionResult, actionResultAccept, actionResultFailure, actionResultMissingParameter, actionResultNoPermission, actionResultRetry, PERMISSION_STRINGS } from './neuro_client_helper';
+import { ActionData, ActionResult, actionResultAccept, actionResultEnumFailure, actionResultFailure, actionResultMissingParameter, actionResultNoPermission, actionResultRetry, PERMISSION_STRINGS } from './neuro_client_helper';
 
 /* All actions located in here requires neuropilot.permission.gitOperations to be enabled. */
 
@@ -711,9 +711,10 @@ export function handleGitDiff(actionData: ActionData): ActionResult {
     const ref2: string = actionData.params?.ref2;
     const filePath: string = actionData.params?.filePath || ".";
     const diffType: string = actionData.params?.diffType || 'diffWithHEAD'; // Default to diffWithHEAD
+    const validDiffTypes = ['diffWithHEAD', 'diffWith', 'diffIndexWithHEAD', 'diffIndexWith', 'diffBetween', 'fullDiff'];
 
-    if (!['diffWithHEAD', 'diffWith', 'diffIndexWithHEAD', 'diffIndexWith', 'diffBetween', 'fullDiff'].includes(diffType))
-        return actionResultRetry(`Invalid diffType "${diffType}".`);
+    if (!validDiffTypes.includes(diffType))
+        return actionResultEnumFailure('diffType', validDiffTypes, diffType);
 
     // Get the normalized workspace root path
     const diffThisFile = getNormalizedRepoPathForGit(filePath)
