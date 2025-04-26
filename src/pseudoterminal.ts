@@ -1,9 +1,10 @@
 import * as vscode from 'vscode';
 import { spawn } from 'child_process';
 import { NEURO } from './constants';
-import { TerminalSession, logOutput, delayAsync } from './utils';
+import { TerminalSession, logOutput, delayAsync, hasPermissions } from './utils';
+import { ActionData, ActionResult, actionResultAccept, actionResultEnumFailure, actionResultFailure, actionResultMissingParameter, actionResultNoPermission, PERMISSION_STRINGS } from './neuro_client_helper';
 
-export const terminalAccessHandlers: { [key: string]: (actionData: any) => void } = {
+export const terminalAccessHandlers: { [key: string]: (actionData: ActionData) => ActionResult } = {
 	"execute_in_terminal": handleRunCommand,
 	"kill_terminal_process": handleKillTerminal,
 	"get_currently_running_shells": handleGetCurrentlyRunningShells
@@ -159,31 +160,22 @@ function getOrCreateTerminal(shellType: string, terminalName: string): TerminalS
 * Checks permissions, executes the command in the requested shell,
 * captures STDOUT and STDERR, logs the output, and sends it to nwero.
 */
-export function handleRunCommand(actionData: any) {
+export function handleRunCommand(actionData: ActionData): ActionResult {
 	// Check terminal access permission.
-	if (!vscode.workspace.getConfiguration("neuropilot").get("permission.terminalAccess", false)) {
-		NEURO.client?.sendActionResult(actionData.id, true, "You are not allowed to run commands.");
-		return;
-	}
+	if (!hasPermissions("terminalAccess"))
+		return actionResultNoPermission(PERMISSION_STRINGS.terminalAccess);
 	
 	// Validate command parameter.
 	const command: string = actionData.params?.command;
-	if (!command) {
-		NEURO.client?.sendActionResult(actionData.id, false, "You didn't give a command to execute.");
-		return;
-	}
+	if (!command)
+		return actionResultMissingParameter("command");
 	
 	// Determine the shell type.
 	const shellType: string = actionData.params?.shell;
-	if (!shellType) {
-		NEURO.client?.sendActionResult(actionData.id, false, "You didn't give a shell profile to run this in.");
-		return;
-	} else if (!getAvailableShellProfileNames().includes(shellType)) {
-		NEURO.client?.sendActionResult(actionData.id, false, "Invalid shell type.");
-		return;
-	}
-	
-	NEURO.client?.sendActionResult(actionData.id, true);
+	if (!shellType)
+		return actionResultMissingParameter("shell");
+	else if (!getAvailableShellProfileNames().includes(shellType))
+		return actionResultEnumFailure("shell", getAvailableShellProfileNames(), shellType);
 	
 	// Get or create the terminal session for this shell.
 	const session = getOrCreateTerminal(shellType, `Neuro: ${shellType}`);
@@ -224,10 +216,8 @@ export function handleRunCommand(actionData: any) {
 		
 		logOutput("DEBUG", `Shell: ${shellPath} ${shellArgs}`);
 		
-		if (!shellPath || typeof shellPath !== "string") {
-			NEURO.client?.sendContext(`Error: couldn't determine executable for shell profile ${shellType}`, false);
-			return;
-		}
+		if (!shellPath || typeof shellPath !== "string")
+			return actionResultFailure(`Couldn't determine executable for shell profile ${shellType}`);
 		
 		const cwd = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
 		session.shellProcess = spawn(shellPath, shellArgs || [], { cwd, env: process.env, stdio: ["pipe", "pipe", "pipe"] });
@@ -264,59 +254,48 @@ export function handleRunCommand(actionData: any) {
 			shellProcess.stdin.write(command + "\n");
 			logOutput("DEBUG", `Sent command: ${command}`);
 		} else {
-			logOutput("ERROR", "Shell process stdin is not writable.");
-			NEURO.client?.sendContext("Error: Unable to write to shell process.", false);
+			return actionResultFailure("Unable to write to shell process.");
 		}
 	}
+
+	return actionResultAccept();
 }
 
 /**
  * Kill terminal handler.
  * Checks if the terminal registry contains the open shell and forcefully kills the shell if found.
  */
-export function handleKillTerminal(actionData: any) {
+export function handleKillTerminal(actionData: ActionData): ActionResult {
     // Check terminal access permission.
-    if (!vscode.workspace.getConfiguration("neuropilot").get("permission.terminalAccess", false)) {
-        NEURO.client?.sendActionResult(actionData.id, true, "You are not allowed to manage terminals.");
-        return;
-    }
+    if (!hasPermissions("terminalAccess"))
+		return actionResultNoPermission(PERMISSION_STRINGS.terminalAccess);
 
     // Validate shell type parameter.
     const shellType: string = actionData.params?.shell;
-    if (!shellType) {
-        NEURO.client?.sendActionResult(actionData.id, false, "You didn't specify a shell type to kill.");
-        return;
-    }
+    if (!shellType)
+		return actionResultMissingParameter("shell");
 
     // Check if the terminal session exists in the registry.
     const session = NEURO.terminalRegistry.get(shellType);
-    if (!session) {
-        NEURO.client?.sendActionResult(actionData.id, true, `No terminal session found for shell type "${shellType}".`);
-        return;
-    }
-
-	NEURO.client?.sendActionResult(actionData.id, true)
+    if (!session)
+        return actionResultFailure(`No terminal session found for shell type "${shellType}".`);
 
     // Dispose of the terminal and remove it from the registry.
     session.terminal.dispose();
     NEURO.terminalRegistry.delete(shellType);
 
     // Notify Neuro and the user.
-    NEURO.client?.sendContext(`Terminal session for shell type "${shellType}" has been terminated.`);
     logOutput("INFO", `Terminal session for shell type "${shellType}" has been terminated.`);
+    return actionResultAccept(`Terminal session for shell type "${shellType}" has been terminated.`);
 }
 
 /**
  * Returns a list of currently running shell types.
  * Each entry includes the shell type and its status.
  */
-export function handleGetCurrentlyRunningShells(actionData: any) {
-	if (!vscode.workspace.getConfiguration('neuropilot').get("permission.terminalAccess", false)) {
-		NEURO.client?.sendActionResult(actionData.id, true, "You don't have permission to manage terminals.")
-		return
-	}
-	
-	NEURO.client?.sendActionResult(actionData.id, true)
+export function handleGetCurrentlyRunningShells(actionData: ActionData): ActionResult {
+	if (!hasPermissions("terminalAccess"))
+		return actionResultNoPermission(PERMISSION_STRINGS.terminalAccess);
 
     const runningShells: Array<{ shellType: string; status: string }> = [];
 
@@ -325,13 +304,10 @@ export function handleGetCurrentlyRunningShells(actionData: any) {
         runningShells.push({ shellType, status });
     }
 	
-	if (runningShells.length === 0) {
-		NEURO.client?.sendContext("No shells are spawned.")
-		return
-	} else {
-		NEURO.client?.sendContext(`Currently running shells: ${JSON.stringify(runningShells)}`)
-		return
-	}
+	if (runningShells.length === 0)
+		return actionResultAccept("No running shells found.");
+	else
+		return actionResultAccept(`Currently running shells: ${JSON.stringify(runningShells)}`);
 }
 
 /**

@@ -109,6 +109,14 @@ export function actionResultNoAccess(path: string) {
     };
 }
 
+export function actionResultEnumFailure(parameterName: string, validValues: any[], value: any) {
+    logOutput('WARNING', `Action failed: "${parameterName}" must be one of ${JSON.stringify(validValues)}, but got ${JSON.stringify(value)}.`);
+    return {
+        success: false,
+        message: `Action failed: "${parameterName}" must be one of ${JSON.stringify(validValues)}, but got ${JSON.stringify(value)}.`,
+    }
+}
+
 /** Collection of strings for use in {@link actionResultNoPermission}. */
 export const PERMISSION_STRINGS = {
     openFiles:          'open files',
@@ -123,4 +131,5 @@ export const PERMISSION_STRINGS = {
     gitRemotes:         'interact with Git remotes',
     editRemoteData:     'edit remote data',
     gitConfigs:         'edit the Git configuration',
+    terminalAccess:     'access the terminal',
 };
