@@ -9,7 +9,7 @@ import { NEURO } from './constants';
 import { Range } from 'vscode';
 
 export const REGEXP_ALWAYS = /^/;
-export const REGEXP_NEVER = /_$/;
+export const REGEXP_NEVER = /^\b$/;
 
 export function assert(obj: unknown): asserts obj {
     if(!obj) throw new Error('Assertion failed');
