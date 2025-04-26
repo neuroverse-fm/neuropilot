@@ -50,8 +50,6 @@ let repo: Repository | undefined = git.repositories[0];
 
 // Register all git commands
 export function registerGitActions() {
-    NEURO.client?.unregisterActions(Object.keys(gitActionHandlers));
-
     if (hasPermissions('gitOperations')) {
         NEURO.client?.registerActions([
             {
@@ -543,6 +541,9 @@ export function handleGitAdd(actionData: ActionData): ActionResult {
         absolutePath = stageFiles;
     } else {
         absolutePath = path.join(repo.rootUri.fsPath, stageFiles);
+        if (stageFiles === ".") {
+            absolutePath = `${absolutePath}\\${stageFiles}`
+        }
     }
 
     // Pass the absolute path to the Git add command.
@@ -550,7 +551,7 @@ export function handleGitAdd(actionData: ActionData): ActionResult {
         NEURO.client?.sendContext(`Added ${stageFiles} to staging area.`);
     }, (err: string) => {
         NEURO.client?.sendContext(`Adding files to staging area failed`);
-        logOutput("ERROR", `Failed to git add: ${err}`)
+        logOutput("ERROR", `Failed to git add: ${err}\nTried to add ${absolutePath}`)
     });
 
     return actionResultAccept();
@@ -577,14 +578,17 @@ export function handleGitRemove(actionData: ActionData): ActionResult {
         absolutePath = revertFiles;
     } else {
         absolutePath = path.join(repo.rootUri.fsPath, revertFiles);
+        if (revertFiles === ".") {
+            absolutePath = `${absolutePath}\\${revertFiles}`
+        }
     }
 
     // Pass the absolute path to the Git remove command.
     repo.revert([absolutePath]).then(() => {
         NEURO.client?.sendContext(`Removed ${revertFiles} from the index.`);
     }, (err: string) => {
-        NEURO.client?.sendContext(`Reverting files failed`);
-        logOutput("ERROR", `Git revert failed: ${err}`)
+        NEURO.client?.sendContext(`Removing files from the index failed`);
+        logOutput("ERROR", `Git remove failed: ${err}\nTried to remove ${absolutePath}`)
     });
 
     return actionResultAccept();

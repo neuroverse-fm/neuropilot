@@ -125,7 +125,7 @@ export function registerChatParticipant(context: vscode.ExtensionContext) {
     };
 
     const neuro = vscode.chat.createChatParticipant(NEURO_PARTICIPANT_ID, handler);
-    neuro.iconPath = vscode.Uri.joinPath(context.extensionUri, 'icon.png'); // TODO: Different image
+    neuro.iconPath = vscode.Uri.joinPath(context.extensionUri, 'neuropilot.png');
     
     // TODO: Add followup provider?
 

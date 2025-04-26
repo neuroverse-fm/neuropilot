@@ -1,8 +1,7 @@
 import { NeuroClient } from 'neuro-game-sdk';
 import * as vscode from 'vscode';
-import { Range } from 'vscode';
 import { NEURO } from './constants';
-import { logOutput, assert, simpleFileName, filterFileContents, getPositionContext } from './utils';
+import { logOutput, assert, simpleFileName, getPositionContext } from './utils';
 
 let lastSuggestions: string[] = [];
 

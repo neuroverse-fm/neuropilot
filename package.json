@@ -49,6 +49,11 @@
 				"command": "neuropilot.reloadPermissions",
 				"title": "Reload Permissions",
 				"category": "NeuroPilot"
+			},
+			{
+				"command": "neuropilot.disableAllPermissions",
+				"title": "Disable All Permissions",
+				"category": "NeuroPilot"
 			}
 		],
 		"configuration": [
@@ -116,6 +121,52 @@
 						"markdownDescription": "A glob pattern for files Neuro is not allowed to open. Applied after the include pattern. Files and folders beginning with a dot are always excluded, regardless of this setting. Separate multiple patterns with a newline.",
 						"editPresentation": "multilineText"
 					},
+					"neuropilot.terminals": {
+						"type": "array",
+						"items": {
+							"type": "object",
+							"properties": {
+								"name": {
+									"type": "string",
+									"description": "The name Neuro can reference this terminal by"
+								},
+								"path": {
+									"type": "string",
+									"description": "The path to the terminal executable"
+								},
+								"args": {
+									"type": "array",
+									"items": {
+										"type": "string"
+									},
+									"description": "The arguments to pass to the terminal executable"
+								}
+							},
+							"required": [
+								"name",
+								"path"
+							],
+							"additionalProperties": false
+						},
+						"description": "A list of terminals Neuro can use.",
+						"default": [
+							{
+								"name": "PowerShell",
+								"path": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+								"args": []
+							},
+							{
+								"name": "Command Prompt",
+								"path": "C:\\Windows\\System32\\cmd.exe",
+								"args": ["/K"]
+							},
+							{
+								"name": "Git Bash",
+								"path": "C:\\Program Files\\Git\\bin\\bash.exe",
+								"args": ["-i"]
+							}
+						]
+					},
 					"neuropilot.permission.openFiles": {
 						"type": "boolean",
 						"default": false,
@@ -175,6 +226,21 @@
 						"type": "boolean",
 						"default": false,
 						"markdownDescription": "Allow Neuro to view and edit Git configuration in the workspace.\nAlso requires Git Operations permission to be enabled.\n\nRequires reloading permissions if changed."
+					},
+					"neuropilot.permission.terminalAccess": {
+						"type": "boolean",
+						"default": false,
+						"markdownDescription": "Allow Neuro __direct terminal access__. Be very careful with this."
+					},
+					"neuropilot.showTimeOnTerminalStart": {
+						"type": "boolean",
+						"default": true,
+						"markdownDescription": "Display the date and time of when a terminal is started by Neuro."
+					},
+					"neuropilot.terminalContextDelay": {
+						"type": "number",
+						"default": 400,
+						"markdownDescription": "The time in ms to wait for the terminal to print more output before sending context to Neuro. This is to prevent sending multiple context messages if the terminal doesn't print fast enough."
 					}
 				}
 			}

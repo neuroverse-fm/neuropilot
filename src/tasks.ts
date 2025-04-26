@@ -74,7 +74,8 @@ export function taskEndedHandler(event: vscode.TaskEndEvent) {
 }
 
 export function reloadTasks() {
-    NEURO.client?.unregisterActions(NEURO.tasks.map((task) => task.id));
+    if(NEURO.tasks.length)
+        NEURO.client?.unregisterActions(NEURO.tasks.map((task) => task.id));
 
     NEURO.tasks = [];
 
