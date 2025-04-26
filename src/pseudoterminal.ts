@@ -112,7 +112,7 @@ function createPseudoterminal(shellType: string, terminalName: string, vscContex
 		}
 	};
 
-	// 50/50 chance of icon selection
+	// 50/50 chance of icon selection no longer
 	const icon = vscode.Uri.joinPath(vscContext.extensionUri, "console.png")
 	
 	// Create the terminal using VS Code's API.
@@ -198,7 +198,7 @@ export function handleRunCommand(actionData: any) {
 		await delayAsync(delay);
 		if (session.outputStdout === cachedOutput) {
 			NEURO.client?.sendContext(
-				`The ${shellType} terminal outputted the following to stdout:\n\n\`\`\`\n${session.outputStdout}\n\`\`\``,
+				`The ${shellType} terminal outputted the following to stdout:\n\n\`\`\`\n${session.outputStdout!.replace(/\x1b\[[\x30-\x3F]*[\x20-\x2F]*[\x40-\x7F]|\x1b\]0;.+\r?\n/g, "")}\n\`\`\``,
 				false
 			);
 			session.outputStdout = "";
@@ -210,7 +210,7 @@ export function handleRunCommand(actionData: any) {
 		await delayAsync(delay);
 		if (session.outputStderr === cachedOutput) {
 			NEURO.client?.sendContext(
-				`The ${shellType} terminal outputted the following to stderr:\n\n\`\`\`\n${session.outputStderr}\n\`\`\``,
+				`The ${shellType} terminal outputted the following to stderr:\n\n\`\`\`\n${session.outputStderr!.replace(/\x1b\[[\x30-\x3F]*[\x20-\x2F]*[\x40-\x7F]|\x1b\]0;.+\r?\n/g, "")}\n\`\`\``,
 				false
 			);
 			session.outputStderr = "";
@@ -250,7 +250,7 @@ export function handleRunCommand(actionData: any) {
 		});		
 		
 		proc.on("exit", (code) => {
-			NEURO.client?.sendContext(code === null ? `The ${shellType} terminal closed with a null exit code. Did Vedal close it?` : `Terminal ${shellType} exited with code ${code}.`)
+			NEURO.client?.sendContext(code === null ? `The ${shellType} terminal closed with a null exit code. Someone did something to it.` : `Terminal ${shellType} exited with code ${code}.`)
 			logOutput("INFO", `${shellType} process exited with code ${code}`);
 		});
 		
@@ -349,6 +349,7 @@ export function emergencyTerminalShutdown() {
     logOutput("INFO", "Initiating emergency shutdown of all terminals...");
 
 	let failedShutdownCount: number = 0
+	let failedShutdownTerminals: string[] = []
 
     // Iterate through all terminal sessions in the registry.
     for (const [shellType, session] of NEURO.terminalRegistry.entries()) {
@@ -358,6 +359,7 @@ export function emergencyTerminalShutdown() {
             logOutput("INFO", `Terminal session for shell type "${shellType}" has been terminated.`);
         } catch (error) {
             logOutput("ERROR", `Failed to terminate terminal session for shell type "${shellType}": ${error}`);
+			failedShutdownTerminals.push(shellType)
 			failedShutdownCount += 1
         }
     }
@@ -370,18 +372,7 @@ export function emergencyTerminalShutdown() {
 	if (failedShutdownCount == 0) {
     	logOutput("INFO", "Emergency shutdown complete. All terminals have been terminated.");
 	} else {
-		logOutput("WARN", `Failed to terminate ${failedShutdownCount} shells.`)
+		logOutput("WARN", `Failed to terminate ${failedShutdownCount} shells, including: ${failedShutdownTerminals}.`)
+		vscode.window.showWarningMessage(`Failed to terminate ${failedShutdownCount} terminal(s), which include these terminals: ${failedShutdownTerminals}.\nPlease check on them.`)
 	}
-}
-
-/**
-* Returns the captured output (STDOUT and STDERR) for the given shell type.
-* If no active session exists for that shell, returns undefined.
-*/
-export function getTerminalOutput(shellType: string): string | undefined {
-	const session = NEURO.terminalRegistry.get(shellType);
-	if (!session) {
-		return undefined;
-	}
-	return `STDOUT: ${session.outputStdout}\nSTDERR: ${session.outputStderr}`;
 }

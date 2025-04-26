@@ -27,7 +27,7 @@
         {
             "name": "Git Bash",
             "path": "C:\\Program Files\\Git\\bin\\bash.exe",
-            "args": []
+            "args": ["-i"]
         }
     ],
     "neuropilot.showTimeOnTerminalStart": true

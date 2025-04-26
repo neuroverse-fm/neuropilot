@@ -163,7 +163,7 @@
 							{
 								"name": "Git Bash",
 								"path": "C:\\Program Files\\Git\\bin\\bash.exe",
-								"args": []
+								"args": ["-i"]
 							}
 						]
 					},
@@ -240,7 +240,7 @@
 					"neuropilot.terminalContextDelay": {
 						"type": "number",
 						"default": 400,
-						"markdownDescription": "The delay to wait before sending stdout/stderr context to Neuro."
+						"markdownDescription": "The time in ms to wait for the terminal to print more output before sending context to Neuro. This is to prevent sending multiple context messages if the terminal doesn't print fast enough."
 					}
 				}
 			}
