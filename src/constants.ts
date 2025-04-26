@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { NeuroClient } from "neuro-game-sdk";
+import { TerminalSession } from './utils';
 
 export interface NeuroTask {
     id: string;
@@ -31,7 +32,10 @@ interface Neuro {
     currentTaskExecution: vscode.TaskExecution | null;
     /** Whether the current action has been handled. */
     actionHandled: boolean;
+    terminalEnabled: boolean;
+    terminalRegistry: Map<string, TerminalSession>;
 }
+
 
 export const NEURO: Neuro = {
     initialized: false,
@@ -46,4 +50,6 @@ export const NEURO: Neuro = {
     tasks: [],
     currentTaskExecution: null,
     actionHandled: false,
+    terminalEnabled: false,
+    terminalRegistry: new Map()
 };
