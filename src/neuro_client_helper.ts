@@ -73,7 +73,7 @@ export function actionResultRetry(message: string): ActionResult {
  * @param parameterName The name of the missing parameter.
  * @returns An failed action result with a message pointing out the missing parameter.
  */
-export function actionResultMissingParameter(parameterName: string) {
+export function actionResultMissingParameter(parameterName: string): ActionResult {
     logOutput('WARNING', `Action failed: Missing required parameter "${parameterName}"`);
     return {
         success: false,
@@ -88,7 +88,7 @@ export function actionResultMissingParameter(parameterName: string) {
  * otherwise it should fit in the sentence "You do not have permission to {permission}.".
  * @returns A successful action result with a message pointing out the missing permission.
  */
-export function actionResultNoPermission(permission: string) {
+export function actionResultNoPermission(permission: string): ActionResult {
     logOutput('WARNING', `Action failed: Neuro attempted to ${permission}, but permission is disabled.`);
     return {
         success: true,
@@ -101,7 +101,7 @@ export function actionResultNoPermission(permission: string) {
  * @param path The path that was attempted to be accessed.
  * @returns A successful action result with a message pointing out the missing permission.
  */
-export function actionResultNoAccess(path: string) {
+export function actionResultNoAccess(path: string): ActionResult {
     logOutput('WARNING', `Action failed: Neuro attempted to access "${path}", but permission is disabled.`);
     return {
         success: true,
@@ -109,7 +109,7 @@ export function actionResultNoAccess(path: string) {
     };
 }
 
-export function actionResultEnumFailure(parameterName: string, validValues: any[], value: any) {
+export function actionResultEnumFailure(parameterName: string, validValues: any[], value: any): ActionResult {
     logOutput('WARNING', `Action failed: "${parameterName}" must be one of ${JSON.stringify(validValues)}, but got ${JSON.stringify(value)}.`);
     return {
         success: false,
