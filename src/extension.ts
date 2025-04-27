@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 
 import { NEURO } from './constants';
-import { logOutput, createClient, onClientConnected } from './utils';
+import { logOutput, createClient, onClientConnected, CONFIG } from './utils';
 import { completionsProvider, registerCompletionResultHandler } from './completions';
 import { giveCookie, registerRequestCookieAction, registerRequestCookieHandler, sendCurrentFile } from './context';
 import { registerChatParticipant, registerChatResponseHandler } from './chat';
@@ -10,8 +10,8 @@ import { reloadTasks, taskEndedHandler } from './tasks';
 import { emergencyTerminalShutdown, saveContextForTerminal } from './pseudoterminal';
 
 export function activate(context: vscode.ExtensionContext) {
-    NEURO.url = vscode.workspace.getConfiguration('neuropilot').get('websocketUrl', 'ws://localhost:8000');
-    NEURO.gameName = vscode.workspace.getConfiguration('neuropilot').get('gameName', 'Visual Studio Code');
+    NEURO.url = CONFIG.websocketUrl;
+    NEURO.gameName = CONFIG.gameName;
     NEURO.connected = false;
     NEURO.waiting = false;
     NEURO.cancelled = false;

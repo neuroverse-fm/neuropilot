@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 
 import { NEURO } from "./constants";
-import { combineGlobLines, getWorkspacePath, hasPermissions, isPathNeuroSafe, logOutput, normalizePath, PERMISSIONS } from './utils';
+import { combineGlobLines, getWorkspacePath, hasPermissions, isPathNeuroSafe, logOutput, normalizePath, PERMISSIONS, CONFIG } from './utils';
 import { ActionData, ActionResult, actionResultAccept, actionResultFailure, actionResultMissingParameter, actionResultNoAccess, actionResultNoPermission } from './neuro_client_helper';
 
 export const fileActionHandlers: { [key: string]: (actionData: ActionData) => ActionResult } = {
@@ -310,8 +310,8 @@ export function handleGetFiles(actionData: ActionData): ActionResult {
     if(workspaceFolder === undefined)
         return actionResultFailure('No open workspace to get files from.');
 
-    const includePattern = combineGlobLines(vscode.workspace.getConfiguration('neuropilot').get('includePattern', '**'));
-    const excludePattern = combineGlobLines(vscode.workspace.getConfiguration('neuropilot').get('excludePattern', ''));
+    const includePattern = combineGlobLines(CONFIG.includePattern || "**");
+    const excludePattern = combineGlobLines(CONFIG.excludePattern || "");
     vscode.workspace.findFiles(includePattern, excludePattern).then(
         (uris) => {
             const paths = uris

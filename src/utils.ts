@@ -209,17 +209,12 @@ export function hasPermissions(...permissions: Permission[]): boolean {
 }
 
 /**
- * Gets the value of the specified permission.
- * @param config The config entry to get.
- * @returns The config value, `undefined` if the config doesn't exist, or `null` if there is no value.
+ * Gets the value of the config
+ * @param key The config key to get
+ * @returns The value of the config, or `undefined` if it doesn't exist
  */
-
-export function checkConfig(config: string) {
-    if (!CONFIGS.includes(config)) {
-        return undefined
-    }
-
-    return vscode.workspace.getConfiguration('neuropilot').get(config) || null
+export function get<T>(key: string): T | undefined {
+    return vscode.workspace.getConfiguration('neuropilot').get<T>(key);
 }
 
 /*
@@ -263,18 +258,20 @@ export const PERMISSIONS: Record<string, Permission> = {
     terminalAccess:     { id: 'terminalAccess',           infinitive: 'access the terminal' },
 };
 
-export const CONFIGS: string[] = [
-    "websocketUrl",
-    "gameName",
-    "beforeContext",
-    "afterContext",
-    "maxCompletions",
-    "completionTrigger",
-    "initialContext",
-    "timeout",
-    "includePattern",
-    "excludePattern",
-    "terminals",
-    "showTimeOnTerminalStart",
-    "terminalContextDelay"
-];
+class Config {
+    get websocketUrl(): string { return get('websocketUrl')!; }
+    get gameName(): string { return get('gameName')!; }
+    get beforeContext(): number { return get('beforeContext')!; }
+    get afterContext(): number { return get('afterContext')!; }
+    get maxCompletions(): number { return get('maxCompletions')!; }
+    get completionTrigger(): string { return get('completionTrigger')!; }
+    get initialContext(): string { return get('initialContext')!; }
+    get timeout(): number { return get('timeout')!; }
+    get includePattern(): string { return get('includePattern')!; }
+    get excludePattern(): string { return get('excludePattern')!; }
+    get terminals(): Array<{ name: string; path: string; args?: string[]; }> { return get('terminals')!; }
+    get showTimeOnTerminalStart(): boolean { return get('showTimeOnTerminalStart')!; }
+    get terminalContextDelay(): number { return get('terminalContextDelay')!; }
+}
+
+export const CONFIG = new Config();

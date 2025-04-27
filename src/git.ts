@@ -921,7 +921,7 @@ export function handleDeleteTag(actionData: ActionData): ActionResult {
 export function handleFetchGitCommits(actionData: ActionData): ActionResult {
     if (!git)
         return ACTION_RESULT_NO_GIT;
-    if (!hasPermissions(PERMISSIONS.gitOperations) && !vscode.workspace.getConfiguration('neuropilot').get('permission.gitRemotes'))
+    if (!hasPermissions(PERMISSIONS.gitOperations, PERMISSIONS.gitRemotes))
         return actionResultNoPermission(PERMISSIONS.gitRemotes);
     if (!repo)
         return ACTION_RESULT_NO_REPO;
@@ -943,7 +943,7 @@ export function handleFetchGitCommits(actionData: ActionData): ActionResult {
 export function handlePullGitCommits(actionData: ActionData): ActionResult {
     if (!git)
         return ACTION_RESULT_NO_GIT;
-    if (!hasPermissions(PERMISSIONS.gitOperations) && !vscode.workspace.getConfiguration('neuropilot').get('permission.gitRemotes'))
+    if (!hasPermissions(PERMISSIONS.gitOperations, PERMISSIONS.gitRemotes))
         return actionResultNoPermission(PERMISSIONS.gitRemotes);
     if (!repo)
         return ACTION_RESULT_NO_REPO;
@@ -962,7 +962,7 @@ export function handlePullGitCommits(actionData: ActionData): ActionResult {
 export function handlePushGitCommits(actionData: ActionData): ActionResult {
     if (!git)
         return ACTION_RESULT_NO_GIT;
-    if (!hasPermissions(PERMISSIONS.gitOperations) && !vscode.workspace.getConfiguration('neuropilot').get('permission.gitRemotes'))
+    if (!hasPermissions(PERMISSIONS.gitOperations, PERMISSIONS.gitRemotes))
         return actionResultNoPermission(PERMISSIONS.gitRemotes);
     if (!repo)
         return ACTION_RESULT_NO_REPO;
