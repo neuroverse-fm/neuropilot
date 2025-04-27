@@ -166,6 +166,17 @@ export function isPathNeuroSafe(path: string, checkPatterns: boolean = true): bo
     const includeRegExp: RegExp = checkPatterns ? combineGlobLinesToRegExp(includePattern) : REGEXP_ALWAYS;
     const excludeRegExp: RegExp = (checkPatterns && excludePattern) ? combineGlobLinesToRegExp(excludePattern) : REGEXP_NEVER;
 
+    if (hasPermissions(PERMISSIONS.dotFileAccess)) {
+        return rootFolder !== undefined
+            && normalizedPath !== rootFolder            // Prevent access to the workspace folder itself
+            && normalizedPath.startsWith(rootFolder)    // Prevent access to paths outside the workspace
+            && !normalizedPath.includes('..')           // Prevent access to parent folders
+            && !normalizedPath.includes('~')            // Prevent access to home directory
+            && !normalizedPath.includes('$')            // Prevent access to environment variables
+            && includeRegExp.test(normalizedPath)       // Check against include pattern
+            && !excludeRegExp.test(normalizedPath);     // Check against exclude pattern
+    }
+
     return rootFolder !== undefined
         && normalizedPath !== rootFolder            // Prevent access to the workspace folder itself
         && normalizedPath.startsWith(rootFolder)    // Prevent access to paths outside the workspace
@@ -197,6 +208,20 @@ export function hasPermissions(...permissions: Permission[]): boolean {
     return permissions.every(permission => vscode.workspace.getConfiguration('neuropilot').get('permission.' + permission.id, false));
 }
 
+/**
+ * Gets the value of the specified permission.
+ * @param config The config entry to get.
+ * @returns The config value, `undefined` if the config doesn't exist, or `null` if there is no value.
+ */
+
+export function checkConfig(config: string) {
+    if (!CONFIGS.includes(config)) {
+        return undefined
+    }
+
+    return vscode.workspace.getConfiguration('neuropilot').get(config) || null
+}
+
 /*
  * Extended interface for terminal sessions.
  * We now explicitly store the event emitter along with the pseudoterminal.
@@ -223,17 +248,33 @@ export interface Permission {
 
 /** Collection of strings for use in {@link actionResultNoPermission}. */
 export const PERMISSIONS: Record<string, Permission> = {
-    openFiles:          { id: 'openFiles',          infinitive: 'open files' },
-    editActiveDocument: { id: 'editActiveDocument', infinitive: 'edit documents' },
-    create:             { id: 'create',             infinitive: 'create files or folders' },
-    rename:             { id: 'rename',             infinitive: 'rename files or folders' },
-    delete:             { id: 'delete',             infinitive: 'delete files or folders' },
-    runTasks:           { id: 'runTasks',           infinitive: 'run or terminate tasks' },
-    requestCookies:     { id: 'requestCookies',     infinitive: 'request cookies' },
-    gitOperations:      { id: 'gitOperations',      infinitive: 'use Git' },
-    gitTags:            { id: 'gitTags',            infinitive: 'tag commits' },
-    gitRemotes:         { id: 'gitRemotes',         infinitive: 'interact with Git remotes' },
-    editRemoteData:     { id: 'editRemoteData',     infinitive: 'edit remote data' },
-    gitConfigs:         { id: 'gitConfigs',         infinitive: 'edit the Git configuration' },
-    terminalAccess:     { id: 'terminalAccess',     infinitive: 'access the terminal' },
+    openFiles:          { id: 'openFiles',                infinitive: 'open files' },
+    editActiveDocument: { id: 'editActiveDocument',       infinitive: 'edit documents' },
+    create:             { id: 'create',                   infinitive: 'create files or folders' },
+    rename:             { id: 'rename',                   infinitive: 'rename files or folders' },
+    delete:             { id: 'delete',                   infinitive: 'delete files or folders' },
+    runTasks:           { id: 'runTasks',                 infinitive: 'run or terminate tasks' },
+    requestCookies:     { id: 'requestCookies',           infinitive: 'request cookies' },
+    gitOperations:      { id: 'gitOperations',            infinitive: 'use Git' },
+    gitTags:            { id: 'gitTags',                  infinitive: 'tag commits' },
+    gitRemotes:         { id: 'gitRemotes',               infinitive: 'interact with Git remotes' },
+    editRemoteData:     { id: 'editRemoteData',           infinitive: 'edit remote data' },
+    gitConfigs:         { id: 'gitConfigs',               infinitive: 'edit the Git configuration' },
+    terminalAccess:     { id: 'terminalAccess',           infinitive: 'access the terminal' },
 };
+
+export const CONFIGS: string[] = [
+    "websocketUrl",
+    "gameName",
+    "beforeContext",
+    "afterContext",
+    "maxCompletions",
+    "completionTrigger",
+    "initialContext",
+    "timeout",
+    "includePattern",
+    "excludePattern",
+    "terminals",
+    "showTimeOnTerminalStart",
+    "terminalContextDelay"
+];
