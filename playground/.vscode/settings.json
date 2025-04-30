@@ -30,5 +30,7 @@
             "args": ["-i"]
         }
     ],
-    "neuropilot.showTimeOnTerminalStart": true
+    "neuropilot.showTimeOnTerminalStart": true,
+    "files.autoSave": "afterDelay",
+    "files.autoSaveDelay": 1000
 }
