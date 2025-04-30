@@ -235,6 +235,10 @@ export interface TerminalSession {
 
 export const delayAsync = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
+export function escapeRegExp(string: string): string {
+    return string.replace(/[/\-\\^$*+?.()|[\]{}]/g, '\\$&');
+}
+
 export interface Permission {
     /** The ID of the permission in package.json, without the `neuropilot.permission.` prefix. */
     id: string;

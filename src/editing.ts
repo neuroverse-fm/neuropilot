@@ -1,11 +1,13 @@
 import * as vscode from 'vscode';
 
 import { NEURO } from "./constants";
-import { getPositionContext, hasPermissions, isPathNeuroSafe, logOutput, PERMISSIONS } from './utils';
+import { escapeRegExp, getPositionContext, hasPermissions, isPathNeuroSafe, logOutput, PERMISSIONS } from './utils';
 import { ActionData, ActionResult, actionResultAccept, actionResultEnumFailure, actionResultFailure, actionResultMissingParameter, actionResultNoPermission, actionResultRetry } from './neuro_client_helper';
 
 const ACTION_RESULT_NO_ACCESS = actionResultFailure('You do not have permission to access this file.');
 const ACTION_RESULT_NO_ACTIVE_DOCUMENT = actionResultFailure('No active document to edit.');
+
+const MATCH_OPTIONS: string[] = [ 'firstInFile', 'lastInFile', 'firstAfterCursor', 'lastBeforeCursor', 'allInFile' ] as const;
 
 export const editingFileHandlers: { [key: string]: (actionData: ActionData) => ActionResult } = {
     'place_cursor': handlePlaceCursor,
@@ -13,7 +15,7 @@ export const editingFileHandlers: { [key: string]: (actionData: ActionData) => A
     'insert_text': handleInsertText,
     'replace_text': handleReplaceText,
     'delete_text': handleDeleteText,
-    'place_cursor_at_text': handlePlaceCursorAtText,
+    'find_text': handleFindText,
 }
 
 export function registerEditingActions() {
@@ -48,37 +50,42 @@ export function registerEditingActions() {
             },
             {
                 name: 'replace_text',
-                description: 'Replace the first occurrence of the specified code',
+                description: 'Replace text in the active document. If you set "useRegex" to true, you can use a Regex in the "find" parameter and a subtitution pattern in the "replaceWith" parameter.',
                 schema: {
                     type: 'object',
                     properties: {
-                        oldText: { type: 'string' },
-                        newText: { type: 'string' },
+                        find: { type: 'string' },
+                        replaceWith: { type: 'string' },
+                        useRegex: { type: 'boolean' },
+                        match: { type: 'string', enum: MATCH_OPTIONS },
                     },
-                    required: ['oldText', 'newText'],
+                    required: ['find', 'replaceWith', 'match'],
                 }
             },
             {
                 name: 'delete_text',
-                description: 'Delete the first occurrence of the specified code',
+                description: 'Delete text in the active document. If you set "useRegex" to true, you can use a Regex in the "find" parameter.',
                 schema: {
                     type: 'object',
                     properties: {
-                        textToDelete: { type: 'string' },
+                        find: { type: 'string' },
+                        useRegex: { type: 'boolean' },
+                        match: { type: 'string', enum: MATCH_OPTIONS },
                     },
-                    required: ['textToDelete'],
+                    required: ['find', 'match'],
                 }
             },
             {
-                name: 'place_cursor_at_text',
-                description: 'Place the cursor before or after the first occurrence of the specified text',
+                name: 'find_text',
+                description: 'Find text in the active document. If you set "useRegex" to true, you can use a Regex in the "find" parameter.',
                 schema: {
                     type: 'object',
                     properties: {
-                        text: { type: 'string' },
-                        position: { type: 'string', enum: ['before', 'after'] },
+                        find: { type: 'string' },
+                        useRegex: { type: 'boolean' },
+                        match: { type: 'string', enum: MATCH_OPTIONS },
                     },
-                    required: ['text', 'position'],
+                    required: ['text', 'match'],
                 }
             },
         ]);
@@ -215,20 +222,44 @@ export function handleDeleteText(actionData: ActionData): ActionResult {
     if(!isPathNeuroSafe(document.fileName))
         return ACTION_RESULT_NO_ACCESS;
 
-    const textToDelete = actionData.params?.textToDelete;
-    if(textToDelete === undefined)
-        return actionResultMissingParameter('textToDelete');
+    const find = actionData.params?.find;
+    if(find === undefined)
+        return actionResultMissingParameter('find');
 
-    const textStart = document.getText().indexOf(textToDelete);
-    if(textStart === -1)
-        return actionResultFailure('Text to delete not found in document.');
+    const match: string = actionData.params?.match;
+    if(match === undefined)
+        return actionResultMissingParameter('match');
+    if(!MATCH_OPTIONS.includes(match))
+        return actionResultEnumFailure('match', MATCH_OPTIONS, match);
+
+    const useRegex = actionData.params?.useRegex ?? false;
+
+    const regex = new RegExp(useRegex ? find : escapeRegExp(find), 'g');
+    const cursorOffset = document.offsetAt(vscode.window.activeTextEditor!.selection.active);
+    
+    const matches = findAndFilter(regex, document.getText(), cursorOffset, match);
+    if(matches.length === 0)
+        return actionResultFailure('No matches found for the given parameters.');
 
     const edit = new vscode.WorkspaceEdit();
-    edit.delete(document.uri, new vscode.Range(document.positionAt(textStart), document.positionAt(textStart + textToDelete.length)));
+    for(const m of matches) {
+        edit.delete(document.uri, new vscode.Range(document.positionAt(m.index), document.positionAt(m.index + m[0].length)));
+    }
     vscode.workspace.applyEdit(edit).then(success => {
         if(success) {
             logOutput('INFO', `Deleting text from document`);
-            vscode.window.activeTextEditor!.selection = new vscode.Selection(document.positionAt(textStart), document.positionAt(textStart));
+            if(matches.length === 1) {
+                // Single match
+                const document = vscode.window.activeTextEditor!.document;
+                vscode.window.activeTextEditor!.selection = new vscode.Selection(document.positionAt(matches[0].index), document.positionAt(matches[0].index));
+                const cursorContext = getPositionContext(document, new vscode.Position(document.positionAt(matches[0].index).line, document.positionAt(matches[0].index).character));
+                NEURO.client?.sendContext(`Deleted text from document\n\nContext (lines ${cursorContext.startLine}-${cursorContext.endLine}, cursor position denoted by \`<<<|>>>\`):\n\n\`\`\`\n${cursorContext.contextBefore}<<<|>>>${cursorContext.contextAfter}\n\`\`\``);
+            }
+            else {
+                // Multiple matches
+                const document = vscode.window.activeTextEditor!.document;
+                NEURO.client?.sendContext(`Deleted ${matches.length} occurrences from the document\n\nUpdated content:\n\n\`\`\`\n${document.getText()}\n\`\`\``);
+            }
         }
         else {
             logOutput('ERROR', 'Failed to apply text deletion edit');
@@ -239,7 +270,7 @@ export function handleDeleteText(actionData: ActionData): ActionResult {
     return actionResultAccept();
 }
 
-export function handlePlaceCursorAtText(actionData: ActionData): ActionResult {
+export function handleFindText(actionData: ActionData): ActionResult {
     if(!hasPermissions(PERMISSIONS.editActiveDocument))
         return actionResultNoPermission(PERMISSIONS.editActiveDocument);
 
@@ -271,4 +302,50 @@ export function handlePlaceCursorAtText(actionData: ActionData): ActionResult {
     logOutput('INFO', `Placed cursor at text ${position} the first occurrence`);
 
     return actionResultAccept(`Cursor placed at text ${position} the first occurrence (line ${line}, character ${character})\n\nContext before:\n\n\`\`\`\n${cursorContext.contextBefore}\n\`\`\`\n\nContext after:\n\n\`\`\`\n${cursorContext.contextAfter}\n\`\`\``);
+}
+
+/**
+ * Find matches in the text and filter based on the match option.
+ * @param regex The regular expression to search for.
+ * @param text The text to search in.
+ * @param cursorOffset The current cursor offset in the text.
+ * @param match The match option from the {@link MATCH_OPTIONS} array.
+ * @returns The matches found in the text based on the match option.
+ */
+function findAndFilter(regex: RegExp, text: string, cursorOffset: number, match: string): RegExpExecArray[] {
+    const matches = text.matchAll(regex);
+    let result: RegExpExecArray[] = [];
+    
+    switch(match) {
+        case 'firstInFile':
+            for(const m of matches)
+                return [m];
+            return [];
+
+        case 'lastInFile':
+            for(const m of matches)
+                result = [m];
+            return result;
+
+        case 'firstAfterCursor':
+            for(const m of matches)
+                if(m.index >= cursorOffset)
+                    return [m];
+            return [];
+
+        case 'lastBeforeCursor':
+            for(const m of matches)
+                if(m.index < cursorOffset)
+                    result = [m];
+                else break;
+            return result;
+
+        case 'allInFile':
+            for(const m of matches)
+                result.push(m);
+            return result;
+
+        default:
+            throw new Error(`Invalid match option: ${match}`);
+    }
 }
