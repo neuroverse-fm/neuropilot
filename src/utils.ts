@@ -239,6 +239,75 @@ export function escapeRegExp(string: string): string {
     return string.replace(/[/\-\\^$*+?.()|[\]{}]/g, '\\$&');
 }
 
+/**
+ * Returns the string that would be inserted by the {@link String.replace} method.
+ * @param match The match object returned by a regular expression.
+ * @param replacement The replacement string, which can contain substitutions.
+ * The substitutions ` $` `, $' and $_ are not supported.
+ * @returns The substituted string.
+ * @throws Error if the substitution is invalid or if the capture group does not exist.
+ */
+export function substituteMatch(match: RegExpExecArray, replacement: string): string {
+    const rx = /\$<.+?>|\${.+?}|\$\d+|\$./g;
+    const substitutions = Array.from(replacement.matchAll(rx));
+    const literals = replacement.split(rx);
+    let result = '';
+    for(let i = 0; i < substitutions.length; i++) {
+        // Append literal
+        result += literals[i];
+        // Append substitution
+        if(substitutions[i][0] === '$&') {
+            // Full match
+            result += match[0];
+        }
+        else if(substitutions[i][0] === '$`' || substitutions[i][0] === '$\'' || substitutions[i][0] === '$_') {
+            // Text before or after the match
+            throw new Error('Substitution with text outside the match is not supported.');
+        }
+        else if(substitutions[i][0] === '$+') {
+            // Last capture group
+            if(match.length === 0)
+                throw new Error('No capture groups in the match');
+            result += match[match.length - 1];
+        }
+        else if(substitutions[i][0] === '$$') {
+            // Escaped dollar sign
+            result += '$';
+        }
+        else if(substitutions[i][0].startsWith('$<') || substitutions[i][0].startsWith('${')) {
+            const name = substitutions[i][0].slice(2, -1);
+            if(/^\d+$/.test(name)) {
+                // Numbered group
+                const index = parseInt(name);
+                if(index >= match.length)
+                    throw new Error(`Capture group ${index} does not exist in the match`);
+                result += match[index];
+            }
+            else {
+                // Named group
+                const content = match.groups?.[name];
+                if(content === undefined)
+                    throw new Error(`Capture group "${name}" does not exist in the match`);
+                result += content;
+            }
+        }
+        else if(/^\$\d+$/.test(substitutions[i][0])) {
+            // Numbered group
+            const index = parseInt(substitutions[i][0].slice(1));
+            if(index >= match.length)
+                throw new Error(`Capture group ${index} does not exist in the match`);
+            result += match[index];
+        }
+        else {
+            // No substitution, just append the string
+            result += substitutions[i][0];
+        }
+    }
+    // Append remaining literal
+    result += literals[literals.length - 1];
+    return result;
+}
+
 export interface Permission {
     /** The ID of the permission in package.json, without the `neuropilot.permission.` prefix. */
     id: string;

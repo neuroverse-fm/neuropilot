@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 
 import { NEURO } from "./constants";
-import { escapeRegExp, getPositionContext, hasPermissions, isPathNeuroSafe, logOutput, PERMISSIONS } from './utils';
+import { escapeRegExp, getPositionContext, hasPermissions, isPathNeuroSafe, logOutput, PERMISSIONS, substituteMatch } from './utils';
 import { ActionData, ActionResult, actionResultAccept, actionResultEnumFailure, actionResultFailure, actionResultMissingParameter, actionResultNoPermission, actionResultRetry } from './neuro_client_helper';
 
 const ACTION_RESULT_NO_ACCESS = actionResultFailure('You do not have permission to access this file.');
@@ -179,29 +179,60 @@ export function handleReplaceText(actionData: ActionData): ActionResult {
     if(!hasPermissions(PERMISSIONS.editActiveDocument))
         return actionResultNoPermission(PERMISSIONS.editActiveDocument);
 
-    const oldText = actionData.params?.oldText;
-    const newText = actionData.params?.newText;
-    if(oldText === undefined)
-        return actionResultMissingParameter('oldText');
-    if(newText === undefined)
-        return actionResultMissingParameter('newText');
+    const find: string = actionData.params?.find;
+    const replaceWith: string = actionData.params?.replaceWith;
+    if(find === undefined)
+        return actionResultMissingParameter('find');
+    if(replaceWith === undefined)
+        return actionResultMissingParameter('replaceWith');
 
+    const match: string = actionData.params?.match;
+    if(match === undefined)
+        return actionResultMissingParameter('match');
+    if(!MATCH_OPTIONS.includes(match))
+        return actionResultEnumFailure('match', MATCH_OPTIONS, match);
+
+    const useRegex = actionData.params?.useRegex ?? false;
+    
     const document = vscode.window.activeTextEditor?.document;
     if(document === undefined)
         return ACTION_RESULT_NO_ACTIVE_DOCUMENT;
     if(!isPathNeuroSafe(document.fileName))
         return ACTION_RESULT_NO_ACCESS;
 
-    const oldStart = document.getText().indexOf(oldText);
-    if(oldStart === -1)
-        return actionResultFailure('Text to replace not found in document.');
+    const regex = new RegExp(useRegex ? find : escapeRegExp(find), 'g');
+    const cursorOffset = document.offsetAt(vscode.window.activeTextEditor!.selection.active);
+
+    const matches = findAndFilter(regex, document.getText(), cursorOffset, match);
+    if(matches.length === 0)
+        return actionResultFailure('No matches found for the given parameters.');
 
     const edit = new vscode.WorkspaceEdit();
-    edit.replace(document.uri, new vscode.Range(document.positionAt(oldStart), document.positionAt(oldStart + oldText.length)), newText);
+    for(const m of matches) {
+        try {
+            const replacement = useRegex ? substituteMatch(m, replaceWith) : replaceWith;
+            edit.replace(document.uri, new vscode.Range(document.positionAt(m.index), document.positionAt(m.index + m[0].length)), replacement);
+        } catch(erm) {
+            logOutput('ERROR', `Error while substituting match: ${erm}`);
+            return actionResultFailure(erm instanceof Error ? erm.message : 'Unknown error while substituting match');
+        }
+    }
     vscode.workspace.applyEdit(edit).then(success => {
         if(success) {
             logOutput('INFO', `Replacing text in document`);
-            vscode.window.activeTextEditor!.selection = new vscode.Selection(document.positionAt(oldStart + newText.length), document.positionAt(oldStart + newText.length));
+            if(matches.length === 1) {
+                // Single match
+                const document = vscode.window.activeTextEditor!.document;
+                const cursorPosition = document.positionAt(matches[0].index + matches[0][0].length);
+                vscode.window.activeTextEditor!.selection = new vscode.Selection(cursorPosition, cursorPosition);
+                const cursorContext = getPositionContext(document, cursorPosition);
+                NEURO.client?.sendContext(`Replaced text in document\n\nContext (lines ${cursorContext.startLine}-${cursorContext.endLine}, cursor position denoted by \`<<<|>>>\`):\n\n\`\`\`\n${cursorContext.contextBefore}<<<|>>>${cursorContext.contextAfter}\n\`\`\``);
+            }
+            else {
+                // Multiple matches
+                const document = vscode.window.activeTextEditor!.document;
+                NEURO.client?.sendContext(`Deleted ${matches.length} occurrences from the document\n\nUpdated content:\n\n\`\`\`\n${document.getText()}\n\`\`\``);
+            }
         }
         else {
             logOutput('ERROR', 'Failed to apply text replacement edit');
@@ -252,7 +283,7 @@ export function handleDeleteText(actionData: ActionData): ActionResult {
                 // Single match
                 const document = vscode.window.activeTextEditor!.document;
                 vscode.window.activeTextEditor!.selection = new vscode.Selection(document.positionAt(matches[0].index), document.positionAt(matches[0].index));
-                const cursorContext = getPositionContext(document, new vscode.Position(document.positionAt(matches[0].index).line, document.positionAt(matches[0].index).character));
+                const cursorContext = getPositionContext(document, document.positionAt(matches[0].index));
                 NEURO.client?.sendContext(`Deleted text from document\n\nContext (lines ${cursorContext.startLine}-${cursorContext.endLine}, cursor position denoted by \`<<<|>>>\`):\n\n\`\`\`\n${cursorContext.contextBefore}<<<|>>>${cursorContext.contextAfter}\n\`\`\``);
             }
             else {
