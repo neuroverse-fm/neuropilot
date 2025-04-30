@@ -104,8 +104,8 @@ export function handlePlaceCursor(actionData: ActionData): ActionResult {
         return ACTION_RESULT_NO_ACCESS;
     if(line >= document.lineCount)
         return actionResultRetry(`Line is out of bounds, the last line of the document is ${document.lineCount - 1}.`);
-    if(character >= document.lineAt(line).text.length)
-        return actionResultRetry(`Character is out of bounds, the last character of line ${line} is ${document.lineAt(line).text.length - 1}.`);
+    if(character > document.lineAt(line).text.length)
+        return actionResultRetry(`Character is out of bounds, the last character of line ${line} is ${document.lineAt(line).text.length}.`);
 
     vscode.window.activeTextEditor!.selection = new vscode.Selection(line, character, line, character);
     const cursorContext = getPositionContext(document, new vscode.Position(line, character));
