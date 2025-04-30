@@ -95,20 +95,41 @@ export function filterFileContents(contents: string): string {
 interface NeuroPositionContext {
     contextBefore: string;
     contextAfter: string;
+    startLine: number;
+    endLine: number;
 }
 
-export function getPositionContext(document: vscode.TextDocument, position: vscode.Position): NeuroPositionContext {
+/**
+ * Gets the context around a specified range in a document.
+ * @param document The document to get the context from.
+ * @param position The start of the range around which to get the context.
+ * @param position2 The end of the range around which to get the context. If not provided, defaults to {@link position}.
+ * @returns The context around the specified range. The amount of lines before and after the range is configurable in the settings.
+ */
+export function getPositionContext(document: vscode.TextDocument, position: vscode.Position, position2?: vscode.Position): NeuroPositionContext {
     const beforeContextLength = vscode.workspace.getConfiguration('neuropilot').get('beforeContext', 10);
     const afterContextLength = vscode.workspace.getConfiguration('neuropilot').get('afterContext', 10);
+
+    if(position2 === undefined) {
+        position2 = position;
+    }
+    if(position2.isBefore(position)) {
+        // Swap the positions if position2 is before position
+        const temp = position;
+        position = position2;
+        position2 = temp;
+    }
     
-    const contextStart = Math.max(0, position.line - beforeContextLength);
-    const contextBefore = filterFileContents(document.getText(new Range(new vscode.Position(contextStart, 0), position)));
-    const contextEnd = Math.min(document.lineCount - 1, position.line + afterContextLength);
-    const contextAfter = document.getText(new Range(position, new vscode.Position(contextEnd, document.lineAt(contextEnd).text.length))).replace(/\r\n/g, '\n');
+    const startLine = Math.max(0, position.line - beforeContextLength);
+    const contextBefore = filterFileContents(document.getText(new Range(new vscode.Position(startLine, 0), position)));
+    const endLine = Math.min(document.lineCount - 1, position2.line + afterContextLength);
+    const contextAfter = document.getText(new Range(position2, new vscode.Position(endLine, document.lineAt(endLine).text.length))).replace(/\r\n/g, '\n');
 
     return {
         contextBefore: filterFileContents(contextBefore),
-        contextAfter: filterFileContents(contextAfter)
+        contextAfter: filterFileContents(contextAfter),
+        startLine: startLine,
+        endLine: endLine,
     };
 }
 

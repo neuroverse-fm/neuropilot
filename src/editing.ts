@@ -102,16 +102,16 @@ export function handlePlaceCursor(actionData: ActionData): ActionResult {
         return ACTION_RESULT_NO_ACTIVE_DOCUMENT;
     if(!isPathNeuroSafe(document.fileName))
         return ACTION_RESULT_NO_ACCESS;
-    if(line >= document.lineCount)
+    if(line >= document.lineCount || line < 0)
         return actionResultRetry(`Line is out of bounds, the last line of the document is ${document.lineCount - 1}.`);
-    if(character > document.lineAt(line).text.length)
+    if(character > document.lineAt(line).text.length || character < 0)
         return actionResultRetry(`Character is out of bounds, the last character of line ${line} is ${document.lineAt(line).text.length}.`);
 
     vscode.window.activeTextEditor!.selection = new vscode.Selection(line, character, line, character);
     const cursorContext = getPositionContext(document, new vscode.Position(line, character));
     logOutput('INFO', `Placed cursor at (${line}:${character}).`);
 
-    return actionResultAccept(`Cursor placed at line ${line}, character ${character}\n\nContext before:\n\n\`\`\`\n${cursorContext.contextBefore}\n\`\`\`\n\nContext after:\n\n\`\`\`\n${cursorContext.contextAfter}\n\`\`\``);
+    return actionResultAccept(`Cursor placed at (${line}:${character})\n\nContext (lines ${cursorContext.startLine}-${cursorContext.endLine}, cursor position denoted by \`<<<|>>>\`):\n\n\`\`\`\n${cursorContext.contextBefore}<<<|>>>${cursorContext.contextAfter}\n\`\`\``);
 }
 
 export function handleGetCursor(actionData: ActionData): ActionResult {
@@ -130,7 +130,7 @@ export function handleGetCursor(actionData: ActionData): ActionResult {
     const relativePath = vscode.workspace.asRelativePath(document.uri);
     logOutput('INFO', `Sending cursor position to Neuro`);
 
-    return actionResultAccept(`In file ${relativePath}\n\nCursor is at line ${line}, character ${character}\n\nContext before:\n\n\`\`\`\n${cursorContext.contextBefore}\n\`\`\`\n\nContext after:\n\n\`\`\`\n${cursorContext.contextAfter}\n\`\`\``);
+    return actionResultAccept(`In file ${relativePath}\n\nCursor is at (${line}:${character})\n\nContext (lines ${cursorContext.startLine}-${cursorContext.endLine}, cursor position denoted by \`<<<|>>>\`):\n\n\`\`\`\n${cursorContext.contextBefore}<<<|>>>${cursorContext.contextAfter}\n\`\`\``);
 }
 
 export function handleInsertText(actionData: ActionData): ActionResult {
@@ -147,12 +147,17 @@ export function handleInsertText(actionData: ActionData): ActionResult {
     if(!isPathNeuroSafe(document.fileName))
         return ACTION_RESULT_NO_ACCESS;
 
+    const insertStart = vscode.window.activeTextEditor!.selection.active;
     const edit = new vscode.WorkspaceEdit();
     edit.insert(document.uri, vscode.window.activeTextEditor!.selection.active, text);
 
     vscode.workspace.applyEdit(edit).then(success => {
         if(success) {
             logOutput('INFO', `Inserting text into document`);
+            const document = vscode.window.activeTextEditor!.document;
+            const insertEnd = vscode.window.activeTextEditor!.selection.active;
+            const cursorContext = getPositionContext(document, insertStart, insertEnd);
+            NEURO.client?.sendContext(`Inserted text into document\n\nContext (lines ${cursorContext.startLine}-${cursorContext.endLine}, cursor position denoted by \`<<<|>>>\`):\n\n\`\`\`\n${cursorContext.contextBefore}${text}<<<|>>>${cursorContext.contextAfter}\n\`\`\``);
         }
         else {
             logOutput('ERROR', 'Failed to apply text insertion edit');
@@ -176,9 +181,9 @@ export function handleReplaceText(actionData: ActionData): ActionResult {
 
     const document = vscode.window.activeTextEditor?.document;
     if(document === undefined)
-        return actionResultFailure('No active document to replace text in.');
+        return ACTION_RESULT_NO_ACTIVE_DOCUMENT;
     if(!isPathNeuroSafe(document.fileName))
-        return actionResultFailure('You do not have permission to access this file.');
+        return ACTION_RESULT_NO_ACCESS;
 
     const oldStart = document.getText().indexOf(oldText);
     if(oldStart === -1)
