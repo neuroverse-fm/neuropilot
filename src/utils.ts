@@ -161,19 +161,13 @@ export function combineGlobLinesToRegExp(lines: string): RegExp {
 export function isPathNeuroSafe(path: string, checkPatterns: boolean = true): boolean {
     const rootFolder = getWorkspacePath();
     const normalizedPath = normalizePath(path);
-    const includePattern = vscode.workspace.getConfiguration('neuropilot').get('includePattern', '**/*');
-    const excludePattern = vscode.workspace.getConfiguration('neuropilot').get<string>('excludePattern');
+    const includePattern = CONFIG.includePattern || "**/*";
+    const excludePattern = CONFIG.excludePattern;
     const includeRegExp: RegExp = checkPatterns ? combineGlobLinesToRegExp(includePattern) : REGEXP_ALWAYS;
     const excludeRegExp: RegExp = (checkPatterns && excludePattern) ? combineGlobLinesToRegExp(excludePattern) : REGEXP_NEVER;
 
-    if (hasPermissions(PERMISSIONS.dotFileAccess)) {
-        return rootFolder !== undefined
-            && normalizedPath !== rootFolder            // Prevent access to the workspace folder itself
-            && normalizedPath.startsWith(rootFolder)    // Prevent access to paths outside the workspace
-            && !normalizedPath.includes('..')           // Prevent access to parent folders
-            && !normalizedPath.includes('~')            // Prevent access to home directory
-            && !normalizedPath.includes('$')            // Prevent access to environment variables
-            && includeRegExp.test(normalizedPath)       // Check against include pattern
+    if (CONFIG.allowUnsafePaths === true) {
+        return includeRegExp.test(normalizedPath)       // Check against include pattern
             && !excludeRegExp.test(normalizedPath);     // Check against exclude pattern
     }
 
@@ -272,6 +266,7 @@ class Config {
     get terminals(): Array<{ name: string; path: string; args?: string[]; }> { return get('terminals')!; }
     get showTimeOnTerminalStart(): boolean { return get('showTimeOnTerminalStart')!; }
     get terminalContextDelay(): number { return get('terminalContextDelay')!; }
+    get allowUnsafePaths(): boolean { return get('allowUnsafePaths')!; }
 }
 
 export const CONFIG = new Config();

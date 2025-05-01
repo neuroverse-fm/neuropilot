@@ -76,6 +76,9 @@ function disableAllPermissions() {
             promises.push(config.update(`permission.${key}`, false, vscode.ConfigurationTarget.Workspace));
         }
     }
+    if (CONFIG.allowUnsafePaths === true) {
+        promises.push(config.update('allowUnsafePaths', false, vscode.ConfigurationTarget.Workspace))
+    }
     Promise.all(promises).then(() => {
         const exe = NEURO.currentTaskExecution;
         if (exe) {
