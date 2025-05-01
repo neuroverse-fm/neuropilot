@@ -16,6 +16,7 @@ export const editingFileHandlers: { [key: string]: (actionData: ActionData) => A
     'replace_text': handleReplaceText,
     'delete_text': handleDeleteText,
     'find_text': handleFindText,
+    // 'undo': handleUndo,
 }
 
 export function registerEditingActions() {
@@ -88,6 +89,10 @@ export function registerEditingActions() {
                     required: ['text', 'match'],
                 }
             },
+            // {
+            //     name: 'undo',
+            //     description: 'Undo the last action in the active document',
+            // },
         ]);
     }
 }
@@ -333,6 +338,31 @@ export function handleFindText(actionData: ActionData): ActionResult {
     logOutput('INFO', `Placed cursor at text ${position} the first occurrence`);
 
     return actionResultAccept(`Cursor placed at text ${position} the first occurrence (line ${line}, character ${character})\n\nContext before:\n\n\`\`\`\n${cursorContext.contextBefore}\n\`\`\`\n\nContext after:\n\n\`\`\`\n${cursorContext.contextAfter}\n\`\`\``);
+}
+
+export function handleUndo(actionData: ActionData): ActionResult {
+    if(!hasPermissions(PERMISSIONS.editActiveDocument))
+        return actionResultNoPermission(PERMISSIONS.editActiveDocument);
+
+    const document = vscode.window.activeTextEditor?.document;
+    if(document === undefined)
+        return ACTION_RESULT_NO_ACTIVE_DOCUMENT;
+    if(!isPathNeuroSafe(document.fileName))
+        return ACTION_RESULT_NO_ACCESS;
+
+    vscode.commands.executeCommand('undo').then(
+        () => {
+            logOutput('INFO', 'Undoing last action in document');
+            const cursorContext = getPositionContext(document, vscode.window.activeTextEditor!.selection.active);
+            NEURO.client?.sendContext(`Undid last action in document\n\nContext (lines ${cursorContext.startLine}-${cursorContext.endLine}, cursor position denoted by \`<<<|>>>\`):\n\n\`\`\`\n${cursorContext.contextBefore}<<<|>>>${cursorContext.contextAfter}\n\`\`\``);
+        },
+        (erm) => {
+            logOutput('ERROR', `Failed to undo last action: ${erm}`);
+            NEURO.client?.sendContext('Failed to undo last action');
+        }
+    );
+
+    return actionResultAccept();
 }
 
 /**
