@@ -33,5 +33,5 @@
     "neuropilot.showTimeOnTerminalStart": true,
     "files.autoSave": "afterDelay",
     "files.autoSaveDelay": 1000,
-    "neuropilot.allowUnsafePaths": false,
+    "neuropilot.allowUnsafePaths": false
 }
