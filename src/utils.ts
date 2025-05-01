@@ -267,6 +267,7 @@ class Config {
     get showTimeOnTerminalStart(): boolean { return get('showTimeOnTerminalStart')!; }
     get terminalContextDelay(): number { return get('terminalContextDelay')!; }
     get allowUnsafePaths(): boolean { return get('allowUnsafePaths')!; }
+    get allowRunningAllTasks(): boolean { return get('allowRunningAllTasks')!; }
 }
 
 export const CONFIG = new Config();

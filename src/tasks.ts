@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 
 import { NEURO } from "./constants";
-import { logOutput, formatActionID, hasPermissions, PERMISSIONS } from './utils';
+import { logOutput, formatActionID, hasPermissions, PERMISSIONS, CONFIG } from './utils';
 import { ActionData, ActionResult, actionResultAccept, actionResultFailure, actionResultNoPermission, actionResultRetry } from './neuro_client_helper';
 
 export const taskHandlers: { [key: string]: (actionData: ActionData) => ActionResult } = {
@@ -85,14 +85,21 @@ export function reloadTasks() {
 
     vscode.tasks.fetchTasks().then((tasks) => {
         for(const task of tasks) {
-            // Only allow tasks whose details start with '[Neuro]'
-            if(task.detail?.toLowerCase().startsWith('[neuro]')) {
+            if (CONFIG.allowRunningAllTasks === true) {
+                logOutput('INFO', `Adding task: ${task.name}`)
+                NEURO.tasks.push({
+                    id: formatActionID(task.name),
+                    description: (task.detail?.length ?? 0) > 0 ? task.detail! : task.name,
+                    task
+                })
+            } else if (task.detail?.toLowerCase().startsWith('[neuro]')) {
+                // Only allow tasks whose details start with '[Neuro]'
                 const detail = task.detail?.substring(7).trim();
                 logOutput('INFO', `Adding Neuro task: ${task.name}`);
                 NEURO.tasks.push({
                     id: formatActionID(task.name),
                     description: detail.length > 0 ? detail : task.name,
-                    task: task,
+                    task,
                 });
             }
             else {

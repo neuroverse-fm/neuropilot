@@ -245,7 +245,12 @@
 					"neuropilot.allowUnsafePaths": {
 						"type": "boolean",
 						"default": false,
-						"markdownDeprecationMessage": "Allow Neuro to view & edit files and folders in unsafe paths. These include:\n- files/folders starting with a '.'\n- parent directories and directories outside the workspace\n- Environmental variables\n\nNote that your include/exclude patterns are still respected."
+						"markdownDescription": "Allow Neuro to view & edit files and folders in unsafe paths. These include:\n- files/folders starting with a '.'\n- parent directories and directories outside the workspace\n- Environmental variables\n\nNote that your include/exclude patterns are still respected."
+					},
+					"neuropilot.allowRunningAllTasks": {
+						"type": "boolean",
+						"default": false,
+						"markdownDescription": "Allow Neuro to run all tasks regardless of their prefix in their 'detail' key."
 					}
 				}
 			}
