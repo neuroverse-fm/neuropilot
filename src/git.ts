@@ -3,8 +3,9 @@ import * as path from 'path';
 import { NEURO } from './constants';
 import { GitExtension, Change, ForcePushMode, CommitOptions, Commit, Repository } from './types/git';
 import { StatusStrings, RefTypeStrings } from './types/git_status';
-import { getNormalizedRepoPathForGit, hasPermissions, logOutput, PERMISSIONS, simpleFileName } from './utils';
+import { getNormalizedRepoPathForGit, hasPermissions, logOutput, simpleFileName } from './utils';
 import { ActionData, ActionResult, actionResultAccept, actionResultEnumFailure, actionResultFailure, actionResultMissingParameter, actionResultNoPermission, actionResultRetry } from './neuro_client_helper';
+import { PERMISSIONS } from './config';
 
 /* All actions located in here requires neuropilot.permission.gitOperations to be enabled. */
 
@@ -345,7 +346,7 @@ export function handleNewGitRepo(actionData: ActionData): ActionResult {
 export function handleGetGitConfig(actionData: ActionData): ActionResult {
     if (!git)
         return ACTION_RESULT_NO_GIT;
-    if (!hasPermissions(PERMISSIONS.gitOperations, PERMISSIONS.gitConfig))
+    if (!hasPermissions(PERMISSIONS.gitOperations, PERMISSIONS.gitConfigs))
         return actionResultNoPermission(PERMISSIONS.gitConfigs);
     if (!repo)
         return ACTION_RESULT_NO_REPO;
@@ -374,7 +375,7 @@ export function handleGetGitConfig(actionData: ActionData): ActionResult {
 export function handleSetGitConfig(actionData: ActionData): ActionResult {
     if (!git)
         return ACTION_RESULT_NO_GIT;
-    if (!hasPermissions(PERMISSIONS.gitOperations, PERMISSIONS.gitConfig))
+    if (!hasPermissions(PERMISSIONS.gitOperations, PERMISSIONS.gitConfigs))
         return actionResultNoPermission(PERMISSIONS.gitConfigs);
     if (!repo)
         return ACTION_RESULT_NO_REPO;

@@ -1,7 +1,8 @@
 import * as vscode from 'vscode';
 
 import { NEURO } from './constants';
-import { assert, filterFileContents, logOutput, simpleFileName, CONFIG } from './utils';
+import { assert, filterFileContents, logOutput, simpleFileName } from './utils';
+import { CONFIG } from './config';
 
 const NEURO_PARTICIPANT_ID = 'neuropilot.neuro';
 

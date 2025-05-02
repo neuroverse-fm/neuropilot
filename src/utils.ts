@@ -7,6 +7,7 @@ import { ChildProcessWithoutNullStreams } from 'child_process';
 
 import { NEURO } from './constants';
 import { Range } from 'vscode';
+import { CONFIG, Permission } from './config';
 
 export const REGEXP_ALWAYS = /^/;
 export const REGEXP_NEVER = /^\b$/;
@@ -202,15 +203,6 @@ export function hasPermissions(...permissions: Permission[]): boolean {
     return permissions.every(permission => vscode.workspace.getConfiguration('neuropilot').get('permission.' + permission.id, false));
 }
 
-/**
- * Gets the value of the config
- * @param key The config key to get
- * @returns The value of the config, or `undefined` if it doesn't exist
- */
-export function get<T>(key: string): T | undefined {
-    return vscode.workspace.getConfiguration('neuropilot').get<T>(key);
-}
-
 /*
  * Extended interface for terminal sessions.
  * We now explicitly store the event emitter along with the pseudoterminal.
@@ -227,47 +219,3 @@ export interface TerminalSession {
 }
 
 export const delayAsync = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
-export interface Permission {
-    /** The ID of the permission in package.json, without the `neuropilot.permission.` prefix. */
-    id: string;
-    /** The infinitive of the permission to construct sentences (should fit the scheme "permission to {something}"). */
-    infinitive: string;
-}
-
-/** Collection of strings for use in {@link actionResultNoPermission}. */
-export const PERMISSIONS: Record<string, Permission> = {
-    openFiles:          { id: 'openFiles',                infinitive: 'open files' },
-    editActiveDocument: { id: 'editActiveDocument',       infinitive: 'edit documents' },
-    create:             { id: 'create',                   infinitive: 'create files or folders' },
-    rename:             { id: 'rename',                   infinitive: 'rename files or folders' },
-    delete:             { id: 'delete',                   infinitive: 'delete files or folders' },
-    runTasks:           { id: 'runTasks',                 infinitive: 'run or terminate tasks' },
-    requestCookies:     { id: 'requestCookies',           infinitive: 'request cookies' },
-    gitOperations:      { id: 'gitOperations',            infinitive: 'use Git' },
-    gitTags:            { id: 'gitTags',                  infinitive: 'tag commits' },
-    gitRemotes:         { id: 'gitRemotes',               infinitive: 'interact with Git remotes' },
-    editRemoteData:     { id: 'editRemoteData',           infinitive: 'edit remote data' },
-    gitConfigs:         { id: 'gitConfigs',               infinitive: 'edit the Git configuration' },
-    terminalAccess:     { id: 'terminalAccess',           infinitive: 'access the terminal' },
-};
-
-class Config {
-    get websocketUrl(): string { return get('websocketUrl')!; }
-    get gameName(): string { return get('gameName')!; }
-    get beforeContext(): number { return get('beforeContext')!; }
-    get afterContext(): number { return get('afterContext')!; }
-    get maxCompletions(): number { return get('maxCompletions')!; }
-    get completionTrigger(): string { return get('completionTrigger')!; }
-    get initialContext(): string { return get('initialContext')!; }
-    get timeout(): number { return get('timeout')!; }
-    get includePattern(): string { return get('includePattern')!; }
-    get excludePattern(): string { return get('excludePattern')!; }
-    get terminals(): Array<{ name: string; path: string; args?: string[]; }> { return get('terminals')!; }
-    get showTimeOnTerminalStart(): boolean { return get('showTimeOnTerminalStart')!; }
-    get terminalContextDelay(): number { return get('terminalContextDelay')!; }
-    get allowUnsafePaths(): boolean { return get('allowUnsafePaths')!; }
-    get allowRunningAllTasks(): boolean { return get('allowRunningAllTasks')!; }
-}
-
-export const CONFIG = new Config();

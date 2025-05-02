@@ -1,13 +1,14 @@
 import * as vscode from 'vscode';
 
 import { NEURO } from './constants';
-import { logOutput, createClient, onClientConnected, CONFIG } from './utils';
+import { logOutput, createClient, onClientConnected } from './utils';
 import { completionsProvider, registerCompletionResultHandler } from './completions';
 import { giveCookie, registerRequestCookieAction, registerRequestCookieHandler, sendCurrentFile } from './context';
 import { registerChatParticipant, registerChatResponseHandler } from './chat';
 import { registerUnsupervisedActions, registerUnsupervisedHandlers } from './unsupervised';
 import { reloadTasks, taskEndedHandler } from './tasks';
 import { emergencyTerminalShutdown, saveContextForTerminal } from './pseudoterminal';
+import { CONFIG } from './config';
 
 export function activate(context: vscode.ExtensionContext) {
     NEURO.url = CONFIG.websocketUrl;

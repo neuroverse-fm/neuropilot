@@ -1,8 +1,9 @@
 import * as vscode from 'vscode';
 
 import { NEURO } from "./constants";
-import { logOutput, formatActionID, hasPermissions, PERMISSIONS, CONFIG } from './utils';
+import { logOutput, formatActionID, hasPermissions } from './utils';
 import { ActionData, ActionResult, actionResultAccept, actionResultFailure, actionResultNoPermission, actionResultRetry } from './neuro_client_helper';
+import { CONFIG, PERMISSIONS } from './config';
 
 export const taskHandlers: { [key: string]: (actionData: ActionData) => ActionResult } = {
     // handleRunTask is used separately and not on this list
