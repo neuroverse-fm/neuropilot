@@ -87,7 +87,7 @@ export function registerEditingActions() {
                         useRegex: { type: 'boolean' },
                         match: { type: 'string', enum: MATCH_OPTIONS },
                     },
-                    required: ['text', 'match'],
+                    required: ['find', 'match'],
                 }
             },
             {
@@ -320,14 +320,18 @@ export function handleFindText(actionData: ActionData): ActionResult {
     if(!hasPermissions(PERMISSIONS.editActiveDocument))
         return actionResultNoPermission(PERMISSIONS.editActiveDocument);
 
-    const text = actionData.params?.text;
-    const position = actionData.params?.position;
-    if(text === undefined)
-        return actionResultMissingParameter('text');
-    if(position === undefined)
-        return actionResultMissingParameter('position');
-    if(position !== 'before' && position !== 'after')
-        return actionResultEnumFailure('position', ['before', 'after'], position);
+    const find = actionData.params?.find;
+    if(find === undefined)
+        return actionResultMissingParameter('find');
+
+    const match = actionData.params?.match;
+    if(match === undefined)
+        return actionResultMissingParameter('match');
+    if(!MATCH_OPTIONS.includes(match))
+        return actionResultEnumFailure('match', MATCH_OPTIONS, match);
+
+    const useRegex = actionData.params?.useRegex ?? false;
+    const regex = new RegExp(useRegex ? find : escapeRegExp(find), 'g');
 
     const document = vscode.window.activeTextEditor?.document;
     if(document === undefined)
@@ -335,19 +339,31 @@ export function handleFindText(actionData: ActionData): ActionResult {
     if(!isPathNeuroSafe(document.fileName))
         return ACTION_RESULT_NO_ACCESS;
 
-    const textStart = document.getText().indexOf(text);
-    if(textStart === -1)
-        return actionResultFailure('Text to place cursor at not found in document.');
+    const cursorOffset = document.offsetAt(vscode.window.activeTextEditor!.selection.active);
+    
+    const matches = findAndFilter(regex, document.getText(), cursorOffset, match);
+    if(matches.length === 0)
+        return actionResultFailure('No matches found for the given parameters.');
 
-    let pos = position === 'before' ? textStart : textStart + text.length;
-    const line = document.positionAt(pos).line;
-    const character = document.positionAt(pos).character;
-
-    vscode.window.activeTextEditor!.selection = new vscode.Selection(line, character, line, character);
-    const cursorContext = getPositionContext(document, new vscode.Position(line, character));
-    logOutput('INFO', `Placed cursor at text ${position} the first occurrence`);
-
-    return actionResultAccept(`Cursor placed at text ${position} the first occurrence (line ${line}, character ${character})\n\nContext before:\n\n\`\`\`\n${cursorContext.contextBefore}\n\`\`\`\n\nContext after:\n\n\`\`\`\n${cursorContext.contextAfter}\n\`\`\``);
+    if(matches.length === 1) {
+        // Single match
+        const pos = matches[0].index;
+        const line = document.positionAt(pos).line;
+        const character = document.positionAt(pos).character;
+        vscode.window.activeTextEditor!.selection = new vscode.Selection(line, character, line, character);
+        const cursorContext = getPositionContext(document, new vscode.Position(line, character));
+        logOutput('INFO', `Placed cursor at (${line + CONFIG.firstLineNumber}:${character + CONFIG.firstLineNumber})`);
+        return actionResultAccept(`Found match at (${line + CONFIG.firstLineNumber}:${character + CONFIG.firstLineNumber})\n\n${formatContext(cursorContext)}`);
+    }
+    else {
+        // Multiple matches
+        const positions = matches.map(m => document.positionAt(m.index));
+        const lines = positions.map(p => document.lineAt(p.line).text);
+        // max(1, ...) because log10(0) is -Infinity
+        const space = Math.max(1, Math.log10(positions[positions.length - 1].line + CONFIG.firstLineNumber) + 1); // Space for the line number
+        logOutput('INFO', `Found ${positions.length} matches`);
+        return actionResultAccept(`Found ${positions.length} matches: \n\n\`\`\`\n` + lines.map((line, i) => `L. ${(positions[i].line + CONFIG.firstLineNumber).toString().padStart(space)}: ${line}`).join('\n') + '\n```');
+    }
 }
 
 export function handleUndo(actionData: ActionData): ActionResult {
