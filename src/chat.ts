@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 
 import { NEURO } from './constants';
 import { assert, filterFileContents, logOutput, simpleFileName } from './utils';
+import { CONFIG } from './config';
 
 const NEURO_PARTICIPANT_ID = 'neuropilot.neuro';
 
@@ -179,7 +180,7 @@ async function requestChatResponse(prompt: string, state: string, token: vscode.
         cancelChatRequest();
     });
 
-    const timeoutMs = vscode.workspace.getConfiguration('neuropilot').get('timeout', 10000);
+    const timeoutMs = CONFIG.timeout || 10000;
     const timeout = new Promise<string>((_, reject) => setTimeout(() => reject('Request timed out'), timeoutMs));
     const response = new Promise<string>((resolve) => {
         const interval = setInterval(() => {

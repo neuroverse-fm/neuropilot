@@ -7,6 +7,7 @@ import { ChildProcessWithoutNullStreams } from 'child_process';
 
 import { NEURO } from './constants';
 import { Range } from 'vscode';
+import { CONFIG, Permission } from './config';
 
 export const REGEXP_ALWAYS = /^/;
 export const REGEXP_NEVER = /^\b$/;
@@ -182,10 +183,15 @@ export function combineGlobLinesToRegExp(lines: string): RegExp {
 export function isPathNeuroSafe(path: string, checkPatterns: boolean = true): boolean {
     const rootFolder = getWorkspacePath();
     const normalizedPath = normalizePath(path);
-    const includePattern = vscode.workspace.getConfiguration('neuropilot').get('includePattern', '**/*');
-    const excludePattern = vscode.workspace.getConfiguration('neuropilot').get<string>('excludePattern');
+    const includePattern = CONFIG.includePattern || "**/*";
+    const excludePattern = CONFIG.excludePattern;
     const includeRegExp: RegExp = checkPatterns ? combineGlobLinesToRegExp(includePattern) : REGEXP_ALWAYS;
     const excludeRegExp: RegExp = (checkPatterns && excludePattern) ? combineGlobLinesToRegExp(excludePattern) : REGEXP_NEVER;
+
+    if (CONFIG.allowUnsafePaths === true) {
+        return includeRegExp.test(normalizedPath)       // Check against include pattern
+            && !excludeRegExp.test(normalizedPath);     // Check against exclude pattern
+    }
 
     return rootFolder !== undefined
         && normalizedPath !== rootFolder            // Prevent access to the workspace folder itself
@@ -307,27 +313,3 @@ export function substituteMatch(match: RegExpExecArray, replacement: string): st
     result += literals[literals.length - 1];
     return result;
 }
-
-export interface Permission {
-    /** The ID of the permission in package.json, without the `neuropilot.permission.` prefix. */
-    id: string;
-    /** The infinitive of the permission to construct sentences (should fit the scheme "permission to {something}"). */
-    infinitive: string;
-}
-
-/** Collection of strings for use in {@link actionResultNoPermission}. */
-export const PERMISSIONS: Record<string, Permission> = {
-    openFiles:          { id: 'openFiles',          infinitive: 'open files' },
-    editActiveDocument: { id: 'editActiveDocument', infinitive: 'edit documents' },
-    create:             { id: 'create',             infinitive: 'create files or folders' },
-    rename:             { id: 'rename',             infinitive: 'rename files or folders' },
-    delete:             { id: 'delete',             infinitive: 'delete files or folders' },
-    runTasks:           { id: 'runTasks',           infinitive: 'run or terminate tasks' },
-    requestCookies:     { id: 'requestCookies',     infinitive: 'request cookies' },
-    gitOperations:      { id: 'gitOperations',      infinitive: 'use Git' },
-    gitTags:            { id: 'gitTags',            infinitive: 'tag commits' },
-    gitRemotes:         { id: 'gitRemotes',         infinitive: 'interact with Git remotes' },
-    editRemoteData:     { id: 'editRemoteData',     infinitive: 'edit remote data' },
-    gitConfigs:         { id: 'gitConfigs',         infinitive: 'edit the Git configuration' },
-    terminalAccess:     { id: 'terminalAccess',     infinitive: 'access the terminal' },
-};

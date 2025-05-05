@@ -1,8 +1,9 @@
 import * as vscode from 'vscode';
 import { spawn } from 'child_process';
 import { NEURO } from './constants';
-import { TerminalSession, logOutput, delayAsync, hasPermissions, PERMISSIONS } from './utils';
+import { TerminalSession, logOutput, delayAsync, hasPermissions } from './utils';
 import { ActionData, ActionResult, actionResultAccept, actionResultEnumFailure, actionResultFailure, actionResultMissingParameter, actionResultNoPermission } from './neuro_client_helper';
+import { CONFIG, PERMISSIONS } from './config';
 
 export const terminalAccessHandlers: { [key: string]: (actionData: ActionData) => ActionResult } = {
 	"execute_in_terminal": handleRunCommand,
@@ -11,7 +12,7 @@ export const terminalAccessHandlers: { [key: string]: (actionData: ActionData) =
 }
 
 export function registerTerminalActions() {
-	if (vscode.workspace.getConfiguration('neuropilot').get('permission.terminalAccess')) {
+	if (hasPermissions(PERMISSIONS.terminalAccess)) {
 		NEURO.client?.registerActions([
 			{
 				name: "execute_in_terminal",
@@ -96,7 +97,7 @@ function createPseudoterminal(shellType: string, terminalName: string, vscContex
 	const emitter = new vscode.EventEmitter<string>();
 
 	const startTime: string = new Date().toLocaleString()
-	const startTimePermission: boolean = vscode.workspace.getConfiguration('neuropilot').get("showTimeOnTerminalStart", false)
+	const startTimePermission: boolean = CONFIG.showTimeOnTerminalStart
 	
 	// Define the pseudoterminal.
 	const pty: vscode.Pseudoterminal = {
@@ -179,7 +180,7 @@ export function handleRunCommand(actionData: ActionData): ActionResult {
 	
 	// Get or create the terminal session for this shell.
 	const session = getOrCreateTerminal(shellType, `Neuro: ${shellType}`);
-	const outputDelay = vscode.workspace.getConfiguration('neuropilot').get('terminalContextDelay', 400);
+	const outputDelay = CONFIG.terminalContextDelay;
 	
 	// Reset previous outputs.
 	session.outputStdout = "";

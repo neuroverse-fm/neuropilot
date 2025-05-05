@@ -2,7 +2,8 @@
  * Helper functions and types for interacting with the Neuro Game SDK.
  */
 
-import { logOutput, Permission } from "./utils";
+import { Permission } from "./config";
+import { logOutput } from "./utils";
 
 /** Data used by an action handler. */
 export interface ActionData {

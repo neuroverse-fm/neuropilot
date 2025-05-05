@@ -241,6 +241,16 @@
 						"type": "number",
 						"default": 400,
 						"markdownDescription": "The time in ms to wait for the terminal to print more output before sending context to Neuro. This is to prevent sending multiple context messages if the terminal doesn't print fast enough."
+					},
+					"neuropilot.allowUnsafePaths": {
+						"type": "boolean",
+						"default": false,
+						"markdownDescription": "Allow Neuro to view & edit files and folders in unsafe paths. These include:\n- files/folders starting with a '.'\n- parent directories and directories outside the workspace\n- Environmental variables\n\nNote that your include/exclude patterns are still respected."
+					},
+					"neuropilot.allowRunningAllTasks": {
+						"type": "boolean",
+						"default": false,
+						"markdownDescription": "Allow Neuro to run all tasks regardless of their prefix in their 'detail' key."
 					}
 				}
 			}
