@@ -93,10 +93,14 @@ export function filterFileContents(contents: string): string {
     return contents.replace(/\r\n/g, '\n');
 }
 
-interface NeuroPositionContext {
+export interface NeuroPositionContext {
+    /** The context before the range. */
     contextBefore: string;
+    /** The context after the range. */
     contextAfter: string;
+    /** The zero-based line where {@link contextBefore} starts. */
     startLine: number;
+    /** The zero-based line where {@link contextAfter} ends. */
     endLine: number;
 }
 

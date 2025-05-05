@@ -82,6 +82,14 @@ export function actionResultMissingParameter(parameterName: string): ActionResul
     };
 }
 
+export function actionResultIncorrectType(parameterName: string, expectedType: string, actualType: string): ActionResult {
+    logOutput('WARNING', `Action failed: "${parameterName}" must be of type "${expectedType}", but got "${actualType}".`);
+    return {
+        success: false,
+        message: `Action failed: "${parameterName}" must be of type "${expectedType}", but got "${actualType}".`,
+    };
+}
+
 /**
  * Create an action result that tells Neuro that she doesn't have the required permission.
  * @param permission The permission Neuro doesn't have.

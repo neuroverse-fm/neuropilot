@@ -40,6 +40,7 @@ class Config {
     get gameName(): string                  { return get('gameName')!; }
     get beforeContext(): number             { return get('beforeContext')!; }
     get afterContext(): number              { return get('afterContext')!; }
+    get firstLineNumber(): number           { return get('firstLineNumber')!; }
     get maxCompletions(): number            { return get('maxCompletions')!; }
     get completionTrigger(): string         { return get('completionTrigger')!; }
     get initialContext(): string            { return get('initialContext')!; }
