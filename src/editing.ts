@@ -25,14 +25,15 @@ export function registerEditingActions() {
         NEURO.client?.registerActions([
             {
                 name: 'place_cursor',
-                description: `Place the cursor in the current file. Line and character are ${CONFIG.firstLineNumber === 0 ? 'zero-based' : 'one-based'}.`,
+                description: `Place the cursor in the current file. Absolute line and character numbers are ${CONFIG.firstLineNumber === 0 ? 'zero-based' : 'one-based'}.`,
                 schema: {
                     type: 'object',
                     properties: {
                         line: { type: 'integer' },
                         character: { type: 'integer' },
+                        type: { type: 'string', enum: ['relative', 'absolute'] }
                     },
-                    required: ['line', 'character'],
+                    required: ['line', 'character', 'type'],
                 }
             },
             {
@@ -103,27 +104,48 @@ export function handlePlaceCursor(actionData: ActionData): ActionResult {
         return actionResultNoPermission(PERMISSIONS.editActiveDocument);
 
     // One- or zero-based line and character (depending on config)
-    const basedLine = actionData.params?.line;
-    const basedCharacter = actionData.params?.character;
+    let line = actionData.params?.line;
+    let character = actionData.params?.character;
 
-    if(basedLine === undefined)
+    if(line === undefined)
         return actionResultMissingParameter('line');
-    if(basedCharacter === undefined)
+    if(character === undefined)
         return actionResultMissingParameter('character');
 
-    if(typeof basedLine !== 'number')
-        return actionResultIncorrectType('line', 'number', typeof basedLine);
-    if(typeof basedCharacter !== 'number')
-        return actionResultIncorrectType('character', 'number', typeof basedCharacter);
-
-    const line = basedLine - CONFIG.firstLineNumber;
-    const character = basedCharacter - CONFIG.firstLineNumber;
+    if(typeof line !== 'number')
+        return actionResultIncorrectType('line', 'number', typeof line);
+    if(typeof character !== 'number')
+        return actionResultIncorrectType('character', 'number', typeof character);
+    
+    const type = actionData.params?.type;
+    if(type === undefined)
+        return actionResultMissingParameter('type');
+    if(type !== 'relative' && type !== 'absolute')
+        return actionResultEnumFailure('type', ['relative', 'absolute'], type);
 
     const document = vscode.window.activeTextEditor?.document;
     if(document === undefined)
         return ACTION_RESULT_NO_ACTIVE_DOCUMENT;
     if(!isPathNeuroSafe(document.fileName))
         return ACTION_RESULT_NO_ACCESS;
+
+    let basedLine: number, basedCharacter: number;
+
+    if(type === 'relative') {
+        line += vscode.window.activeTextEditor!.selection.active.line;
+        character += vscode.window.activeTextEditor!.selection.active.character;
+
+        basedLine = line + CONFIG.firstLineNumber;
+        basedCharacter = character + CONFIG.firstLineNumber;
+    }
+    else {
+        basedLine = line;
+        basedCharacter = character;
+
+        line -= CONFIG.firstLineNumber;
+        character -= CONFIG.firstLineNumber;
+    }
+
     if(line >= document.lineCount || line < 0)
         return actionResultRetry(`Line is out of bounds, the last line of the document is ${document.lineCount - 1 + CONFIG.firstLineNumber}.`);
     if(character > document.lineAt(line).text.length || character < 0)
@@ -353,7 +375,7 @@ export function handleFindText(actionData: ActionData): ActionResult {
         vscode.window.activeTextEditor!.selection = new vscode.Selection(line, character, line, character);
         const cursorContext = getPositionContext(document, new vscode.Position(line, character));
         logOutput('INFO', `Placed cursor at (${line + CONFIG.firstLineNumber}:${character + CONFIG.firstLineNumber})`);
-        return actionResultAccept(`Found match at (${line + CONFIG.firstLineNumber}:${character + CONFIG.firstLineNumber})\n\n${formatContext(cursorContext)}`);
+        return actionResultAccept(`Found match and placed cursor at (${line + CONFIG.firstLineNumber}:${character + CONFIG.firstLineNumber})\n\n${formatContext(cursorContext)}`);
     }
     else {
         // Multiple matches
