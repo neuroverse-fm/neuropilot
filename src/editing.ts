@@ -17,7 +17,7 @@ export const editingFileHandlers: { [key: string]: (actionData: ActionData) => A
     'replace_text': handleReplaceText,
     'delete_text': handleDeleteText,
     'find_text': handleFindText,
-    // 'undo': handleUndo,
+    'undo': handleUndo,
 }
 
 export function registerEditingActions() {
@@ -90,10 +90,10 @@ export function registerEditingActions() {
                     required: ['text', 'match'],
                 }
             },
-            // {
-            //     name: 'undo',
-            //     description: 'Undo the last action in the active document',
-            // },
+            {
+                name: 'undo',
+                description: 'Undo the last action in the active document. If this doesn\'t work, tell Vedal to focus VS Code.',
+            },
         ]);
     }
 }
