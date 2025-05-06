@@ -194,15 +194,6 @@ export function getNormalizedRepoPathForGit(repoPath: string): string {
   return normalized;
 }
 
-/**
- * Checks whether the specified permission is enabled.
- * @param permissions The permissions to query.
- * @returns `true` if all the permission are enabled, otherwise `false`.
- */
-export function hasPermissions(...permissions: Permission[]): boolean {
-    return permissions.every(permission => vscode.workspace.getConfiguration('neuropilot').get('permission.' + permission.id, false));
-}
-
 /*
  * Extended interface for terminal sessions.
  * We now explicitly store the event emitter along with the pseudoterminal.
