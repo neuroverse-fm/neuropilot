@@ -73,17 +73,30 @@
 					"neuropilot.beforeContext": {
 						"type": "integer",
 						"default": 10,
-						"description": "The number of lines before the cursor position to include in the completion request"
+						"description": "The number of lines before the cursor position to include as context when editing a file or sending a completion request"
 					},
 					"neuropilot.afterContext": {
 						"type": "integer",
 						"default": 10,
-						"description": "The number of lines after the cursor position to include in the completion request"
+						"description": "The number of lines after the cursor position to include as context when editing a file or sending a completion request"
 					},
 					"neuropilot.maxCompletions": {
 						"type": "integer",
 						"default": 3,
 						"description": "The maximum number of completions to request"
+					},
+					"neuropilot.firstLineNumber": {
+						"type": "integer",
+						"default": 1,
+						"description": "The line / column number format to use when sending context to Neuro, or when parsing actions sent by Neuro",
+						"enum": [
+							0,
+							1
+						],
+						"enumDescriptions": [
+							"Line and column numbers start at 0",
+							"Line and column numbers start at 1"
+						]
 					},
 					"neuropilot.completionTrigger": {
 						"type": "string",
