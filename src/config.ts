@@ -9,6 +9,15 @@ export function get<T>(key: string): T | undefined {
     return vscode.workspace.getConfiguration('neuropilot').get<T>(key);
 }
 
+/**
+ * Checks whether the specified permission is enabled.
+ * @param permissions The permissions to query.
+ * @returns `true` if all the permission are enabled, otherwise `false`.
+ */
+export function hasPermissions(...permissions: Permission[]): boolean {
+    return permissions.every(permission => vscode.workspace.getConfiguration('neuropilot').get('permission.' + permission.id, false));
+}
+
 export interface Permission {
     /** The ID of the permission in package.json, without the `neuropilot.permission.` prefix. */
     id: string;
@@ -31,6 +40,7 @@ class Permissions {
     get editRemoteData()        { return { id: 'editRemoteData',           infinitive: 'edit remote data' } }
     get gitConfigs()            { return { id: 'gitConfigs',               infinitive: 'edit the Git configuration' } }
     get terminalAccess()        { return { id: 'terminalAccess',           infinitive: 'access the terminal' } }
+    get accessLintingAnalysis() { return { id: 'accessLintingAnalysis',    infinitive: 'view linting problems' } }
 }
 
 export const PERMISSIONS = new Permissions();

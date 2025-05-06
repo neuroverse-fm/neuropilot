@@ -1,9 +1,9 @@
 import * as vscode from 'vscode';
 import { spawn } from 'child_process';
 import { NEURO } from './constants';
-import { TerminalSession, logOutput, delayAsync, hasPermissions } from './utils';
+import { TerminalSession, logOutput, delayAsync } from './utils';
 import { ActionData, ActionResult, actionResultAccept, actionResultEnumFailure, actionResultFailure, actionResultMissingParameter, actionResultNoPermission } from './neuro_client_helper';
-import { CONFIG, PERMISSIONS } from './config';
+import { CONFIG, PERMISSIONS, hasPermissions } from './config';
 
 export const terminalAccessHandlers: { [key: string]: (actionData: ActionData) => ActionResult } = {
 	"execute_in_terminal": handleRunCommand,

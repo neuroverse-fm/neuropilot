@@ -3,9 +3,9 @@ import * as path from 'path';
 import { NEURO } from './constants';
 import { GitExtension, Change, ForcePushMode, CommitOptions, Commit, Repository } from './types/git';
 import { StatusStrings, RefTypeStrings } from './types/git_status';
-import { getNormalizedRepoPathForGit, hasPermissions, logOutput, simpleFileName } from './utils';
+import { getNormalizedRepoPathForGit, logOutput, simpleFileName } from './utils';
 import { ActionData, ActionResult, actionResultAccept, actionResultEnumFailure, actionResultFailure, actionResultMissingParameter, actionResultNoPermission, actionResultRetry } from './neuro_client_helper';
-import { PERMISSIONS } from './config';
+import { PERMISSIONS, hasPermissions } from './config';
 
 /* All actions located in here requires neuropilot.permission.gitOperations to be enabled. */
 
