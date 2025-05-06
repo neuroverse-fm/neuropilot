@@ -112,7 +112,7 @@ export function actionResultNoAccess(path: string): ActionResult {
     logOutput('WARNING', `Action failed: Neuro attempted to access "${path}", but permission is disabled.`);
     return {
         success: true,
-        message: `Action failed: You do not have permission to access this location.`
+        message: `Action failed: You do not have permission to access the requested location(s).`
     };
 }
 

@@ -1,9 +1,9 @@
 import * as vscode from 'vscode';
 
 import { NEURO } from "./constants";
-import { combineGlobLines, getWorkspacePath, hasPermissions, isPathNeuroSafe, logOutput, normalizePath } from './utils';
+import { combineGlobLines, getWorkspacePath, isPathNeuroSafe, logOutput, normalizePath } from './utils';
 import { ActionData, ActionResult, actionResultAccept, actionResultFailure, actionResultMissingParameter, actionResultNoAccess, actionResultNoPermission } from './neuro_client_helper';
-import { CONFIG, PERMISSIONS } from './config';
+import { CONFIG, PERMISSIONS, hasPermissions } from './config';
 
 export const fileActionHandlers: { [key: string]: (actionData: ActionData) => ActionResult } = {
     'get_files': handleGetFiles,
