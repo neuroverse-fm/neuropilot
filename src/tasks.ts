@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 
 import { NEURO } from "./constants";
-import { logOutput, formatActionID } from './utils';
+import { logOutput, formatActionID, getFence } from './utils';
 import { ActionData, ActionResult, actionResultAccept, actionResultFailure, actionResultNoPermission, actionResultRetry } from './neuro_client_helper';
 import { CONFIG, PERMISSIONS, hasPermissions } from './config';
 
@@ -68,7 +68,10 @@ export function taskEndedHandler(event: vscode.TaskEndEvent) {
                 .then(
                     _ => vscode.env.clipboard.readText()
                 ).then(
-                    text => NEURO.client?.sendContext(`Task finished! Output:\n\n\`\`\`${text}\n\`\`\``)
+                    text => {
+                        const fence = getFence(text);
+                        NEURO.client?.sendContext(`Task finished! Output:\n\n${fence}\n${text}\n${fence}`);
+                    }
                 );
         }
     }

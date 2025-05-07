@@ -1,9 +1,9 @@
 import * as vscode from 'vscode';
 
 import { NEURO } from "./constants";
-import { escapeRegExp, getPositionContext, isPathNeuroSafe, logOutput, NeuroPositionContext, substituteMatch } from './utils';
+import { escapeRegExp, getFence, getPositionContext, isPathNeuroSafe, logOutput, NeuroPositionContext, substituteMatch } from './utils';
 import { ActionData, ActionResult, actionResultAccept, actionResultEnumFailure, actionResultFailure, actionResultIncorrectType, actionResultMissingParameter, actionResultNoPermission, actionResultRetry } from './neuro_client_helper';
-import { CONFIG, PERMISSIONS, hasPermissions } from './config';
+import { PERMISSIONS, hasPermissions } from './config';
 
 const ACTION_RESULT_NO_ACCESS = actionResultFailure('You do not have permission to access this file.');
 const ACTION_RESULT_NO_ACTIVE_DOCUMENT = actionResultFailure('No active document to edit.');
@@ -269,7 +269,8 @@ export function handleReplaceText(actionData: ActionData): ActionResult {
             else {
                 // Multiple matches
                 const document = vscode.window.activeTextEditor!.document;
-                NEURO.client?.sendContext(`Deleted ${matches.length} occurrences from the document\n\nUpdated content:\n\n\`\`\`\n${document.getText()}\n\`\`\``);
+                const fence = getFence(document.getText());
+                NEURO.client?.sendContext(`Deleted ${matches.length} occurrences from the document\n\nUpdated content:\n\n${fence}\n${document.getText()}\n${fence}`);
             }
         }
         else {
@@ -327,7 +328,8 @@ export function handleDeleteText(actionData: ActionData): ActionResult {
             else {
                 // Multiple matches
                 const document = vscode.window.activeTextEditor!.document;
-                NEURO.client?.sendContext(`Deleted ${matches.length} occurrences from the document\n\nUpdated content:\n\n\`\`\`\n${document.getText()}\n\`\`\``);
+                const fence = getFence(document.getText());
+                NEURO.client?.sendContext(`Deleted ${matches.length} occurrences from the document\n\nUpdated content:\n\n${fence}\n${document.getText()}\n${fence}`);
             }
         }
         else {
@@ -385,7 +387,9 @@ export function handleFindText(actionData: ActionData): ActionResult {
         // max(1, ...) because log10(0) is -Infinity
         const padding = Math.max(1, Math.log10(positions[positions.length - 1].line + 1) + 1); // Space for the line number
         logOutput('INFO', `Found ${positions.length} matches`);
-        return actionResultAccept(`Found ${positions.length} matches: \n\n\`\`\`\n` + lines.map((line, i) => `L. ${(positions[i].line + 1).toString().padStart(padding)}: ${line}`).join('\n') + '\n```');
+        const text = lines.map((line, i) => `L. ${(positions[i].line + 1).toString().padStart(padding)}: ${line}`).join('\n');
+        const fence = getFence(text);
+        return actionResultAccept(`Found ${positions.length} matches: \n\n${fence}\n${text}\n${fence}`);
     }
 }
 
@@ -461,5 +465,6 @@ function findAndFilter(regex: RegExp, text: string, cursorOffset: number, match:
 }
 
 function formatContext(context: NeuroPositionContext): string {
-    return `Context (lines ${context.startLine + 1}-${context.endLine + 1}, cursor position denoted by \`<<<|>>>\`):\n\n\`\`\`\n${context.contextBefore}${context.contextBetween}<<<|>>>${context.contextAfter}\n\`\`\``;
+    const fence = getFence(context.contextBefore + context.contextBetween + context.contextAfter);
+    return `Context (lines ${context.startLine + 1}-${context.endLine + 1}, cursor position denoted by \`<<<|>>>\`):\n\n${fence}\n${context.contextBefore}${context.contextBetween}<<<|>>>${context.contextAfter}\n${fence}`;
 }

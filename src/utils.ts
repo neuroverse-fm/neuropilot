@@ -317,3 +317,22 @@ export function substituteMatch(match: RegExpExecArray, replacement: string): st
     result += literals[literals.length - 1];
     return result;
 }
+
+/**
+ * Searches for the longest fence (at least 3 backticks in a row) in the given text.
+ * @param text The text to search for fences in.
+ * @returns The length of the longest fence found in the text, or 0 if no fences were found.
+ */
+export function getMaxFenceLength(text: string): number {
+    return text.match(/`{3,}/g)?.reduce((a, b) => Math.max(a, b.length), 0) ?? 0;
+}
+
+/**
+ * Gets the minimum fence required to enclose the given text.
+ * @param text The text to search for fences in.
+ * @returns The minimum fence required to enclose the text.
+ */
+export function getFence(text: string): string {
+    const maxFenceLength = getMaxFenceLength(text);
+    return '`'.repeat(maxFenceLength ? maxFenceLength + 1 : 3);
+}

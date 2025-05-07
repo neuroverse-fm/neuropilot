@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { spawn } from 'child_process';
 import { NEURO } from './constants';
-import { TerminalSession, logOutput, delayAsync } from './utils';
+import { TerminalSession, logOutput, delayAsync, getFence } from './utils';
 import { ActionData, ActionResult, actionResultAccept, actionResultEnumFailure, actionResultFailure, actionResultMissingParameter, actionResultNoPermission } from './neuro_client_helper';
 import { CONFIG, PERMISSIONS, hasPermissions } from './config';
 
@@ -190,8 +190,9 @@ export function handleRunCommand(actionData: ActionData): ActionResult {
 		const cachedOutput = session.outputStdout;
 		await delayAsync(delay);
 		if (session.outputStdout === cachedOutput) {
+			const fence = getFence(session.outputStdout!)
 			NEURO.client?.sendContext(
-				`The ${shellType} terminal outputted the following to stdout:\n\n\`\`\`\n${session.outputStdout!.replace(/\x1b\[[\x30-\x3F]*[\x20-\x2F]*[\x40-\x7F]|\x1b\]0;.+\r?\n/g, "")}\n\`\`\``,
+				`The ${shellType} terminal outputted the following to stdout:\n\n${fence}\n${session.outputStdout!.replace(/\x1b\[[\x30-\x3F]*[\x20-\x2F]*[\x40-\x7F]|\x1b\]0;.+\r?\n/g, "")}\n${fence}`,
 				false
 			);
 			session.outputStdout = "";
@@ -202,8 +203,9 @@ export function handleRunCommand(actionData: ActionData): ActionResult {
 		const cachedOutput = session.outputStderr;
 		await delayAsync(delay);
 		if (session.outputStderr === cachedOutput) {
+			const fence = getFence(session.outputStderr!)
 			NEURO.client?.sendContext(
-				`The ${shellType} terminal outputted the following to stderr:\n\n\`\`\`\n${session.outputStderr!.replace(/\x1b\[[\x30-\x3F]*[\x20-\x2F]*[\x40-\x7F]|\x1b\]0;.+\r?\n/g, "")}\n\`\`\``,
+				`The ${shellType} terminal outputted the following to stderr:\n\n${fence}\n${session.outputStderr!.replace(/\x1b\[[\x30-\x3F]*[\x20-\x2F]*[\x40-\x7F]|\x1b\]0;.+\r?\n/g, "")}\n${fence}`,
 				false
 			);
 			session.outputStderr = "";

@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 
 import { NEURO } from "./constants";
-import { combineGlobLines, getWorkspacePath, isPathNeuroSafe, logOutput, normalizePath } from './utils';
+import { combineGlobLines, filterFileContents, getFence, getWorkspacePath, isPathNeuroSafe, logOutput, normalizePath } from './utils';
 import { ActionData, ActionResult, actionResultAccept, actionResultFailure, actionResultMissingParameter, actionResultNoAccess, actionResultNoPermission } from './neuro_client_helper';
 import { CONFIG, PERMISSIONS, hasPermissions } from './config';
 
@@ -144,12 +144,11 @@ export function handleCreateFile(actionData: ActionData): ActionResult {
 
         try {
             const document = await vscode.workspace.openTextDocument(fileUri);
-            const editor = await vscode.window.showTextDocument(document);
-            const cursor = editor.selection.active;
-            NEURO.client?.sendContext(`Opened file ${relativePath}\n\nContent:\n\n\`\`\`${document.languageId}\n${document.getText()}\n\`\`\`\n\nCursor at (${cursor.line}:${cursor.character})`);
+            await vscode.window.showTextDocument(document);
+            NEURO.client?.sendContext(`Opened new file ${relativePath}`);
         } catch {
-            logOutput('ERROR', `Failed to open file ${relativePath}`);
-            NEURO.client?.sendContext(`Failed to open file ${relativePath}`);
+            logOutput('ERROR', `Failed to open new file ${relativePath}`);
+            NEURO.client?.sendContext(`Failed to open new file ${relativePath}`);
         }
     }
 }
@@ -355,7 +354,11 @@ export function handleOpenFile(actionData: ActionData): ActionResult {
         (document) => {
             vscode.window.showTextDocument(document);
             logOutput('INFO', `Opened file ${relativePath}`);
-            NEURO.client?.sendContext(`Opened file ${relativePath}\n\nContent:\n\n\`\`\`${document.languageId}\n${document.getText()}\n\`\`\``);
+            const cursorOffset = document.offsetAt(vscode.window.activeTextEditor!.selection.active);
+            let text = document.getText();
+            text = text.slice(0, cursorOffset) + '<<<|>>>' + text.slice(cursorOffset);
+            const fence = getFence(text);
+            NEURO.client?.sendContext(`Opened file ${relativePath}\n\nContent (cursor position denoted by \`<<<|>>>\`):\n\n${fence}${document.languageId}\n${filterFileContents(text)}\n${fence}`);
         },
         (_erm) => {
             logOutput('ERROR', `Failed to open file ${relativePath}`);

@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 
-import { logOutput, simpleFileName } from "./utils";
+import { getFence, logOutput, simpleFileName } from "./utils";
 import { NEURO } from './constants';
 import { PERMISSIONS, hasPermissions } from './config';
 
@@ -23,7 +23,8 @@ export function sendCurrentFile() {
     }
 
     logOutput('INFO', 'Sending current file to Neuro API');
-    NEURO.client?.sendContext(`Current file: ${fileName}\n\nContent:\n\n\`\`\`${language}\n${text}\n\`\`\``);
+    const fence = getFence(text);
+    NEURO.client?.sendContext(`Current file: ${fileName}\n\nContent:\n\n${fence}${language}\n${text}\n${fence}`);
 }
 
 export function registerRequestCookieAction() {
