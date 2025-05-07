@@ -260,9 +260,10 @@ export function handleReplaceText(actionData: ActionData): ActionResult {
             if(matches.length === 1) {
                 // Single match
                 const document = vscode.window.activeTextEditor!.document;
-                const cursorPosition = document.positionAt(matches[0].index + matches[0][0].length);
-                vscode.window.activeTextEditor!.selection = new vscode.Selection(cursorPosition, cursorPosition);
-                const cursorContext = getPositionContext(document, cursorPosition);
+                const startPosition = document.positionAt(matches[0].index);
+                const endPosition = document.positionAt(matches[0].index + substituteMatch(matches[0], replaceWith).length);
+                vscode.window.activeTextEditor!.selection = new vscode.Selection(endPosition, endPosition);
+                const cursorContext = getPositionContext(document, startPosition, endPosition);
                 NEURO.client?.sendContext(`Replaced text in document\n\n${formatContext(cursorContext)}`);
             }
             else {
