@@ -119,7 +119,7 @@ Opens a file inside the workspace (or focuses it if it is already open) and send
 #### `place_cursor`
 
 *Requires Permission: Edit Active Document.*
-Places the cursor at the specified line and character (zero-based).
+Places the cursor at the specified line and column or moves the cursor by the specified number of lines and columns.
 
 #### `get_cursor`
 
@@ -135,23 +135,33 @@ Inserts text at the current cursor position and places the cursor after the inse
 #### `replace_text`
 
 *Requires Permission: Edit Active Document.*
-Replaces the first occurence of the specified text with new text and places the cursor after the inserted text.
+Searches the current file for a search string or regex and replaces it.
+If using regex, the replacement can use substitution patterns.
+If only one instance is replaced, places the cursor after the inserted text.
 
 #### `delete_text`
 
 *Requires Permission: Edit Active Document.*
-Deletes the first occurence of the specified text and places the cursor where the text was.
+Searches the current file for a search string or regex and deletes it.
+If only one instance is deleted, places the cursor where the text was.
 
-#### `place_cursor_at_text`
+#### `find_text`
 
 *Requires Permission: Edit Active Document.*
-Places the cursor before or after the first occurence of the specified text.
+Searches the current file for a search string or regex.
+Depending on the match mode, places the cursor at the location or returns all lines with matches.
+
+#### `undo`
+
+*Requires Permission: Edit Active Document.*
+Undoes the last editing action.
+Only works if VS Code is focused.
 
 #### `create_file`
 
 *Requires Permission: Create.*
 Creates a new file in the workspace.
-If *permission to open file* is given, the file is immediately opened.
+If *Permission: Open Files* is given, the file is immediately opened.
 The file name cannot start with a dot, and cannot be created in a folder that starts with a dot.
 
 #### `create_folder`
@@ -164,13 +174,13 @@ A folder starting with a dot cannot be created this way.
 
 *Requires Permission: Rename.*
 Renames a file or folder in the workspace.
-This cannot rename to or from a name starting with a dot, or within a folder that starts with a dot.
+By default his cannot rename to or from a name starting with a dot, or within a folder that starts with a dot.
 
 #### `delete_file_or_folder`
 
 *Requires Permission: Delete.*
 Deletes a file or folder in the workspace.
-This cannot delete anything starting with a dot, or inside a folder starting with a dot.
+By default, this cannot delete anything starting with a dot, or inside a folder starting with a dot.
 
 ### Git interactions
 
