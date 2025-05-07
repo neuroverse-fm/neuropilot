@@ -460,5 +460,5 @@ function findAndFilter(regex: RegExp, text: string, cursorOffset: number, match:
 }
 
 function formatContext(context: NeuroPositionContext): string {
-    return `Context (lines ${context.startLine + 1}-${context.endLine + 1}, cursor position denoted by \`<<<|>>>\`):\n\n\`\`\`\n${context.contextBefore}<<<|>>>${context.contextAfter}\n\`\`\``;
+    return `Context (lines ${context.startLine + 1}-${context.endLine + 1}, cursor position denoted by \`<<<|>>>\`):\n\n\`\`\`\n${context.contextBefore}${context.contextBetween}<<<|>>>${context.contextAfter}\n\`\`\``;
 }
