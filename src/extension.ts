@@ -83,6 +83,9 @@ function disableAllPermissions() {
     if (CONFIG.allowUnsafePaths === true) {
         promises.push(config.update('allowUnsafePaths', false, vscode.ConfigurationTarget.Workspace))
     }
+    if (CONFIG.sendNewLintingProblemsOn !== "off") {
+        promises.push(config.update('sendNewLintingProblemsOn', "off", vscode.ConfigurationTarget.Workspace))
+    }
     Promise.all(promises).then(() => {
         const exe = NEURO.currentTaskExecution;
         if (exe) {
