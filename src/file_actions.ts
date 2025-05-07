@@ -216,8 +216,6 @@ export function handleRenameFileOrFolder(actionData: ActionData): ActionResult {
     if(!isPathNeuroSafe(newAbsolutePath))
         return actionResultNoAccess(newAbsolutePath);
 
-    NEURO.client?.sendActionResult(actionData.id, true);
-
     checkAndRenameAsync(oldAbsolutePath, oldRelativePath, newAbsolutePath, newRelativePath);
 
     return actionResultAccept();
@@ -262,8 +260,6 @@ export function handleDeleteFileOrFolder(actionData: ActionData): ActionResult {
     const absolutePath = getWorkspacePath() + '/' + relativePath;
     if(!isPathNeuroSafe(absolutePath))
         return actionResultNoAccess(absolutePath);
-
-    NEURO.client?.sendActionResult(actionData.id, true);
 
     checkAndDeleteAsync(absolutePath, relativePath, recursive);
 
