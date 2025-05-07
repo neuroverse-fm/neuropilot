@@ -1,7 +1,8 @@
 import * as vscode from 'vscode';
 
-import { assert, logOutput, simpleFileName } from "./utils";
+import { getFence, logOutput, simpleFileName } from "./utils";
 import { NEURO } from './constants';
+import { PERMISSIONS, hasPermissions } from './config';
 
 export function sendCurrentFile() {
     const editor = vscode.window.activeTextEditor;
@@ -22,13 +23,14 @@ export function sendCurrentFile() {
     }
 
     logOutput('INFO', 'Sending current file to Neuro API');
-    NEURO.client?.sendContext(`Current file: ${fileName}\n\nContent:\n\n\`\`\`${language}\n${text}\n\`\`\``);
+    const fence = getFence(text);
+    NEURO.client?.sendContext(`Current file: ${fileName}\n\nContent:\n\n${fence}${language}\n${text}\n${fence}`);
 }
 
 export function registerRequestCookieAction() {
     NEURO.client?.unregisterActions(['request_cookie']);
 
-    if(!vscode.workspace.getConfiguration('neuropilot').get('permission.requestCookies', true))
+    if(!hasPermissions(PERMISSIONS.requestCookies))
         return;
     
     NEURO.client?.registerActions([
@@ -42,7 +44,9 @@ export function registerRequestCookieAction() {
 export function registerRequestCookieHandler() {
     NEURO.client?.onAction((actionData) => {
         if(actionData.name === 'request_cookie') {
-            if(!vscode.workspace.getConfiguration('neuropilot').get('permission.requestCookies', true)) {
+            NEURO.actionHandled = true;
+            
+            if(!hasPermissions(PERMISSIONS.requestCookies)) {
                 logOutput('WARNING', 'Neuro attempted to request a cookie, but permission is disabled');
                 NEURO.client?.sendActionResult(actionData.id, true, 'Permission to request cookies is disabled.');
             }

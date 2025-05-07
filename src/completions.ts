@@ -1,8 +1,8 @@
 import { NeuroClient } from 'neuro-game-sdk';
 import * as vscode from 'vscode';
-import { Range } from 'vscode';
 import { NEURO } from './constants';
-import { logOutput, assert, simpleFileName, filterFileContents, getPositionContext } from './utils';
+import { logOutput, assert, simpleFileName, getPositionContext } from './utils';
+import { CONFIG } from './config';
 
 let lastSuggestions: string[] = [];
 
@@ -74,6 +74,8 @@ export function registerCompletionResultHandler() {
         assert(NEURO.client instanceof NeuroClient);
 
         if(actionData.name === 'complete_code') {
+            NEURO.actionHandled = true;
+            
             const suggestions = actionData.params?.suggestions;
 
             if(suggestions === undefined) {
@@ -109,7 +111,7 @@ export const completionsProvider: vscode.InlineCompletionItemProvider = {
             items: [],
         };
         
-        const triggerAuto = vscode.workspace.getConfiguration('neuropilot').get<string>('completionTrigger', 'invokeOnly') === 'automatic';
+        const triggerAuto = CONFIG.completionTrigger === 'automatic';
         if(!triggerAuto && context.triggerKind !== vscode.InlineCompletionTriggerKind.Invoke) {
             return result;
         }
@@ -117,7 +119,7 @@ export const completionsProvider: vscode.InlineCompletionItemProvider = {
         // Get context
         const cursorContext = getPositionContext(document, position);
         const fileName = simpleFileName(document.fileName);
-        const maxCount = vscode.workspace.getConfiguration('neuropilot').get('maxCompletions', 3);
+        const maxCount = CONFIG.maxCompletions || 3;
         
         requestCompletion(cursorContext.contextBefore, cursorContext.contextAfter, fileName, document.languageId, maxCount);
         
@@ -126,7 +128,7 @@ export const completionsProvider: vscode.InlineCompletionItemProvider = {
             cancelCompletionRequest();
         });
 
-        const timeoutMs = vscode.workspace.getConfiguration('neuropilot').get('timeout', 10000);
+        const timeoutMs = CONFIG.timeout || 10000;
         const timeout = new Promise<void>((_, reject) => setTimeout(() => reject('Request timed out'), timeoutMs));
         const completion = new Promise<void>((resolve) => {
             const interval = setInterval(() => {

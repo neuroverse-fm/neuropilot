@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 
 import { NEURO } from './constants';
 import { assert, filterFileContents, logOutput, simpleFileName } from './utils';
+import { CONFIG } from './config';
 
 const NEURO_PARTICIPANT_ID = 'neuropilot.neuro';
 
@@ -22,6 +23,8 @@ let lastChatResponse: string = '';
 export function registerChatResponseHandler() {
     NEURO.client?.onAction((actionData) => {
         if(actionData.name === 'chat') {
+            NEURO.actionHandled = true;
+            
             const answer = actionData.params?.answer;
             if(answer === undefined) {
                 NEURO.client?.sendActionResult(actionData.id, false, 'Missing required parameter "answer"');
@@ -123,7 +126,7 @@ export function registerChatParticipant(context: vscode.ExtensionContext) {
     };
 
     const neuro = vscode.chat.createChatParticipant(NEURO_PARTICIPANT_ID, handler);
-    neuro.iconPath = vscode.Uri.joinPath(context.extensionUri, 'icon.png'); // TODO: Different image
+    neuro.iconPath = vscode.Uri.joinPath(context.extensionUri, 'neuropilot.png');
     
     // TODO: Add followup provider?
 
@@ -177,7 +180,7 @@ async function requestChatResponse(prompt: string, state: string, token: vscode.
         cancelChatRequest();
     });
 
-    const timeoutMs = vscode.workspace.getConfiguration('neuropilot').get('timeout', 10000);
+    const timeoutMs = CONFIG.timeout || 10000;
     const timeout = new Promise<string>((_, reject) => setTimeout(() => reject('Request timed out'), timeoutMs));
     const response = new Promise<string>((resolve) => {
         const interval = setInterval(() => {

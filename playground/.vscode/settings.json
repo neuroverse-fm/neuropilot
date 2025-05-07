@@ -4,5 +4,34 @@
     "neuropilot.permission.runTasks": true,
     "neuropilot.permission.create": true,
     "neuropilot.permission.delete": true,
-    "neuropilot.permission.rename": true
+    "neuropilot.permission.rename": true,
+    "neuropilot.permission.gitRemotes": true,
+    "neuropilot.permission.gitTags": true,
+    "neuropilot.permission.gitOperations": true,
+    "neuropilot.permission.gitConfigs": true,
+    "github.copilot.advanced": {
+        "debug.overrideEngine": "someRandomString"
+    },
+    "neuropilot.permission.terminalAccess": true,
+    "neuropilot.terminals": [
+        {
+            "name": "PowerShell",
+            "path": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+            "args": []
+        },
+        {
+            "name": "Command Prompt",
+            "path": "C:\\Windows\\System32\\cmd.exe",
+            "args": ["/K"]
+        },
+        {
+            "name": "Git Bash",
+            "path": "C:\\Program Files\\Git\\bin\\bash.exe",
+            "args": ["-i"]
+        }
+    ],
+    "neuropilot.showTimeOnTerminalStart": true,
+    "files.autoSave": "afterDelay",
+    "files.autoSaveDelay": 1000,
+    "neuropilot.allowUnsafePaths": false
 }
