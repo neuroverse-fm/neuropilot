@@ -25,15 +25,15 @@ export function registerEditingActions() {
         NEURO.client?.registerActions([
             {
                 name: 'place_cursor',
-                description: 'Place the cursor in the current file. Absolute line and character numbers are one-based.',
+                description: 'Place the cursor in the current file. Absolute line and column numbers are one-based.',
                 schema: {
                     type: 'object',
                     properties: {
                         line: { type: 'integer' },
-                        character: { type: 'integer' },
+                        column: { type: 'integer' },
                         type: { type: 'string', enum: ['relative', 'absolute'] }
                     },
-                    required: ['line', 'character', 'type'],
+                    required: ['line', 'column', 'type'],
                 }
             },
             {
@@ -103,19 +103,19 @@ export function handlePlaceCursor(actionData: ActionData): ActionResult {
     if(!hasPermissions(PERMISSIONS.editActiveDocument))
         return actionResultNoPermission(PERMISSIONS.editActiveDocument);
 
-    // One- or zero-based line and character (depending on config)
+    // One-based line and column (depending on config)
     let line = actionData.params?.line;
-    let character = actionData.params?.character;
+    let column = actionData.params?.column;
 
     if(line === undefined)
         return actionResultMissingParameter('line');
-    if(character === undefined)
-        return actionResultMissingParameter('character');
+    if(column === undefined)
+        return actionResultMissingParameter('column');
 
     if(typeof line !== 'number')
         return actionResultIncorrectType('line', 'number', typeof line);
-    if(typeof character !== 'number')
-        return actionResultIncorrectType('character', 'number', typeof character);
+    if(typeof column !== 'number')
+        return actionResultIncorrectType('column', 'number', typeof column);
     
     const type = actionData.params?.type;
     if(type === undefined)
@@ -129,33 +129,33 @@ export function handlePlaceCursor(actionData: ActionData): ActionResult {
     if(!isPathNeuroSafe(document.fileName))
         return ACTION_RESULT_NO_ACCESS;
 
-    let basedLine: number, basedCharacter: number;
+    let basedLine: number, basedColumn: number;
 
     if(type === 'relative') {
         line += vscode.window.activeTextEditor!.selection.active.line;
-        character += vscode.window.activeTextEditor!.selection.active.character;
+        column += vscode.window.activeTextEditor!.selection.active.character;
 
         basedLine = line + 1;
-        basedCharacter = character + 1;
+        basedColumn = column + 1;
     }
     else {
         basedLine = line;
-        basedCharacter = character;
+        basedColumn = column;
 
         line -= 1;
-        character -= 1;
+        column -= 1;
     }
 
     if(line >= document.lineCount || line < 0)
         return actionResultRetry(`Line is out of bounds, the last line of the document is ${document.lineCount}.`);
-    if(character > document.lineAt(line).text.length || character < 0)
-        return actionResultRetry(`Character is out of bounds, the last character of line ${basedLine} is ${document.lineAt(line).text.length + 1}.`);
+    if(column > document.lineAt(line).text.length || column < 0)
+        return actionResultRetry(`Column is out of bounds, the last column of line ${basedLine} is ${document.lineAt(line).text.length + 1}.`);
 
-    vscode.window.activeTextEditor!.selection = new vscode.Selection(line, character, line, character);
-    const cursorContext = getPositionContext(document, new vscode.Position(line, character));
-    logOutput('INFO', `Placed cursor at (${basedLine}:${basedCharacter}).`);
+    vscode.window.activeTextEditor!.selection = new vscode.Selection(line, column, line, column);
+    const cursorContext = getPositionContext(document, new vscode.Position(line, column));
+    logOutput('INFO', `Placed cursor at (${basedLine}:${basedColumn}).`);
 
-    return actionResultAccept(`Cursor placed at (${basedLine}:${basedCharacter})\n\n${formatContext(cursorContext)}`);
+    return actionResultAccept(`Cursor placed at (${basedLine}:${basedColumn})\n\n${formatContext(cursorContext)}`);
 }
 
 export function handleGetCursor(actionData: ActionData): ActionResult {
