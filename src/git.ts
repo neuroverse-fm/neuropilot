@@ -250,6 +250,17 @@ export function registerGitActions() {
                 if (hasPermissions(PERMISSIONS.gitRemotes)) {
                     NEURO.client?.registerActions([
                         {
+                            name: 'fetch_git_commits',
+                            description: 'Fetch commits from the remote repository',
+                            schema: {
+                                type: 'object',
+                                properties: {
+                                    remoteName: { type: 'string' },
+                                    branchName: { type: 'string' },
+                                }
+                            }
+                        },
+                        {
                             name: 'pull_git_commits',
                             description: 'Pull commits from the remote repository',
                             schema: {}
@@ -932,7 +943,7 @@ export function handleFetchGitCommits(actionData: ActionData): ActionResult {
     const branchName: string = actionData.params?.branchName;
 
     repo.fetch(remoteName, branchName).then(() => {
-        NEURO.client?.sendContext(`Fetched commits from remote "${remoteName}"${branchName ? `, branch "${branchName}"` : ""}.`);
+        NEURO.client?.sendContext(`Fetched commits from ${remoteName ? "remote " + remoteName : "default remote"}${branchName ? `, branch "${branchName}"` : ""}.`);
     }, (err: string) => {
         NEURO.client?.sendContext(`Failed to fetch commits from remote "${remoteName}"`);
         logOutput("ERROR", `Failed to fetch commits: ${err}`)
