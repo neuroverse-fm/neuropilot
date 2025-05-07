@@ -9,6 +9,7 @@ import { registerUnsupervisedActions, registerUnsupervisedHandlers } from './uns
 import { reloadTasks, taskEndedHandler } from './tasks';
 import { emergencyTerminalShutdown, saveContextForTerminal } from './pseudoterminal';
 import { CONFIG } from './config';
+import { sendDiagnosticsDiff } from './lint_problems';
 
 export function activate(context: vscode.ExtensionContext) {
     NEURO.url = CONFIG.websocketUrl;
@@ -41,6 +42,8 @@ export function activate(context: vscode.ExtensionContext) {
     onClientConnected(registerUnsupervisedActions);
     onClientConnected(registerUnsupervisedHandlers);
     onClientConnected(registerPostActionHandler);
+
+    vscode.languages.onDidChangeDiagnostics(sendDiagnosticsDiff);    
 
     vscode.tasks.onDidEndTask(taskEndedHandler);
 
