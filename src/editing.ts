@@ -25,7 +25,7 @@ export function registerEditingActions() {
         NEURO.client?.registerActions([
             {
                 name: 'place_cursor',
-                description: `Place the cursor in the current file. Absolute line and character numbers are ${CONFIG.firstLineNumber === 0 ? 'zero-based' : 'one-based'}.`,
+                description: 'Place the cursor in the current file. Absolute line and character numbers are one-based.',
                 schema: {
                     type: 'object',
                     properties: {
@@ -135,21 +135,21 @@ export function handlePlaceCursor(actionData: ActionData): ActionResult {
         line += vscode.window.activeTextEditor!.selection.active.line;
         character += vscode.window.activeTextEditor!.selection.active.character;
 
-        basedLine = line + CONFIG.firstLineNumber;
-        basedCharacter = character + CONFIG.firstLineNumber;
+        basedLine = line + 1;
+        basedCharacter = character + 1;
     }
     else {
         basedLine = line;
         basedCharacter = character;
 
-        line -= CONFIG.firstLineNumber;
-        character -= CONFIG.firstLineNumber;
+        line -= 1;
+        character -= 1;
     }
 
     if(line >= document.lineCount || line < 0)
-        return actionResultRetry(`Line is out of bounds, the last line of the document is ${document.lineCount - 1 + CONFIG.firstLineNumber}.`);
+        return actionResultRetry(`Line is out of bounds, the last line of the document is ${document.lineCount}.`);
     if(character > document.lineAt(line).text.length || character < 0)
-        return actionResultRetry(`Character is out of bounds, the last character of line ${basedLine} is ${document.lineAt(line).text.length}.`);
+        return actionResultRetry(`Character is out of bounds, the last character of line ${basedLine} is ${document.lineAt(line).text.length + 1}.`);
 
     vscode.window.activeTextEditor!.selection = new vscode.Selection(line, character, line, character);
     const cursorContext = getPositionContext(document, new vscode.Position(line, character));
@@ -174,7 +174,7 @@ export function handleGetCursor(actionData: ActionData): ActionResult {
     const relativePath = vscode.workspace.asRelativePath(document.uri);
     logOutput('INFO', 'Sending cursor position to Neuro');
 
-    return actionResultAccept(`In file ${relativePath}\n\nCursor is at (${line + CONFIG.firstLineNumber}:${character + CONFIG.firstLineNumber})\n\n${formatContext(cursorContext)}`);
+    return actionResultAccept(`In file ${relativePath}\n\nCursor is at (${line + 1}:${character + 1})\n\n${formatContext(cursorContext)}`);
 }
 
 export function handleInsertText(actionData: ActionData): ActionResult {
@@ -374,17 +374,17 @@ export function handleFindText(actionData: ActionData): ActionResult {
         const character = document.positionAt(pos).character;
         vscode.window.activeTextEditor!.selection = new vscode.Selection(line, character, line, character);
         const cursorContext = getPositionContext(document, new vscode.Position(line, character));
-        logOutput('INFO', `Placed cursor at (${line + CONFIG.firstLineNumber}:${character + CONFIG.firstLineNumber})`);
-        return actionResultAccept(`Found match and placed cursor at (${line + CONFIG.firstLineNumber}:${character + CONFIG.firstLineNumber})\n\n${formatContext(cursorContext)}`);
+        logOutput('INFO', `Placed cursor at (${line + 1}:${character + 1})`);
+        return actionResultAccept(`Found match and placed cursor at (${line + 1}:${character + 1})\n\n${formatContext(cursorContext)}`);
     }
     else {
         // Multiple matches
         const positions = matches.map(m => document.positionAt(m.index));
         const lines = positions.map(p => document.lineAt(p.line).text);
         // max(1, ...) because log10(0) is -Infinity
-        const space = Math.max(1, Math.log10(positions[positions.length - 1].line + CONFIG.firstLineNumber) + 1); // Space for the line number
+        const padding = Math.max(1, Math.log10(positions[positions.length - 1].line + 1) + 1); // Space for the line number
         logOutput('INFO', `Found ${positions.length} matches`);
-        return actionResultAccept(`Found ${positions.length} matches: \n\n\`\`\`\n` + lines.map((line, i) => `L. ${(positions[i].line + CONFIG.firstLineNumber).toString().padStart(space)}: ${line}`).join('\n') + '\n```');
+        return actionResultAccept(`Found ${positions.length} matches: \n\n\`\`\`\n` + lines.map((line, i) => `L. ${(positions[i].line + 1).toString().padStart(padding)}: ${line}`).join('\n') + '\n```');
     }
 }
 
@@ -460,5 +460,5 @@ function findAndFilter(regex: RegExp, text: string, cursorOffset: number, match:
 }
 
 function formatContext(context: NeuroPositionContext): string {
-    return `Context (lines ${context.startLine + CONFIG.firstLineNumber}-${context.endLine + CONFIG.firstLineNumber}, cursor position denoted by \`<<<|>>>\`):\n\n\`\`\`\n${context.contextBefore}<<<|>>>${context.contextAfter}\n\`\`\``;
+    return `Context (lines ${context.startLine + 1}-${context.endLine + 1}, cursor position denoted by \`<<<|>>>\`):\n\n\`\`\`\n${context.contextBefore}<<<|>>>${context.contextAfter}\n\`\`\``;
 }
