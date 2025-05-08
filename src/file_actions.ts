@@ -30,7 +30,7 @@ export function registerFileActions() {
                         path: { type: 'string' },
                     },
                     required: ['path'],
-                 }
+                }
             },
         ]);
     }

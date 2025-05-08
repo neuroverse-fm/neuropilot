@@ -219,13 +219,13 @@ export function isPathNeuroSafe(path: string, checkPatterns: boolean = true): bo
 
 // Helper function to normalize repository paths
 export function getNormalizedRepoPathForGit(repoPath: string): string {
-  // Remove trailing backslashes
-  let normalized = repoPath.replace(/\\+$/, '');
-  // Normalize the path to remove redundant separators etc.
-  normalized = path.normalize(normalized);
-  // Convert backslashes to forward slashes if needed by your Git library
-  normalized = normalized.replace(/\\/g, '/');
-  return normalized;
+    // Remove trailing backslashes
+    let normalized = repoPath.replace(/\\+$/, '');
+    // Normalize the path to remove redundant separators etc.
+    normalized = path.normalize(normalized);
+    // Convert backslashes to forward slashes if needed by your Git library
+    normalized = normalized.replace(/\\/g, '/');
+    return normalized;
 }
 
 /*

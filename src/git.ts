@@ -734,7 +734,7 @@ export function handleGitDiff(actionData: ActionData): ActionResult {
     switch (diffType) {
         case 'diffWithHEAD':
             repo.diffWithHEAD(diffThisFile)
-               .then((diff: string) => {
+                .then((diff: string) => {
                     NEURO.client?.sendContext(`Diff with HEAD for ${filePath || 'workspace root'}:\n${diff}`);
                 })
                 .catch((err: string) => {
@@ -759,14 +759,14 @@ export function handleGitDiff(actionData: ActionData): ActionResult {
             break;
 
         case 'diffIndexWithHEAD':
-                repo.diffIndexWithHEAD(diffThisFile)
-                    .then((diff: string) => {
-                        NEURO.client?.sendContext(`Diff index with HEAD for ${filePath || 'workspace root'}:\n${diff}`);
-                    })
-                    .catch((err: string) => {
-                        NEURO.client?.sendContext(`Failed to get diff index with HEAD for ${filePath || 'workspace root'}.`);
-                        logOutput("ERROR", `Failed to get diff index with HEAD for ${filePath || 'workspace root'}: ${err}`);
-                    });
+            repo.diffIndexWithHEAD(diffThisFile)
+                .then((diff: string) => {
+                    NEURO.client?.sendContext(`Diff index with HEAD for ${filePath || 'workspace root'}:\n${diff}`);
+                })
+                .catch((err: string) => {
+                    NEURO.client?.sendContext(`Failed to get diff index with HEAD for ${filePath || 'workspace root'}.`);
+                    logOutput("ERROR", `Failed to get diff index with HEAD for ${filePath || 'workspace root'}: ${err}`);
+                });
             break;
 
         case 'diffIndexWith':
