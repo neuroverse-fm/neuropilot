@@ -18,7 +18,7 @@ interface NeuroChatContext {
     text: string;
 }
 
-let lastChatResponse: string = '';
+let lastChatResponse = '';
 
 export function registerChatResponseHandler() {
     NEURO.client?.onAction((actionData) => {

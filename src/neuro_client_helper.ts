@@ -47,7 +47,7 @@ export function actionResultAccept(message?: string): ActionResult {
  * @param {string} [tag="WARNING"] The tag to use for the log output.
  * @returns A successful action result with the specified message.
  */
-export function actionResultFailure(message?: string, tag: string = "WARNING"): ActionResult {
+export function actionResultFailure(message?: string, tag = "WARNING"): ActionResult {
     logOutput(tag, 'Action failed: ' + message);
     return {
         success: true,

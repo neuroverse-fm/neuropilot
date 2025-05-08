@@ -327,7 +327,7 @@ export function emergencyTerminalShutdown() {
 
     logOutput("INFO", "Initiating emergency shutdown of all terminals...");
 
-    let failedShutdownCount: number = 0;
+    let failedShutdownCount = 0;
     let failedShutdownTerminals: string[] = [];
 
     // Iterate through all terminal sessions in the registry.
