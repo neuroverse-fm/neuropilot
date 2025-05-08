@@ -8,7 +8,7 @@ import { CONFIG, PERMISSIONS, hasPermissions } from './config';
 export const terminalAccessHandlers: { [key: string]: (actionData: ActionData) => ActionResult } = {
     'execute_in_terminal': handleRunCommand,
     'kill_terminal_process': handleKillTerminal,
-    'get_currently_running_shells': handleGetCurrentlyRunningShells
+    'get_currently_running_shells': handleGetCurrentlyRunningShells,
 };
 
 export function registerTerminalActions() {
@@ -21,10 +21,10 @@ export function registerTerminalActions() {
                     type: 'object',
                     properties: {
                         command: { type: 'string' },
-                        shell: { type: 'string', enum: getAvailableShellProfileNames() }
+                        shell: { type: 'string', enum: getAvailableShellProfileNames() },
                     },
-                    required: ['command', 'shell']
-                }
+                    required: ['command', 'shell'],
+                },
             },
             {
                 name: 'kill_terminal_process',
@@ -32,16 +32,16 @@ export function registerTerminalActions() {
                 schema: {
                     type: 'object',
                     properties: {
-                        shell: { type: 'string' }
+                        shell: { type: 'string' },
                     },
-                    required: ['shell']
-                }
+                    required: ['shell'],
+                },
             },
             {
                 name: 'get_currently_running_shells',
                 description: 'Get the list of terminal processes that are spawned.',
-                schema: {}
-            }
+                schema: {},
+            },
         ]);
     }
 }
@@ -111,7 +111,7 @@ function createPseudoterminal(shellType: string, terminalName: string, vscContex
             if (session.shellProcess) {
                 session.shellProcess.kill();
             }
-        }
+        },
     };
 
     // 50/50 chance of icon selection no longer
@@ -122,7 +122,7 @@ function createPseudoterminal(shellType: string, terminalName: string, vscContex
         name: terminalName,
         pty: pty,
         iconPath: icon,
-        isTransient: false
+        isTransient: false,
     });
 
     // Create the session object.
@@ -134,7 +134,7 @@ function createPseudoterminal(shellType: string, terminalName: string, vscContex
         outputStderr: '',
         processStarted: false,
         shellProcess: undefined,
-        shellType
+        shellType,
     };
 
     return session;
@@ -193,7 +193,7 @@ export function handleRunCommand(actionData: ActionData): ActionResult {
             const fence = getFence(session.outputStdout!);
             NEURO.client?.sendContext(
                 `The ${shellType} terminal outputted the following to stdout:\n\n${fence}\n${session.outputStdout!.replace(/\x1b\[[\x30-\x3F]*[\x20-\x2F]*[\x40-\x7F]|\x1b\]0;.+\r?\n/g, '')}\n${fence}`,
-                false
+                false,
             );
             session.outputStdout = '';
         }
@@ -206,7 +206,7 @@ export function handleRunCommand(actionData: ActionData): ActionResult {
             const fence = getFence(session.outputStderr!);
             NEURO.client?.sendContext(
                 `The ${shellType} terminal outputted the following to stderr:\n\n${fence}\n${session.outputStderr!.replace(/\x1b\[[\x30-\x3F]*[\x20-\x2F]*[\x40-\x7F]|\x1b\]0;.+\r?\n/g, '')}\n${fence}`,
-                false
+                false,
             );
             session.outputStderr = '';
         }

@@ -42,11 +42,11 @@ export function requestCompletion(beforeContext: string, afterContext: string, f
                         type: 'array',
                         items: { type: 'string' },
                         maxItems: maxCount,
-                    }
+                    },
                 },
                 required: ['suggestions'],
-            }
-        }
+            },
+        },
     ]);
 
     NEURO.client.forceActions(

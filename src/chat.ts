@@ -164,8 +164,8 @@ async function requestChatResponse(prompt: string, state: string, token: vscode.
                     answer: { type: 'string' },
                 },
                 required: ['answer'],
-            }
-        }
+            },
+        },
     ]);
 
     NEURO.client?.forceActions(

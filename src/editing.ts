@@ -31,10 +31,10 @@ export function registerEditingActions() {
                     properties: {
                         line: { type: 'integer' },
                         column: { type: 'integer' },
-                        type: { type: 'string', enum: ['relative', 'absolute'] }
+                        type: { type: 'string', enum: ['relative', 'absolute'] },
                     },
                     required: ['line', 'column', 'type'],
-                }
+                },
             },
             {
                 name: 'get_cursor',
@@ -49,7 +49,7 @@ export function registerEditingActions() {
                         text: { type: 'string' },
                     },
                     required: ['text'],
-                }
+                },
             },
             {
                 name: 'replace_text',
@@ -63,7 +63,7 @@ export function registerEditingActions() {
                         match: { type: 'string', enum: MATCH_OPTIONS },
                     },
                     required: ['find', 'replaceWith', 'match'],
-                }
+                },
             },
             {
                 name: 'delete_text',
@@ -76,7 +76,7 @@ export function registerEditingActions() {
                         match: { type: 'string', enum: MATCH_OPTIONS },
                     },
                     required: ['find', 'match'],
-                }
+                },
             },
             {
                 name: 'find_text',
@@ -89,7 +89,7 @@ export function registerEditingActions() {
                         match: { type: 'string', enum: MATCH_OPTIONS },
                     },
                     required: ['find', 'match'],
-                }
+                },
             },
             {
                 name: 'undo',
@@ -412,7 +412,7 @@ export function handleUndo(actionData: ActionData): ActionResult {
         (erm) => {
             logOutput('ERROR', `Failed to undo last action: ${erm}`);
             NEURO.client?.sendContext('Failed to undo last action');
-        }
+        },
     );
 
     return actionResultAccept();

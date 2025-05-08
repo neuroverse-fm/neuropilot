@@ -37,7 +37,7 @@ export function registerRequestCookieAction() {
         {
             name: 'request_cookie',
             description: 'Ask Vedal for a cookie.',
-        }
+        },
     ]);
 }
 

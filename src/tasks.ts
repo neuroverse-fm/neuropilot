@@ -66,12 +66,12 @@ export function taskEndedHandler(event: vscode.TaskEndEvent) {
             NEURO.currentTaskExecution = null;
             vscode.commands.executeCommand('workbench.action.terminal.copyLastCommandOutput')
                 .then(
-                    _ => vscode.env.clipboard.readText()
+                    _ => vscode.env.clipboard.readText(),
                 ).then(
                     text => {
                         const fence = getFence(text);
                         NEURO.client?.sendContext(`Task finished! Output:\n\n${fence}\n${text}\n${fence}`);
-                    }
+                    },
                 );
         }
     }
@@ -94,7 +94,7 @@ export function reloadTasks() {
                 NEURO.tasks.push({
                     id: formatActionID(task.name),
                     description: (task.detail?.length ?? 0) > 0 ? task.detail! : task.name,
-                    task
+                    task,
                 });
             } else if (task.detail?.toLowerCase().startsWith('[neuro]')) {
                 // Only allow tasks whose details start with '[Neuro]'

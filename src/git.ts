@@ -39,7 +39,7 @@ export const gitActionHandlers: { [key: string]: (actionData: ActionData) => Act
     'git_log': handleGitLog,
     'git_blame': handleGitBlame,
     'tag_head': handleTagHEAD,
-    'delete_tag': handleDeleteTag
+    'delete_tag': handleDeleteTag,
 };
 
 // Get the current Git repository
@@ -56,8 +56,8 @@ export function registerGitActions() {
             {
                 name: 'init_git_repo',
                 description: 'Initialize a new Git repository in the current workspace folder',
-                schema: {}
-            }
+                schema: {},
+            },
         ]);
 
         const root = vscode.workspace.workspaceFolders?.[0].uri;
@@ -81,8 +81,8 @@ export function registerGitActions() {
                             properties: {
                                 filePath: { type: 'string' },
                             },
-                            required: ['filePath']
-                        }
+                            required: ['filePath'],
+                        },
                     },
                     {
                         name: 'make_git_commit',
@@ -94,10 +94,10 @@ export function registerGitActions() {
                                 options: {
                                     type: 'array',
                                     items: { type: 'string', enum: ['signoff', 'verbose', 'amend'] },
-                                }
+                                },
                             },
-                            required: ['message']
-                        }
+                            required: ['message'],
+                        },
                     },
                     {
                         name: 'merge_to_current_branch',
@@ -105,15 +105,15 @@ export function registerGitActions() {
                         schema: {
                             type: 'object',
                             properties: {
-                                ref_to_merge: { type: 'string' }
+                                ref_to_merge: { type: 'string' },
                             },
-                            required: ['ref_to_merge']
-                        }
+                            required: ['ref_to_merge'],
+                        },
                     },
                     {
                         name: 'git_status',
                         description: 'Get the current status of the Git repository',
-                        schema: {}
+                        schema: {},
                     },
                     {
                         name: 'remove_file_from_git',
@@ -123,8 +123,8 @@ export function registerGitActions() {
                             properties: {
                                 filePath: { type: 'string' },
                             },
-                            required: ['filePath']
-                        }
+                            required: ['filePath'],
+                        },
                     },
                     {
                         name: 'delete_git_branch',
@@ -135,8 +135,8 @@ export function registerGitActions() {
                                 branchName: { type: 'string' },
                                 force: { type: 'boolean' },
                             },
-                            required: ['branchName']
-                        }
+                            required: ['branchName'],
+                        },
                     },
                     {
                         name: 'switch_git_branch',
@@ -146,8 +146,8 @@ export function registerGitActions() {
                             properties: {
                                 branchName: { type: 'string' },
                             },
-                            required: ['branchName']
-                        }
+                            required: ['branchName'],
+                        },
                     },
                     {
                         name: 'new_git_branch',
@@ -158,7 +158,7 @@ export function registerGitActions() {
                                 branchName: { type: 'string' },
                             },
                             required: ['branchName'],
-                        }
+                        },
                     },
                     {
                         name: 'diff_files',
@@ -170,13 +170,13 @@ export function registerGitActions() {
                                 ref2: { type: 'string' },
                                 filePath: { type: 'string' },
                                 diffType: { type: 'string', enum: ['diffWithHEAD', 'diffWith', 'diffIndexWithHEAD', 'diffIndexWith', 'diffBetween', 'fullDiff'] },
-                            }
-                        }
+                            },
+                        },
                     },
                     {
                         name: 'git_log',
                         description: 'Get the commit history of the current branch',
-                        schema: {}
+                        schema: {},
                     },
                     {
                         name: 'git_blame',
@@ -184,11 +184,11 @@ export function registerGitActions() {
                         schema: {
                             type: 'object',
                             properties: {
-                                filePath: { type: 'string' }
+                                filePath: { type: 'string' },
                             },
-                            required: ['filePath']
-                        }
-                    }
+                            required: ['filePath'],
+                        },
+                    },
                 ]);
 
                 if (hasPermissions(PERMISSIONS.gitTags)) {
@@ -200,10 +200,10 @@ export function registerGitActions() {
                                 type: 'object',
                                 properties: {
                                     name: { type: 'string' },
-                                    upstream: { type: 'string' }
+                                    upstream: { type: 'string' },
                                 },
-                                required: ['name', 'upstream']
-                            }
+                                required: ['name', 'upstream'],
+                            },
                         },
                         {
                             name: 'delete_tag',
@@ -211,11 +211,11 @@ export function registerGitActions() {
                             schema: {
                                 type: 'object',
                                 properties: {
-                                    name: { type: 'string' }
+                                    name: { type: 'string' },
                                 },
-                                required: ['name']
-                            }
-                        }
+                                required: ['name'],
+                            },
+                        },
                     ]);
                 }
 
@@ -231,7 +231,7 @@ export function registerGitActions() {
                                     value: { type: 'string' },
                                 },
                                 required: ['key', 'value'],
-                            }
+                            },
                         },
                         {
                             name: 'get_git_config',
@@ -242,7 +242,7 @@ export function registerGitActions() {
                                     key: { type: 'string' },
                                 },
                                 required: ['key'],
-                            }
+                            },
                         },
                     ]);
                 }
@@ -257,13 +257,13 @@ export function registerGitActions() {
                                 properties: {
                                     remoteName: { type: 'string' },
                                     branchName: { type: 'string' },
-                                }
-                            }
+                                },
+                            },
                         },
                         {
                             name: 'pull_git_commits',
                             description: 'Pull commits from the remote repository',
-                            schema: {}
+                            schema: {},
                         },
                         {
                             name: 'push_git_commits',
@@ -274,9 +274,9 @@ export function registerGitActions() {
                                     remoteName: { type: 'string' },
                                     branchName: { type: 'string' },
                                     forcePush: { type: 'boolean' },
-                                }
-                            }
-                        }
+                                },
+                            },
+                        },
                     ]);
 
                     if (hasPermissions(PERMISSIONS.editRemoteData)) {
@@ -291,7 +291,7 @@ export function registerGitActions() {
                                         remoteURL: { type: 'string' },
                                     },
                                     required: ['remoteName', 'remoteURL'],
-                                }
+                                },
                             },
                             {
                                 name: 'remove_git_remote',
@@ -302,7 +302,7 @@ export function registerGitActions() {
                                         remoteName: { type: 'string' },
                                     },
                                     required: ['remoteName'],
-                                }
+                                },
                             },
                             {
                                 name: 'rename_git_remote',
@@ -314,8 +314,8 @@ export function registerGitActions() {
                                         newRemoteName: { type: 'string' },
                                     },
                                     required: ['oldRemoteName', 'newRemoteName'],
-                                }
-                            }
+                                },
+                            },
                         ]);
                     }
                 }
@@ -680,7 +680,7 @@ export function handleGitMerge(actionData: ActionData): ActionResult {
                 {
                     name: 'abort_merge',
                     description: 'Aborts the current merge operation.',
-                    schema: {}
+                    schema: {},
                 },
             ]);
         }

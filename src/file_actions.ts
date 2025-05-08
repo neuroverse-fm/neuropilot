@@ -30,7 +30,7 @@ export function registerFileActions() {
                         path: { type: 'string' },
                     },
                     required: ['path'],
-                }
+                },
             },
         ]);
     }
@@ -46,7 +46,7 @@ export function registerFileActions() {
                         filePath: { type: 'string' },
                     },
                     required: ['filePath'],
-                }
+                },
             },
             {
                 name: 'create_folder',
@@ -57,7 +57,7 @@ export function registerFileActions() {
                         folderPath: { type: 'string' },
                     },
                     required: ['folderPath'],
-                }
+                },
             },
         ]);
     }
@@ -74,7 +74,7 @@ export function registerFileActions() {
                         newPath: { type: 'string' },
                     },
                     required: ['oldPath', 'newPath'],
-                }
+                },
             },
         ]);
     }
@@ -91,7 +91,7 @@ export function registerFileActions() {
                         recursive: { type: 'boolean' },
                     },
                     required: ['pathToDelete'],
-                }
+                },
             },
         ]);
     }
@@ -328,7 +328,7 @@ export function handleGetFiles(actionData: ActionData): ActionResult {
                 });
             logOutput('INFO', 'Sending list of files in workspace to Neuro');
             NEURO.client?.sendContext(`Files in workspace:\n\n${paths.join('\n')}`);
-        }
+        },
     );
 
     return actionResultAccept();
@@ -359,7 +359,7 @@ export function handleOpenFile(actionData: ActionData): ActionResult {
         (_erm) => {
             logOutput('ERROR', `Failed to open file ${relativePath}`);
             NEURO.client?.sendContext(`Failed to open file ${relativePath}`);
-        }
+        },
     );
 
     return actionResultAccept();

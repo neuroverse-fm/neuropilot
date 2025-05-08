@@ -99,7 +99,7 @@ export function actionResultNoPermission(permission: Permission): ActionResult {
     logOutput('WARNING', `Action failed: Neuro attempted to ${permission.infinitive}, but permission is disabled.`);
     return {
         success: true,
-        message: `Action failed: You do not have permission to ${permission.infinitive}.`
+        message: `Action failed: You do not have permission to ${permission.infinitive}.`,
     };
 }
 
@@ -112,7 +112,7 @@ export function actionResultNoAccess(path: string): ActionResult {
     logOutput('WARNING', `Action failed: Neuro attempted to access "${path}", but permission is disabled.`);
     return {
         success: true,
-        message: 'Action failed: You do not have permission to access the requested location(s).'
+        message: 'Action failed: You do not have permission to access the requested location(s).',
     };
 }
 

@@ -17,7 +17,7 @@ const neuroActionHandlers: { [key: string]: (actionData: ActionData) => ActionRe
     ...fileActionHandlers,
     ...taskHandlers,
     ...editingFileHandlers,
-    ...terminalAccessHandlers
+    ...terminalAccessHandlers,
 };
 
 const actionKeys: string[] = Object.keys(neuroActionHandlers);

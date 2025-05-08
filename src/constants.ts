@@ -51,5 +51,5 @@ export const NEURO: Neuro = {
     currentTaskExecution: null,
     actionHandled: false,
     terminalEnabled: false,
-    terminalRegistry: new Map()
+    terminalRegistry: new Map(),
 };
