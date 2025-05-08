@@ -1,18 +1,18 @@
 import * as vscode from 'vscode';
 
-import { NEURO } from "./constants";
+import { NEURO } from './constants';
 import { combineGlobLines, filterFileContents, getFence, getWorkspacePath, isPathNeuroSafe, logOutput, normalizePath } from './utils';
 import { ActionData, ActionResult, actionResultAccept, actionResultFailure, actionResultMissingParameter, actionResultNoAccess, actionResultNoPermission } from './neuro_client_helper';
 import { CONFIG, PERMISSIONS, hasPermissions } from './config';
 
-export const fileActionHandlers: { [key: string]: (actionData: ActionData) => ActionResult } = {
+export const fileActionHandlers: Record<string, (actionData: ActionData) => ActionResult> = {
     'get_files': handleGetFiles,
     'open_file': handleOpenFile,
     'create_file': handleCreateFile,
     'create_folder': handleCreateFolder,
     'rename_file_or_folder': handleRenameFileOrFolder,
     'delete_file_or_folder': handleDeleteFileOrFolder,
-}
+};
 
 export function registerFileActions() {
     if(hasPermissions(PERMISSIONS.openFiles)) {
@@ -30,7 +30,7 @@ export function registerFileActions() {
                         path: { type: 'string' },
                     },
                     required: ['path'],
-                 }
+                },
             },
         ]);
     }
@@ -46,7 +46,7 @@ export function registerFileActions() {
                         filePath: { type: 'string' },
                     },
                     required: ['filePath'],
-                }
+                },
             },
             {
                 name: 'create_folder',
@@ -57,7 +57,7 @@ export function registerFileActions() {
                         folderPath: { type: 'string' },
                     },
                     required: ['folderPath'],
-                }
+                },
             },
         ]);
     }
@@ -74,7 +74,7 @@ export function registerFileActions() {
                         newPath: { type: 'string' },
                     },
                     required: ['oldPath', 'newPath'],
-                }
+                },
             },
         ]);
     }
@@ -91,7 +91,7 @@ export function registerFileActions() {
                         recursive: { type: 'boolean' },
                     },
                     required: ['pathToDelete'],
-                }
+                },
             },
         ]);
     }
@@ -124,7 +124,7 @@ export function handleCreateFile(actionData: ActionData): ActionResult {
             // If no error is thrown, the file already exists
             NEURO.client?.sendContext(`Could not create file: File ${relativePath} already exists`);
             return;
-        } catch { } // File does not exist, continue
+        } catch { /* File does not exist, continue */ }
 
         // Create the file
         try {
@@ -180,7 +180,7 @@ export function handleCreateFolder(actionData: ActionData): ActionResult {
             // If no error is thrown, the folder already exists
             NEURO.client?.sendContext(`Could not create folder: Folder ${relativePath} already exists`);
             return;
-        } catch { } // Folder does not exist, continue
+        } catch { /* Folder does not exist, continue */ }
 
         // Create the folder
         try {
@@ -231,7 +231,7 @@ export function handleRenameFileOrFolder(actionData: ActionData): ActionResult {
             // If no error is thrown, the new path already exists
             NEURO.client?.sendContext(`Could not rename: ${newRelativePath} already exists`);
             return;
-        } catch { } // New path does not exist, continue
+        } catch { /* New path does not exist, continue */ }
 
         // Rename the file/folder
         try {
@@ -298,7 +298,7 @@ export function handleDeleteFileOrFolder(actionData: ActionData): ActionResult {
     }
 }
 
-export function handleGetFiles(actionData: ActionData): ActionResult {
+export function handleGetFiles(_actionData: ActionData): ActionResult {
     if(!hasPermissions(PERMISSIONS.openFiles))
         return actionResultNoPermission(PERMISSIONS.openFiles);
 
@@ -306,8 +306,8 @@ export function handleGetFiles(actionData: ActionData): ActionResult {
     if(workspaceFolder === undefined)
         return actionResultFailure('No open workspace to get files from.');
 
-    const includePattern = combineGlobLines(CONFIG.includePattern || "**");
-    const excludePattern = combineGlobLines(CONFIG.excludePattern || "");
+    const includePattern = combineGlobLines(CONFIG.includePattern || '**');
+    const excludePattern = combineGlobLines(CONFIG.excludePattern || '');
     vscode.workspace.findFiles(includePattern, excludePattern).then(
         (uris) => {
             const paths = uris
@@ -326,9 +326,9 @@ export function handleGetFiles(actionData: ActionData): ActionResult {
                     }
                     return aParts.length - bParts.length;
                 });
-            logOutput('INFO', `Sending list of files in workspace to Neuro`);
+            logOutput('INFO', 'Sending list of files in workspace to Neuro');
             NEURO.client?.sendContext(`Files in workspace:\n\n${paths.join('\n')}`);
-        }
+        },
     );
 
     return actionResultAccept();
@@ -359,7 +359,7 @@ export function handleOpenFile(actionData: ActionData): ActionResult {
         (_erm) => {
             logOutput('ERROR', `Failed to open file ${relativePath}`);
             NEURO.client?.sendContext(`Failed to open file ${relativePath}`);
-        }
+        },
     );
 
     return actionResultAccept();

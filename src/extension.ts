@@ -43,7 +43,7 @@ export function activate(context: vscode.ExtensionContext) {
     onClientConnected(registerUnsupervisedHandlers);
     onClientConnected(registerPostActionHandler);
 
-    vscode.languages.onDidChangeDiagnostics(sendDiagnosticsDiff);    
+    vscode.languages.onDidChangeDiagnostics(sendDiagnosticsDiff);
 
     vscode.tasks.onDidEndTask(taskEndedHandler);
 
@@ -65,26 +65,26 @@ function registerPreActionHandler() {
 function registerPostActionHandler() {
     NEURO.client?.onAction((actionData) => {
         if(NEURO.actionHandled) return;
-        
+
         NEURO.client?.sendActionResult(actionData.id, true, 'Unknown action');
     });
 }
 
 function disableAllPermissions() {
     const config = vscode.workspace.getConfiguration('neuropilot');
-    const permissionKeys = config.get<{ [key: string]: boolean }>('permission');
+    const permissionKeys = config.get<Record<string, boolean>>('permission');
     // Disable each permission one-by-one
-    let promises: Thenable<void>[] = [];
+    const promises: Thenable<void>[] = [];
     if (permissionKeys) {
         for (const key of Object.keys(permissionKeys)) {
             promises.push(config.update(`permission.${key}`, false, vscode.ConfigurationTarget.Workspace));
         }
     }
     if (CONFIG.allowUnsafePaths === true) {
-        promises.push(config.update('allowUnsafePaths', false, vscode.ConfigurationTarget.Workspace))
+        promises.push(config.update('allowUnsafePaths', false, vscode.ConfigurationTarget.Workspace));
     }
-    if (CONFIG.sendNewLintingProblemsOn !== "off") {
-        promises.push(config.update('sendNewLintingProblemsOn', "off", vscode.ConfigurationTarget.Workspace))
+    if (CONFIG.sendNewLintingProblemsOn !== 'off') {
+        promises.push(config.update('sendNewLintingProblemsOn', 'off', vscode.ConfigurationTarget.Workspace));
     }
     Promise.all(promises).then(() => {
         const exe = NEURO.currentTaskExecution;
@@ -95,7 +95,7 @@ function disableAllPermissions() {
         emergencyTerminalShutdown();
         // Send context and reload
         reloadPermissions();
-        NEURO.client?.sendContext("Vedal has turned off all dangerous permissions.");
-        vscode.window.showInformationMessage("All dangerous permissions have been turned off and actions have been re-registered. Terminal shells have also been killed, if any.");
+        NEURO.client?.sendContext('Vedal has turned off all dangerous permissions.');
+        vscode.window.showInformationMessage('All dangerous permissions have been turned off and actions have been re-registered. Terminal shells have also been killed, if any.');
     });
 }

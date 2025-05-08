@@ -1,25 +1,25 @@
-import { NEURO } from "./constants";
+import { NEURO } from './constants';
 
 import { handleRunTask, registerTaskActions, taskHandlers } from './tasks';
 import { fileActionHandlers, registerFileActions } from './file_actions';
 import { gitActionHandlers, registerGitActions } from './git';
 import { editingFileHandlers, registerEditingActions } from './editing';
-import { ActionData, ActionResult } from "./neuro_client_helper";
-import { registerTerminalActions, terminalAccessHandlers } from "./pseudoterminal";
-import { lintActionHandlers, registerLintActions } from "./lint_problems";
+import { ActionData, ActionResult } from './neuro_client_helper';
+import { registerTerminalActions, terminalAccessHandlers } from './pseudoterminal';
+import { lintActionHandlers, registerLintActions } from './lint_problems';
 
 /**
  * Register unsupervised actions with the Neuro API.
  * Will only register actions that the user has given permission to use.
  */
 
-const neuroActionHandlers: { [key: string]: (actionData: ActionData) => ActionResult } = {
+const neuroActionHandlers: Record<string, (actionData: ActionData) => ActionResult> = {
     ...gitActionHandlers,
     ...fileActionHandlers,
     ...taskHandlers,
     ...editingFileHandlers,
     ...terminalAccessHandlers,
-    ...lintActionHandlers
+    ...lintActionHandlers,
 };
 
 const actionKeys: string[] = Object.keys(neuroActionHandlers);

@@ -1,12 +1,7 @@
-/**
- * ESLint configuration for the project.
- * 
- * See https://eslint.style and https://typescript-eslint.io for additional linting options.
- */
-// @ts-check
 import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
 import stylistic from '@stylistic/eslint-plugin';
+import globals from 'globals';
 
 export default tseslint.config(
     {
@@ -49,5 +44,9 @@ export default tseslint.config(
                 },
             ],
         },
+    },
+    {
+        files: ['**/*.{js,mjs,cjs,ts}'],
+        languageOptions: { globals: globals.node },
     },
 );

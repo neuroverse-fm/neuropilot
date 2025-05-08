@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { NeuroClient } from "neuro-game-sdk";
+import { NeuroClient } from 'neuro-game-sdk';
 import { TerminalSession } from './utils';
 
 export interface NeuroTask {
@@ -42,8 +42,8 @@ interface Neuro {
 export const NEURO: Neuro = {
     initialized: false,
     client: null,
-    url: "ws://localhost:8000",
-    gameName: "Visual Studio Code",
+    url: 'ws://localhost:8000',
+    gameName: 'Visual Studio Code',
     connected: false,
     waiting: false,
     cancelled: false,
@@ -54,5 +54,5 @@ export const NEURO: Neuro = {
     actionHandled: false,
     terminalEnabled: false,
     terminalRegistry: new Map(),
-    previousDiagnosticsMap: new Map()
+    previousDiagnosticsMap: new Map(),
 };

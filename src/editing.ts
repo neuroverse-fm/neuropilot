@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 
-import { NEURO } from "./constants";
+import { NEURO } from './constants';
 import { escapeRegExp, getFence, getPositionContext, isPathNeuroSafe, logOutput, NeuroPositionContext, substituteMatch } from './utils';
 import { ActionData, ActionResult, actionResultAccept, actionResultEnumFailure, actionResultFailure, actionResultIncorrectType, actionResultMissingParameter, actionResultNoPermission, actionResultRetry } from './neuro_client_helper';
 import { PERMISSIONS, hasPermissions } from './config';
@@ -10,7 +10,7 @@ const ACTION_RESULT_NO_ACTIVE_DOCUMENT = actionResultFailure('No active document
 
 const MATCH_OPTIONS: string[] = [ 'firstInFile', 'lastInFile', 'firstAfterCursor', 'lastBeforeCursor', 'allInFile' ] as const;
 
-export const editingFileHandlers: { [key: string]: (actionData: ActionData) => ActionResult } = {
+export const editingFileHandlers: Record<string, (actionData: ActionData) => ActionResult> = {
     'place_cursor': handlePlaceCursor,
     'get_cursor': handleGetCursor,
     'insert_text': handleInsertText,
@@ -18,7 +18,7 @@ export const editingFileHandlers: { [key: string]: (actionData: ActionData) => A
     'delete_text': handleDeleteText,
     'find_text': handleFindText,
     'undo': handleUndo,
-}
+};
 
 export function registerEditingActions() {
     if(hasPermissions(PERMISSIONS.editActiveDocument)) {
@@ -31,10 +31,10 @@ export function registerEditingActions() {
                     properties: {
                         line: { type: 'integer' },
                         column: { type: 'integer' },
-                        type: { type: 'string', enum: ['relative', 'absolute'] }
+                        type: { type: 'string', enum: ['relative', 'absolute'] },
                     },
                     required: ['line', 'column', 'type'],
-                }
+                },
             },
             {
                 name: 'get_cursor',
@@ -49,7 +49,7 @@ export function registerEditingActions() {
                         text: { type: 'string' },
                     },
                     required: ['text'],
-                }
+                },
             },
             {
                 name: 'replace_text',
@@ -63,7 +63,7 @@ export function registerEditingActions() {
                         match: { type: 'string', enum: MATCH_OPTIONS },
                     },
                     required: ['find', 'replaceWith', 'match'],
-                }
+                },
             },
             {
                 name: 'delete_text',
@@ -76,7 +76,7 @@ export function registerEditingActions() {
                         match: { type: 'string', enum: MATCH_OPTIONS },
                     },
                     required: ['find', 'match'],
-                }
+                },
             },
             {
                 name: 'find_text',
@@ -89,7 +89,7 @@ export function registerEditingActions() {
                         match: { type: 'string', enum: MATCH_OPTIONS },
                     },
                     required: ['find', 'match'],
-                }
+                },
             },
             {
                 name: 'undo',
@@ -116,7 +116,7 @@ export function handlePlaceCursor(actionData: ActionData): ActionResult {
         return actionResultIncorrectType('line', 'number', typeof line);
     if(typeof column !== 'number')
         return actionResultIncorrectType('column', 'number', typeof column);
-    
+
     const type = actionData.params?.type;
     if(type === undefined)
         return actionResultMissingParameter('type');
@@ -158,7 +158,7 @@ export function handlePlaceCursor(actionData: ActionData): ActionResult {
     return actionResultAccept(`Cursor placed at (${basedLine}:${basedColumn})\n\n${formatContext(cursorContext)}`);
 }
 
-export function handleGetCursor(actionData: ActionData): ActionResult {
+export function handleGetCursor(_actionData: ActionData): ActionResult {
     if(!hasPermissions(PERMISSIONS.editActiveDocument))
         return actionResultNoPermission(PERMISSIONS.editActiveDocument);
 
@@ -230,7 +230,7 @@ export function handleReplaceText(actionData: ActionData): ActionResult {
         return actionResultEnumFailure('match', MATCH_OPTIONS, match);
 
     const useRegex = actionData.params?.useRegex ?? false;
-    
+
     const document = vscode.window.activeTextEditor?.document;
     if(document === undefined)
         return ACTION_RESULT_NO_ACTIVE_DOCUMENT;
@@ -256,7 +256,7 @@ export function handleReplaceText(actionData: ActionData): ActionResult {
     }
     vscode.workspace.applyEdit(edit).then(success => {
         if(success) {
-            logOutput('INFO', `Replacing text in document`);
+            logOutput('INFO', 'Replacing text in document');
             if(matches.length === 1) {
                 // Single match
                 const document = vscode.window.activeTextEditor!.document;
@@ -306,7 +306,7 @@ export function handleDeleteText(actionData: ActionData): ActionResult {
 
     const regex = new RegExp(useRegex ? find : escapeRegExp(find), 'g');
     const cursorOffset = document.offsetAt(vscode.window.activeTextEditor!.selection.active);
-    
+
     const matches = findAndFilter(regex, document.getText(), cursorOffset, match);
     if(matches.length === 0)
         return actionResultFailure('No matches found for the given parameters.');
@@ -317,7 +317,7 @@ export function handleDeleteText(actionData: ActionData): ActionResult {
     }
     vscode.workspace.applyEdit(edit).then(success => {
         if(success) {
-            logOutput('INFO', `Deleting text from document`);
+            logOutput('INFO', 'Deleting text from document');
             if(matches.length === 1) {
                 // Single match
                 const document = vscode.window.activeTextEditor!.document;
@@ -365,7 +365,7 @@ export function handleFindText(actionData: ActionData): ActionResult {
         return ACTION_RESULT_NO_ACCESS;
 
     const cursorOffset = document.offsetAt(vscode.window.activeTextEditor!.selection.active);
-    
+
     const matches = findAndFilter(regex, document.getText(), cursorOffset, match);
     if(matches.length === 0)
         return actionResultFailure('No matches found for the given parameters.');
@@ -393,7 +393,7 @@ export function handleFindText(actionData: ActionData): ActionResult {
     }
 }
 
-export function handleUndo(actionData: ActionData): ActionResult {
+export function handleUndo(_actionData: ActionData): ActionResult {
     if(!hasPermissions(PERMISSIONS.editActiveDocument))
         return actionResultNoPermission(PERMISSIONS.editActiveDocument);
 
@@ -412,7 +412,7 @@ export function handleUndo(actionData: ActionData): ActionResult {
         (erm) => {
             logOutput('ERROR', `Failed to undo last action: ${erm}`);
             NEURO.client?.sendContext('Failed to undo last action');
-        }
+        },
     );
 
     return actionResultAccept();
@@ -429,7 +429,7 @@ export function handleUndo(actionData: ActionData): ActionResult {
 function findAndFilter(regex: RegExp, text: string, cursorOffset: number, match: string): RegExpExecArray[] {
     const matches = text.matchAll(regex);
     let result: RegExpExecArray[] = [];
-    
+
     switch(match) {
         case 'firstInFile':
             for(const m of matches)
