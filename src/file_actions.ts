@@ -298,7 +298,7 @@ export function handleDeleteFileOrFolder(actionData: ActionData): ActionResult {
     }
 }
 
-export function handleGetFiles(actionData: ActionData): ActionResult {
+export function handleGetFiles(_actionData: ActionData): ActionResult {
     if(!hasPermissions(PERMISSIONS.openFiles))
         return actionResultNoPermission(PERMISSIONS.openFiles);
 

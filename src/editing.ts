@@ -158,7 +158,7 @@ export function handlePlaceCursor(actionData: ActionData): ActionResult {
     return actionResultAccept(`Cursor placed at (${basedLine}:${basedColumn})\n\n${formatContext(cursorContext)}`);
 }
 
-export function handleGetCursor(actionData: ActionData): ActionResult {
+export function handleGetCursor(_actionData: ActionData): ActionResult {
     if(!hasPermissions(PERMISSIONS.editActiveDocument))
         return actionResultNoPermission(PERMISSIONS.editActiveDocument);
 
@@ -393,7 +393,7 @@ export function handleFindText(actionData: ActionData): ActionResult {
     }
 }
 
-export function handleUndo(actionData: ActionData): ActionResult {
+export function handleUndo(_actionData: ActionData): ActionResult {
     if(!hasPermissions(PERMISSIONS.editActiveDocument))
         return actionResultNoPermission(PERMISSIONS.editActiveDocument);
 

@@ -329,7 +329,7 @@ export function registerGitActions() {
  * Requires neuropilot.permission.gitConfig to be enabled.
  */
 
-export function handleNewGitRepo(actionData: ActionData): ActionResult {
+export function handleNewGitRepo(_actionData: ActionData): ActionResult {
     if (!git)
         return ACTION_RESULT_NO_GIT;
     if (!hasPermissions(PERMISSIONS.gitOperations, PERMISSIONS.gitConfigs))
@@ -488,7 +488,7 @@ export function handleDeleteGitBranch(actionData: ActionData): ActionResult {
  * Actions with the Git index
  */
 
-export function handleGitStatus(actionData: ActionData): ActionResult {
+export function handleGitStatus(_actionData: ActionData): ActionResult {
     if (!git)
         return ACTION_RESULT_NO_GIT;
     if (!hasPermissions(PERMISSIONS.gitOperations))
@@ -691,7 +691,7 @@ export function handleGitMerge(actionData: ActionData): ActionResult {
     return actionResultAccept();
 }
 
-export function handleAbortMerge(actionData: ActionData): ActionResult {
+export function handleAbortMerge(_actionData: ActionData): ActionResult {
     if (!git)
         return ACTION_RESULT_NO_GIT;
     if (!hasPermissions(PERMISSIONS.gitOperations))
@@ -817,7 +817,7 @@ export function handleGitDiff(actionData: ActionData): ActionResult {
     return actionResultAccept();
 }
 
-export function handleGitLog(actionData: ActionData): ActionResult {
+export function handleGitLog(_actionData: ActionData): ActionResult {
     if (!git)
         return ACTION_RESULT_NO_GIT;
     if (!hasPermissions(PERMISSIONS.gitOperations))
@@ -952,7 +952,7 @@ export function handleFetchGitCommits(actionData: ActionData): ActionResult {
     return actionResultAccept();
 }
 
-export function handlePullGitCommits(actionData: ActionData): ActionResult {
+export function handlePullGitCommits(_actionData: ActionData): ActionResult {
     if (!git)
         return ACTION_RESULT_NO_GIT;
     if (!hasPermissions(PERMISSIONS.gitOperations, PERMISSIONS.gitRemotes))

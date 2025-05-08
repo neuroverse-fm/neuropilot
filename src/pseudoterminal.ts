@@ -296,7 +296,7 @@ export function handleKillTerminal(actionData: ActionData): ActionResult {
  * Returns a list of currently running shell types.
  * Each entry includes the shell type and its status.
  */
-export function handleGetCurrentlyRunningShells(actionData: ActionData): ActionResult {
+export function handleGetCurrentlyRunningShells(_actionData: ActionData): ActionResult {
     if (!hasPermissions(PERMISSIONS.terminalAccess))
         return actionResultNoPermission(PERMISSIONS.terminalAccess);
 

@@ -7,7 +7,7 @@ import { ChildProcessWithoutNullStreams } from 'child_process';
 
 import { NEURO } from './constants';
 import { Range } from 'vscode';
-import { CONFIG, Permission } from './config';
+import { CONFIG } from './config';
 
 export const REGEXP_ALWAYS = /^/;
 export const REGEXP_NEVER = /^\b$/;

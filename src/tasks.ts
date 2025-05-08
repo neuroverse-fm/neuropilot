@@ -22,7 +22,7 @@ export function registerTaskActions() {
     }
 }
 
-export function handleTerminateTask(actionData: ActionData): ActionResult {
+export function handleTerminateTask(_actionData: ActionData): ActionResult {
     if(!hasPermissions(PERMISSIONS.runTasks))
         return actionResultNoPermission(PERMISSIONS.runTasks);
 
