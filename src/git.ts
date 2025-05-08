@@ -16,7 +16,7 @@ const ACTION_RESULT_NO_REPO = actionResultFailure('You are not in a repository.'
 const gitExtension = vscode.extensions.getExtension<GitExtension>('vscode.git')!.exports;
 const git = gitExtension.getAPI(1);
 
-export const gitActionHandlers: { [key: string]: (actionData: ActionData) => ActionResult } = {
+export const gitActionHandlers: Record<string, (actionData: ActionData) => ActionResult> = {
     'init_git_repo': handleNewGitRepo,
     'new_git_branch': handleNewGitBranch,
     'add_file_to_git': handleGitAdd,

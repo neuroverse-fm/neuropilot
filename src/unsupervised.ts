@@ -12,7 +12,7 @@ import { registerTerminalActions, terminalAccessHandlers } from './pseudotermina
  * Will only register actions that the user has given permission to use.
  */
 
-const neuroActionHandlers: { [key: string]: (actionData: ActionData) => ActionResult } = {
+const neuroActionHandlers: Record<string, (actionData: ActionData) => ActionResult> = {
     ...gitActionHandlers,
     ...fileActionHandlers,
     ...taskHandlers,

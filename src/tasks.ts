@@ -5,7 +5,7 @@ import { logOutput, formatActionID, getFence } from './utils';
 import { ActionData, ActionResult, actionResultAccept, actionResultFailure, actionResultNoPermission, actionResultRetry } from './neuro_client_helper';
 import { CONFIG, PERMISSIONS, hasPermissions } from './config';
 
-export const taskHandlers: { [key: string]: (actionData: ActionData) => ActionResult } = {
+export const taskHandlers: Record<string, (actionData: ActionData) => ActionResult> = {
     // handleRunTask is used separately and not on this list
     'terminate_task': handleTerminateTask,
 };

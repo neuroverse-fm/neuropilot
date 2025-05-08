@@ -69,7 +69,7 @@ function registerPostActionHandler() {
 
 function disableAllPermissions() {
     const config = vscode.workspace.getConfiguration('neuropilot');
-    const permissionKeys = config.get<{ [key: string]: boolean }>('permission');
+    const permissionKeys = config.get<Record<string, boolean>>('permission');
     // Disable each permission one-by-one
     let promises: Thenable<void>[] = [];
     if (permissionKeys) {

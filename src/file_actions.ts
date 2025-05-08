@@ -5,7 +5,7 @@ import { combineGlobLines, filterFileContents, getFence, getWorkspacePath, isPat
 import { ActionData, ActionResult, actionResultAccept, actionResultFailure, actionResultMissingParameter, actionResultNoAccess, actionResultNoPermission } from './neuro_client_helper';
 import { CONFIG, PERMISSIONS, hasPermissions } from './config';
 
-export const fileActionHandlers: { [key: string]: (actionData: ActionData) => ActionResult } = {
+export const fileActionHandlers: Record<string, (actionData: ActionData) => ActionResult> = {
     'get_files': handleGetFiles,
     'open_file': handleOpenFile,
     'create_file': handleCreateFile,

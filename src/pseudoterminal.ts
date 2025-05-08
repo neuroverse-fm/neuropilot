@@ -5,7 +5,7 @@ import { TerminalSession, logOutput, delayAsync, getFence } from './utils';
 import { ActionData, ActionResult, actionResultAccept, actionResultEnumFailure, actionResultFailure, actionResultMissingParameter, actionResultNoPermission } from './neuro_client_helper';
 import { CONFIG, PERMISSIONS, hasPermissions } from './config';
 
-export const terminalAccessHandlers: { [key: string]: (actionData: ActionData) => ActionResult } = {
+export const terminalAccessHandlers: Record<string, (actionData: ActionData) => ActionResult> = {
     'execute_in_terminal': handleRunCommand,
     'kill_terminal_process': handleKillTerminal,
     'get_currently_running_shells': handleGetCurrentlyRunningShells,

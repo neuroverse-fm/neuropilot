@@ -10,7 +10,7 @@ const ACTION_RESULT_NO_ACTIVE_DOCUMENT = actionResultFailure('No active document
 
 const MATCH_OPTIONS: string[] = [ 'firstInFile', 'lastInFile', 'firstAfterCursor', 'lastBeforeCursor', 'allInFile' ] as const;
 
-export const editingFileHandlers: { [key: string]: (actionData: ActionData) => ActionResult } = {
+export const editingFileHandlers: Record<string, (actionData: ActionData) => ActionResult> = {
     'place_cursor': handlePlaceCursor,
     'get_cursor': handleGetCursor,
     'insert_text': handleInsertText,
