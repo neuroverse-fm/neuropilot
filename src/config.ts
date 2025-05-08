@@ -61,7 +61,7 @@ class Config {
     get allowUnsafePaths(): boolean         { return get('allowUnsafePaths')!; }
     get allowRunningAllTasks(): boolean     { return get('allowRunningAllTasks')!; }
 
-    get terminals(): Array<{ name: string; path: string; args?: string[]; }> { return get('terminals')!; }
+    get terminals(): { name: string; path: string; args?: string[]; }[] { return get('terminals')!; }
 }
 
 export const CONFIG = new Config();

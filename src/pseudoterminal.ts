@@ -55,9 +55,9 @@ export function saveContextForTerminal(context: vscode.ExtensionContext) {
 /**
 * Fetches the list of terminal configurations from the `neuropilot.terminals` setting.
 */
-function getCustomTerminalConfigs(): Array<{ name: string; path: string; args?: string[] }> {
+function getCustomTerminalConfigs(): { name: string; path: string; args?: string[] }[] {
     const config = vscode.workspace.getConfiguration('neuropilot');
-    const terminals = config.get<Array<{ name: string; path: string; args?: string[] }>>('terminals', []);
+    const terminals = config.get<{ name: string; path: string; args?: string[] }[]>('terminals', []);
     return terminals;
 }
 
@@ -300,7 +300,7 @@ export function handleGetCurrentlyRunningShells(actionData: ActionData): ActionR
     if (!hasPermissions(PERMISSIONS.terminalAccess))
         return actionResultNoPermission(PERMISSIONS.terminalAccess);
 
-    const runningShells: Array<{ shellType: string; status: string }> = [];
+    const runningShells: { shellType: string; status: string }[] = [];
 
     for (const [shellType, session] of NEURO.terminalRegistry.entries()) {
         const status = session.shellProcess && !session.shellProcess.killed ? 'Running' : 'Stopped';
