@@ -24,7 +24,7 @@ export function registerChatResponseHandler() {
     NEURO.client?.onAction((actionData) => {
         if(actionData.name === 'chat') {
             NEURO.actionHandled = true;
-            
+
             const answer = actionData.params?.answer;
             if(answer === undefined) {
                 NEURO.client?.sendActionResult(actionData.id, false, 'Missing required parameter "answer"');
@@ -81,7 +81,7 @@ export function registerChatParticipant(context: vscode.ExtensionContext) {
 
         // Collect references
         stream.progress('Collecting references...');
-        
+
         const references: NeuroChatContext[] = [];
         for(const ref of request.references) {
             if(ref.value instanceof vscode.Location) {
@@ -127,7 +127,7 @@ export function registerChatParticipant(context: vscode.ExtensionContext) {
 
     const neuro = vscode.chat.createChatParticipant(NEURO_PARTICIPANT_ID, handler);
     neuro.iconPath = vscode.Uri.joinPath(context.extensionUri, 'neuropilot.png');
-    
+
     // TODO: Add followup provider?
 
     context.subscriptions.push(neuro.onDidReceiveFeedback((feedback: vscode.ChatResultFeedback) => {

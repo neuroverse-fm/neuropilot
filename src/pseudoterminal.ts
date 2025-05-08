@@ -76,16 +76,16 @@ export function getAvailableShellProfileNames(): string[] {
 function getShellProfileForType(shellType: string): { shellPath: string; shellArgs?: string[] } {
     const terminalConfigs = getCustomTerminalConfigs();
     const terminal = terminalConfigs.find((t) => t.name === shellType);
-	
+
     if (terminal) {
         return { shellPath: terminal.path, shellArgs: terminal.args || [] };
     }
-	
+
     // Fallback to the first terminal in the list if no match is found
     if (terminalConfigs.length > 0) {
         return { shellPath: terminalConfigs[0].path, shellArgs: terminalConfigs[0].args || [] };
     }
-	
+
     throw new Error(`No terminal configuration found for shell type: ${shellType}`);
 }
 
@@ -98,7 +98,7 @@ function createPseudoterminal(shellType: string, terminalName: string, vscContex
 
     const startTime: string = new Date().toLocaleString();
     const startTimePermission: boolean = CONFIG.showTimeOnTerminalStart;
-	
+
     // Define the pseudoterminal.
     const pty: vscode.Pseudoterminal = {
         onDidWrite: emitter.event,
@@ -116,7 +116,7 @@ function createPseudoterminal(shellType: string, terminalName: string, vscContex
 
     // 50/50 chance of icon selection no longer
     const icon = vscode.Uri.joinPath(vscContext.extensionUri, 'console.png');
-	
+
     // Create the terminal using VS Code's API.
     const terminal = vscode.window.createTerminal({
         name: terminalName,
@@ -124,7 +124,7 @@ function createPseudoterminal(shellType: string, terminalName: string, vscContex
         iconPath: icon,
         isTransient: false
     });
-	
+
     // Create the session object.
     const session: TerminalSession = {
         terminal,
@@ -165,27 +165,27 @@ export function handleRunCommand(actionData: ActionData): ActionResult {
     // Check terminal access permission.
     if (!hasPermissions(PERMISSIONS.terminalAccess))
         return actionResultNoPermission(PERMISSIONS.terminalAccess);
-	
+
     // Validate command parameter.
     const command: string = actionData.params?.command;
     if (!command)
         return actionResultMissingParameter('command');
-	
+
     // Determine the shell type.
     const shellType: string = actionData.params?.shell;
     if (!shellType)
         return actionResultMissingParameter('shell');
     else if (!getAvailableShellProfileNames().includes(shellType))
         return actionResultEnumFailure('shell', getAvailableShellProfileNames(), shellType);
-	
+
     // Get or create the terminal session for this shell.
     const session = getOrCreateTerminal(shellType, `Neuro: ${shellType}`);
     const outputDelay = CONFIG.terminalContextDelay;
-	
+
     // Reset previous outputs.
     session.outputStdout = '';
     session.outputStderr = '';
-	
+
     async function sendStdoutIfUnchangedAsync(delay: number) {
         const cachedOutput = session.outputStdout;
         await delayAsync(delay);
@@ -198,7 +198,7 @@ export function handleRunCommand(actionData: ActionData): ActionResult {
             session.outputStdout = '';
         }
     }
-	
+
     async function sendStderrIfUnchangedAsync(delay: number) {
         const cachedOutput = session.outputStderr;
         await delayAsync(delay);
@@ -211,21 +211,21 @@ export function handleRunCommand(actionData: ActionData): ActionResult {
             session.outputStderr = '';
         }
     }
-	
+
     // If no process has been started, spawn it.
     if (!session.processStarted) {
         session.processStarted = true;
         const { shellPath, shellArgs } = getShellProfileForType(shellType);
-		
+
         logOutput('DEBUG', `Shell: ${shellPath} ${shellArgs}`);
-		
+
         if (!shellPath || typeof shellPath !== 'string')
             return actionResultFailure(`Couldn't determine executable for shell profile ${shellType}`);
-		
+
         const cwd = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
         session.shellProcess = spawn(shellPath, shellArgs || [], { cwd, env: process.env, stdio: ['pipe', 'pipe', 'pipe'] });
         const proc = session.shellProcess;
-		
+
         proc.stdout.on('data', (data: Buffer) => {
             const text = data.toString();
             session.outputStdout += text;
@@ -233,20 +233,20 @@ export function handleRunCommand(actionData: ActionData): ActionResult {
             sendStdoutIfUnchangedAsync(outputDelay);
             logOutput('DEBUG', `STDOUT: ${text}`);
         });
-		
+
         proc.stderr.on('data', (data: Buffer) => {
             const text = data.toString();
             session.outputStderr += text;
             session.emitter.fire(text.replace(/(?<!\r)\n/g, '\r\n'));
             sendStderrIfUnchangedAsync(outputDelay);
             logOutput('ERROR', `STDERR: ${text}`);
-        });		
-		
+        });
+
         proc.on('exit', (code) => {
             NEURO.client?.sendContext(code === null ? `The ${shellType} terminal closed with a null exit code. Someone did something to it.` : `Terminal ${shellType} exited with code ${code}.`);
             logOutput('INFO', `${shellType} process exited with code ${code}`);
         });
-		
+
         proc.stdin.write(command + '\n');
         logOutput('DEBUG', `Sent command: ${command}`);
 
@@ -306,7 +306,7 @@ export function handleGetCurrentlyRunningShells(actionData: ActionData): ActionR
         const status = session.shellProcess && !session.shellProcess.killed ? 'Running' : 'Stopped';
         runningShells.push({ shellType, status });
     }
-	
+
     if (runningShells.length === 0)
         return actionResultAccept('No running shells found.');
     else

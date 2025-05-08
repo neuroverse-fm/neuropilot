@@ -131,7 +131,7 @@ export function getPositionContext(document: vscode.TextDocument, position: vsco
         position = position2;
         position2 = temp;
     }
-    
+
     const startLine = Math.max(0, position.line - beforeContextLength);
     const contextBefore = document.getText(new Range(new vscode.Position(startLine, 0), position));
     const endLine = Math.min(document.lineCount - 1, position2.line + afterContextLength);

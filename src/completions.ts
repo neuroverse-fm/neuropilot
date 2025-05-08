@@ -23,7 +23,7 @@ export function requestCompletion(beforeContext: string, afterContext: string, f
     NEURO.cancelled = false;
 
     assert(NEURO.client);
-    
+
     NEURO.client.registerActions([
         {
             name: 'complete_code',
@@ -31,7 +31,7 @@ export function requestCompletion(beforeContext: string, afterContext: string, f
                 ? 'Suggest code to write.' +
                 ' You may make one suggestion.' +
                 ' Your suggestion can be a single line or a multi-line code snippet.'
-                
+
                 : 'Suggest code to write.' +
                 ` You may make up to ${maxCount} suggestions, but only one will be used.` +
                 ' Your suggestions can be single lines or multi-line code snippets.',
@@ -75,7 +75,7 @@ export function registerCompletionResultHandler() {
 
         if(actionData.name === 'complete_code') {
             NEURO.actionHandled = true;
-            
+
             const suggestions = actionData.params?.suggestions;
 
             if(suggestions === undefined) {
@@ -84,7 +84,7 @@ export function registerCompletionResultHandler() {
             }
 
             NEURO.client.unregisterActions(['complete_code']);
-            
+
             if(NEURO.cancelled) {
                 NEURO.client.sendActionResult(actionData.id, true, 'Request was cancelled');
                 NEURO.waiting = false;
@@ -110,19 +110,19 @@ export const completionsProvider: vscode.InlineCompletionItemProvider = {
         const result: vscode.InlineCompletionList = {
             items: [],
         };
-        
+
         const triggerAuto = CONFIG.completionTrigger === 'automatic';
         if(!triggerAuto && context.triggerKind !== vscode.InlineCompletionTriggerKind.Invoke) {
             return result;
         }
-        
+
         // Get context
         const cursorContext = getPositionContext(document, position);
         const fileName = simpleFileName(document.fileName);
         const maxCount = CONFIG.maxCompletions || 3;
-        
+
         requestCompletion(cursorContext.contextBefore, cursorContext.contextAfter, fileName, document.languageId, maxCount);
-        
+
         token.onCancellationRequested(() => {
             logOutput('INFO', 'Cancelled request');
             cancelCompletionRequest();
@@ -151,13 +151,13 @@ export const completionsProvider: vscode.InlineCompletionItemProvider = {
                 throw erm;
             }
         }
-        
+
         for(const suggestion of lastSuggestions) {
             result.items.push({
                 insertText: suggestion.trim(),
             });
         }
-        
+
         return result;
     },
 };

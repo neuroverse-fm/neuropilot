@@ -62,7 +62,7 @@ function registerPreActionHandler() {
 function registerPostActionHandler() {
     NEURO.client?.onAction((actionData) => {
         if(NEURO.actionHandled) return;
-        
+
         NEURO.client?.sendActionResult(actionData.id, true, 'Unknown action');
     });
 }

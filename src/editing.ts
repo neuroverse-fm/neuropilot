@@ -116,7 +116,7 @@ export function handlePlaceCursor(actionData: ActionData): ActionResult {
         return actionResultIncorrectType('line', 'number', typeof line);
     if(typeof column !== 'number')
         return actionResultIncorrectType('column', 'number', typeof column);
-    
+
     const type = actionData.params?.type;
     if(type === undefined)
         return actionResultMissingParameter('type');
@@ -230,7 +230,7 @@ export function handleReplaceText(actionData: ActionData): ActionResult {
         return actionResultEnumFailure('match', MATCH_OPTIONS, match);
 
     const useRegex = actionData.params?.useRegex ?? false;
-    
+
     const document = vscode.window.activeTextEditor?.document;
     if(document === undefined)
         return ACTION_RESULT_NO_ACTIVE_DOCUMENT;
@@ -306,7 +306,7 @@ export function handleDeleteText(actionData: ActionData): ActionResult {
 
     const regex = new RegExp(useRegex ? find : escapeRegExp(find), 'g');
     const cursorOffset = document.offsetAt(vscode.window.activeTextEditor!.selection.active);
-    
+
     const matches = findAndFilter(regex, document.getText(), cursorOffset, match);
     if(matches.length === 0)
         return actionResultFailure('No matches found for the given parameters.');
@@ -365,7 +365,7 @@ export function handleFindText(actionData: ActionData): ActionResult {
         return ACTION_RESULT_NO_ACCESS;
 
     const cursorOffset = document.offsetAt(vscode.window.activeTextEditor!.selection.active);
-    
+
     const matches = findAndFilter(regex, document.getText(), cursorOffset, match);
     if(matches.length === 0)
         return actionResultFailure('No matches found for the given parameters.');
@@ -429,7 +429,7 @@ export function handleUndo(actionData: ActionData): ActionResult {
 function findAndFilter(regex: RegExp, text: string, cursorOffset: number, match: string): RegExpExecArray[] {
     const matches = text.matchAll(regex);
     let result: RegExpExecArray[] = [];
-    
+
     switch(match) {
         case 'firstInFile':
             for(const m of matches)
