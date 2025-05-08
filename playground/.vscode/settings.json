@@ -1,4 +1,5 @@
 {
+    // NeuroPilot settings
     "neuropilot.permission.editActiveDocument": true,
     "neuropilot.permission.openFiles": true,
     "neuropilot.permission.runTasks": true,
@@ -9,10 +10,10 @@
     "neuropilot.permission.gitTags": true,
     "neuropilot.permission.gitOperations": true,
     "neuropilot.permission.gitConfigs": true,
-    "github.copilot.advanced": {
-        "debug.overrideEngine": "someRandomString"
-    },
+    "neuropilot.allowUnsafePaths": false,
+    "neuropilot.showTimeOnTerminalStart": true,
     "neuropilot.permission.terminalAccess": true,
+    "neuropilot.permission.accessLintingAnalysis": true,
     "neuropilot.terminals": [
         {
             "name": "PowerShell",
@@ -30,8 +31,14 @@
             "args": ["-i"]
         }
     ],
-    "neuropilot.showTimeOnTerminalStart": true,
+    "neuropilot.sendNewLintingProblemsOn": "inCurrentFile",
+
+    // Debug engine override for GitHub Copilot
+    "github.copilot.advanced": {
+        "debug.overrideEngine": "someRandomString"
+    },
+
+    // VS Code settings
     "files.autoSave": "afterDelay",
     "files.autoSaveDelay": 1000,
-    "neuropilot.allowUnsafePaths": false
 }

@@ -18,11 +18,12 @@ If you enable it, this extension **can**:
 - let Neuro create, rename and delete files in the workspace.
 - let Neuro run pre-defined tasks.
 - let Neuro interact with the git repository, if one is present in the open workspace.
+- let Neuro view linting diagnostics, and be updated on linting diagnostics as they come in.
 
 This extension **will not**:
 
 - let Neuro read what you type in real time, unless you enable it in the settings.
-- give Neuro direct terminal access.
+- give Neuro direct terminal access, unless you enable it and specify shells she is allowed to run.
 - allow Neuro to change global git configurations.
 
 ## How to use
@@ -318,6 +319,26 @@ Kills a running shell. If a shell isn't already running, Neuro will be notified.
 
 *Requires Permissions: Terminal Access.*
 Returns the list of currently running shells to Neuro.
+
+### Linting
+
+#### `get_file_lint_problems`
+
+*Requires Permissions: Access Linting Problems.*
+Returns the linting diagnostics list of a file to Neuro.
+The file must have been loaded first before diagnostics are available.
+
+#### `get_folder_lint_problems`
+
+*Requires Permissions: Access Linting Problems.*
+Returns the linting diagnostics list of a folder's files to Neuro.
+Note that this only returns diagnostics of files in that folder that are loaded in the current session.
+
+#### `get_workspace_lint_problems`
+
+*Requires Permissions: Access Linting Problems.*
+Returns the linting diagnostics list of the current workspace to Neuro.
+Note that this only returns diagnostics of files that are loaded in the current session.
 
 ## Further Info
 
