@@ -114,13 +114,15 @@ export function handleGetFileLintProblems(actionData: ActionData): ActionResult 
         }
 
         const rawDiagnostics = vscode.languages.getDiagnostics(vscode.Uri.file(normalizedPath));
+        if (rawDiagnostics.length === 0) {
+            return actionResultAccept(`No linting problems found for file ${relativePath}.`);
+        }
         const formattedDiagnostics = getFormattedDiagnosticsForFile(relativePath, rawDiagnostics); // use relativePath
-        NEURO.client?.sendContext(`Linting problems for file ${relativePath}:${formattedDiagnostics}`);
+        return actionResultAccept(`Linting problems for file ${relativePath}:${formattedDiagnostics}`);
     } catch (error) {
-        NEURO.client?.sendContext(`Failed to get linting diagnostics for '${relativePath}'.`);
         logOutput("ERROR", `Getting diagnostics for ${relativePath} failed: ${error}`);
+        return actionResultFailure(`Failed to get linting diagnostics for '${relativePath}'.`);
     }
-    return actionResultAccept();
 }
 
 
@@ -151,12 +153,12 @@ export function handleGetFolderLintProblems(actionData: ActionData): ActionResul
         }
 
         const diagnostics = vscode.languages.getDiagnostics();
-        const folderDiagnostics = diagnostics.filter(([uri]) => {
-            return uri.fsPath.startsWith(normalizedFolderPath) && isPathNeuroSafe(uri.fsPath);
+        const folderDiagnostics = diagnostics.filter(([uri, diags]) => {
+            return normalizePath(uri.fsPath).startsWith(normalizedFolderPath) && isPathNeuroSafe(uri.fsPath) && diags.length > 0;
         });
 
         if (folderDiagnostics.length === 0) {
-            return actionResultNoAccess(normalizedFolderPath);
+            return actionResultAccept("No linting problems found.");
         }
 
         const formattedDiagnostics = folderDiagnostics.map(([uri, diags]) => {
@@ -164,12 +166,11 @@ export function handleGetFolderLintProblems(actionData: ActionData): ActionResul
             return getFormattedDiagnosticsForFile(relative, diags);
         }).join('\n');
 
-        NEURO.client?.sendContext(`Linting problems for folder ${relativeFolder}: ${formattedDiagnostics}`);
+        return actionResultAccept(`Linting problems for folder ${relativeFolder}: ${formattedDiagnostics}`);
     } catch (error) {
-        NEURO.client?.sendContext(`Failed to get linting diagnostics for folder '${relativeFolder}'.`);
         logOutput("ERROR", `Getting diagnostics for folder ${relativeFolder} failed: ${error}`);
+        return actionResultFailure(`Failed to get linting diagnostics for folder '${relativeFolder}`);
     }
-    return actionResultAccept();
 }
 
 // Handle diagnostics for the entire workspace
@@ -186,10 +187,10 @@ export function handleGetWorkspaceLintProblems(actionData: ActionData): ActionRe
 
     try {
         const diagnostics = vscode.languages.getDiagnostics();
-        const safeDiagnostics = diagnostics.filter(([uri]) => isPathNeuroSafe(uri.fsPath));
+        const safeDiagnostics = diagnostics.filter(([uri, diags]) => isPathNeuroSafe(uri.fsPath) && diags.length > 0);
 
         if (safeDiagnostics.length === 0) {
-            return actionResultNoAccess(workspacePath);
+            return actionResultAccept("No linting problems found.");
         }
 
         const formattedDiagnostics = safeDiagnostics.map(([uri, diags]) => {
@@ -197,10 +198,10 @@ export function handleGetWorkspaceLintProblems(actionData: ActionData): ActionRe
             return getFormattedDiagnosticsForFile(relative, diags);
         }).join('\n\n');
 
-        NEURO.client?.sendContext(`Linting problems for the current workspace: ${formattedDiagnostics}`);
+        return actionResultAccept(`Linting problems for the current workspace: ${formattedDiagnostics}`);
     } catch (error) {
-        NEURO.client?.sendContext("Couldn't get diagnostics for the workspace.");
         logOutput("ERROR", `Failed to get diagnostics for workspace. Error: ${error}`);
+        return actionResultFailure("Couldn't get diagnostics for the workspace.");
     }
 
     return actionResultAccept();
