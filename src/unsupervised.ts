@@ -6,7 +6,7 @@ import { gitActionHandlers, registerGitActions } from './git';
 import { editingFileHandlers, registerEditingActions } from './editing';
 import { ActionData, ActionResult } from './neuro_client_helper';
 import { registerTerminalActions, terminalAccessHandlers } from './pseudoterminal';
-import { lintActionHandlers, registerLintActions } from "./lint_problems";
+import { lintActionHandlers, registerLintActions } from './lint_problems';
 
 /**
  * Register unsupervised actions with the Neuro API.
@@ -19,7 +19,7 @@ const neuroActionHandlers: Record<string, (actionData: ActionData) => ActionResu
     ...taskHandlers,
     ...editingFileHandlers,
     ...terminalAccessHandlers,
-    ...lintActionHandlers
+    ...lintActionHandlers,
 };
 
 const actionKeys: string[] = Object.keys(neuroActionHandlers);

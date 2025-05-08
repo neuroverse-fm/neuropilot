@@ -54,5 +54,5 @@ export const NEURO: Neuro = {
     actionHandled: false,
     terminalEnabled: false,
     terminalRegistry: new Map(),
-    previousDiagnosticsMap: new Map()
+    previousDiagnosticsMap: new Map(),
 };

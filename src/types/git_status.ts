@@ -1,6 +1,6 @@
 import { Status, RefType } from './git';
 
-export const StatusStrings: { [key in Status]: string } = {
+export const StatusStrings: Record<Status, string> = {
     [Status.INDEX_MODIFIED]:     'Index modified',
     [Status.INDEX_ADDED]:        'Index added',
     [Status.INDEX_DELETED]:      'Index deleted',
@@ -24,7 +24,7 @@ export const StatusStrings: { [key in Status]: string } = {
     [Status.BOTH_MODIFIED]:      'Both modified',
 } as const;
 
-export const RefTypeStrings: { [key in RefType]: string } = {
+export const RefTypeStrings: Record<RefType, string> = {
     [RefType.Head]: 'Head',
     [RefType.RemoteHead]: 'Remote head',
     [RefType.Tag]: 'Tag',
