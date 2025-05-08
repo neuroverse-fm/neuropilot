@@ -1,12 +1,13 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
-import { NeuroClient } from "neuro-game-sdk";
-var globToRegExp = require('glob-to-regexp');
+import { NeuroClient } from 'neuro-game-sdk';
+import globToRegExp from 'glob-to-regexp';
 
 import { ChildProcessWithoutNullStreams } from 'child_process';
 
 import { NEURO } from './constants';
 import { Range } from 'vscode';
+import { CONFIG } from './config';
 
 export const REGEXP_ALWAYS = /^/;
 export const REGEXP_NEVER = /^\b$/;
@@ -81,34 +82,68 @@ export function onClientConnected(handler: () => void) {
 
 export function simpleFileName(fileName: string): string {
     const rootFolder = vscode.workspace.workspaceFolders?.[0].uri.fsPath.replace(/\\/, '/');
-    let result = fileName.replace(/\\/g, '/');
+    const result = fileName.replace(/\\/g, '/');
     if(rootFolder && result.startsWith(rootFolder))
         return result.substring(rootFolder.length);
     else
         return result.substring(result.lastIndexOf('/') + 1);
 }
 
+/**
+ * Filters the contents of a file to remove Windows-style line endings.
+ * @param contents The contents of the file to filter.
+ * @returns The filtered contents of the file.
+ */
 export function filterFileContents(contents: string): string {
     return contents.replace(/\r\n/g, '\n');
 }
 
-interface NeuroPositionContext {
+export interface NeuroPositionContext {
+    /** The context before the range. */
     contextBefore: string;
+    /** The context after the range. */
     contextAfter: string;
+    /** The context between the range. */
+    contextBetween: string;
+    /** The zero-based line where {@link contextBefore} starts. */
+    startLine: number;
+    /** The zero-based line where {@link contextAfter} ends. */
+    endLine: number;
 }
 
-export function getPositionContext(document: vscode.TextDocument, position: vscode.Position): NeuroPositionContext {
-    const beforeContextLength = vscode.workspace.getConfiguration('neuropilot').get('beforeContext', 10);
-    const afterContextLength = vscode.workspace.getConfiguration('neuropilot').get('afterContext', 10);
-    
-    const contextStart = Math.max(0, position.line - beforeContextLength);
-    const contextBefore = filterFileContents(document.getText(new Range(new vscode.Position(contextStart, 0), position)));
-    const contextEnd = Math.min(document.lineCount - 1, position.line + afterContextLength);
-    const contextAfter = document.getText(new Range(position, new vscode.Position(contextEnd, document.lineAt(contextEnd).text.length))).replace(/\r\n/g, '\n');
+/**
+ * Gets the context around a specified range in a document.
+ * @param document The document to get the context from.
+ * @param position The start of the range around which to get the context.
+ * @param position2 The end of the range around which to get the context. If not provided, defaults to {@link position}.
+ * @returns The context around the specified range. The amount of lines before and after the range is configurable in the settings.
+ */
+export function getPositionContext(document: vscode.TextDocument, position: vscode.Position, position2?: vscode.Position): NeuroPositionContext {
+    const beforeContextLength = CONFIG.beforeContext;
+    const afterContextLength = CONFIG.afterContext;
+
+    if(position2 === undefined) {
+        position2 = position;
+    }
+    if(position2.isBefore(position)) {
+        // Swap the positions if position2 is before position
+        const temp = position;
+        position = position2;
+        position2 = temp;
+    }
+
+    const startLine = Math.max(0, position.line - beforeContextLength);
+    const contextBefore = document.getText(new Range(new vscode.Position(startLine, 0), position));
+    const endLine = Math.min(document.lineCount - 1, position2.line + afterContextLength);
+    const contextAfter = document.getText(new Range(position2, new vscode.Position(endLine, document.lineAt(endLine).text.length))).replace(/\r\n/g, '\n');
+    const contextBetween = document.getText(new Range(position, position2));
 
     return {
         contextBefore: filterFileContents(contextBefore),
-        contextAfter: filterFileContents(contextAfter)
+        contextAfter: filterFileContents(contextAfter),
+        contextBetween: filterFileContents(contextBetween),
+        startLine: startLine,
+        endLine: endLine,
     };
 }
 
@@ -158,13 +193,18 @@ export function combineGlobLinesToRegExp(lines: string): RegExp {
  * @param checkPatterns Whether to check against include and exclude patterns.
  * @returns True if Neuro may safely access the path.
  */
-export function isPathNeuroSafe(path: string, checkPatterns: boolean = true): boolean {
+export function isPathNeuroSafe(path: string, checkPatterns = true): boolean {
     const rootFolder = getWorkspacePath();
     const normalizedPath = normalizePath(path);
-    const includePattern = vscode.workspace.getConfiguration('neuropilot').get('includePattern', '**/*');
-    const excludePattern = vscode.workspace.getConfiguration('neuropilot').get<string>('excludePattern');
+    const includePattern = CONFIG.includePattern || '**/*';
+    const excludePattern = CONFIG.excludePattern;
     const includeRegExp: RegExp = checkPatterns ? combineGlobLinesToRegExp(includePattern) : REGEXP_ALWAYS;
-    const excludeRegExp: RegExp = (checkPatterns && excludePattern) ? combineGlobLinesToRegExp(excludePattern) : REGEXP_NEVER;
+    const excludeRegExp: RegExp = checkPatterns && excludePattern ? combineGlobLinesToRegExp(excludePattern) : REGEXP_NEVER;
+
+    if (CONFIG.allowUnsafePaths === true) {
+        return includeRegExp.test(normalizedPath)       // Check against include pattern
+            && !excludeRegExp.test(normalizedPath);     // Check against exclude pattern
+    }
 
     return rootFolder !== undefined
         && normalizedPath !== rootFolder            // Prevent access to the workspace folder itself
@@ -179,22 +219,13 @@ export function isPathNeuroSafe(path: string, checkPatterns: boolean = true): bo
 
 // Helper function to normalize repository paths
 export function getNormalizedRepoPathForGit(repoPath: string): string {
-  // Remove trailing backslashes
-  let normalized = repoPath.replace(/\\+$/, '');
-  // Normalize the path to remove redundant separators etc.
-  normalized = path.normalize(normalized);
-  // Convert backslashes to forward slashes if needed by your Git library
-  normalized = normalized.replace(/\\/g, '/');
-  return normalized;
-}
-
-/**
- * Checks whether the specified permission is enabled.
- * @param permissions The permissions to query.
- * @returns `true` if all the permission are enabled, otherwise `false`.
- */
-export function hasPermissions(...permissions: Permission[]): boolean {
-    return permissions.every(permission => vscode.workspace.getConfiguration('neuropilot').get('permission.' + permission.id, false));
+    // Remove trailing backslashes
+    let normalized = repoPath.replace(/\\+$/, '');
+    // Normalize the path to remove redundant separators etc.
+    normalized = path.normalize(normalized);
+    // Convert backslashes to forward slashes if needed by your Git library
+    normalized = normalized.replace(/\\/g, '/');
+    return normalized;
 }
 
 /*
@@ -214,26 +245,94 @@ export interface TerminalSession {
 
 export const delayAsync = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-export interface Permission {
-    /** The ID of the permission in package.json, without the `neuropilot.permission.` prefix. */
-    id: string;
-    /** The infinitive of the permission to construct sentences (should fit the scheme "permission to {something}"). */
-    infinitive: string;
+export function escapeRegExp(string: string): string {
+    return string.replace(/[/\-\\^$*+?.()|[\]{}]/g, '\\$&');
 }
 
-/** Collection of strings for use in {@link actionResultNoPermission}. */
-export const PERMISSIONS: Record<string, Permission> = {
-    openFiles:          { id: 'openFiles',          infinitive: 'open files' },
-    editActiveDocument: { id: 'editActiveDocument', infinitive: 'edit documents' },
-    create:             { id: 'create',             infinitive: 'create files or folders' },
-    rename:             { id: 'rename',             infinitive: 'rename files or folders' },
-    delete:             { id: 'delete',             infinitive: 'delete files or folders' },
-    runTasks:           { id: 'runTasks',           infinitive: 'run or terminate tasks' },
-    requestCookies:     { id: 'requestCookies',     infinitive: 'request cookies' },
-    gitOperations:      { id: 'gitOperations',      infinitive: 'use Git' },
-    gitTags:            { id: 'gitTags',            infinitive: 'tag commits' },
-    gitRemotes:         { id: 'gitRemotes',         infinitive: 'interact with Git remotes' },
-    editRemoteData:     { id: 'editRemoteData',     infinitive: 'edit remote data' },
-    gitConfigs:         { id: 'gitConfigs',         infinitive: 'edit the Git configuration' },
-    terminalAccess:     { id: 'terminalAccess',     infinitive: 'access the terminal' },
-};
+/**
+ * Returns the string that would be inserted by the {@link String.replace} method.
+ * @param match The match object returned by a regular expression.
+ * @param replacement The replacement string, which can contain substitutions.
+ * The substitutions ` $` `, $' and $_ are not supported.
+ * @returns The substituted string.
+ * @throws Error if the substitution is invalid or if the capture group does not exist.
+ */
+export function substituteMatch(match: RegExpExecArray, replacement: string): string {
+    const rx = /\$<.+?>|\${.+?}|\$\d+|\$./g;
+    const substitutions = Array.from(replacement.matchAll(rx));
+    const literals = replacement.split(rx);
+    let result = '';
+    for(let i = 0; i < substitutions.length; i++) {
+        // Append literal
+        result += literals[i];
+        // Append substitution
+        if(substitutions[i][0] === '$&') {
+            // Full match
+            result += match[0];
+        }
+        else if(substitutions[i][0] === '$`' || substitutions[i][0] === '$\'' || substitutions[i][0] === '$_') {
+            // Text before or after the match
+            throw new Error('Substitution with text outside the match is not supported.');
+        }
+        else if(substitutions[i][0] === '$+') {
+            // Last capture group
+            if(match.length === 0)
+                throw new Error('No capture groups in the match');
+            result += match[match.length - 1];
+        }
+        else if(substitutions[i][0] === '$$') {
+            // Escaped dollar sign
+            result += '$';
+        }
+        else if(substitutions[i][0].startsWith('$<') || substitutions[i][0].startsWith('${')) {
+            const name = substitutions[i][0].slice(2, -1);
+            if(/^\d+$/.test(name)) {
+                // Numbered group
+                const index = parseInt(name);
+                if(index >= match.length)
+                    throw new Error(`Capture group ${index} does not exist in the match`);
+                result += match[index];
+            }
+            else {
+                // Named group
+                const content = match.groups?.[name];
+                if(content === undefined)
+                    throw new Error(`Capture group "${name}" does not exist in the match`);
+                result += content;
+            }
+        }
+        else if(/^\$\d+$/.test(substitutions[i][0])) {
+            // Numbered group
+            const index = parseInt(substitutions[i][0].slice(1));
+            if(index >= match.length)
+                throw new Error(`Capture group ${index} does not exist in the match`);
+            result += match[index];
+        }
+        else {
+            // No substitution, just append the string
+            result += substitutions[i][0];
+        }
+    }
+    // Append remaining literal
+    result += literals[literals.length - 1];
+    return result;
+}
+
+/**
+ * Searches for the longest fence (at least 3 backticks in a row) in the given text.
+ * @param text The text to search for fences in.
+ * @returns The length of the longest fence found in the text, or 0 if no fences were found.
+ */
+export function getMaxFenceLength(text: string): number {
+    return text.match(/`{3,}/g)?.reduce((a, b) => Math.max(a, b.length), 0) ?? 0;
+}
+
+/**
+ * Gets the minimum fence required to enclose the given text.
+ * @param text The text to search for fences in.
+ * @returns The minimum fence required to enclose the text.
+ */
+export function getFence(text: string): string {
+    const maxFenceLength = getMaxFenceLength(text);
+    return '`'.repeat(maxFenceLength ? maxFenceLength + 1 : 3);
+}

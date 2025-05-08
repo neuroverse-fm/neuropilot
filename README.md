@@ -22,6 +22,7 @@ If you enable it, this extension **can**:
 - let Neuro interact with the git repository, if one is present in the open workspace.
 - give Neuro direct terminal access.
 - let Neuro read what you type in real time.
+- let Neuro view linting diagnostics, and be updated on linting diagnostics as they come in.
 
 This extension **will not**:
 
@@ -139,7 +140,7 @@ Opens a file inside the workspace (or focuses it if it is already open) and send
 
 *Requires Permission: [Edit Active Document](vscode://settings/neuropilot.permission.editActiveDocument).*
 
-Places the cursor at the specified line and character (zero-based).
+Places the cursor at the specified line and column or moves the cursor by the specified number of lines and columns.
 
 #### `get_cursor`
 
@@ -158,26 +159,36 @@ Inserts text at the current cursor position and places the cursor after the inse
 
 *Requires Permission: [Edit Active Document](vscode://settings/neuropilot.permission.editActiveDocument).*
 
-Replaces the first occurence of the specified text with new text and places the cursor after the inserted text.
+Searches the current file for a search string or regex and replaces it.
+If using regex, the replacement can use substitution patterns.
+If only one instance is replaced, places the cursor after the inserted text.
 
 #### `delete_text`
 
 *Requires Permission: [Edit Active Document](vscode://settings/neuropilot.permission.editActiveDocument).*
 
-Deletes the first occurence of the specified text and places the cursor where the text was.
+Searches the current file for a search string or regex and deletes it.
+If only one instance is deleted, places the cursor where the text was.
 
-#### `place_cursor_at_text`
+#### `find_text`
 
 *Requires Permission: [Edit Active Document](vscode://settings/neuropilot.permission.editActiveDocument).*
 
-Places the cursor before or after the first occurence of the specified text.
+Searches the current file for a search string or regex.
+Depending on the match mode, places the cursor at the location or returns all lines with matches.
+
+#### `undo`
+
+*Requires Permission: Edit Active Document.*
+Undoes the last editing action.
+Only works if VS Code is focused.
 
 #### `create_file`
 
 *Requires Permission: [Create](vscode://settings/neuropilot.permission.create).*
 
 Creates a new file in the workspace.
-If *permission to open file* is given, the file is immediately opened.
+If *Permission: Open Files* is given, the file is immediately opened.
 The file name cannot start with a dot, and cannot be created in a folder that starts with a dot.
 
 #### `create_folder`
@@ -192,14 +203,14 @@ A folder starting with a dot cannot be created this way.
 *Requires Permission: [Rename](vscode://settings/neuropilot.permission.rename).*
 
 Renames a file or folder in the workspace.
-This cannot rename to or from a name starting with a dot, or within a folder that starts with a dot.
+By default his cannot rename to or from a name starting with a dot, or within a folder that starts with a dot.
 
 #### `delete_file_or_folder`
 
 *Requires Permission: [Delete](vscode://settings/neuropilot.permission.delete).*
 
 Deletes a file or folder in the workspace.
-This cannot delete anything starting with a dot, or inside a folder starting with a dot.
+By default, this cannot delete anything starting with a dot, or inside a folder starting with a dot.
 
 ### Git Interactions
 
@@ -368,6 +379,26 @@ Kills a running shell. If a shell isn't already running, Neuro will be notified.
 *Requires Permission: [Terminal Access](vscode://settings/neuropilot.permission.terminalAccess).*
 
 Returns the list of currently running shells to Neuro.
+
+### Linting
+
+#### `get_file_lint_problems`
+
+*Requires Permissions: Access Linting Problems.*
+Returns the linting diagnostics list of a file to Neuro.
+The file must have been loaded first before diagnostics are available.
+
+#### `get_folder_lint_problems`
+
+*Requires Permissions: Access Linting Problems.*
+Returns the linting diagnostics list of a folder's files to Neuro.
+Note that this only returns diagnostics of files in that folder that are loaded in the current session.
+
+#### `get_workspace_lint_problems`
+
+*Requires Permissions: Access Linting Problems.*
+Returns the linting diagnostics list of the current workspace to Neuro.
+Note that this only returns diagnostics of files that are loaded in the current session.
 
 ## Further Info
 

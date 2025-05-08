@@ -2,6 +2,7 @@ import { NeuroClient } from 'neuro-game-sdk';
 import * as vscode from 'vscode';
 import { NEURO } from './constants';
 import { logOutput, assert, simpleFileName, getPositionContext } from './utils';
+import { CONFIG } from './config';
 
 let lastSuggestions: string[] = [];
 
@@ -22,18 +23,18 @@ export function requestCompletion(beforeContext: string, afterContext: string, f
     NEURO.cancelled = false;
 
     assert(NEURO.client);
-    
+
     NEURO.client.registerActions([
         {
             name: 'complete_code',
             description: maxCount == 1
-                ? `Suggest code to write.` +
-                ` You may make one suggestion.` +
-                ` Your suggestion can be a single line or a multi-line code snippet.`
-                
-                : `Suggest code to write.` +
+                ? 'Suggest code to write.' +
+                ' You may make one suggestion.' +
+                ' Your suggestion can be a single line or a multi-line code snippet.'
+
+                : 'Suggest code to write.' +
                 ` You may make up to ${maxCount} suggestions, but only one will be used.` +
-                ` Your suggestions can be single lines or multi-line code snippets.`,
+                ' Your suggestions can be single lines or multi-line code snippets.',
             schema: {
                 type: 'object',
                 properties: {
@@ -41,11 +42,11 @@ export function requestCompletion(beforeContext: string, afterContext: string, f
                         type: 'array',
                         items: { type: 'string' },
                         maxItems: maxCount,
-                    }
+                    },
                 },
                 required: ['suggestions'],
-            }
-        }
+            },
+        },
     ]);
 
     NEURO.client.forceActions(
@@ -74,7 +75,7 @@ export function registerCompletionResultHandler() {
 
         if(actionData.name === 'complete_code') {
             NEURO.actionHandled = true;
-            
+
             const suggestions = actionData.params?.suggestions;
 
             if(suggestions === undefined) {
@@ -83,7 +84,7 @@ export function registerCompletionResultHandler() {
             }
 
             NEURO.client.unregisterActions(['complete_code']);
-            
+
             if(NEURO.cancelled) {
                 NEURO.client.sendActionResult(actionData.id, true, 'Request was cancelled');
                 NEURO.waiting = false;
@@ -109,25 +110,25 @@ export const completionsProvider: vscode.InlineCompletionItemProvider = {
         const result: vscode.InlineCompletionList = {
             items: [],
         };
-        
-        const triggerAuto = vscode.workspace.getConfiguration('neuropilot').get<string>('completionTrigger', 'invokeOnly') === 'automatic';
+
+        const triggerAuto = CONFIG.completionTrigger === 'automatic';
         if(!triggerAuto && context.triggerKind !== vscode.InlineCompletionTriggerKind.Invoke) {
             return result;
         }
-        
+
         // Get context
         const cursorContext = getPositionContext(document, position);
         const fileName = simpleFileName(document.fileName);
-        const maxCount = vscode.workspace.getConfiguration('neuropilot').get('maxCompletions', 3);
-        
+        const maxCount = CONFIG.maxCompletions || 3;
+
         requestCompletion(cursorContext.contextBefore, cursorContext.contextAfter, fileName, document.languageId, maxCount);
-        
+
         token.onCancellationRequested(() => {
             logOutput('INFO', 'Cancelled request');
             cancelCompletionRequest();
         });
 
-        const timeoutMs = vscode.workspace.getConfiguration('neuropilot').get('timeout', 10000);
+        const timeoutMs = CONFIG.timeout || 10000;
         const timeout = new Promise<void>((_, reject) => setTimeout(() => reject('Request timed out'), timeoutMs));
         const completion = new Promise<void>((resolve) => {
             const interval = setInterval(() => {
@@ -150,13 +151,13 @@ export const completionsProvider: vscode.InlineCompletionItemProvider = {
                 throw erm;
             }
         }
-        
+
         for(const suggestion of lastSuggestions) {
             result.items.push({
                 insertText: suggestion.trim(),
             });
         }
-        
+
         return result;
     },
 };

@@ -1,13 +1,14 @@
 import * as vscode from 'vscode';
 
-import { NEURO } from "./constants";
-import { logOutput, formatActionID, hasPermissions, PERMISSIONS } from './utils';
+import { NEURO } from './constants';
+import { logOutput, formatActionID, getFence } from './utils';
 import { ActionData, ActionResult, actionResultAccept, actionResultFailure, actionResultNoPermission, actionResultRetry } from './neuro_client_helper';
+import { CONFIG, PERMISSIONS, hasPermissions } from './config';
 
-export const taskHandlers: { [key: string]: (actionData: ActionData) => ActionResult } = {
+export const taskHandlers: Record<string, (actionData: ActionData) => ActionResult> = {
     // handleRunTask is used separately and not on this list
     'terminate_task': handleTerminateTask,
-}
+};
 
 export function registerTaskActions() {
     if(hasPermissions(PERMISSIONS.runTasks)) {
@@ -21,7 +22,7 @@ export function registerTaskActions() {
     }
 }
 
-export function handleTerminateTask(actionData: ActionData): ActionResult {
+export function handleTerminateTask(_actionData: ActionData): ActionResult {
     if(!hasPermissions(PERMISSIONS.runTasks))
         return actionResultNoPermission(PERMISSIONS.runTasks);
 
@@ -65,9 +66,12 @@ export function taskEndedHandler(event: vscode.TaskEndEvent) {
             NEURO.currentTaskExecution = null;
             vscode.commands.executeCommand('workbench.action.terminal.copyLastCommandOutput')
                 .then(
-                    _ => vscode.env.clipboard.readText()
+                    _ => vscode.env.clipboard.readText(),
                 ).then(
-                    text => NEURO.client?.sendContext(`Task finished! Output:\n\n\`\`\`${text}\n\`\`\``)
+                    text => {
+                        const fence = getFence(text);
+                        NEURO.client?.sendContext(`Task finished! Output:\n\n${fence}\n${text}\n${fence}`);
+                    },
                 );
         }
     }
@@ -85,14 +89,21 @@ export function reloadTasks() {
 
     vscode.tasks.fetchTasks().then((tasks) => {
         for(const task of tasks) {
-            // Only allow tasks whose details start with '[Neuro]'
-            if(task.detail?.toLowerCase().startsWith('[neuro]')) {
+            if (CONFIG.allowRunningAllTasks === true) {
+                logOutput('INFO', `Adding task: ${task.name}`);
+                NEURO.tasks.push({
+                    id: formatActionID(task.name),
+                    description: (task.detail?.length ?? 0) > 0 ? task.detail! : task.name,
+                    task,
+                });
+            } else if (task.detail?.toLowerCase().startsWith('[neuro]')) {
+                // Only allow tasks whose details start with '[Neuro]'
                 const detail = task.detail?.substring(7).trim();
                 logOutput('INFO', `Adding Neuro task: ${task.name}`);
                 NEURO.tasks.push({
                     id: formatActionID(task.name),
                     description: detail.length > 0 ? detail : task.name,
-                    task: task,
+                    task,
                 });
             }
             else {
@@ -108,7 +119,7 @@ export function reloadTasks() {
             return {
                 name: task.id,
                 description: task.description,
-            }
+            };
         }));
     });
 }

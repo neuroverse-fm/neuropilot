@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 
 import { NEURO } from './constants';
 import { assert, filterFileContents, logOutput, simpleFileName } from './utils';
+import { CONFIG } from './config';
 
 const NEURO_PARTICIPANT_ID = 'neuropilot.neuro';
 
@@ -17,13 +18,13 @@ interface NeuroChatContext {
     text: string;
 }
 
-let lastChatResponse: string = '';
+let lastChatResponse = '';
 
 export function registerChatResponseHandler() {
     NEURO.client?.onAction((actionData) => {
         if(actionData.name === 'chat') {
             NEURO.actionHandled = true;
-            
+
             const answer = actionData.params?.answer;
             if(answer === undefined) {
                 NEURO.client?.sendActionResult(actionData.id, false, 'Missing required parameter "answer"');
@@ -80,7 +81,7 @@ export function registerChatParticipant(context: vscode.ExtensionContext) {
 
         // Collect references
         stream.progress('Collecting references...');
-        
+
         const references: NeuroChatContext[] = [];
         for(const ref of request.references) {
             if(ref.value instanceof vscode.Location) {
@@ -126,18 +127,18 @@ export function registerChatParticipant(context: vscode.ExtensionContext) {
 
     const neuro = vscode.chat.createChatParticipant(NEURO_PARTICIPANT_ID, handler);
     neuro.iconPath = vscode.Uri.joinPath(context.extensionUri, 'neuropilot.png');
-    
+
     // TODO: Add followup provider?
 
     context.subscriptions.push(neuro.onDidReceiveFeedback((feedback: vscode.ChatResultFeedback) => {
         if(feedback.kind === vscode.ChatResultFeedbackKind.Helpful) {
             logOutput('INFO', 'Answer was deemed helpful');
-            NEURO.client?.sendContext("Vedal found your answer helpful.");
+            NEURO.client?.sendContext('Vedal found your answer helpful.');
         }
         else {
             logOutput('INFO', 'Answer was deemed unhelpful');
             logOutput('DEBUG', JSON.stringify(feedback));
-            NEURO.client?.sendContext("Vedal found your answer unhelpful.");
+            NEURO.client?.sendContext('Vedal found your answer unhelpful.');
         }
     }));
 }
@@ -163,8 +164,8 @@ async function requestChatResponse(prompt: string, state: string, token: vscode.
                     answer: { type: 'string' },
                 },
                 required: ['answer'],
-            }
-        }
+            },
+        },
     ]);
 
     NEURO.client?.forceActions(
@@ -179,7 +180,7 @@ async function requestChatResponse(prompt: string, state: string, token: vscode.
         cancelChatRequest();
     });
 
-    const timeoutMs = vscode.workspace.getConfiguration('neuropilot').get('timeout', 10000);
+    const timeoutMs = CONFIG.timeout || 10000;
     const timeout = new Promise<string>((_, reject) => setTimeout(() => reject('Request timed out'), timeoutMs));
     const response = new Promise<string>((resolve) => {
         const interval = setInterval(() => {

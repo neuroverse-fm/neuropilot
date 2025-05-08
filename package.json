@@ -3,7 +3,7 @@
 	"displayName": "NeuroPilot",
 	"description": "Lets Neuro-sama provide inline completions in VS Code",
 	"icon": "icon.png",
-	"version": "1.4.1",
+	"version": "1.5.0",
 	"publisher": "Pasu4",
 	"repository": "https://github.com/Pasu4/neuropilot",
 	"license": "MIT",
@@ -73,12 +73,12 @@
 					"neuropilot.beforeContext": {
 						"type": "integer",
 						"default": 10,
-						"description": "The number of lines before the cursor position to include in the completion request"
+						"description": "The number of lines before the cursor position to include as context when editing a file or sending a completion request"
 					},
 					"neuropilot.afterContext": {
 						"type": "integer",
 						"default": 10,
-						"description": "The number of lines after the cursor position to include in the completion request"
+						"description": "The number of lines after the cursor position to include as context when editing a file or sending a completion request"
 					},
 					"neuropilot.maxCompletions": {
 						"type": "integer",
@@ -158,12 +158,16 @@
 							{
 								"name": "Command Prompt",
 								"path": "C:\\Windows\\System32\\cmd.exe",
-								"args": ["/K"]
+								"args": [
+									"/K"
+								]
 							},
 							{
 								"name": "Git Bash",
 								"path": "C:\\Program Files\\Git\\bin\\bash.exe",
-								"args": ["-i"]
+								"args": [
+									"-i"
+								]
 							}
 						]
 					},
@@ -232,6 +236,11 @@
 						"default": false,
 						"markdownDescription": "Allow Neuro __direct terminal access__. Be very careful with this."
 					},
+					"neuropilot.permission.accessLintingAnalysis": {
+						"type": "boolean",
+						"default": false,
+						"markdownDescription": "Allow Neuro to get access to linting problems within loaded files."
+					},
 					"neuropilot.showTimeOnTerminalStart": {
 						"type": "boolean",
 						"default": true,
@@ -241,6 +250,31 @@
 						"type": "number",
 						"default": 400,
 						"markdownDescription": "The time in ms to wait for the terminal to print more output before sending context to Neuro. This is to prevent sending multiple context messages if the terminal doesn't print fast enough."
+					},
+					"neuropilot.allowUnsafePaths": {
+						"type": "boolean",
+						"default": false,
+						"markdownDescription": "Allow Neuro to view & edit files and folders in unsafe paths. These include:\n- files/folders starting with a '.'\n- parent directories and directories outside the workspace\n- Environmental variables\n\nNote that your include/exclude patterns are still respected."
+					},
+					"neuropilot.allowRunningAllTasks": {
+						"type": "boolean",
+						"default": false,
+						"markdownDescription": "Allow Neuro to run all tasks regardless of their prefix in their 'detail' key."
+					},
+					"neuropilot.sendNewLintingProblemsOn": {
+						"type": "string",
+						"default": "off",
+						"description": "If a new linting problem appears, on what condition should it be sent to Neuro?",
+						"enum": [
+							"off",
+							"inCurrentFile",
+							"inWorkspace"
+						],
+						"enumDescriptions": [
+							"Only when Neuro explicitly checks for it.",
+							"If a new problem appears in the file she is currently viewing.",
+							"When a new problem appears anywhere in the workspace."
+						]
 					}
 				}
 			}
@@ -259,6 +293,8 @@
 	"devDependencies": {
 		"@eslint/js": "^9.13.0",
 		"@stylistic/eslint-plugin": "^2.9.0",
+		"@types/eslint__js": "^8.42.3",
+		"@types/glob-to-regexp": "^0.4.4",
 		"@types/node": "^20",
 		"@types/vscode": "^1.95.0",
 		"@types/ws": "^8.18.0",
