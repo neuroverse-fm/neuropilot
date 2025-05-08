@@ -27,7 +27,8 @@ export default tseslint.config(
 			'@stylistic': stylistic,
 		},
 		rules: {
-			// 'curly': ['warn', 'multi-or-nest'],
+			'curly': 'off',
+			'no-control-regex': 'off',
 			'@stylistic/semi': ['warn', 'always'],
 			'@stylistic/indent': ['error', 4],
 			'@stylistic/comma-dangle': ['warn', 'always-multiline'],
