@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import { NeuroClient } from 'neuro-game-sdk';
-var globToRegExp = require('glob-to-regexp');
+import globToRegExp from 'glob-to-regexp';
 
 import { ChildProcessWithoutNullStreams } from 'child_process';
 
@@ -199,7 +199,7 @@ export function isPathNeuroSafe(path: string, checkPatterns = true): boolean {
     const includePattern = CONFIG.includePattern || '**/*';
     const excludePattern = CONFIG.excludePattern;
     const includeRegExp: RegExp = checkPatterns ? combineGlobLinesToRegExp(includePattern) : REGEXP_ALWAYS;
-    const excludeRegExp: RegExp = (checkPatterns && excludePattern) ? combineGlobLinesToRegExp(excludePattern) : REGEXP_NEVER;
+    const excludeRegExp: RegExp = checkPatterns && excludePattern ? combineGlobLinesToRegExp(excludePattern) : REGEXP_NEVER;
 
     if (CONFIG.allowUnsafePaths === true) {
         return includeRegExp.test(normalizedPath)       // Check against include pattern
