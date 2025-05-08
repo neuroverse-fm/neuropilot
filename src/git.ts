@@ -372,7 +372,7 @@ export function handleGetGitConfig(actionData: ActionData): ActionResult {
         });
     }
     else {
-        repo.getConfig(configKey).then((configValue: any) => {
+        repo.getConfig(configKey).then((configValue: string) => {
             NEURO.client?.sendContext(`Git config key "${configKey}": ${configValue}`);
         }, (err: string) => {
             NEURO.client?.sendContext(`Failed to get Git config key "${configKey}"`);

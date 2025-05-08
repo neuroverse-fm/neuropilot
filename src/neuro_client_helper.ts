@@ -9,6 +9,7 @@ import { logOutput } from './utils';
 export interface ActionData {
     id: string;
     name: string;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     params?: any;
 }
 
@@ -116,7 +117,7 @@ export function actionResultNoAccess(path: string): ActionResult {
     };
 }
 
-export function actionResultEnumFailure(parameterName: string, validValues: any[], value: any): ActionResult {
+export function actionResultEnumFailure<T>(parameterName: string, validValues: T[], value: T): ActionResult {
     logOutput('WARNING', `Action failed: "${parameterName}" must be one of ${JSON.stringify(validValues)}, but got ${JSON.stringify(value)}.`);
     return {
         success: false,
