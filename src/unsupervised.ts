@@ -1,11 +1,11 @@
-import { NEURO } from "./constants";
+import { NEURO } from './constants';
 
 import { handleRunTask, registerTaskActions, taskHandlers } from './tasks';
 import { fileActionHandlers, registerFileActions } from './file_actions';
 import { gitActionHandlers, registerGitActions } from './git';
 import { editingFileHandlers, registerEditingActions } from './editing';
-import { ActionData, ActionResult } from "./neuro_client_helper";
-import { registerTerminalActions, terminalAccessHandlers } from "./pseudoterminal";
+import { ActionData, ActionResult } from './neuro_client_helper';
+import { registerTerminalActions, terminalAccessHandlers } from './pseudoterminal';
 
 /**
  * Register unsupervised actions with the Neuro API.

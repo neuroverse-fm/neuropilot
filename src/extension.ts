@@ -89,7 +89,7 @@ function disableAllPermissions() {
         emergencyTerminalShutdown();
         // Send context and reload
         reloadPermissions();
-        NEURO.client?.sendContext("Vedal has turned off all dangerous permissions.");
-        vscode.window.showInformationMessage("All dangerous permissions have been turned off and actions have been re-registered. Terminal shells have also been killed, if any.");
+        NEURO.client?.sendContext('Vedal has turned off all dangerous permissions.');
+        vscode.window.showInformationMessage('All dangerous permissions have been turned off and actions have been re-registered. Terminal shells have also been killed, if any.');
     });
 }

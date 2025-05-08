@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 
-import { NEURO } from "./constants";
+import { NEURO } from './constants';
 import { escapeRegExp, getFence, getPositionContext, isPathNeuroSafe, logOutput, NeuroPositionContext, substituteMatch } from './utils';
 import { ActionData, ActionResult, actionResultAccept, actionResultEnumFailure, actionResultFailure, actionResultIncorrectType, actionResultMissingParameter, actionResultNoPermission, actionResultRetry } from './neuro_client_helper';
 import { PERMISSIONS, hasPermissions } from './config';
@@ -256,7 +256,7 @@ export function handleReplaceText(actionData: ActionData): ActionResult {
     }
     vscode.workspace.applyEdit(edit).then(success => {
         if(success) {
-            logOutput('INFO', `Replacing text in document`);
+            logOutput('INFO', 'Replacing text in document');
             if(matches.length === 1) {
                 // Single match
                 const document = vscode.window.activeTextEditor!.document;
@@ -317,7 +317,7 @@ export function handleDeleteText(actionData: ActionData): ActionResult {
     }
     vscode.workspace.applyEdit(edit).then(success => {
         if(success) {
-            logOutput('INFO', `Deleting text from document`);
+            logOutput('INFO', 'Deleting text from document');
             if(matches.length === 1) {
                 // Single match
                 const document = vscode.window.activeTextEditor!.document;

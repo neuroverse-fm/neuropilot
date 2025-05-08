@@ -93,7 +93,7 @@ export function registerGitActions() {
                                 message: { type: 'string' },
                                 options: {
                                     type: 'array',
-                                    items: { type: 'string', enum: ["signoff", "verbose", "amend"] },
+                                    items: { type: 'string', enum: ['signoff', 'verbose', 'amend'] },
                                 }
                             },
                             required: ['message']
@@ -182,11 +182,11 @@ export function registerGitActions() {
                         name: 'git_blame',
                         description: 'Get commit attributions for each line in a file.',
                         schema: {
-                            type: "object",
+                            type: 'object',
                             properties: {
                                 filePath: { type: 'string' }
                             },
-                            required: ["filePath"]
+                            required: ['filePath']
                         }
                     }
                 ]);
@@ -195,25 +195,25 @@ export function registerGitActions() {
                     NEURO.client?.registerActions([
                         {
                             name: 'tag_head',
-                            description: "Tag the current commit using Git.",
+                            description: 'Tag the current commit using Git.',
                             schema: {
                                 type: 'object',
                                 properties: {
                                     name: { type: 'string' },
                                     upstream: { type: 'string' }
                                 },
-                                required: ["name", "upstream"]
+                                required: ['name', 'upstream']
                             }
                         },
                         {
                             name: 'delete_tag',
-                            description: "Delete a tag from Git.",
+                            description: 'Delete a tag from Git.',
                             schema: {
                                 type: 'object',
                                 properties: {
                                     name: { type: 'string' }
                                 },
-                                required: ["name"]
+                                required: ['name']
                             }
                         }
                     ]);
@@ -345,9 +345,9 @@ export function handleNewGitRepo(actionData: ActionData): ActionResult {
     git.init(vscode.Uri.file(folderPath)).then(() => {
         repo = git.repositories[0]; // Update the repo reference to the new repository, just in case
         registerGitActions(); // Re-register commands
-        NEURO.client?.sendContext(`Initialized a new Git repository in the workspace folder. You should now be able to use git commands.`);
+        NEURO.client?.sendContext('Initialized a new Git repository in the workspace folder. You should now be able to use git commands.');
     }, (err: string) => {
-        NEURO.client?.sendContext(`Failed to initialize Git repository`);
+        NEURO.client?.sendContext('Failed to initialize Git repository');
         logOutput('ERROR', `Failed to initialize Git repository: ${err}`);
     });
 
@@ -477,7 +477,7 @@ export function handleDeleteGitBranch(actionData: ActionData): ActionResult {
     repo.deleteBranch(branchName, forceDelete).then(() => {
         NEURO.client?.sendContext(`Deleted branch ${branchName}.`);
     }, (err: string) => {
-        NEURO.client?.sendContext(`Failed to delete branch "${branchName}".${forceDelete === false ? "\nEnsure the branch is merged before deleting, or force delete it to discard changes." : ""}`);
+        NEURO.client?.sendContext(`Failed to delete branch "${branchName}".${forceDelete === false ? '\nEnsure the branch is merged before deleting, or force delete it to discard changes.' : ''}`);
         logOutput('ERROR', `Failed to delete branch: ${err}`);
     });
 
@@ -525,7 +525,7 @@ export function handleGitStatus(actionData: ActionData): ActionResult {
         };
         NEURO.client?.sendContext(`Git status: ${JSON.stringify(state)}`);
     }, (err: string) => {
-        NEURO.client?.sendContext(`Failed to get Git repository status`);
+        NEURO.client?.sendContext('Failed to get Git repository status');
         logOutput('ERROR', `Failed to get Git status: ${err}`);
     });
 
@@ -544,7 +544,7 @@ export function handleGitAdd(actionData: ActionData): ActionResult {
     const filePath: string = actionData.params?.filePath;
 
     // Normalize the file path if provided; otherwise, use wildcard.
-    const stageFiles: string = filePath ? getNormalizedRepoPathForGit(filePath) : `*`;
+    const stageFiles: string = filePath ? getNormalizedRepoPathForGit(filePath) : '*';
 
     // Compute an absolute path. If the stageFiles is already absolute, use it.
     // Otherwise, join it with the repository's root path.
@@ -553,7 +553,7 @@ export function handleGitAdd(actionData: ActionData): ActionResult {
         absolutePath = stageFiles;
     } else {
         absolutePath = path.join(repo.rootUri.fsPath, stageFiles);
-        if (stageFiles === ".") {
+        if (stageFiles === '.') {
             absolutePath = `${absolutePath}\\${stageFiles}`;
         }
     }
@@ -562,8 +562,8 @@ export function handleGitAdd(actionData: ActionData): ActionResult {
     repo.add([absolutePath]).then(() => {
         NEURO.client?.sendContext(`Added ${stageFiles} to staging area.`);
     }, (err: string) => {
-        NEURO.client?.sendContext(`Adding files to staging area failed`);
-        logOutput("ERROR", `Failed to git add: ${err}\nTried to add ${absolutePath}`);
+        NEURO.client?.sendContext('Adding files to staging area failed');
+        logOutput('ERROR', `Failed to git add: ${err}\nTried to add ${absolutePath}`);
     });
 
     return actionResultAccept();
@@ -581,7 +581,7 @@ export function handleGitRemove(actionData: ActionData): ActionResult {
     const filePath: string = actionData.params?.filePath;
 
     // Normalize the file path if provided; otherwise, use wildcard.
-    const revertFiles: string = filePath ? getNormalizedRepoPathForGit(filePath) : `*`;
+    const revertFiles: string = filePath ? getNormalizedRepoPathForGit(filePath) : '*';
 
     // Compute an absolute path. If the removeFiles is already absolute, use it.
     // Otherwise, join it with the repository's root path.
@@ -590,7 +590,7 @@ export function handleGitRemove(actionData: ActionData): ActionResult {
         absolutePath = revertFiles;
     } else {
         absolutePath = path.join(repo.rootUri.fsPath, revertFiles);
-        if (revertFiles === ".") {
+        if (revertFiles === '.') {
             absolutePath = `${absolutePath}\\${revertFiles}`;
         }
     }
@@ -599,8 +599,8 @@ export function handleGitRemove(actionData: ActionData): ActionResult {
     repo.revert([absolutePath]).then(() => {
         NEURO.client?.sendContext(`Removed ${revertFiles} from the index.`);
     }, (err: string) => {
-        NEURO.client?.sendContext(`Removing files from the index failed`);
-        logOutput("ERROR", `Git remove failed: ${err}\nTried to remove ${absolutePath}`);
+        NEURO.client?.sendContext('Removing files from the index failed');
+        logOutput('ERROR', `Git remove failed: ${err}\nTried to remove ${absolutePath}`);
     });
 
     return actionResultAccept();
@@ -630,13 +630,13 @@ export function handleGitCommit(actionData: ActionData): ActionResult {
         commitOptions.map((option) => {
             if (!ExtraCommitOptions) return;
             switch(option) {
-                case "amend":
+                case 'amend':
                     ExtraCommitOptions.amend = true;
                     break;
-                case "signoff":
+                case 'signoff':
                     ExtraCommitOptions.signoff = true;
                     break;
-                case "verbose":
+                case 'verbose':
                     ExtraCommitOptions.verbose = true;
                     break;
                 default:
@@ -645,15 +645,15 @@ export function handleGitCommit(actionData: ActionData): ActionResult {
             }
         });
         if (invalidCommitOptionCheck === true)
-            return actionResultRetry(`Invalid commit options: ${invalidCommitOptions.join(", ")}`);
+            return actionResultRetry(`Invalid commit options: ${invalidCommitOptions.join(', ')}`);
     }
 
     repo.inputBox.value = message;
     repo.commit(message, ExtraCommitOptions).then(() => {
-        NEURO.client?.sendContext(`Committed with message: "${message}"\nCommit options used: ${commitOptions ? commitOptions : "None"}`);
+        NEURO.client?.sendContext(`Committed with message: "${message}"\nCommit options used: ${commitOptions ? commitOptions : 'None'}`);
     }, (err: string) => {
-        NEURO.client?.sendContext(`Failed to record commit`);
-        logOutput("ERROR", `Failed to commit: ${err}`);
+        NEURO.client?.sendContext('Failed to record commit');
+        logOutput('ERROR', `Failed to commit: ${err}`);
     });
 
     return actionResultAccept();
@@ -685,7 +685,7 @@ export function handleGitMerge(actionData: ActionData): ActionResult {
             ]);
         }
         NEURO.client?.sendContext(`Couldn't merge ${refToMerge}: ${err}`);
-        logOutput("ERROR", `Encountered an error when merging ${refToMerge}: ${err}`);
+        logOutput('ERROR', `Encountered an error when merging ${refToMerge}: ${err}`);
     });
 
     return actionResultAccept();
@@ -701,11 +701,11 @@ export function handleAbortMerge(actionData: ActionData): ActionResult {
 
 
     repo.mergeAbort().then(() => {
-        NEURO.client?.unregisterActions(["abort_merge"]);
-        NEURO.client?.sendContext("Merge aborted.");
+        NEURO.client?.unregisterActions(['abort_merge']);
+        NEURO.client?.sendContext('Merge aborted.');
     }, (err: string) => {
         NEURO.client?.sendContext("Couldn't abort merging!");
-        logOutput("ERROR", `Failed to abort merge: ${err}`);
+        logOutput('ERROR', `Failed to abort merge: ${err}`);
     });
 
     return actionResultAccept();
@@ -721,7 +721,7 @@ export function handleGitDiff(actionData: ActionData): ActionResult {
 
     const ref1: string = actionData.params?.ref1;
     const ref2: string = actionData.params?.ref2;
-    const filePath: string = actionData.params?.filePath || ".";
+    const filePath: string = actionData.params?.filePath || '.';
     const diffType: string = actionData.params?.diffType || 'diffWithHEAD'; // Default to diffWithHEAD
     const validDiffTypes = ['diffWithHEAD', 'diffWith', 'diffIndexWithHEAD', 'diffIndexWith', 'diffBetween', 'fullDiff'];
 
@@ -739,7 +739,7 @@ export function handleGitDiff(actionData: ActionData): ActionResult {
                 })
                 .catch((err: string) => {
                     NEURO.client?.sendContext(`Failed to get diff with HEAD for ${filePath || 'workspace root'}.`);
-                    logOutput("ERROR", `Failed to get diff with HEAD for ${filePath || 'workspace root'}: ${err}`);
+                    logOutput('ERROR', `Failed to get diff with HEAD for ${filePath || 'workspace root'}: ${err}`);
                 });
             break;
 
@@ -751,7 +751,7 @@ export function handleGitDiff(actionData: ActionData): ActionResult {
                     })
                     .catch((err: string) => {
                         NEURO.client?.sendContext(`Failed to get diff with ref "${ref1}" for ${filePath || 'workspace root'}.`);
-                        logOutput("ERROR", `Failed to get diff with ref "${ref1}" for ${filePath || 'workspace root'}: ${err}`);
+                        logOutput('ERROR', `Failed to get diff with ref "${ref1}" for ${filePath || 'workspace root'}: ${err}`);
                     });
             } else {
                 NEURO.client?.sendContext('Ref1 is required for diffWith.');
@@ -765,7 +765,7 @@ export function handleGitDiff(actionData: ActionData): ActionResult {
                 })
                 .catch((err: string) => {
                     NEURO.client?.sendContext(`Failed to get diff index with HEAD for ${filePath || 'workspace root'}.`);
-                    logOutput("ERROR", `Failed to get diff index with HEAD for ${filePath || 'workspace root'}: ${err}`);
+                    logOutput('ERROR', `Failed to get diff index with HEAD for ${filePath || 'workspace root'}: ${err}`);
                 });
             break;
 
@@ -777,7 +777,7 @@ export function handleGitDiff(actionData: ActionData): ActionResult {
                     })
                     .catch((err: string) => {
                         NEURO.client?.sendContext(`Failed to get diff index with ref "${ref1}" for ${filePath || 'workspace root'}.`);
-                        logOutput("ERROR", `Failed to get diff index with ref "${ref1}" for ${filePath || 'workspace root'}: ${err}`);
+                        logOutput('ERROR', `Failed to get diff index with ref "${ref1}" for ${filePath || 'workspace root'}: ${err}`);
                     });
             } else {
                 NEURO.client?.sendContext('Ref1 is required for diffIndexWith.');
@@ -792,7 +792,7 @@ export function handleGitDiff(actionData: ActionData): ActionResult {
                     })
                     .catch((err: string) => {
                         NEURO.client?.sendContext(`Failed to get diff between refs "${ref1}" and "${ref2}" for ${filePath || 'workspace root'}.`);
-                        logOutput("ERROR", `Failed to get diff between refs "${ref1}" and "${ref2}" for ${filePath || 'workspace root'}: ${err}`);
+                        logOutput('ERROR', `Failed to get diff between refs "${ref1}" and "${ref2}" for ${filePath || 'workspace root'}: ${err}`);
                     });
             } else {
                 NEURO.client?.sendContext('Both ref1 and ref2 are required for diffBetween.');
@@ -805,8 +805,8 @@ export function handleGitDiff(actionData: ActionData): ActionResult {
                     NEURO.client?.sendContext(`Full diff for workspace root:\n${diff}`);
                 })
                 .catch((err: string) => {
-                    NEURO.client?.sendContext(`Failed to get full diff for workspace root.`);
-                    logOutput("ERROR", `Failed to get full diff for workspace root: ${err}`);
+                    NEURO.client?.sendContext('Failed to get full diff for workspace root.');
+                    logOutput('ERROR', `Failed to get full diff for workspace root: ${err}`);
                 });
             break;
 
@@ -829,8 +829,8 @@ export function handleGitLog(actionData: ActionData): ActionResult {
     repo.log().then((commits: Commit[]) => {
         NEURO.client?.sendContext(`Commit log: ${JSON.stringify(commits)}`);
     }, (err: string) => {
-        NEURO.client?.sendContext("Failed to get git log.");
-        logOutput("ERROR", `Failed to get git log: ${err}`);
+        NEURO.client?.sendContext('Failed to get git log.');
+        logOutput('ERROR', `Failed to get git log: ${err}`);
     });
 
     return actionResultAccept();
@@ -848,7 +848,7 @@ export function handleGitBlame(actionData: ActionData): ActionResult {
     const filePath: string = actionData.params?.filePath;
 
     // Normalize the file path if provided; otherwise, use wildcard.
-    const stageFiles: string = filePath ? getNormalizedRepoPathForGit(filePath) : `*`;
+    const stageFiles: string = filePath ? getNormalizedRepoPathForGit(filePath) : '*';
 
     // Compute an absolute path. If the stageFiles is already absolute, use it.
     // Otherwise, join it with the repository's root path.
@@ -862,8 +862,8 @@ export function handleGitBlame(actionData: ActionData): ActionResult {
     repo.blame(absolutePath).then((blame: string) => {
         NEURO.client?.sendContext(`Blame attribution: ${blame}`);
     }, (err: string) => {
-        NEURO.client?.sendContext("Failed to get blame attribution.");
-        logOutput("ERROR", `Error getting blame attribs: ${err}`);
+        NEURO.client?.sendContext('Failed to get blame attribution.');
+        logOutput('ERROR', `Error getting blame attribs: ${err}`);
     });
 
     return actionResultAccept();
@@ -894,8 +894,8 @@ export function handleTagHEAD(actionData: ActionData): ActionResult {
     repo.tag(name, upstream).then(() => {
         NEURO.client?.sendContext(`Tag ${name} created for ${upstream} upstream.`);
     }, (err: string) => {
-        NEURO.client?.sendContext("There was an error during tagging.");
-        logOutput("ERROR", `Error trying to tag: ${err}`);
+        NEURO.client?.sendContext('There was an error during tagging.');
+        logOutput('ERROR', `Error trying to tag: ${err}`);
     });
 
     return actionResultAccept();
@@ -919,7 +919,7 @@ export function handleDeleteTag(actionData: ActionData): ActionResult {
         NEURO.client?.sendContext(`Deleted tag ${name}`);
     }, (err: string) => {
         NEURO.client?.sendContext(`Couldn't delete tag "${name}"`);
-        logOutput("ERROR", `Failed to delete tag ${name}: ${err}`);
+        logOutput('ERROR', `Failed to delete tag ${name}: ${err}`);
     });
 
     return actionResultAccept();
@@ -943,10 +943,10 @@ export function handleFetchGitCommits(actionData: ActionData): ActionResult {
     const branchName: string = actionData.params?.branchName;
 
     repo.fetch(remoteName, branchName).then(() => {
-        NEURO.client?.sendContext(`Fetched commits from ${remoteName ? "remote " + remoteName : "default remote"}${branchName ? `, branch "${branchName}"` : ""}.`);
+        NEURO.client?.sendContext(`Fetched commits from ${remoteName ? 'remote ' + remoteName : 'default remote'}${branchName ? `, branch "${branchName}"` : ''}.`);
     }, (err: string) => {
         NEURO.client?.sendContext(`Failed to fetch commits from remote "${remoteName}"`);
-        logOutput("ERROR", `Failed to fetch commits: ${err}`);
+        logOutput('ERROR', `Failed to fetch commits: ${err}`);
     });
 
     return actionResultAccept();
@@ -962,10 +962,10 @@ export function handlePullGitCommits(actionData: ActionData): ActionResult {
 
 
     repo.pull().then(() => {
-        NEURO.client?.sendContext(`Pulled commits from remote.`);
+        NEURO.client?.sendContext('Pulled commits from remote.');
     }, (err: string) => {
         NEURO.client?.sendContext(`Failed to pull commits from remote: ${err}`);
-        logOutput("ERROR", `Failed to pull commits: ${err}`);
+        logOutput('ERROR', `Failed to pull commits: ${err}`);
     });
 
     return actionResultAccept();
@@ -987,10 +987,10 @@ export function handlePushGitCommits(actionData: ActionData): ActionResult {
     const forcePushMode: ForcePushMode | undefined = forcePush === true ? ForcePushMode.Force : undefined;
 
     repo.push(remoteName, branchName, true, forcePushMode).then(() => {
-        NEURO.client?.sendContext(`Pushed commits${remoteName ? ` to remote "${remoteName}"` : ""}${branchName ? `, branch "${branchName}"` : ""}.${forcePush === true ? " (forced push)" : ""}`);
+        NEURO.client?.sendContext(`Pushed commits${remoteName ? ` to remote "${remoteName}"` : ''}${branchName ? `, branch "${branchName}"` : ''}.${forcePush === true ? ' (forced push)' : ''}`);
     }, (err: string) => {
         NEURO.client?.sendContext(`Failed to push commits to remote "${remoteName}": ${err}`);
-        logOutput("ERROR", `Failed to push commits: ${err}`);
+        logOutput('ERROR', `Failed to push commits: ${err}`);
     });
 
     return actionResultAccept();
@@ -1022,7 +1022,7 @@ export function handleAddGitRemote(actionData: ActionData): ActionResult {
         NEURO.client?.sendContext(`Added remote "${remoteName}" with URL: ${remoteUrl}`);
     }, (err: string) => {
         NEURO.client?.sendContext(`Failed to add remote "${remoteName}"`);
-        logOutput("ERROR", `Failed to add remote: ${err}`);
+        logOutput('ERROR', `Failed to add remote: ${err}`);
     });
 
     return actionResultAccept();
@@ -1046,7 +1046,7 @@ export function handleRemoveGitRemote(actionData: ActionData): ActionResult {
         NEURO.client?.sendContext(`Removed remote "${remoteName}".`);
     }, (err: string) => {
         NEURO.client?.sendContext(`Failed to remove remote "${remoteName}"`);
-        logOutput("ERROR", `Failed to remove remote: ${err}`);
+        logOutput('ERROR', `Failed to remove remote: ${err}`);
     });
 
     return actionResultAccept();
@@ -1073,7 +1073,7 @@ export function handleRenameGitRemote(actionData: ActionData): ActionResult {
         NEURO.client?.sendContext(`Renamed remote "${oldRemoteName}" to "${newRemoteName}".`);
     }, (err: string) => {
         NEURO.client?.sendContext(`Failed to rename remote "${oldRemoteName}" to "${newRemoteName}"`);
-        logOutput("ERROR", `Failed to rename remote ${oldRemoteName}: ${err}`);
+        logOutput('ERROR', `Failed to rename remote ${oldRemoteName}: ${err}`);
     });
 
     return actionResultAccept();

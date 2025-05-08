@@ -2,8 +2,8 @@
  * Helper functions and types for interacting with the Neuro Game SDK.
  */
 
-import { Permission } from "./config";
-import { logOutput } from "./utils";
+import { Permission } from './config';
+import { logOutput } from './utils';
 
 /** Data used by an action handler. */
 export interface ActionData {
@@ -47,7 +47,7 @@ export function actionResultAccept(message?: string): ActionResult {
  * @param {string} [tag="WARNING"] The tag to use for the log output.
  * @returns A successful action result with the specified message.
  */
-export function actionResultFailure(message?: string, tag = "WARNING"): ActionResult {
+export function actionResultFailure(message?: string, tag = 'WARNING'): ActionResult {
     logOutput(tag, 'Action failed: ' + message);
     return {
         success: true,
@@ -112,7 +112,7 @@ export function actionResultNoAccess(path: string): ActionResult {
     logOutput('WARNING', `Action failed: Neuro attempted to access "${path}", but permission is disabled.`);
     return {
         success: true,
-        message: `Action failed: You do not have permission to access the requested location(s).`
+        message: 'Action failed: You do not have permission to access the requested location(s).'
     };
 }
 

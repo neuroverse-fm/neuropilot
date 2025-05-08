@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 
-import { getFence, logOutput, simpleFileName } from "./utils";
+import { getFence, logOutput, simpleFileName } from './utils';
 import { NEURO } from './constants';
 import { PERMISSIONS, hasPermissions } from './config';
 

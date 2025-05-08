@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 
-import { NEURO } from "./constants";
+import { NEURO } from './constants';
 import { combineGlobLines, filterFileContents, getFence, getWorkspacePath, isPathNeuroSafe, logOutput, normalizePath } from './utils';
 import { ActionData, ActionResult, actionResultAccept, actionResultFailure, actionResultMissingParameter, actionResultNoAccess, actionResultNoPermission } from './neuro_client_helper';
 import { CONFIG, PERMISSIONS, hasPermissions } from './config';
@@ -306,8 +306,8 @@ export function handleGetFiles(actionData: ActionData): ActionResult {
     if(workspaceFolder === undefined)
         return actionResultFailure('No open workspace to get files from.');
 
-    const includePattern = combineGlobLines(CONFIG.includePattern || "**");
-    const excludePattern = combineGlobLines(CONFIG.excludePattern || "");
+    const includePattern = combineGlobLines(CONFIG.includePattern || '**');
+    const excludePattern = combineGlobLines(CONFIG.excludePattern || '');
     vscode.workspace.findFiles(includePattern, excludePattern).then(
         (uris) => {
             const paths = uris
@@ -326,7 +326,7 @@ export function handleGetFiles(actionData: ActionData): ActionResult {
                     }
                     return aParts.length - bParts.length;
                 });
-            logOutput('INFO', `Sending list of files in workspace to Neuro`);
+            logOutput('INFO', 'Sending list of files in workspace to Neuro');
             NEURO.client?.sendContext(`Files in workspace:\n\n${paths.join('\n')}`);
         }
     );

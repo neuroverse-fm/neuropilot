@@ -6,17 +6,17 @@ import { ActionData, ActionResult, actionResultAccept, actionResultEnumFailure, 
 import { CONFIG, PERMISSIONS, hasPermissions } from './config';
 
 export const terminalAccessHandlers: { [key: string]: (actionData: ActionData) => ActionResult } = {
-    "execute_in_terminal": handleRunCommand,
-    "kill_terminal_process": handleKillTerminal,
-    "get_currently_running_shells": handleGetCurrentlyRunningShells
+    'execute_in_terminal': handleRunCommand,
+    'kill_terminal_process': handleKillTerminal,
+    'get_currently_running_shells': handleGetCurrentlyRunningShells
 };
 
 export function registerTerminalActions() {
     if (hasPermissions(PERMISSIONS.terminalAccess)) {
         NEURO.client?.registerActions([
             {
-                name: "execute_in_terminal",
-                description: "Run a command directly in the terminal.",
+                name: 'execute_in_terminal',
+                description: 'Run a command directly in the terminal.',
                 schema: {
                     type: 'object',
                     properties: {
@@ -27,8 +27,8 @@ export function registerTerminalActions() {
                 }
             },
             {
-                name: "kill_terminal_process",
-                description: "Kill a terminal process that is running.",
+                name: 'kill_terminal_process',
+                description: 'Kill a terminal process that is running.',
                 schema: {
                     type: 'object',
                     properties: {
@@ -38,8 +38,8 @@ export function registerTerminalActions() {
                 }
             },
             {
-                name: "get_currently_running_shells",
-                description: "Get the list of terminal processes that are spawned.",
+                name: 'get_currently_running_shells',
+                description: 'Get the list of terminal processes that are spawned.',
                 schema: {}
             }
         ]);
@@ -104,7 +104,7 @@ function createPseudoterminal(shellType: string, terminalName: string, vscContex
         onDidWrite: emitter.event,
         open: () => {
             // Write an initial message when the terminal opens.
-            emitter.fire(`Terminal "${terminalName}" ready${startTimePermission ? ` at ${startTime}` : ""}.\r\n`);
+            emitter.fire(`Terminal "${terminalName}" ready${startTimePermission ? ` at ${startTime}` : ''}.\r\n`);
         },
         close: () => {
             // On terminal close, kill the spawned process if it exists.
@@ -115,7 +115,7 @@ function createPseudoterminal(shellType: string, terminalName: string, vscContex
     };
 
     // 50/50 chance of icon selection no longer
-    const icon = vscode.Uri.joinPath(vscContext.extensionUri, "console.png");
+    const icon = vscode.Uri.joinPath(vscContext.extensionUri, 'console.png');
 	
     // Create the terminal using VS Code's API.
     const terminal = vscode.window.createTerminal({
@@ -130,8 +130,8 @@ function createPseudoterminal(shellType: string, terminalName: string, vscContex
         terminal,
         pty,
         emitter,
-        outputStdout: "",
-        outputStderr: "",
+        outputStdout: '',
+        outputStderr: '',
         processStarted: false,
         shellProcess: undefined,
         shellType
@@ -169,22 +169,22 @@ export function handleRunCommand(actionData: ActionData): ActionResult {
     // Validate command parameter.
     const command: string = actionData.params?.command;
     if (!command)
-        return actionResultMissingParameter("command");
+        return actionResultMissingParameter('command');
 	
     // Determine the shell type.
     const shellType: string = actionData.params?.shell;
     if (!shellType)
-        return actionResultMissingParameter("shell");
+        return actionResultMissingParameter('shell');
     else if (!getAvailableShellProfileNames().includes(shellType))
-        return actionResultEnumFailure("shell", getAvailableShellProfileNames(), shellType);
+        return actionResultEnumFailure('shell', getAvailableShellProfileNames(), shellType);
 	
     // Get or create the terminal session for this shell.
     const session = getOrCreateTerminal(shellType, `Neuro: ${shellType}`);
     const outputDelay = CONFIG.terminalContextDelay;
 	
     // Reset previous outputs.
-    session.outputStdout = "";
-    session.outputStderr = "";
+    session.outputStdout = '';
+    session.outputStderr = '';
 	
     async function sendStdoutIfUnchangedAsync(delay: number) {
         const cachedOutput = session.outputStdout;
@@ -192,10 +192,10 @@ export function handleRunCommand(actionData: ActionData): ActionResult {
         if (session.outputStdout === cachedOutput) {
             const fence = getFence(session.outputStdout!);
             NEURO.client?.sendContext(
-                `The ${shellType} terminal outputted the following to stdout:\n\n${fence}\n${session.outputStdout!.replace(/\x1b\[[\x30-\x3F]*[\x20-\x2F]*[\x40-\x7F]|\x1b\]0;.+\r?\n/g, "")}\n${fence}`,
+                `The ${shellType} terminal outputted the following to stdout:\n\n${fence}\n${session.outputStdout!.replace(/\x1b\[[\x30-\x3F]*[\x20-\x2F]*[\x40-\x7F]|\x1b\]0;.+\r?\n/g, '')}\n${fence}`,
                 false
             );
-            session.outputStdout = "";
+            session.outputStdout = '';
         }
     }
 	
@@ -205,10 +205,10 @@ export function handleRunCommand(actionData: ActionData): ActionResult {
         if (session.outputStderr === cachedOutput) {
             const fence = getFence(session.outputStderr!);
             NEURO.client?.sendContext(
-                `The ${shellType} terminal outputted the following to stderr:\n\n${fence}\n${session.outputStderr!.replace(/\x1b\[[\x30-\x3F]*[\x20-\x2F]*[\x40-\x7F]|\x1b\]0;.+\r?\n/g, "")}\n${fence}`,
+                `The ${shellType} terminal outputted the following to stderr:\n\n${fence}\n${session.outputStderr!.replace(/\x1b\[[\x30-\x3F]*[\x20-\x2F]*[\x40-\x7F]|\x1b\]0;.+\r?\n/g, '')}\n${fence}`,
                 false
             );
-            session.outputStderr = "";
+            session.outputStderr = '';
         }
     }
 	
@@ -217,47 +217,47 @@ export function handleRunCommand(actionData: ActionData): ActionResult {
         session.processStarted = true;
         const { shellPath, shellArgs } = getShellProfileForType(shellType);
 		
-        logOutput("DEBUG", `Shell: ${shellPath} ${shellArgs}`);
+        logOutput('DEBUG', `Shell: ${shellPath} ${shellArgs}`);
 		
-        if (!shellPath || typeof shellPath !== "string")
+        if (!shellPath || typeof shellPath !== 'string')
             return actionResultFailure(`Couldn't determine executable for shell profile ${shellType}`);
 		
         const cwd = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-        session.shellProcess = spawn(shellPath, shellArgs || [], { cwd, env: process.env, stdio: ["pipe", "pipe", "pipe"] });
+        session.shellProcess = spawn(shellPath, shellArgs || [], { cwd, env: process.env, stdio: ['pipe', 'pipe', 'pipe'] });
         const proc = session.shellProcess;
 		
-        proc.stdout.on("data", (data: Buffer) => {
+        proc.stdout.on('data', (data: Buffer) => {
             const text = data.toString();
             session.outputStdout += text;
-            session.emitter.fire(text.replace(/(?<!\r)\n/g, "\r\n"));
+            session.emitter.fire(text.replace(/(?<!\r)\n/g, '\r\n'));
             sendStdoutIfUnchangedAsync(outputDelay);
-            logOutput("DEBUG", `STDOUT: ${text}`);
+            logOutput('DEBUG', `STDOUT: ${text}`);
         });
 		
-        proc.stderr.on("data", (data: Buffer) => {
+        proc.stderr.on('data', (data: Buffer) => {
             const text = data.toString();
             session.outputStderr += text;
-            session.emitter.fire(text.replace(/(?<!\r)\n/g, "\r\n"));
+            session.emitter.fire(text.replace(/(?<!\r)\n/g, '\r\n'));
             sendStderrIfUnchangedAsync(outputDelay);
-            logOutput("ERROR", `STDERR: ${text}`);
+            logOutput('ERROR', `STDERR: ${text}`);
         });		
 		
-        proc.on("exit", (code) => {
+        proc.on('exit', (code) => {
             NEURO.client?.sendContext(code === null ? `The ${shellType} terminal closed with a null exit code. Someone did something to it.` : `Terminal ${shellType} exited with code ${code}.`);
-            logOutput("INFO", `${shellType} process exited with code ${code}`);
+            logOutput('INFO', `${shellType} process exited with code ${code}`);
         });
 		
-        proc.stdin.write(command + "\n");
-        logOutput("DEBUG", `Sent command: ${command}`);
+        proc.stdin.write(command + '\n');
+        logOutput('DEBUG', `Sent command: ${command}`);
 
     } else {
         // Process is already running; send the new command via stdin.
         const shellProcess = session.shellProcess;
         if (shellProcess && shellProcess.stdin.writable) {
-            shellProcess.stdin.write(command + "\n");
-            logOutput("DEBUG", `Sent command: ${command}`);
+            shellProcess.stdin.write(command + '\n');
+            logOutput('DEBUG', `Sent command: ${command}`);
         } else {
-            return actionResultFailure("Unable to write to shell process.");
+            return actionResultFailure('Unable to write to shell process.');
         }
     }
 
@@ -276,7 +276,7 @@ export function handleKillTerminal(actionData: ActionData): ActionResult {
     // Validate shell type parameter.
     const shellType: string = actionData.params?.shell;
     if (!shellType)
-        return actionResultMissingParameter("shell");
+        return actionResultMissingParameter('shell');
 
     // Check if the terminal session exists in the registry.
     const session = NEURO.terminalRegistry.get(shellType);
@@ -288,7 +288,7 @@ export function handleKillTerminal(actionData: ActionData): ActionResult {
     NEURO.terminalRegistry.delete(shellType);
 
     // Notify Neuro and the user.
-    logOutput("INFO", `Terminal session for shell type "${shellType}" has been terminated.`);
+    logOutput('INFO', `Terminal session for shell type "${shellType}" has been terminated.`);
     return actionResultAccept(`Terminal session for shell type "${shellType}" has been terminated.`);
 }
 
@@ -303,12 +303,12 @@ export function handleGetCurrentlyRunningShells(actionData: ActionData): ActionR
     const runningShells: Array<{ shellType: string; status: string }> = [];
 
     for (const [shellType, session] of NEURO.terminalRegistry.entries()) {
-        const status = session.shellProcess && !session.shellProcess.killed ? "Running" : "Stopped";
+        const status = session.shellProcess && !session.shellProcess.killed ? 'Running' : 'Stopped';
         runningShells.push({ shellType, status });
     }
 	
     if (runningShells.length === 0)
-        return actionResultAccept("No running shells found.");
+        return actionResultAccept('No running shells found.');
     else
         return actionResultAccept(`Currently running shells: ${JSON.stringify(runningShells)}`);
 }
@@ -321,11 +321,11 @@ export function handleGetCurrentlyRunningShells(actionData: ActionData): ActionR
 export function emergencyTerminalShutdown() {
     // Check if there are any active terminals in the registry.
     if (NEURO.terminalRegistry.size === 0) {
-        logOutput("INFO", "No active terminals to shut down.");
+        logOutput('INFO', 'No active terminals to shut down.');
         return;
     }
 
-    logOutput("INFO", "Initiating emergency shutdown of all terminals...");
+    logOutput('INFO', 'Initiating emergency shutdown of all terminals...');
 
     let failedShutdownCount = 0;
     let failedShutdownTerminals: string[] = [];
@@ -335,9 +335,9 @@ export function emergencyTerminalShutdown() {
         try {
             // Dispose of the terminal.
             session.terminal.dispose();
-            logOutput("INFO", `Terminal session for shell type "${shellType}" has been terminated.`);
+            logOutput('INFO', `Terminal session for shell type "${shellType}" has been terminated.`);
         } catch (error) {
-            logOutput("ERROR", `Failed to terminate terminal session for shell type "${shellType}": ${error}`);
+            logOutput('ERROR', `Failed to terminate terminal session for shell type "${shellType}": ${error}`);
             failedShutdownTerminals.push(shellType);
             failedShutdownCount += 1;
         }
@@ -347,11 +347,11 @@ export function emergencyTerminalShutdown() {
     NEURO.terminalRegistry.clear();
 
     // Notify Neuro and log the shutdown.
-    NEURO.client?.sendContext("Emergency shutdown: All terminal sessions have been forcefully terminated.");
+    NEURO.client?.sendContext('Emergency shutdown: All terminal sessions have been forcefully terminated.');
     if (failedShutdownCount == 0) {
-        logOutput("INFO", "Emergency shutdown complete. All terminals have been terminated.");
+        logOutput('INFO', 'Emergency shutdown complete. All terminals have been terminated.');
     } else {
-        logOutput("WARN", `Failed to terminate ${failedShutdownCount} shells, including: ${failedShutdownTerminals}.`);
+        logOutput('WARN', `Failed to terminate ${failedShutdownCount} shells, including: ${failedShutdownTerminals}.`);
         vscode.window.showWarningMessage(`Failed to terminate ${failedShutdownCount} terminal(s), which include these terminals: ${failedShutdownTerminals}.\nPlease check on them.`);
     }
 }

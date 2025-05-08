@@ -133,12 +133,12 @@ export function registerChatParticipant(context: vscode.ExtensionContext) {
     context.subscriptions.push(neuro.onDidReceiveFeedback((feedback: vscode.ChatResultFeedback) => {
         if(feedback.kind === vscode.ChatResultFeedbackKind.Helpful) {
             logOutput('INFO', 'Answer was deemed helpful');
-            NEURO.client?.sendContext("Vedal found your answer helpful.");
+            NEURO.client?.sendContext('Vedal found your answer helpful.');
         }
         else {
             logOutput('INFO', 'Answer was deemed unhelpful');
             logOutput('DEBUG', JSON.stringify(feedback));
-            NEURO.client?.sendContext("Vedal found your answer unhelpful.");
+            NEURO.client?.sendContext('Vedal found your answer unhelpful.');
         }
     }));
 }
