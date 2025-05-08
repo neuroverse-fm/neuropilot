@@ -179,7 +179,8 @@ Depending on the match mode, places the cursor at the location or returns all li
 
 #### `undo`
 
-*Requires Permission: Edit Active Document.*
+*Requires Permission: [Edit Active Document](vscode://settings/neuropilot.permission.editActiveDocument).*
+
 Undoes the last editing action.
 Only works if VS Code is focused.
 
@@ -382,21 +383,23 @@ Returns the list of currently running shells to Neuro.
 
 ### Linting
 
+Actions that let Neuro see linting problems reported by other extensions.
+
 #### `get_file_lint_problems`
 
-*Requires Permissions: Access Linting Problems.*
+*Requires Permissions: [Access Linting Analysis](vscode://settings/neuropilot.permission.accessLintingAnalysis).*
 Returns the linting diagnostics list of a file to Neuro.
 The file must have been loaded first before diagnostics are available.
 
 #### `get_folder_lint_problems`
 
-*Requires Permissions: Access Linting Problems.*
+*Requires Permissions: [Access Linting Analysis](vscode://settings/neuropilot.permission.accessLintingAnalysis).*
 Returns the linting diagnostics list of a folder's files to Neuro.
 Note that this only returns diagnostics of files in that folder that are loaded in the current session.
 
 #### `get_workspace_lint_problems`
 
-*Requires Permissions: Access Linting Problems.*
+*Requires Permissions: [Access Linting Analysis](vscode://settings/neuropilot.permission.accessLintingAnalysis).*
 Returns the linting diagnostics list of the current workspace to Neuro.
 Note that this only returns diagnostics of files that are loaded in the current session.
 
