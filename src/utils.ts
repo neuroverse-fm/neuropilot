@@ -82,7 +82,7 @@ export function onClientConnected(handler: () => void) {
 
 export function simpleFileName(fileName: string): string {
     const rootFolder = vscode.workspace.workspaceFolders?.[0].uri.fsPath.replace(/\\/, '/');
-    let result = fileName.replace(/\\/g, '/');
+    const result = fileName.replace(/\\/g, '/');
     if(rootFolder && result.startsWith(rootFolder))
         return result.substring(rootFolder.length);
     else

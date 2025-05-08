@@ -626,7 +626,7 @@ export function handleGitCommit(actionData: ActionData): ActionResult {
     }
     else {
         let invalidCommitOptionCheck: boolean | undefined;
-        let invalidCommitOptions: string[] = [];
+        const invalidCommitOptions: string[] = [];
         commitOptions.map((option) => {
             if (!ExtraCommitOptions) return;
             switch(option) {
@@ -641,6 +641,7 @@ export function handleGitCommit(actionData: ActionData): ActionResult {
                     break;
                 default:
                     invalidCommitOptionCheck = true;
+                    invalidCommitOptions.push(option);
                     break;
             }
         });

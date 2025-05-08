@@ -328,7 +328,7 @@ export function emergencyTerminalShutdown() {
     logOutput('INFO', 'Initiating emergency shutdown of all terminals...');
 
     let failedShutdownCount = 0;
-    let failedShutdownTerminals: string[] = [];
+    const failedShutdownTerminals: string[] = [];
 
     // Iterate through all terminal sessions in the registry.
     for (const [shellType, session] of NEURO.terminalRegistry.entries()) {

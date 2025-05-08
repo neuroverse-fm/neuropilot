@@ -71,7 +71,7 @@ function disableAllPermissions() {
     const config = vscode.workspace.getConfiguration('neuropilot');
     const permissionKeys = config.get<Record<string, boolean>>('permission');
     // Disable each permission one-by-one
-    let promises: Thenable<void>[] = [];
+    const promises: Thenable<void>[] = [];
     if (permissionKeys) {
         for (const key of Object.keys(permissionKeys)) {
             promises.push(config.update(`permission.${key}`, false, vscode.ConfigurationTarget.Workspace));
