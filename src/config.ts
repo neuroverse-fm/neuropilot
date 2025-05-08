@@ -27,20 +27,20 @@ export interface Permission {
 
 /** Collection of strings for use in {@link actionResultNoPermission}. */
 class Permissions {
-    get openFiles()             { return { id: 'openFiles',                infinitive: 'open files' } }
-    get editActiveDocument()    { return { id: 'editActiveDocument',       infinitive: 'edit documents' } }
-    get create()                { return { id: 'create',                   infinitive: 'create files or folders' } }
-    get rename()                { return { id: 'rename',                   infinitive: 'rename files or folders' } }
-    get delete()                { return { id: 'delete',                   infinitive: 'delete files or folders' } }
-    get runTasks()              { return { id: 'runTasks',                 infinitive: 'run or terminate tasks' } }
-    get requestCookies()        { return { id: 'requestCookies',           infinitive: 'request cookies' } }
-    get gitOperations()         { return { id: 'gitOperations',            infinitive: 'use Git' } }
-    get gitTags()               { return { id: 'gitTags',                  infinitive: 'tag commits' } }
-    get gitRemotes()            { return { id: 'gitRemotes',               infinitive: 'interact with Git remotes' } }
-    get editRemoteData()        { return { id: 'editRemoteData',           infinitive: 'edit remote data' } }
-    get gitConfigs()            { return { id: 'gitConfigs',               infinitive: 'edit the Git configuration' } }
-    get terminalAccess()        { return { id: 'terminalAccess',           infinitive: 'access the terminal' } }
-    get accessLintingAnalysis() { return { id: 'accessLintingAnalysis',    infinitive: 'view linting problems' } }
+    get openFiles()             { return { id: 'openFiles',                infinitive: 'open files' }; }
+    get editActiveDocument()    { return { id: 'editActiveDocument',       infinitive: 'edit documents' }; }
+    get create()                { return { id: 'create',                   infinitive: 'create files or folders' }; }
+    get rename()                { return { id: 'rename',                   infinitive: 'rename files or folders' }; }
+    get delete()                { return { id: 'delete',                   infinitive: 'delete files or folders' }; }
+    get runTasks()              { return { id: 'runTasks',                 infinitive: 'run or terminate tasks' }; }
+    get requestCookies()        { return { id: 'requestCookies',           infinitive: 'request cookies' }; }
+    get gitOperations()         { return { id: 'gitOperations',            infinitive: 'use Git' }; }
+    get gitTags()               { return { id: 'gitTags',                  infinitive: 'tag commits' }; }
+    get gitRemotes()            { return { id: 'gitRemotes',               infinitive: 'interact with Git remotes' }; }
+    get editRemoteData()        { return { id: 'editRemoteData',           infinitive: 'edit remote data' }; }
+    get gitConfigs()            { return { id: 'gitConfigs',               infinitive: 'edit the Git configuration' }; }
+    get terminalAccess()        { return { id: 'terminalAccess',           infinitive: 'access the terminal' }; }
+    get accessLintingAnalysis() { return { id: 'accessLintingAnalysis',    infinitive: 'view linting problems' }; }
 }
 
 export const PERMISSIONS = new Permissions();

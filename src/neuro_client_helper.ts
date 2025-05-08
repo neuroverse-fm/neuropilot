@@ -121,5 +121,5 @@ export function actionResultEnumFailure(parameterName: string, validValues: any[
     return {
         success: false,
         message: `Action failed: "${parameterName}" must be one of ${JSON.stringify(validValues)}, but got ${JSON.stringify(value)}.`,
-    }
+    };
 }

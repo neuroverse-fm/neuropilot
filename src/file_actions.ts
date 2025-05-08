@@ -12,7 +12,7 @@ export const fileActionHandlers: { [key: string]: (actionData: ActionData) => Ac
     'create_folder': handleCreateFolder,
     'rename_file_or_folder': handleRenameFileOrFolder,
     'delete_file_or_folder': handleDeleteFileOrFolder,
-}
+};
 
 export function registerFileActions() {
     if(hasPermissions(PERMISSIONS.openFiles)) {

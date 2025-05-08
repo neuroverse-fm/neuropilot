@@ -18,7 +18,7 @@ export const editingFileHandlers: { [key: string]: (actionData: ActionData) => A
     'delete_text': handleDeleteText,
     'find_text': handleFindText,
     'undo': handleUndo,
-}
+};
 
 export function registerEditingActions() {
     if(hasPermissions(PERMISSIONS.editActiveDocument)) {
