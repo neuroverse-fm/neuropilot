@@ -236,6 +236,11 @@
 						"default": false,
 						"markdownDescription": "Allow Neuro __direct terminal access__. Be very careful with this."
 					},
+					"neuropilot.permission.accessLintingAnalysis": {
+						"type": "boolean",
+						"default": false,
+						"markdownDescription": "Allow Neuro to get access to linting problems within loaded files."
+					},
 					"neuropilot.showTimeOnTerminalStart": {
 						"type": "boolean",
 						"default": true,
@@ -255,6 +260,21 @@
 						"type": "boolean",
 						"default": false,
 						"markdownDescription": "Allow Neuro to run all tasks regardless of their prefix in their 'detail' key."
+					},
+					"neuropilot.sendNewLintingProblemsOn": {
+						"type": "string",
+						"default": "off",
+						"description": "If a new linting problem appears, on what condition should it be sent to Neuro?",
+						"enum": [
+							"off",
+							"inCurrentFile",
+							"inWorkspace"
+						],
+						"enumDescriptions": [
+							"Only when Neuro explicitly checks for it.",
+							"If a new problem appears in the file she is currently viewing.",
+							"When a new problem appears anywhere in the workspace."
+						]
 					}
 				}
 			}

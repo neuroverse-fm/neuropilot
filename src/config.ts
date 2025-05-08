@@ -60,6 +60,7 @@ class Config {
     get terminalContextDelay(): number      { return get('terminalContextDelay')!; }
     get allowUnsafePaths(): boolean         { return get('allowUnsafePaths')!; }
     get allowRunningAllTasks(): boolean     { return get('allowRunningAllTasks')!; }
+    get sendNewLintingProblemsOn(): string  { return get('sendNewLintingProblemsOn')!; }
 
     get terminals(): Array<{ name: string; path: string; args?: string[]; }> { return get('terminals')!; }
 }

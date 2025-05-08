@@ -34,6 +34,8 @@ interface Neuro {
     actionHandled: boolean;
     terminalEnabled: boolean;
     terminalRegistry: Map<string, TerminalSession>;
+    /** This is needed because VSCode doesn't say what changed, only what files were changed */
+    previousDiagnosticsMap: Map<string, vscode.Diagnostic[]>;
 }
 
 
@@ -51,5 +53,6 @@ export const NEURO: Neuro = {
     currentTaskExecution: null,
     actionHandled: false,
     terminalEnabled: false,
-    terminalRegistry: new Map()
+    terminalRegistry: new Map(),
+    previousDiagnosticsMap: new Map()
 };
