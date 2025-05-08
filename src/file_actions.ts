@@ -124,7 +124,7 @@ export function handleCreateFile(actionData: ActionData): ActionResult {
             // If no error is thrown, the file already exists
             NEURO.client?.sendContext(`Could not create file: File ${relativePath} already exists`);
             return;
-        } catch { } // File does not exist, continue
+        } catch { /* File does not exist, continue */ }
 
         // Create the file
         try {
@@ -180,7 +180,7 @@ export function handleCreateFolder(actionData: ActionData): ActionResult {
             // If no error is thrown, the folder already exists
             NEURO.client?.sendContext(`Could not create folder: Folder ${relativePath} already exists`);
             return;
-        } catch { } // Folder does not exist, continue
+        } catch { /* Folder does not exist, continue */ }
 
         // Create the folder
         try {
@@ -231,7 +231,7 @@ export function handleRenameFileOrFolder(actionData: ActionData): ActionResult {
             // If no error is thrown, the new path already exists
             NEURO.client?.sendContext(`Could not rename: ${newRelativePath} already exists`);
             return;
-        } catch { } // New path does not exist, continue
+        } catch { /* New path does not exist, continue */ }
 
         // Rename the file/folder
         try {
