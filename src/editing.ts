@@ -433,21 +433,20 @@ export function handleSave(actionData: ActionData): ActionResult {
         return ACTION_RESULT_NO_ACCESS;
     }
 
-    Promise.resolve(document.save()).then(
+    document.save().then(
         (saved) => {
             if (saved) {
                 logOutput('INFO', 'Document saved successfully.');
-                NEURO.client?.sendContext("Document saved successfully.", false);
+                NEURO.client?.sendContext('Document saved successfully.', false);
             } else {
                 logOutput('WARN', 'Document save returned false.');
-                NEURO.client?.sendContext("Document did not save.", false);
+                NEURO.client?.sendContext('Document did not save.', false);
             }
-        }
-    ).catch(
+        },
         (error: string) => {
             logOutput('ERROR', `Failed to save document: ${error}`);
             NEURO.client?.sendContext(`Failed to save document: ${error}`, false);
-        }
+        },
     );
     
     return actionResultAccept();
