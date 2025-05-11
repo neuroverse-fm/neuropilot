@@ -49,7 +49,7 @@ On startup, the extension will immediately try to establish a connection to the 
 If the extension was started before the API was ready, or you lose connection to the API, you can use the command "NeuroPilot: Reconnect" from the Command Palette.
 
 To make Neuro able to code unsupervised, go to the extension settings and activate the necessary permissions, then run the command "NeuroPilot: Reload Permissions" from the Command Palette.
-It is recommended to turn on auto-saving in the settings for this, as there is no action to manually save.
+It is recommended to turn on auto-saving in the settings for this, however Neuro also has the ability to manually save, and will be notified if a file saved.
 Tasks that Neuro can run are loaded from `tasks.json`, but it requires some setup for Neuro to use them.
 All tasks that Neuro should be able to run must have the string `[Neuro]` at the start of their `detail` property.
 This is a safety measure so she doesn't have access to all tasks.
