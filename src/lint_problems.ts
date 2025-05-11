@@ -92,6 +92,7 @@ export function getFormattedDiagnosticsForFile(filePath: string, diagnostics: vs
     return '\n' + formattedLines.join('\n');
 }
 
+
 // Handle diagnostics for a single file
 export function handleGetFileLintProblems(actionData: ActionData): ActionResult {
     if (!hasPermissions(PERMISSIONS.accessLintingAnalysis)) {
@@ -128,7 +129,6 @@ export function handleGetFileLintProblems(actionData: ActionData): ActionResult 
         return actionResultFailure(`Failed to get linting diagnostics for '${relativePath}'.`);
     }
 }
-
 
 // Handle diagnostics for a folder
 export function handleGetFolderLintProblems(actionData: ActionData): ActionResult {
@@ -207,8 +207,6 @@ export function handleGetWorkspaceLintProblems(_actionData: ActionData): ActionR
         logOutput('ERROR', `Failed to get diagnostics for workspace. Error: ${error}`);
         return actionResultFailure("Couldn't get diagnostics for the workspace.");
     }
-
-    return actionResultAccept();
 }
 
 /**

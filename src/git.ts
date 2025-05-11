@@ -240,9 +240,8 @@ export function registerGitActions() {
                                 type: 'object',
                                 properties: {
                                     key: { type: 'string' },
-                                },
-                                required: ['key'],
-                            },
+                                }
+                            }
                         },
                     ]);
                 }
@@ -615,7 +614,7 @@ export function handleGitCommit(actionData: ActionData): ActionResult {
         return ACTION_RESULT_NO_REPO;
 
 
-    const message = `Neuro commit: ${actionData.params?.message}`;
+    const message: string = `Neuro commit: ${actionData.params?.message}`;
     const commitOptions: string[] | undefined = actionData.params?.options;
     let ExtraCommitOptions: CommitOptions | undefined = {};
 
