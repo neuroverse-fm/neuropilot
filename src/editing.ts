@@ -18,6 +18,7 @@ export const editingFileHandlers: Record<string, (actionData: ActionData) => Act
     'delete_text': handleDeleteText,
     'find_text': handleFindText,
     'undo': handleUndo,
+    'save': handleSave
 };
 
 export function registerEditingActions() {
@@ -93,8 +94,12 @@ export function registerEditingActions() {
             },
             {
                 name: 'undo',
-                description: 'Undo the last action in the active document. If this doesn\'t work, tell Vedal to focus VS Code.',
+                description: 'Undo the last action in the active document. If this doesn\'t work, tell Vedal to focus your VS Code window.',
             },
+            {
+                name: "save",
+                description: "Manually save the currently open file."
+            }
         ]);
     }
 }
@@ -416,6 +421,44 @@ export function handleUndo(_actionData: ActionData): ActionResult {
     );
 
     return actionResultAccept();
+}
+
+export function handleSave(actionData: ActionData): ActionResult {
+    const editor = vscode.window.activeTextEditor;
+    if (!editor) {
+        return ACTION_RESULT_NO_ACTIVE_DOCUMENT;
+    }
+    const document = editor.document;
+    if (!isPathNeuroSafe(document.fileName)) {
+        return ACTION_RESULT_NO_ACCESS;
+    }
+
+    Promise.resolve(document.save()).then(
+        (saved) => {
+            if (saved) {
+                logOutput('INFO', 'Document saved successfully.');
+                NEURO.client?.sendContext("Document saved successfully.", false);
+            } else {
+                logOutput('WARN', 'Document save returned false.');
+                NEURO.client?.sendContext("Document did not save.", false);
+            }
+        }
+    ).catch(
+        (error: string) => {
+            logOutput('ERROR', `Failed to save document: ${error}`);
+            NEURO.client?.sendContext(`Failed to save document: ${error}`, false);
+        }
+    );
+    
+    return actionResultAccept();
+}
+
+export function fileSaveListener(e: vscode.TextDocument) {
+    if (!isPathNeuroSafe(e.fileName)) {
+        return;
+    }
+    const relativePath = vscode.workspace.asRelativePath(e.uri);
+    NEURO.client?.sendContext(`File ${relativePath} has been saved.`, false);
 }
 
 /**
