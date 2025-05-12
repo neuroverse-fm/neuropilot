@@ -241,7 +241,6 @@ export function registerGitActions() {
                                 properties: {
                                     key: { type: 'string' },
                                 },
-                                required: ['key'],
                             },
                         },
                     ]);

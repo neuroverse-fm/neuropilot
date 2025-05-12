@@ -61,6 +61,7 @@ class Config {
     get allowUnsafePaths(): boolean         { return get('allowUnsafePaths')!; }
     get allowRunningAllTasks(): boolean     { return get('allowRunningAllTasks')!; }
     get sendNewLintingProblemsOn(): string  { return get('sendNewLintingProblemsOn')!; }
+    get sendSaveNotifications(): boolean    { return get('sendSaveNotifications')!; }
 
     get terminals(): { name: string; path: string; args?: string[]; }[] { return get('terminals')!; }
 }
