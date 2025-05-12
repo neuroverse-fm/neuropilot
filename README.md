@@ -350,6 +350,10 @@ Note that this only returns diagnostics of files that are loaded in the current 
 
 This extension uses the [TypeScript/JavaScript SDK](https://github.com/AriesAlex/typescript-neuro-game-sdk) by [AriesAlex](https://github.com/AriesAlex).
 
+### "Why is there a file named rce.ts in it??? Is there an intentional RCE inside this extension???" <!-- had to add this just in case -->
+
+The framework developed for forcing Neuro to request to run actions instead of just directly allowing her to do that action is called the Requested Command Execution (or Request for Command Execution) framework when it was first conceived. The short answer is no, there isn't an intentional Remote Code Execution vulnerability in this extension, but by enabling Neuro's access to Pseudoterminals, one could say she already has access to a very powerful RCE, so be careful with that one.
+
 ## Debugging
 
 - Clone the repository
