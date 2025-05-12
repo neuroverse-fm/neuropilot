@@ -10,7 +10,7 @@ import { reloadTasks, taskEndedHandler } from './tasks';
 import { emergencyTerminalShutdown, saveContextForTerminal } from './pseudoterminal';
 import { CONFIG } from './config';
 import { sendDiagnosticsDiff } from './lint_problems';
-import { fileSaveListener } from './editing';
+import { fileSaveListener, toggleSaveAction } from './editing';
 
 export function activate(context: vscode.ExtensionContext) {
     NEURO.url = CONFIG.websocketUrl;
@@ -49,6 +49,13 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.tasks.onDidEndTask(taskEndedHandler);
 
     vscode.workspace.onDidSaveTextDocument(fileSaveListener);
+
+    vscode.workspace.onDidChangeConfiguration(event => {
+        if (event.affectsConfiguration('files.autoSave')) {
+            NEURO.client?.sendContext("The Auto-Save setting has been modified.")
+            toggleSaveAction();
+        }
+    });
 
     createClient();
 }

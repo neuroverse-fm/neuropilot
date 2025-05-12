@@ -23,22 +23,23 @@
         {
             "name": "Command Prompt",
             "path": "C:\\Windows\\System32\\cmd.exe",
-            "args": ["/K"]
+            "args": [
+                "/K"
+            ]
         },
         {
             "name": "Git Bash",
             "path": "C:\\Program Files\\Git\\bin\\bash.exe",
-            "args": ["-i"]
+            "args": [
+                "-i"
+            ]
         }
     ],
     "neuropilot.sendNewLintingProblemsOn": "inCurrentFile",
-
     // Debug engine override for GitHub Copilot
     "github.copilot.advanced": {
         "debug.overrideEngine": "someRandomString"
     },
-
     // VS Code settings
-    "files.autoSave": "afterDelay",
-    "files.autoSaveDelay": 1000,
+    "files.autoSaveDelay": 1000
 }

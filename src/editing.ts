@@ -3,7 +3,7 @@ import * as vscode from 'vscode';
 import { NEURO } from './constants';
 import { escapeRegExp, getFence, getPositionContext, isPathNeuroSafe, logOutput, NeuroPositionContext, substituteMatch } from './utils';
 import { ActionData, ActionResult, actionResultAccept, actionResultEnumFailure, actionResultFailure, actionResultIncorrectType, actionResultMissingParameter, actionResultNoPermission, actionResultRetry } from './neuro_client_helper';
-import { PERMISSIONS, hasPermissions } from './config';
+import { PERMISSIONS, hasPermissions, CONFIG } from './config';
 
 const ACTION_RESULT_NO_ACCESS = actionResultFailure('You do not have permission to access this file.');
 const ACTION_RESULT_NO_ACTIVE_DOCUMENT = actionResultFailure('No active document to edit.');
@@ -18,7 +18,7 @@ export const editingFileHandlers: Record<string, (actionData: ActionData) => Act
     'delete_text': handleDeleteText,
     'find_text': handleFindText,
     'undo': handleUndo,
-    'save': handleSave
+    'save': handleSave,
 };
 
 export function registerEditingActions() {
@@ -96,10 +96,31 @@ export function registerEditingActions() {
                 name: 'undo',
                 description: 'Undo the last action in the active document. If this doesn\'t work, tell Vedal to focus your VS Code window.',
             },
+        ]);
+        if (vscode.workspace.getConfiguration('files').get<string>('autoSave') !== 'afterDelay') {
+            NEURO.client?.registerActions([
+                {
+                    name: 'save',
+                    description: 'Manually save the currently open document.',
+                },
+            ]);
+        };
+    }
+}
+
+export function toggleSaveAction(): void {
+    if (!hasPermissions(PERMISSIONS.editActiveDocument)) {
+        return;
+    }
+    const autoSave = vscode.workspace.getConfiguration('files').get<string>('autoSave');
+    if (autoSave === 'afterDelay') {
+        NEURO.client?.unregisterActions(['save']);
+    } else {
+        NEURO.client?.registerActions([
             {
-                name: "save",
-                description: "Manually save the currently open file."
-            }
+                name: 'save',
+                description: 'Manually save the currently open document.',
+            },
         ]);
     }
 }
@@ -423,7 +444,7 @@ export function handleUndo(_actionData: ActionData): ActionResult {
     return actionResultAccept();
 }
 
-export function handleSave(actionData: ActionData): ActionResult {
+export function handleSave(_actionData: ActionData): ActionResult {
     const editor = vscode.window.activeTextEditor;
     if (!editor) {
         return ACTION_RESULT_NO_ACTIVE_DOCUMENT;
@@ -432,6 +453,8 @@ export function handleSave(actionData: ActionData): ActionResult {
     if (!isPathNeuroSafe(document.fileName)) {
         return ACTION_RESULT_NO_ACCESS;
     }
+
+    NEURO.saving = true
 
     document.save().then(
         (saved) => {
@@ -445,15 +468,24 @@ export function handleSave(actionData: ActionData): ActionResult {
         },
         (error: string) => {
             logOutput('ERROR', `Failed to save document: ${error}`);
-            NEURO.client?.sendContext(`Failed to save document: ${error}`, false);
+            NEURO.client?.sendContext('Failed to save document.', false);
         },
     );
-    
+
+    NEURO.saving = false
     return actionResultAccept();
 }
 
 export function fileSaveListener(e: vscode.TextDocument) {
-    if (!isPathNeuroSafe(e.fileName)) {
+    const autoSave = vscode.workspace.getConfiguration('files').get<string>('autoSave');
+    /**
+     * In order from left to right, this function immediately returns if:
+     * - Files > Auto Save is set to off
+     * - NeuroPilot > Send Save Notifications is set to false
+     * - the file that was saved isn't Neuro safe
+     * - Neuro manually saved the file.
+     */
+    if (autoSave === 'off' || !CONFIG.sendSaveNotifications || !isPathNeuroSafe(e.fileName) || NEURO.saving === true) {
         return;
     }
     const relativePath = vscode.workspace.asRelativePath(e.uri);

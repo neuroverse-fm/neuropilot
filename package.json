@@ -275,6 +275,11 @@
 							"If a new problem appears in the file she is currently viewing.",
 							"When a new problem appears anywhere in the workspace."
 						]
+					},
+					"neuropilot.sendSaveNotifications": {
+						"type": "boolean",
+						"default": true,
+						"markdownDescription": "Automatically send save notifications to Neuro, as long as the auto-save setting is set to a value other than `off`."
 					}
 				}
 			}
