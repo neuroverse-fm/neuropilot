@@ -465,19 +465,19 @@ export function handleSave(_actionData: ActionData): ActionResult {
                 logOutput('WARN', 'Document save returned false.');
                 NEURO.client?.sendContext('Document did not save.', false);
             }
+            NEURO.saving = false;
         },
         (error: string) => {
             logOutput('ERROR', `Failed to save document: ${error}`);
             NEURO.client?.sendContext('Failed to save document.', false);
+            NEURO.saving = false;
         },
     );
 
-    NEURO.saving = false;
     return actionResultAccept();
 }
 
 export function fileSaveListener(e: vscode.TextDocument) {
-    const autoSave = vscode.workspace.getConfiguration('files').get<string>('autoSave');
     /**
      * In order from left to right, this function immediately returns if:
      * - Files > Auto Save is set to off
@@ -485,7 +485,7 @@ export function fileSaveListener(e: vscode.TextDocument) {
      * - the file that was saved isn't Neuro safe
      * - Neuro manually saved the file.
      */
-    if (autoSave === 'off' || !CONFIG.sendSaveNotifications || !isPathNeuroSafe(e.fileName) || NEURO.saving === true) {
+    if (!CONFIG.sendSaveNotifications || !isPathNeuroSafe(e.fileName) || NEURO.saving === true) {
         return;
     }
     const relativePath = vscode.workspace.asRelativePath(e.uri);
