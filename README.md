@@ -30,11 +30,34 @@ This extension **will not**:
 
 ## How to use
 
-### Inline Suggestions & Chat
+On startup, the extension will immediately try to establish a connection to the Neuro API.
+If the extension was started before the API was ready, or you lose connection to the API, you can use the command "NeuroPilot: Reconnect" from the Command Palette.
 
-After installing the extension, you should add a keyboard shortcut for "Trigger Inline Suggestion" (`editor.action.inlineSuggest.trigger`) if you haven't already.
+You can configure the extension using the extension settings.
+For example, you can set how many lines of code will be provided as context before and after the current line.
+
+There are two ways the extension can be used, which will be referred to as "Autopilot mode" and "Copilot mode".
+
+### Autopilot Mode
+
+To make Neuro able to code without human input, go to the extension settings and activate the necessary permissions, then run the command "NeuroPilot: Reload Permissions" from the Command Palette. <!-- TODO: Figure out how this will work in #28 -->
+It is recommended to turn on auto-saving in the settings for this in case Neuro doesn't remember to save her files regularly.
+Tasks that Neuro can run are loaded from `tasks.json`, but it requires some setup for Neuro to use them.
+All tasks that Neuro should be able to run must have the string `[Neuro]` at the start of their `detail` property.
+This is a safety measure so she doesn't have access to all tasks.
+
+### Copilot Mode
+
+Copilot mode aims to let Neuro code alongside the user, by letting her suggest code (like GitHub Copilot) and request to execute actions, which the user can allow or deny.
+
+Instead of executing actions directly like in Autopilot Mode, a notification popup will appear asking you to confirm the action first.
+The actions Neuro has access to and the permissions that govern them are the same as in Autopilot Mode.
+Neuro can only request one action at a time<!-- , but she can also cancel it to request something else -->. <!-- TODO: Figure out if this is possible in #28 -->
+
+If you wish to use inline suggestions, you should add a keyboard shortcut for "Trigger Inline Suggestion" (`editor.action.inlineSuggest.trigger`) if you haven't already.
 Once you are in a file, place your cursor where you want the new code to be inserted and trigger a suggestion.
-This should send a command to Neuro asking her to complete the code.
+This will send a command to Neuro asking her to complete the code.
+You can also set it to trigger a completion every time you stop typing (this is fine for the tools like Randy, but might be a problem for Neuro since it sends and cancels requests in quick succession, which is why it's disabled by default).
 
 You can also use Copilot Chat to ask Neuro to generate code by specifying `@neuro` in the prompt.
 This will bypass Copilot and instead send the prompt to Neuro, along with any selected references.
@@ -49,20 +72,12 @@ Simply paste this into your `settings.json` file:
 }
 ```
 
-On startup, the extension will immediately try to establish a connection to the API.
-If the extension was started before the API was ready, or you lose connection to the API, you can use the command "NeuroPilot: Reconnect" from the Command Palette.
+### Mixing Autopilot and Copilot Mode
 
-### Unsupervised Coding
+> [!WARNING]
+> Whether or how this section applies depends heavily on the outcome of [#28](https://github.com/Pasu4/neuropilot/pull/28), which at the time of writing is still in the design phase.
 
-To make Neuro able to code unsupervised, go to the extension settings and activate the necessary permissions, then run the command "NeuroPilot: Reload Permissions" from the Command Palette.
-It is recommended to turn on auto-saving in the settings for this, as there is no action to manually save.
-Tasks that Neuro can run are loaded from `tasks.json`, but it requires some setup for Neuro to use them.
-All tasks that Neuro should be able to run must have the string `[Neuro]` at the start of their `detail` property.
-This is a safety measure so she doesn't have access to all tasks.
-
-You can configure the extension using the extension settings.
-For example, you can set how many lines of code will be provided as context before and after the current line.
-You can also set it to trigger a completion every time you stop typing (this is fine for the tools above, but might be a problem for Neuro since it sends and cancels requests in quick succession, which is why it's disabled by default).
+<!-- TODO: See above. Remove this warning when it has been determined how this will be implemented. -->
 
 ## Security
 
@@ -70,10 +85,10 @@ The extension has multiple security measures in place to prevent Neuro from doin
 As said earlier, Neuro can only run tasks that have the string `[Neuro]` at the start of their `detail` property to control what tasks Neuro can run.
 
 Neuro cannot open, edit, or otherwise access files or folders that start with a dot (`.`), or files in such folders.
-This is mainly to prevent her from opening `.vscode/tasks.json` to essentially run arbitrary commands in the terminal.
+This is mainly to prevent her from opening `.vscode/tasks.json` to essentially run arbitrary commands in the terminal, or editing `.vscode/settings.json` to escalate her permissions.
 **Warning: If your workspace is inside such a folder, Neuro will not be able to edit *any* files!**
 
-Note that if Neuro has direct terminal access, all security features are pretty much out the window.
+Note that if Neuro has direct terminal access, all security features are pretty much out the window, since she can just rewrite the settings file.
 
 ## Commands
 
