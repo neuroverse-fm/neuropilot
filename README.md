@@ -4,29 +4,27 @@
 
 **Disclaimer: For simplicity, all mentions of Neuro also apply to Evil unless otherwise stated.**
 
-This extension lets Neuro-sama suggest code for you similar to GitHub Copilot, or code on her own.
-If you don't have a Neuro-sama, you can use tools like [Randy](https://github.com/VedalAI/neuro-game-sdk/tree/main/Randy), [Tony](https://github.com/Pasu4/neuro-api-tony) or [Jippity](https://github.com/EnterpriseScratchDev/neuro-api-jippity).
-If you are using Tony, activating auto-answer is recommended, since completion requests are canceled if you click out of VS Code.
+This extension enables Neuro-sama to write code in Visual Studio Code, either together with a programmer or on her own.
+If you don't have a Neuro-sama, you can use one of the tools listed [here](https://github.com/VedalAI/neuro-game-sdk/?tab=readme-ov-file#tools) and [here](https://github.com/VedalAI/neuro-game-sdk/?tab=readme-ov-file#tools-1) instead.
 
-This extension **will**:
+Capabilities of this extension include:
 
-- let Neuro make inline code suggestions.
-- add Neuro as a chat participant for Copilot Chat.
+- letting Neuro make inline code suggestions.
+- adding Neuro as a chat participant for Copilot Chat.
+- letting Neuro edit the current file.
+- letting Neuro read and open files in the workspace.
+- letting Neuro create, rename and delete files in the workspace.
+- letting Neuro run pre-defined tasks.
+- letting Neuro interact with the git repository, if one is present in the open workspace.
+- giving Neuro direct terminal access.
+    <!-- - letting Neuro read what you type in real time. -->
+    <!--
+    Not sure about including this one - this was something she could *not* do in the past, but was later implemented and moved to the list of things she *could* do.
+    (Also, this comment block is indented because it would cause formatting issues otherwise.)
+    -->
+- letting Neuro view linting diagnostics, and be updated on linting diagnostics as they come in.
 
-If you enable it, this extension **can**:
-
-- let Neuro edit the current file.
-- let Neuro read and open files in the workspace.
-- let Neuro create, rename and delete files in the workspace.
-- let Neuro run pre-defined tasks.
-- let Neuro interact with the git repository, if one is present in the open workspace.
-- give Neuro direct terminal access.
-- let Neuro read what you type in real time.
-- let Neuro view linting diagnostics, and be updated on linting diagnostics as they come in.
-
-This extension **will not**:
-
-- allow Neuro to change global git configurations (except with direct terminal access).
+These can all be turned on or off using the extension's permission settings. <!-- TODO: Inline suggestions currently can't be turned off -->
 
 ## How to use
 
@@ -59,6 +57,9 @@ Once you are in a file, place your cursor where you want the new code to be inse
 This will send a command to Neuro asking her to complete the code.
 You can also set it to trigger a completion every time you stop typing (this is fine for the tools like Randy, but might be a problem for Neuro since it sends and cancels requests in quick succession, which is why it's disabled by default).
 
+> [!Note]
+> If you are using Tony for testing, activating auto-answer is recommended, since completion requests are canceled if you click out of VS Code.
+
 You can also use Copilot Chat to ask Neuro to generate code by specifying `@neuro` in the prompt.
 This will bypass Copilot and instead send the prompt to Neuro, along with any selected references.
 
@@ -87,6 +88,8 @@ As said earlier, Neuro can only run tasks that have the string `[Neuro]` at the 
 Neuro cannot open, edit, or otherwise access files or folders that start with a dot (`.`), or files in such folders.
 This is mainly to prevent her from opening `.vscode/tasks.json` to essentially run arbitrary commands in the terminal, or editing `.vscode/settings.json` to escalate her permissions.
 **Warning: If your workspace is inside such a folder, Neuro will not be able to edit *any* files!**
+
+Neuro also can't change the global git configuration, only the one local to the current repository.
 
 Note that if Neuro has direct terminal access, all security features are pretty much out the window, since she can just rewrite the settings file.
 
