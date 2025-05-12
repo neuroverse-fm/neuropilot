@@ -158,6 +158,12 @@ Depending on the match mode, places the cursor at the location or returns all li
 Undoes the last editing action.
 Only works if VS Code is focused.
 
+#### `save`
+
+*Requires Permission: Edit Active Document.*
+Saves the currently open document.
+Only registered if the `Files > Auto Save` setting isn't set to `afterDelay`.
+
 #### `create_file`
 
 *Requires Permission: Create.*
