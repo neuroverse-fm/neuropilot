@@ -52,7 +52,7 @@ export function activate(context: vscode.ExtensionContext) {
 
     vscode.workspace.onDidChangeConfiguration(event => {
         if (event.affectsConfiguration('files.autoSave')) {
-            NEURO.client?.sendContext("The Auto-Save setting has been modified.")
+            NEURO.client?.sendContext('The Auto-Save setting has been modified.');
             toggleSaveAction();
         }
     });

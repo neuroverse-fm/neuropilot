@@ -454,7 +454,7 @@ export function handleSave(_actionData: ActionData): ActionResult {
         return ACTION_RESULT_NO_ACCESS;
     }
 
-    NEURO.saving = true
+    NEURO.saving = true;
 
     document.save().then(
         (saved) => {
@@ -472,7 +472,7 @@ export function handleSave(_actionData: ActionData): ActionResult {
         },
     );
 
-    NEURO.saving = false
+    NEURO.saving = false;
     return actionResultAccept();
 }
 
