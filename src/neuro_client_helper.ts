@@ -24,6 +24,14 @@ export interface ActionResult {
     message?: string;
 }
 
+/** ActionHandler to use with constants for records of actions and their corresponding handlers */
+export interface ActionHandler {
+    permissions: Permission[]
+    validator: (actionData: ActionData) => ActionResult
+    handler: (actionData: ActionData) => string | undefined
+    promptGenerator: (actionData: ActionData) => string
+}
+
 /**
  * Create a successful action result.
  * This should be used if all parameters have been parsed correctly.

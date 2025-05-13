@@ -460,7 +460,7 @@ export function handleSave(_actionData: ActionData): ActionResult {
         (saved) => {
             if (saved) {
                 logOutput('INFO', 'Document saved successfully.');
-                NEURO.client?.sendContext('Document saved successfully.', false);
+                NEURO.client?.sendContext('Document saved successfully.', true);
             } else {
                 logOutput('WARN', 'Document save returned false.');
                 NEURO.client?.sendContext('Document did not save.', false);

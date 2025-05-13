@@ -7,6 +7,7 @@ import { editingFileHandlers, registerEditingActions } from './editing';
 import { ActionData, ActionResult } from './neuro_client_helper';
 import { registerTerminalActions, terminalAccessHandlers } from './pseudoterminal';
 import { lintActionHandlers, registerLintActions } from './lint_problems';
+import { handleCancelRequest } from './rce';
 
 /**
  * Register unsupervised actions with the Neuro API.
@@ -14,6 +15,7 @@ import { lintActionHandlers, registerLintActions } from './lint_problems';
  */
 
 const neuroActionHandlers: Record<string, (actionData: ActionData) => ActionResult> = {
+    'cancel_request': handleCancelRequest,
     ...gitActionHandlers,
     ...fileActionHandlers,
     ...taskHandlers,

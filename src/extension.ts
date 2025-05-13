@@ -82,12 +82,12 @@ function registerPostActionHandler() {
 
 function disableAllPermissions() {
     const config = vscode.workspace.getConfiguration('neuropilot');
-    const permissionKeys = config.get<Record<string, boolean>>('permission');
+    const permissionKeys = config.get<Record<string, string>>('permission');
     // Disable each permission one-by-one
     const promises: Thenable<void>[] = [];
     if (permissionKeys) {
         for (const key of Object.keys(permissionKeys)) {
-            promises.push(config.update(`permission.${key}`, false, vscode.ConfigurationTarget.Workspace));
+            promises.push(config.update(`permission.${key}`, 'off', vscode.ConfigurationTarget.Workspace));
         }
     }
     if (CONFIG.allowUnsafePaths === true) {
