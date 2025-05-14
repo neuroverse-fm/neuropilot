@@ -5,7 +5,7 @@ import { GitExtension, Change, ForcePushMode, CommitOptions, Commit, Repository 
 import { StatusStrings, RefTypeStrings } from './types/git_status';
 import { getNormalizedRepoPathForGit, logOutput, simpleFileName } from './utils';
 import { ActionData, ActionResult, actionResultAccept, actionResultEnumFailure, actionResultFailure, actionResultMissingParameter, actionResultNoPermission, actionResultRetry } from './neuro_client_helper';
-import { PERMISSIONS, hasPermissions } from './config';
+import { PERMISSIONS, getPermissionLevel } from './config';
 
 /* All actions located in here requires neuropilot.permission.gitOperations to be enabled. */
 
@@ -51,7 +51,7 @@ let repo: Repository | undefined = git.repositories[0];
 
 // Register all git commands
 export function registerGitActions() {
-    if (hasPermissions(PERMISSIONS.gitOperations)) {
+    if (getPermissionLevel(PERMISSIONS.gitOperations)) {
         NEURO.client?.registerActions([
             {
                 name: 'init_git_repo',
@@ -191,7 +191,7 @@ export function registerGitActions() {
                     },
                 ]);
 
-                if (hasPermissions(PERMISSIONS.gitTags)) {
+                if (getPermissionLevel(PERMISSIONS.gitTags)) {
                     NEURO.client?.registerActions([
                         {
                             name: 'tag_head',
@@ -219,7 +219,7 @@ export function registerGitActions() {
                     ]);
                 }
 
-                if (hasPermissions(PERMISSIONS.gitConfigs)) {
+                if (getPermissionLevel(PERMISSIONS.gitConfigs)) {
                     NEURO.client?.registerActions([
                         {
                             name: 'set_git_config',
@@ -246,7 +246,7 @@ export function registerGitActions() {
                     ]);
                 }
 
-                if (hasPermissions(PERMISSIONS.gitRemotes)) {
+                if (getPermissionLevel(PERMISSIONS.gitRemotes)) {
                     NEURO.client?.registerActions([
                         {
                             name: 'fetch_git_commits',
@@ -278,7 +278,7 @@ export function registerGitActions() {
                         },
                     ]);
 
-                    if (hasPermissions(PERMISSIONS.editRemoteData)) {
+                    if (getPermissionLevel(PERMISSIONS.editRemoteData)) {
                         NEURO.client?.registerActions([
                             {
                                 name: 'add_git_remote',
@@ -331,7 +331,7 @@ export function registerGitActions() {
 export function handleNewGitRepo(_actionData: ActionData): ActionResult {
     if (!git)
         return ACTION_RESULT_NO_GIT;
-    if (!hasPermissions(PERMISSIONS.gitOperations, PERMISSIONS.gitConfigs))
+    if (!getPermissionLevel(PERMISSIONS.gitOperations, PERMISSIONS.gitConfigs))
         return actionResultNoPermission(PERMISSIONS.gitOperations);
 
 
@@ -356,7 +356,7 @@ export function handleNewGitRepo(_actionData: ActionData): ActionResult {
 export function handleGetGitConfig(actionData: ActionData): ActionResult {
     if (!git)
         return ACTION_RESULT_NO_GIT;
-    if (!hasPermissions(PERMISSIONS.gitOperations, PERMISSIONS.gitConfigs))
+    if (!getPermissionLevel(PERMISSIONS.gitOperations, PERMISSIONS.gitConfigs))
         return actionResultNoPermission(PERMISSIONS.gitConfigs);
     if (!repo)
         return ACTION_RESULT_NO_REPO;
@@ -385,7 +385,7 @@ export function handleGetGitConfig(actionData: ActionData): ActionResult {
 export function handleSetGitConfig(actionData: ActionData): ActionResult {
     if (!git)
         return ACTION_RESULT_NO_GIT;
-    if (!hasPermissions(PERMISSIONS.gitOperations, PERMISSIONS.gitConfigs))
+    if (!getPermissionLevel(PERMISSIONS.gitOperations, PERMISSIONS.gitConfigs))
         return actionResultNoPermission(PERMISSIONS.gitConfigs);
     if (!repo)
         return ACTION_RESULT_NO_REPO;
@@ -416,7 +416,7 @@ export function handleSetGitConfig(actionData: ActionData): ActionResult {
 export function handleNewGitBranch(actionData: ActionData): ActionResult {
     if (!git)
         return ACTION_RESULT_NO_GIT;
-    if (!hasPermissions(PERMISSIONS.gitOperations))
+    if (!getPermissionLevel(PERMISSIONS.gitOperations))
         return actionResultNoPermission(PERMISSIONS.gitOperations);
     if (!repo)
         return ACTION_RESULT_NO_REPO;
@@ -439,7 +439,7 @@ export function handleNewGitBranch(actionData: ActionData): ActionResult {
 export function handleSwitchGitBranch(actionData: ActionData): ActionResult {
     if (!git)
         return ACTION_RESULT_NO_GIT;
-    if (!hasPermissions(PERMISSIONS.gitOperations))
+    if (!getPermissionLevel(PERMISSIONS.gitOperations))
         return actionResultNoPermission(PERMISSIONS.gitOperations);
     if (!repo)
         return ACTION_RESULT_NO_REPO;
@@ -462,7 +462,7 @@ export function handleSwitchGitBranch(actionData: ActionData): ActionResult {
 export function handleDeleteGitBranch(actionData: ActionData): ActionResult {
     if (!git)
         return ACTION_RESULT_NO_GIT;
-    if (!hasPermissions(PERMISSIONS.gitOperations))
+    if (!getPermissionLevel(PERMISSIONS.gitOperations))
         return actionResultNoPermission(PERMISSIONS.gitOperations);
     if (!repo)
         return ACTION_RESULT_NO_REPO;
@@ -490,7 +490,7 @@ export function handleDeleteGitBranch(actionData: ActionData): ActionResult {
 export function handleGitStatus(_actionData: ActionData): ActionResult {
     if (!git)
         return ACTION_RESULT_NO_GIT;
-    if (!hasPermissions(PERMISSIONS.gitOperations))
+    if (!getPermissionLevel(PERMISSIONS.gitOperations))
         return actionResultNoPermission(PERMISSIONS.gitOperations);
     if (!repo)
         return ACTION_RESULT_NO_REPO;
@@ -534,7 +534,7 @@ export function handleGitStatus(_actionData: ActionData): ActionResult {
 export function handleGitAdd(actionData: ActionData): ActionResult {
     if (!git)
         return ACTION_RESULT_NO_GIT;
-    if (!hasPermissions(PERMISSIONS.gitOperations))
+    if (!getPermissionLevel(PERMISSIONS.gitOperations))
         return actionResultNoPermission(PERMISSIONS.gitOperations);
     if (!repo)
         return ACTION_RESULT_NO_REPO;
@@ -571,7 +571,7 @@ export function handleGitAdd(actionData: ActionData): ActionResult {
 export function handleGitRemove(actionData: ActionData): ActionResult {
     if (!git)
         return ACTION_RESULT_NO_GIT;
-    if (!hasPermissions(PERMISSIONS.gitOperations))
+    if (!getPermissionLevel(PERMISSIONS.gitOperations))
         return actionResultNoPermission(PERMISSIONS.gitOperations);
     if (!repo)
         return ACTION_RESULT_NO_REPO;
@@ -608,7 +608,7 @@ export function handleGitRemove(actionData: ActionData): ActionResult {
 export function handleGitCommit(actionData: ActionData): ActionResult {
     if (!git)
         return ACTION_RESULT_NO_GIT;
-    if (!hasPermissions(PERMISSIONS.gitOperations))
+    if (!getPermissionLevel(PERMISSIONS.gitOperations))
         return actionResultNoPermission(PERMISSIONS.gitOperations);
     if (!repo)
         return ACTION_RESULT_NO_REPO;
@@ -662,7 +662,7 @@ export function handleGitCommit(actionData: ActionData): ActionResult {
 export function handleGitMerge(actionData: ActionData): ActionResult {
     if (!git)
         return ACTION_RESULT_NO_GIT;
-    if (!hasPermissions(PERMISSIONS.gitOperations))
+    if (!getPermissionLevel(PERMISSIONS.gitOperations))
         return actionResultNoPermission(PERMISSIONS.gitOperations);
     if (!repo)
         return ACTION_RESULT_NO_REPO;
@@ -694,7 +694,7 @@ export function handleGitMerge(actionData: ActionData): ActionResult {
 export function handleAbortMerge(_actionData: ActionData): ActionResult {
     if (!git)
         return ACTION_RESULT_NO_GIT;
-    if (!hasPermissions(PERMISSIONS.gitOperations))
+    if (!getPermissionLevel(PERMISSIONS.gitOperations))
         return actionResultNoPermission(PERMISSIONS.gitOperations);
     if (!repo)
         return ACTION_RESULT_NO_REPO;
@@ -714,7 +714,7 @@ export function handleAbortMerge(_actionData: ActionData): ActionResult {
 export function handleGitDiff(actionData: ActionData): ActionResult {
     if (!git)
         return ACTION_RESULT_NO_GIT;
-    if (!hasPermissions(PERMISSIONS.gitOperations))
+    if (!getPermissionLevel(PERMISSIONS.gitOperations))
         return actionResultNoPermission(PERMISSIONS.gitOperations);
     if (!repo)
         return ACTION_RESULT_NO_REPO;
@@ -820,7 +820,7 @@ export function handleGitDiff(actionData: ActionData): ActionResult {
 export function handleGitLog(_actionData: ActionData): ActionResult {
     if (!git)
         return ACTION_RESULT_NO_GIT;
-    if (!hasPermissions(PERMISSIONS.gitOperations))
+    if (!getPermissionLevel(PERMISSIONS.gitOperations))
         return actionResultNoPermission(PERMISSIONS.gitOperations);
     if (!repo)
         return ACTION_RESULT_NO_REPO;
@@ -839,7 +839,7 @@ export function handleGitLog(_actionData: ActionData): ActionResult {
 export function handleGitBlame(actionData: ActionData): ActionResult {
     if (!git)
         return ACTION_RESULT_NO_GIT;
-    if (!hasPermissions(PERMISSIONS.gitOperations))
+    if (!getPermissionLevel(PERMISSIONS.gitOperations))
         return actionResultNoPermission(PERMISSIONS.gitOperations);
     if (!repo)
         return ACTION_RESULT_NO_REPO;
@@ -877,7 +877,7 @@ export function handleGitBlame(actionData: ActionData): ActionResult {
 export function handleTagHEAD(actionData: ActionData): ActionResult {
     if (!git)
         return ACTION_RESULT_NO_GIT;
-    if (!hasPermissions(PERMISSIONS.gitOperations, PERMISSIONS.gitTags))
+    if (!getPermissionLevel(PERMISSIONS.gitOperations, PERMISSIONS.gitTags))
         return actionResultNoPermission(PERMISSIONS.gitTags);
     if (!repo)
         return ACTION_RESULT_NO_REPO;
@@ -904,7 +904,7 @@ export function handleTagHEAD(actionData: ActionData): ActionResult {
 export function handleDeleteTag(actionData: ActionData): ActionResult {
     if (!git)
         return ACTION_RESULT_NO_GIT;
-    if (!hasPermissions(PERMISSIONS.gitOperations, PERMISSIONS.gitTags))
+    if (!getPermissionLevel(PERMISSIONS.gitOperations, PERMISSIONS.gitTags))
         return actionResultNoPermission(PERMISSIONS.gitTags);
     if (!repo)
         return ACTION_RESULT_NO_REPO;
@@ -933,7 +933,7 @@ export function handleDeleteTag(actionData: ActionData): ActionResult {
 export function handleFetchGitCommits(actionData: ActionData): ActionResult {
     if (!git)
         return ACTION_RESULT_NO_GIT;
-    if (!hasPermissions(PERMISSIONS.gitOperations, PERMISSIONS.gitRemotes))
+    if (!getPermissionLevel(PERMISSIONS.gitOperations, PERMISSIONS.gitRemotes))
         return actionResultNoPermission(PERMISSIONS.gitRemotes);
     if (!repo)
         return ACTION_RESULT_NO_REPO;
@@ -955,7 +955,7 @@ export function handleFetchGitCommits(actionData: ActionData): ActionResult {
 export function handlePullGitCommits(_actionData: ActionData): ActionResult {
     if (!git)
         return ACTION_RESULT_NO_GIT;
-    if (!hasPermissions(PERMISSIONS.gitOperations, PERMISSIONS.gitRemotes))
+    if (!getPermissionLevel(PERMISSIONS.gitOperations, PERMISSIONS.gitRemotes))
         return actionResultNoPermission(PERMISSIONS.gitRemotes);
     if (!repo)
         return ACTION_RESULT_NO_REPO;
@@ -974,7 +974,7 @@ export function handlePullGitCommits(_actionData: ActionData): ActionResult {
 export function handlePushGitCommits(actionData: ActionData): ActionResult {
     if (!git)
         return ACTION_RESULT_NO_GIT;
-    if (!hasPermissions(PERMISSIONS.gitOperations, PERMISSIONS.gitRemotes))
+    if (!getPermissionLevel(PERMISSIONS.gitOperations, PERMISSIONS.gitRemotes))
         return actionResultNoPermission(PERMISSIONS.gitRemotes);
     if (!repo)
         return ACTION_RESULT_NO_REPO;
@@ -1004,7 +1004,7 @@ export function handlePushGitCommits(actionData: ActionData): ActionResult {
 export function handleAddGitRemote(actionData: ActionData): ActionResult {
     if (!git)
         return ACTION_RESULT_NO_GIT;
-    if (!hasPermissions(PERMISSIONS.gitOperations, PERMISSIONS.gitRemotes, PERMISSIONS.editRemoteData))
+    if (!getPermissionLevel(PERMISSIONS.gitOperations, PERMISSIONS.gitRemotes, PERMISSIONS.editRemoteData))
         return actionResultNoPermission(PERMISSIONS.editRemoteData);
     if (!repo)
         return ACTION_RESULT_NO_REPO;
@@ -1031,7 +1031,7 @@ export function handleAddGitRemote(actionData: ActionData): ActionResult {
 export function handleRemoveGitRemote(actionData: ActionData): ActionResult {
     if (!git)
         return ACTION_RESULT_NO_GIT;
-    if (!hasPermissions(PERMISSIONS.gitOperations, PERMISSIONS.gitRemotes, PERMISSIONS.editRemoteData))
+    if (!getPermissionLevel(PERMISSIONS.gitOperations, PERMISSIONS.gitRemotes, PERMISSIONS.editRemoteData))
         return actionResultNoPermission(PERMISSIONS.editRemoteData);
     if (!repo)
         return ACTION_RESULT_NO_REPO;
@@ -1055,7 +1055,7 @@ export function handleRemoveGitRemote(actionData: ActionData): ActionResult {
 export function handleRenameGitRemote(actionData: ActionData): ActionResult {
     if (!git)
         return ACTION_RESULT_NO_GIT;
-    if (!hasPermissions(PERMISSIONS.gitOperations, PERMISSIONS.gitRemotes, PERMISSIONS.editRemoteData))
+    if (!getPermissionLevel(PERMISSIONS.gitOperations, PERMISSIONS.gitRemotes, PERMISSIONS.editRemoteData))
         return actionResultNoPermission(PERMISSIONS.editRemoteData);
     if (!repo)
         return ACTION_RESULT_NO_REPO;

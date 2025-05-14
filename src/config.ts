@@ -23,15 +23,15 @@ export function get<T>(key: string): T | undefined {
  * @param permissions The permission(s) to query.
  * If no permissions are specified, this function assumes Copilot.
  */
-export function hasPermissions(...permissions: Permission[]): PermissionLevel {
+export function getPermissionLevel(...permissions: Permission[]): PermissionLevel {
     if (permissions.length === 0) {
         return PermissionLevel.AUTOPILOT;
     }
     return permissions
         .map(permission => {
-            const setting = vscode.workspace.getConfiguration('neuropilot')
-                .get<string>('permission.' + permission.id, 'off')
-                .toLowerCase();
+            let setting = vscode.workspace.getConfiguration('neuropilot')
+                .get<string>('permission.' + permission.id, 'off');
+            setting = setting.toLowerCase();
             switch (setting) {
                 case 'autopilot':
                     return PermissionLevel.AUTOPILOT;
@@ -41,7 +41,7 @@ export function hasPermissions(...permissions: Permission[]): PermissionLevel {
                     return PermissionLevel.OFF;
             }
         })
-        .reduce((lowest, level) => level < lowest ? level : lowest, PermissionLevel.COPILOT);
+        .reduce((lowest, level) => level < lowest ? level : lowest, PermissionLevel.AUTOPILOT);
 }
 
 export interface Permission {

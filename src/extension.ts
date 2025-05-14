@@ -11,6 +11,7 @@ import { emergencyTerminalShutdown, saveContextForTerminal } from './pseudotermi
 import { CONFIG } from './config';
 import { sendDiagnosticsDiff } from './lint_problems';
 import { fileSaveListener, toggleSaveAction } from './editing';
+import { openRceDialog } from './rce';
 
 export function activate(context: vscode.ExtensionContext) {
     NEURO.url = CONFIG.websocketUrl;
@@ -30,6 +31,7 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand('neuropilot.giveCookie', giveCookie);
     vscode.commands.registerCommand('neuropilot.reloadPermissions', reloadPermissions);
     vscode.commands.registerCommand('neuropilot.disableAllPermissions', disableAllPermissions);
+    vscode.commands.registerCommand('neuropilot.openRceDialog', openRceDialog);
 
     registerChatParticipant(context);
     saveContextForTerminal(context);
@@ -58,6 +60,16 @@ export function activate(context: vscode.ExtensionContext) {
     });
 
     createClient();
+
+    NEURO.statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
+    context.subscriptions.push(NEURO.statusBarItem);
+    NEURO.statusBarItem.name = 'NeuroPilot';
+    NEURO.statusBarItem.command = 'neuropilot.openRceDialog'; // TODO: Implement
+    NEURO.statusBarItem.text = '$(neuropilot-logo)'; // TODO: Use NeuroPilot icon
+    NEURO.statusBarItem.tooltip = new vscode.MarkdownString('No active request');
+    NEURO.statusBarItem.color = new vscode.ThemeColor('statusBarItem.foreground');
+    NEURO.statusBarItem.backgroundColor = new vscode.ThemeColor('statusBarItem.background');
+    NEURO.statusBarItem.show();
 }
 
 function reloadPermissions() {

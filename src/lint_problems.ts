@@ -3,7 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { NEURO } from './constants';
 import { normalizePath, getWorkspacePath, logOutput, isPathNeuroSafe } from './utils';
-import { PERMISSIONS, hasPermissions, CONFIG } from './config';
+import { PERMISSIONS, getPermissionLevel, CONFIG } from './config';
 import { ActionData, ActionResult, actionResultAccept, actionResultFailure, actionResultMissingParameter, actionResultNoPermission, actionResultNoAccess } from './neuro_client_helper';
 
 export const lintActionHandlers: Record<string, (actionData: ActionData) => ActionResult> = {
@@ -13,7 +13,7 @@ export const lintActionHandlers: Record<string, (actionData: ActionData) => Acti
 };
 
 export function registerLintActions() {
-    if (hasPermissions(PERMISSIONS.accessLintingAnalysis)) {
+    if (getPermissionLevel(PERMISSIONS.accessLintingAnalysis)) {
         NEURO.client?.registerActions([
             {
                 name: 'get_file_lint_problems',
@@ -95,7 +95,7 @@ export function getFormattedDiagnosticsForFile(filePath: string, diagnostics: vs
 
 // Handle diagnostics for a single file
 export function handleGetFileLintProblems(actionData: ActionData): ActionResult {
-    if (!hasPermissions(PERMISSIONS.accessLintingAnalysis)) {
+    if (!getPermissionLevel(PERMISSIONS.accessLintingAnalysis)) {
         return actionResultNoPermission(PERMISSIONS.accessLintingAnalysis);
     }
     const relativePath = actionData?.params.file;
@@ -132,7 +132,7 @@ export function handleGetFileLintProblems(actionData: ActionData): ActionResult 
 
 // Handle diagnostics for a folder
 export function handleGetFolderLintProblems(actionData: ActionData): ActionResult {
-    if (!hasPermissions(PERMISSIONS.accessLintingAnalysis)) {
+    if (!getPermissionLevel(PERMISSIONS.accessLintingAnalysis)) {
         return actionResultNoPermission(PERMISSIONS.accessLintingAnalysis);
     }
     const relativeFolder = actionData?.params.folder;
@@ -179,7 +179,7 @@ export function handleGetFolderLintProblems(actionData: ActionData): ActionResul
 
 // Handle diagnostics for the entire workspace
 export function handleGetWorkspaceLintProblems(_actionData: ActionData): ActionResult {
-    if (!hasPermissions(PERMISSIONS.accessLintingAnalysis)) {
+    if (!getPermissionLevel(PERMISSIONS.accessLintingAnalysis)) {
         return actionResultNoPermission(PERMISSIONS.accessLintingAnalysis);
     }
 
