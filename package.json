@@ -423,7 +423,16 @@
 					}
 				}
 			}
-		]
+		],
+		"icons": {
+			"neuropilot-logo": {
+				"description": "NeuroPilot logo",
+				"default": {
+					"fontPath": "icons.woff",
+					"fontCharacter": "\\E900"
+				}
+			}
+		}
 	},
 	"scripts": {
 		"vscode:prepublish": "npm run compile",
