@@ -1,30 +1,36 @@
-import { NEURO } from './constants';
+/* eslint-disable @typescript-eslint/no-unused-vars -- Warnings disabled until handlers are all fixed */
 
+import * as vscode from 'vscode';
+import { NEURO } from './constants';
 import { handleRunTask, registerTaskActions, taskHandlers } from './tasks';
 import { fileActionHandlers, registerFileActions } from './file_actions';
 import { gitActionHandlers, registerGitActions } from './git';
-import { editingFileHandlers, registerEditingActions } from './editing';
-import { ActionData, ActionResult } from './neuro_client_helper';
+import { editingActions, registerEditingActions } from './editing';
+import { ActionData, ActionResult, actionResultAccept, actionResultFailure, ActionWithHandler } from './neuro_client_helper';
 import { registerTerminalActions, terminalAccessHandlers } from './pseudoterminal';
 import { lintActionHandlers, registerLintActions } from './lint_problems';
-import { handleCancelRequest } from './rce';
+import { cancelRequestAction, handleCancelRequest } from './rce';
+import { validate } from 'jsonschema';
+import { getPermissionLevel, PermissionLevel, PERMISSIONS } from './config';
+
+/* eslint-enable @typescript-eslint/no-unused-vars */
 
 /**
  * Register unsupervised actions with the Neuro API.
  * Will only register actions that the user has given permission to use.
  */
 
-const neuroActionHandlers: Record<string, (actionData: ActionData) => ActionResult> = {
-    'cancel_request': handleCancelRequest,
-    ...gitActionHandlers,
-    ...fileActionHandlers,
-    ...taskHandlers,
-    ...editingFileHandlers,
-    ...terminalAccessHandlers,
-    ...lintActionHandlers,
+const neuroActions: Record<string, ActionWithHandler> = {
+    'cancel_request': cancelRequestAction,
+    // ...gitActionHandlers,
+    // ...fileActionHandlers,
+    // ...taskHandlers,
+    ...editingActions,
+    // ...terminalAccessHandlers,
+    // ...lintActionHandlers,
 };
 
-const actionKeys: string[] = Object.keys(neuroActionHandlers);
+const actionKeys: string[] = Object.keys(neuroActions);
 
 export function registerUnsupervisedActions() {
     // Unregister all actions first to properly refresh everything
@@ -44,15 +50,67 @@ export function registerUnsupervisedActions() {
  */
 export function registerUnsupervisedHandlers() {
     NEURO.client?.onAction((actionData: ActionData) => {
-        if(actionKeys.includes(actionData.name)) {
+        if(actionKeys.includes(actionData.name) || NEURO.tasks.find(task => task.id === actionData.name)) {
             NEURO.actionHandled = true;
-            const result = neuroActionHandlers[actionData.name](actionData);
-            NEURO.client?.sendActionResult(actionData.id, result.success, result.message);
-        }
-        else if(NEURO.tasks.find(task => task.id === actionData.name)) {
-            NEURO.actionHandled = true;
-            const result = handleRunTask(actionData);
-            NEURO.client?.sendActionResult(actionData.id, result.success, result.message);
+
+            let action: ActionWithHandler;
+            if(actionKeys.includes(actionData.name)) {
+                action = neuroActions[actionData.name];
+            }
+            else {
+                const task = NEURO.tasks.find(task => task.id === actionData.name)!;
+                action = {
+                    name: task.id,
+                    description: task.description,
+                    permissions: [PERMISSIONS.runTasks],
+                    handler: handleRunTask,
+                    promptGenerator: () => `Neuro wants to run the task "${task.id}".`,
+                };
+            }
+
+            const effectivePermission = getPermissionLevel(...action.permissions);
+            if(effectivePermission === PermissionLevel.OFF)
+                return;
+
+            // Validate schema
+            if(action.schema) {
+                const schemaValidationResult = validate(actionData.params, action.schema, { required: true });
+                if(!schemaValidationResult.valid) {
+                    const message = 'Action failed: ' + schemaValidationResult.errors[0]?.stack;
+                    NEURO.client?.sendActionResult(actionData.id, false, message);
+                    return;
+                }
+            }
+
+            // Validate custom
+            if(action.validator) {
+                const actionResult = action.validator!(actionData);
+                if(!actionResult.success) {
+                    NEURO.client?.sendActionResult(actionData.id, false, actionResult.message);
+                    return;
+                }
+            }
+
+            if(effectivePermission === PermissionLevel.AUTOPILOT) {
+                const result = action.handler(actionData);
+                NEURO.client?.sendActionResult(actionData.id, true, result);
+            }
+            else { // permissionLevel === PermissionLevel.COPILOT
+                if(NEURO.rceCallback) {
+                    NEURO.client?.sendActionResult(actionData.id, true, 'Action failed: Already waiting for permission to run another action.');
+                    return;
+                }
+                NEURO.rceCallback = () => action.handler(actionData);
+                NEURO.statusBarItem!.tooltip = new vscode.MarkdownString(
+                    typeof action.promptGenerator === 'string'
+                        ? action.promptGenerator as string
+                        : (action.promptGenerator as (actionData: ActionData) => string)(actionData),
+                );
+                NEURO.client?.registerActions([cancelRequestAction]);
+                NEURO.statusBarItem!.backgroundColor = new vscode.ThemeColor('statusBarItem.warningBackground');
+                NEURO.statusBarItem!.color = new vscode.ThemeColor('statusBarItem.warningForeground');
+                NEURO.client?.sendActionResult(actionData.id, true, 'Requested permission to run action.');
+            }
         }
     });
 }

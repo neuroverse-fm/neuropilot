@@ -2,8 +2,8 @@ import * as vscode from 'vscode';
 
 import { NEURO } from './constants';
 import { logOutput, formatActionID, getFence } from './utils';
-import { ActionData, ActionResult, actionResultAccept, actionResultFailure, actionResultNoPermission, actionResultRetry } from './neuro_client_helper';
-import { CONFIG, PERMISSIONS, hasPermissions } from './config';
+import { ActionData, ActionResult, actionResultAccept, actionResultFailure, actionResultNoPermission } from './neuro_client_helper';
+import { CONFIG, PERMISSIONS, getPermissionLevel } from './config';
 
 export const taskHandlers: Record<string, (actionData: ActionData) => ActionResult> = {
     // handleRunTask is used separately and not on this list
@@ -11,7 +11,7 @@ export const taskHandlers: Record<string, (actionData: ActionData) => ActionResu
 };
 
 export function registerTaskActions() {
-    if(hasPermissions(PERMISSIONS.runTasks)) {
+    if(getPermissionLevel(PERMISSIONS.runTasks)) {
         NEURO.client?.registerActions([
             {
                 name: 'terminate_task',
@@ -23,7 +23,7 @@ export function registerTaskActions() {
 }
 
 export function handleTerminateTask(_actionData: ActionData): ActionResult {
-    if(!hasPermissions(PERMISSIONS.runTasks))
+    if(!getPermissionLevel(PERMISSIONS.runTasks))
         return actionResultNoPermission(PERMISSIONS.runTasks);
 
     if(NEURO.currentTaskExecution === null)
@@ -36,26 +36,23 @@ export function handleTerminateTask(_actionData: ActionData): ActionResult {
     return actionResultAccept('Terminated current task');
 }
 
-export function handleRunTask(actionData: ActionData): ActionResult {
-    if(!hasPermissions(PERMISSIONS.runTasks))
-        return actionResultNoPermission(PERMISSIONS.runTasks);
-
+export function handleRunTask(actionData: ActionData): string | undefined {
     if(NEURO.currentTaskExecution !== null)
-        return actionResultFailure('A task is already running.');
+        return 'Action failed: A task is already running.';
 
     const task = NEURO.tasks.find(task => task.id === actionData.name);
     if(task === undefined)
-        return actionResultRetry(`Task ${actionData.name} not found.`);
+        return `Action failed: Task ${actionData.name} not found.`;
 
     try {
         vscode.tasks.executeTask(task.task).then(value => {
             logOutput('INFO', `Executing task ${task.id}`);
             NEURO.currentTaskExecution = value;
         });
-        return actionResultAccept(`Executing task ${task.id}`);
+        return `Executing task ${task.id}`;
     } catch(erm) {
         logOutput('DEBUG', JSON.stringify(erm));
-        return actionResultFailure(`Failed to execute task ${task.id}.`, 'ERROR');
+        return `Failed to execute task ${task.id}.`;
     }
 }
 
@@ -83,7 +80,7 @@ export function reloadTasks() {
 
     NEURO.tasks = [];
 
-    if(!hasPermissions(PERMISSIONS.runTasks)) {
+    if(!getPermissionLevel(PERMISSIONS.runTasks)) {
         return;
     }
 
@@ -111,7 +108,7 @@ export function reloadTasks() {
             }
         }
 
-        if(!hasPermissions(PERMISSIONS.runTasks)) {
+        if(!getPermissionLevel(PERMISSIONS.runTasks)) {
             return;
         }
 

@@ -2,8 +2,10 @@
  * Helper functions and types for interacting with the Neuro Game SDK.
  */
 
+import { Action } from 'neuro-game-sdk';
 import { Permission } from './config';
 import { logOutput } from './utils';
+import { PromptGenerator } from './rce';
 
 /** Data used by an action handler. */
 export interface ActionData {
@@ -25,11 +27,15 @@ export interface ActionResult {
 }
 
 /** ActionHandler to use with constants for records of actions and their corresponding handlers */
-export interface ActionHandler {
-    permissions: Permission[]
-    validator: (actionData: ActionData) => ActionResult
-    handler: (actionData: ActionData) => string | undefined
-    promptGenerator: (actionData: ActionData) => string
+export interface ActionWithHandler extends Action {
+    /** The permissions required to execute this action. */
+    permissions: Permission[];
+    /** The function to validate the action data *after* checking the schema. */
+    validator?: (actionData: ActionData) => ActionResult;
+    /** The function to handle the action. */
+    handler: (actionData: ActionData) => string | undefined;
+    /** The function to generate a prompt for the action request (Copilot Mode). */
+    promptGenerator: PromptGenerator;
 }
 
 /**

@@ -54,6 +54,11 @@
 				"command": "neuropilot.disableAllPermissions",
 				"title": "Disable All Permissions",
 				"category": "NeuroPilot"
+			},
+			{
+				"command": "neuropilot.openRceDialog",
+				"title": "Open RCE Dialog",
+				"category": "NeuroPilot"
 			}
 		],
 		"configuration": [
@@ -423,7 +428,16 @@
 					}
 				}
 			}
-		]
+		],
+		"icons": {
+			"neuropilot-logo": {
+				"description": "NeuroPilot logo",
+				"default": {
+					"fontPath": "icons.woff",
+					"fontCharacter": "\\E900"
+				}
+			}
+		}
 	},
 	"scripts": {
 		"vscode:prepublish": "npm run compile",
@@ -449,6 +463,7 @@
 	},
 	"dependencies": {
 		"glob-to-regexp": "^0.4.1",
+		"jsonschema": "^1.5.0",
 		"neuro-game-sdk": "github:AriesAlex/typescript-neuro-game-sdk#49a4a711e031447bcf4c9e5bd8caab3922ed02b5"
 	}
 }

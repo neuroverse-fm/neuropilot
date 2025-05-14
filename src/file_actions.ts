@@ -3,7 +3,7 @@ import * as vscode from 'vscode';
 import { NEURO } from './constants';
 import { combineGlobLines, filterFileContents, getFence, getWorkspacePath, isPathNeuroSafe, logOutput, normalizePath } from './utils';
 import { ActionData, ActionResult, actionResultAccept, actionResultFailure, actionResultMissingParameter, actionResultNoAccess, actionResultNoPermission } from './neuro_client_helper';
-import { CONFIG, PERMISSIONS, hasPermissions } from './config';
+import { CONFIG, PERMISSIONS, getPermissionLevel } from './config';
 
 export const fileActionHandlers: Record<string, (actionData: ActionData) => ActionResult> = {
     'get_files': handleGetFiles,
@@ -15,7 +15,7 @@ export const fileActionHandlers: Record<string, (actionData: ActionData) => Acti
 };
 
 export function registerFileActions() {
-    if(hasPermissions(PERMISSIONS.openFiles)) {
+    if(getPermissionLevel(PERMISSIONS.openFiles)) {
         NEURO.client?.registerActions([
             {
                 name: 'get_files',
@@ -35,7 +35,7 @@ export function registerFileActions() {
         ]);
     }
 
-    if(hasPermissions(PERMISSIONS.create)) {
+    if(getPermissionLevel(PERMISSIONS.create)) {
         NEURO.client?.registerActions([
             {
                 name: 'create_file',
@@ -62,7 +62,7 @@ export function registerFileActions() {
         ]);
     }
 
-    if(hasPermissions(PERMISSIONS.rename)) {
+    if(getPermissionLevel(PERMISSIONS.rename)) {
         NEURO.client?.registerActions([
             {
                 name: 'rename_file_or_folder',
@@ -79,7 +79,7 @@ export function registerFileActions() {
         ]);
     }
 
-    if(hasPermissions(PERMISSIONS.delete)) {
+    if(getPermissionLevel(PERMISSIONS.delete)) {
         NEURO.client?.registerActions([
             {
                 name: 'delete_file_or_folder',
@@ -98,7 +98,7 @@ export function registerFileActions() {
 }
 
 export function handleCreateFile(actionData: ActionData): ActionResult {
-    if(!hasPermissions(PERMISSIONS.create))
+    if(!getPermissionLevel(PERMISSIONS.create))
         return actionResultNoPermission(PERMISSIONS.create);
 
     const relativePathParam = actionData.params?.filePath;
@@ -139,7 +139,7 @@ export function handleCreateFile(actionData: ActionData): ActionResult {
         NEURO.client?.sendContext(`Created file ${relativePath}`);
 
         // Open the file if Neuro has permission to do so
-        if(!hasPermissions(PERMISSIONS.openFiles))
+        if(!getPermissionLevel(PERMISSIONS.openFiles))
             return;
 
         try {
@@ -154,7 +154,7 @@ export function handleCreateFile(actionData: ActionData): ActionResult {
 }
 
 export function handleCreateFolder(actionData: ActionData): ActionResult {
-    if(!hasPermissions(PERMISSIONS.create))
+    if(!getPermissionLevel(PERMISSIONS.create))
         return actionResultNoPermission(PERMISSIONS.create);
 
     const relativePathParam = actionData.params?.folderPath;
@@ -197,7 +197,7 @@ export function handleCreateFolder(actionData: ActionData): ActionResult {
 }
 
 export function handleRenameFileOrFolder(actionData: ActionData): ActionResult {
-    if(!hasPermissions(PERMISSIONS.rename))
+    if(!getPermissionLevel(PERMISSIONS.rename))
         return actionResultNoPermission(PERMISSIONS.rename);
 
     const oldRelativePathParam = actionData.params?.oldPath;
@@ -248,7 +248,7 @@ export function handleRenameFileOrFolder(actionData: ActionData): ActionResult {
 }
 
 export function handleDeleteFileOrFolder(actionData: ActionData): ActionResult {
-    if(!hasPermissions(PERMISSIONS.delete))
+    if(!getPermissionLevel(PERMISSIONS.delete))
         return actionResultNoPermission(PERMISSIONS.delete);
 
     const relativePathParam = actionData.params?.pathToDelete;
@@ -299,7 +299,7 @@ export function handleDeleteFileOrFolder(actionData: ActionData): ActionResult {
 }
 
 export function handleGetFiles(_actionData: ActionData): ActionResult {
-    if(!hasPermissions(PERMISSIONS.openFiles))
+    if(!getPermissionLevel(PERMISSIONS.openFiles))
         return actionResultNoPermission(PERMISSIONS.openFiles);
 
     const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
@@ -335,7 +335,7 @@ export function handleGetFiles(_actionData: ActionData): ActionResult {
 }
 
 export function handleOpenFile(actionData: ActionData): ActionResult {
-    if(!hasPermissions(PERMISSIONS.openFiles))
+    if(!getPermissionLevel(PERMISSIONS.openFiles))
         return actionResultNoPermission(PERMISSIONS.openFiles);
 
     const relativePath = actionData.params?.path;
