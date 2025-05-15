@@ -16,14 +16,19 @@ export interface ActionData {
 }
 
 /** The result of attempting to execute an action client-side. */
-export interface ActionResult {
-    /** If `false`, Neuro should retry the action if it was forced. */
+export interface ActionValidationResult {
+    /**
+     * If `false`, the action handler is not executed.
+     * Warning: This is *not* the success parameter of the action result.
+     */
     success: boolean;
     /**
      * The message to send Neuro.
      * If success is `true`, this is optional, otherwise it should be an error message.
      */
     message?: string;
+    /** If `true`, Neuro should retry the action if it was forced. */
+    retry?: boolean;
 }
 
 /** ActionHandler to use with constants for records of actions and their corresponding handlers */
@@ -31,7 +36,7 @@ export interface ActionWithHandler extends Action {
     /** The permissions required to execute this action. */
     permissions: Permission[];
     /** The function to validate the action data *after* checking the schema. */
-    validator?: (actionData: ActionData) => ActionResult;
+    validator?: (actionData: ActionData) => ActionValidationResult;
     /** The function to handle the action. */
     handler: (actionData: ActionData) => string | undefined;
     /** The function to generate a prompt for the action request (Copilot Mode). */
@@ -44,9 +49,10 @@ export interface ActionWithHandler extends Action {
  * @param message An optional message to send to Neuro.
  * @returns A successful action result.
  */
-export function actionResultAccept(message?: string): ActionResult {
+export function actionValidationAccept(message?: string): ActionValidationResult {
     return {
         success: true,
+        retry: false,
         message: message,
     };
 }
@@ -59,14 +65,14 @@ export function actionResultAccept(message?: string): ActionResult {
  * @param message The message to send to Neuro.
  * This should explain, if possible, why the action failed.
  * If omitted, will just send "Action failed.".
- * @param {string} [tag="WARNING"] The tag to use for the log output.
+ * @param {boolean} [retry=false] Whether to retry the action if it was forced. Defaults to `false`.
  * @returns A successful action result with the specified message.
- * @deprecated Use {@link contextFailure} instead.
  */
-export function actionResultFailure(message?: string, tag = 'WARNING'): ActionResult {
-    logOutput(tag, 'Action failed: ' + message);
+export function actionValidationFailure(message: string, retry = false): ActionValidationResult {
+    logOutput('WARNING', 'Action failed: ' + message);
     return {
-        success: true,
+        success: false,
+        retry: retry,
         message: message !== undefined ? `Action failed: ${message}` : 'Action failed.',
     };
 }
@@ -93,10 +99,11 @@ export function contextFailure(message?: string, tag = 'WARNING'): string {
  * This should contain the information required to fix the mistake.
  * @returns A failed action result with the specified message.
  */
-export function actionResultRetry(message: string): ActionResult {
+export function actionValidationRetry(message: string): ActionValidationResult {
     logOutput('WARNING', 'Action failed: ' + message + '\nRequesting retry.');
     return {
         success: false,
+        retry: true,
         message: 'Action failed: ' + message,
     };
 }
@@ -107,7 +114,7 @@ export function actionResultRetry(message: string): ActionResult {
  * @returns An failed action result with a message pointing out the missing parameter.
  * @deprecated Handled by the schema validator.
  */
-export function actionResultMissingParameter(parameterName: string): ActionResult {
+export function actionResultMissingParameter(parameterName: string): ActionValidationResult {
     logOutput('WARNING', `Action failed: Missing required parameter "${parameterName}"`);
     return {
         success: false,
@@ -118,7 +125,7 @@ export function actionResultMissingParameter(parameterName: string): ActionResul
 /**
  * @deprecated Handled by the schema validator.
  */
-export function actionResultIncorrectType(parameterName: string, expectedType: string, actualType: string): ActionResult {
+export function actionResultIncorrectType(parameterName: string, expectedType: string, actualType: string): ActionValidationResult {
     logOutput('WARNING', `Action failed: "${parameterName}" must be of type "${expectedType}", but got "${actualType}".`);
     return {
         success: false,
@@ -131,7 +138,7 @@ export function actionResultIncorrectType(parameterName: string, expectedType: s
  * @param permission The permission Neuro doesn't have.
  * @returns A successful action result with a message pointing out the missing permission.
  */
-export function actionResultNoPermission(permission: Permission): ActionResult {
+export function actionValidationNoPermission(permission: Permission): ActionValidationResult {
     logOutput('WARNING', `Action failed: Neuro attempted to ${permission.infinitive}, but permission is disabled.`);
     return {
         success: true,
@@ -153,7 +160,7 @@ export function contextNoAccess(path: string): string {
 /**
  * @deprecated Handled by the schema validator.
  */
-export function actionResultEnumFailure<T>(parameterName: string, validValues: T[], value: T): ActionResult {
+export function actionResultEnumFailure<T>(parameterName: string, validValues: T[], value: T): ActionValidationResult {
     logOutput('WARNING', `Action failed: "${parameterName}" must be one of ${JSON.stringify(validValues)}, but got ${JSON.stringify(value)}.`);
     return {
         success: false,

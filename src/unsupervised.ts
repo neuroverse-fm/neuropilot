@@ -4,9 +4,9 @@ import * as vscode from 'vscode';
 import { NEURO } from './constants';
 import { handleRunTask, registerTaskActions, taskHandlers } from './tasks';
 import { fileActions, registerFileActions } from './file_actions';
-import { gitActionHandlers, registerGitActions } from './git';
+import { gitActions, registerGitActions } from './git';
 import { editingActions, registerEditingActions } from './editing';
-import { ActionData, ActionResult, actionResultAccept, actionResultFailure, ActionWithHandler } from './neuro_client_helper';
+import { ActionData, ActionValidationResult, actionValidationAccept, actionValidationFailure, ActionWithHandler } from './neuro_client_helper';
 import { registerTerminalActions, terminalAccessHandlers } from './pseudoterminal';
 import { lintActions, registerLintActions } from './lint_problems';
 import { cancelRequestAction, handleCancelRequest } from './rce';
@@ -22,7 +22,7 @@ import { getPermissionLevel, PermissionLevel, PERMISSIONS } from './config';
 
 const neuroActions: Record<string, ActionWithHandler> = {
     'cancel_request': cancelRequestAction,
-    // ...gitActionHandlers,
+    ...gitActions,
     ...fileActions,
     // ...taskHandlers,
     ...editingActions,
@@ -86,7 +86,7 @@ export function registerUnsupervisedHandlers() {
             if(action.validator) {
                 const actionResult = action.validator!(actionData);
                 if(!actionResult.success) {
-                    NEURO.client?.sendActionResult(actionData.id, false, actionResult.message);
+                    NEURO.client?.sendActionResult(actionData.id, !(actionResult.retry ?? false), actionResult.message);
                     return;
                 }
             }

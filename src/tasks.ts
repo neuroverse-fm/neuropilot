@@ -2,10 +2,10 @@ import * as vscode from 'vscode';
 
 import { NEURO } from './constants';
 import { logOutput, formatActionID, getFence } from './utils';
-import { ActionData, ActionResult, actionResultAccept, actionResultFailure, actionResultNoPermission } from './neuro_client_helper';
+import { ActionData, ActionValidationResult, actionValidationAccept, actionValidationFailure, actionValidationNoPermission } from './neuro_client_helper';
 import { CONFIG, PERMISSIONS, getPermissionLevel } from './config';
 
-export const taskHandlers: Record<string, (actionData: ActionData) => ActionResult> = {
+export const taskHandlers: Record<string, (actionData: ActionData) => ActionValidationResult> = {
     // handleRunTask is used separately and not on this list
     'terminate_task': handleTerminateTask,
 };
@@ -22,18 +22,18 @@ export function registerTaskActions() {
     }
 }
 
-export function handleTerminateTask(_actionData: ActionData): ActionResult {
+export function handleTerminateTask(_actionData: ActionData): ActionValidationResult {
     if(!getPermissionLevel(PERMISSIONS.runTasks))
-        return actionResultNoPermission(PERMISSIONS.runTasks);
+        return actionValidationNoPermission(PERMISSIONS.runTasks);
 
     if(NEURO.currentTaskExecution === null)
-        return actionResultFailure('No task to terminate.');
+        return actionValidationFailure('No task to terminate.');
 
     const exe = NEURO.currentTaskExecution;
     NEURO.currentTaskExecution = null;
     exe.terminate();
     logOutput('INFO', 'Terminated current task');
-    return actionResultAccept('Terminated current task');
+    return actionValidationAccept('Terminated current task');
 }
 
 export function handleRunTask(actionData: ActionData): string | undefined {
