@@ -1,7 +1,6 @@
 /**
  * rce stands for Requested Command Execution
  * (or Request for Command Execution if you don't mind the omitted 'f')
- * definitely didn't choose the acronym for its resemblance to a software vulnerability
  */
 
 import * as vscode from 'vscode';
@@ -28,17 +27,19 @@ export function handleCancelRequest(_actionData: ActionData): string | undefined
     if (!NEURO.rceCallback) {
         return 'No active request to cancel.';
     }
-    // NEURO.rceActive = false;
-    NEURO.rceCallback = null;
-    NEURO.client?.unregisterActions(['cancel_request']);
-
-    NEURO.statusBarItem!.tooltip = 'No active request';
-    NEURO.statusBarItem!.color = new vscode.ThemeColor('statusBarItem.foreground');
-    NEURO.statusBarItem!.backgroundColor = new vscode.ThemeColor('statusBarItem.background');
+    clearRceDialog();
     return 'Request cancelled.';
 }
 
-export function openRceDialog() {
+export function clearRceDialog(): void { // Function to clear out RCE dialogs
+    NEURO.rceCallback = null;
+    NEURO.client?.unregisterActions(['cancel_request']);
+    NEURO.statusBarItem!.tooltip = 'No active request';
+    NEURO.statusBarItem!.color = new vscode.ThemeColor('statusBarItem.foreground');
+    NEURO.statusBarItem!.backgroundColor = new vscode.ThemeColor('statusBarItem.background');
+}
+
+export function openRceDialog(): void {
     if(!NEURO.rceCallback)
         return;
 
@@ -50,11 +51,7 @@ export function openRceDialog() {
         (value) => {
             if(NEURO.rceCallback !== callback) // Multiple messages may be opened, ensure that callback is only called once
                 return;
-            NEURO.rceCallback = null;
-            NEURO.client?.unregisterActions(['cancel_request']);
-            NEURO.statusBarItem!.tooltip = 'No active request';
-            NEURO.statusBarItem!.color = new vscode.ThemeColor('statusBarItem.foreground');
-            NEURO.statusBarItem!.backgroundColor = new vscode.ThemeColor('statusBarItem.background');
+            clearRceDialog();
             if(value === 'Accept') {
                 NEURO.client?.sendContext('Your request was accepted.');
                 const result = callback();

@@ -21,7 +21,12 @@ export function get<T>(key: string): T | undefined {
  * the lowest (most restrictive) level.
  *
  * @param permissions The permission(s) to query.
- * If no permissions are specified, this function assumes Copilot.
+ * @returns The lowest permission level in the list of permissions.
+ * 
+ * If no permissions are specified, this function assumes Autopilot
+ * (needed for cancel_request, terminate_task, and abort_merge)
+ * (Also for the actions relating to the Neuro chat participant and Trigger Inline Suggestions).
+ * TODO: Is there a better way than automatically assuming Autopilot?
  */
 export function getPermissionLevel(...permissions: Permission[]): PermissionLevel {
     if (permissions.length === 0) {
@@ -88,6 +93,7 @@ class Config {
     get allowRunningAllTasks(): boolean { return get('allowRunningAllTasks')!; }
     get sendNewLintingProblemsOn(): string { return get('sendNewLintingProblemsOn')!; }
     get sendSaveNotifications(): boolean { return get('sendSaveNotifications')!; }
+    get requestExpiryTimeout(): number { return get('requestExpiryTimeout')!; }
 
     get terminals(): { name: string; path: string; args?: string[]; }[] { return get('terminals')!; }
 }

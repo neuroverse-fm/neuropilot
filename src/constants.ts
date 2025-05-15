@@ -37,7 +37,6 @@ interface Neuro {
     /** This is needed because VSCode doesn't say what changed, only what files were changed */
     previousDiagnosticsMap: Map<string, vscode.Diagnostic[]>;
     saving: boolean;
-    // rceActive: boolean;
     rceCallback: (() => string | undefined) | null;
     statusBarItem: vscode.StatusBarItem | null;
 }
@@ -60,7 +59,6 @@ export const NEURO: Neuro = {
     terminalRegistry: new Map(),
     previousDiagnosticsMap: new Map(),
     saving: false,
-    // rceActive: false,
     rceCallback: null,
     statusBarItem: null,
 };
