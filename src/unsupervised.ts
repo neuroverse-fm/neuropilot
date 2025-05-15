@@ -23,7 +23,7 @@ const neuroActions: Record<string, ActionWithHandler> = {
     ...fileActions,
     ...taskHandlers,
     ...editingActions,
-    // ...terminalAccessHandlers,
+    ...terminalAccessHandlers,
     ...lintActions,
 };
 
