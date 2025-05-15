@@ -2,38 +2,38 @@ import * as vscode from 'vscode';
 
 import { NEURO } from './constants';
 import { logOutput, formatActionID, getFence } from './utils';
-import { ActionData, ActionResult, actionResultAccept, actionResultFailure, actionResultNoPermission } from './neuro_client_helper';
+import { ActionData, ActionWithHandler, actionValidationAccept, actionValidationFailure } from './neuro_client_helper';
 import { CONFIG, PERMISSIONS, getPermissionLevel } from './config';
 
-export const taskHandlers: Record<string, (actionData: ActionData) => ActionResult> = {
+export const taskHandlers = {
     // handleRunTask is used separately and not on this list
-    'terminate_task': handleTerminateTask,
-};
+    terminate_task: {
+        name: 'terminate_task',
+        description: 'Terminate the currently running task',
+        permissions: [PERMISSIONS.runTasks],
+        handler: handleTerminateTask,
+        promptGenerator: () => 'Neuro wants to terminate the currently running task.',
+        validator: () => NEURO.currentTaskExecution !== null
+            ? actionValidationAccept()
+            : actionValidationFailure('No task to terminate.'),
+    },
+} satisfies Record<string, ActionWithHandler>;
 
 export function registerTaskActions() {
     if(getPermissionLevel(PERMISSIONS.runTasks)) {
         NEURO.client?.registerActions([
-            {
-                name: 'terminate_task',
-                description: 'Terminate the currently running task',
-            },
+            taskHandlers.terminate_task,
         ]);
         // Tasks are registered asynchronously in reloadTasks()
     }
 }
 
-export function handleTerminateTask(_actionData: ActionData): ActionResult {
-    if(!getPermissionLevel(PERMISSIONS.runTasks))
-        return actionResultNoPermission(PERMISSIONS.runTasks);
-
-    if(NEURO.currentTaskExecution === null)
-        return actionResultFailure('No task to terminate.');
-
-    const exe = NEURO.currentTaskExecution;
+export function handleTerminateTask(_actionData: ActionData): string | undefined {
+    const exe = NEURO.currentTaskExecution!;
     NEURO.currentTaskExecution = null;
     exe.terminate();
     logOutput('INFO', 'Terminated current task');
-    return actionResultAccept('Terminated current task');
+    return 'Terminated current task.';
 }
 
 export function handleRunTask(actionData: ActionData): string | undefined {

@@ -2,11 +2,11 @@ import * as vscode from 'vscode';
 
 import { NEURO } from './constants';
 import { escapeRegExp, getFence, getPositionContext, isPathNeuroSafe, logOutput, NeuroPositionContext, substituteMatch } from './utils';
-import { ActionData, ActionWithHandler } from './neuro_client_helper';
+import { ActionData, ActionWithHandler, contextFailure } from './neuro_client_helper';
 import { PERMISSIONS, getPermissionLevel, CONFIG } from './config';
 
-const ACTION_RESULT_NO_ACCESS = 'Action failed: You do not have permission to access this file.';
-const ACTION_RESULT_NO_ACTIVE_DOCUMENT = 'Action failed: No active document to edit.';
+const CONTEXT_NO_ACCESS = 'You do not have permission to access this file.';
+const CONTEXT_NO_ACTIVE_DOCUMENT = 'No active document to edit.';
 
 const MATCH_OPTIONS: string[] = [ 'firstInFile', 'lastInFile', 'firstAfterCursor', 'lastBeforeCursor', 'allInFile' ] as const;
 
@@ -140,12 +140,7 @@ export function toggleSaveAction(): void {
     if (autoSave === 'afterDelay') {
         NEURO.client?.unregisterActions(['save']);
     } else {
-        NEURO.client?.registerActions([
-            {
-                name: 'save',
-                description: 'Manually save the currently open document.',
-            },
-        ]);
+        NEURO.client?.registerActions([editingActions.save]);
     }
 }
 
@@ -157,9 +152,9 @@ export function handlePlaceCursor(actionData: ActionData): string | undefined {
 
     const document = vscode.window.activeTextEditor?.document;
     if(document === undefined)
-        return ACTION_RESULT_NO_ACTIVE_DOCUMENT;
+        return contextFailure(CONTEXT_NO_ACTIVE_DOCUMENT);
     if(!isPathNeuroSafe(document.fileName))
-        return ACTION_RESULT_NO_ACCESS;
+        return contextFailure(CONTEXT_NO_ACCESS);
 
     let basedLine: number, basedColumn: number;
 
@@ -179,11 +174,10 @@ export function handlePlaceCursor(actionData: ActionData): string | undefined {
     }
 
     if(line >= document.lineCount || line < 0) {
-        NEURO.client?.sendContext(`Action failed: Line is out of bounds, the last line of the document is ${document.lineCount}.`);
-        return;
+        return contextFailure(`Line is out of bounds, the last line of the document is ${document.lineCount}.`);
     }
     if(column > document.lineAt(line).text.length || column < 0)
-        return `Action failed: Column is out of bounds, the last column of line ${basedLine} is ${document.lineAt(line).text.length + 1}.`;
+        return contextFailure(`Column is out of bounds, the last column of line ${basedLine} is ${document.lineAt(line).text.length + 1}.`);
 
     vscode.window.activeTextEditor!.selection = new vscode.Selection(line, column, line, column);
     const cursorContext = getPositionContext(document, new vscode.Position(line, column));
@@ -195,9 +189,9 @@ export function handlePlaceCursor(actionData: ActionData): string | undefined {
 export function handleGetCursor(_actionData: ActionData): string | undefined {
     const document = vscode.window.activeTextEditor?.document;
     if(document === undefined)
-        return ACTION_RESULT_NO_ACTIVE_DOCUMENT;
+        return contextFailure(CONTEXT_NO_ACTIVE_DOCUMENT);
     if(!isPathNeuroSafe(document.fileName))
-        return ACTION_RESULT_NO_ACCESS;
+        return contextFailure(CONTEXT_NO_ACCESS);
 
     const cursorContext = getPositionContext(document, vscode.window.activeTextEditor!.selection.active);
     const line = vscode.window.activeTextEditor!.selection.active.line;
@@ -213,9 +207,9 @@ export function handleInsertText(actionData: ActionData): string | undefined {
 
     const document = vscode.window.activeTextEditor?.document;
     if(document === undefined)
-        return ACTION_RESULT_NO_ACTIVE_DOCUMENT;
+        return contextFailure(CONTEXT_NO_ACTIVE_DOCUMENT);
     if(!isPathNeuroSafe(document.fileName))
-        return ACTION_RESULT_NO_ACCESS;
+        return contextFailure(CONTEXT_NO_ACCESS);
 
     const insertStart = vscode.window.activeTextEditor!.selection.active;
     const edit = new vscode.WorkspaceEdit();
@@ -230,8 +224,7 @@ export function handleInsertText(actionData: ActionData): string | undefined {
             NEURO.client?.sendContext(`Inserted text into document\n\n${formatContext(cursorContext)}`);
         }
         else {
-            logOutput('ERROR', 'Failed to apply text insertion edit');
-            NEURO.client?.sendContext('Failed to insert text');
+            NEURO.client?.sendContext(contextFailure('Failed to insert text'));
         }
     });
 }
@@ -244,9 +237,9 @@ export function handleReplaceText(actionData: ActionData): string | undefined {
 
     const document = vscode.window.activeTextEditor?.document;
     if(document === undefined)
-        return ACTION_RESULT_NO_ACTIVE_DOCUMENT;
+        return contextFailure(CONTEXT_NO_ACTIVE_DOCUMENT);
     if(!isPathNeuroSafe(document.fileName))
-        return ACTION_RESULT_NO_ACCESS;
+        return contextFailure(CONTEXT_NO_ACCESS);
 
     const regex = new RegExp(useRegex ? find : escapeRegExp(find), 'g');
     const cursorOffset = document.offsetAt(vscode.window.activeTextEditor!.selection.active);
@@ -262,7 +255,7 @@ export function handleReplaceText(actionData: ActionData): string | undefined {
             edit.replace(document.uri, new vscode.Range(document.positionAt(m.index), document.positionAt(m.index + m[0].length)), replacement);
         } catch(erm) {
             logOutput('ERROR', `Error while substituting match: ${erm}`);
-            return 'Action failed: ' + (erm instanceof Error ? erm.message : 'Unknown error while substituting match');
+            return contextFailure(erm instanceof Error ? erm.message : 'Unknown error while substituting match');
         }
     }
     vscode.workspace.applyEdit(edit).then(success => {
@@ -285,8 +278,7 @@ export function handleReplaceText(actionData: ActionData): string | undefined {
             }
         }
         else {
-            logOutput('ERROR', 'Failed to apply text replacement edit');
-            NEURO.client?.sendContext('Failed to replace text');
+            NEURO.client?.sendContext(contextFailure('Failed to replace text'));
         }
     });
 }
@@ -298,9 +290,9 @@ export function handleDeleteText(actionData: ActionData): string | undefined {
 
     const document = vscode.window.activeTextEditor?.document;
     if(document === undefined)
-        return ACTION_RESULT_NO_ACTIVE_DOCUMENT;
+        return contextFailure(CONTEXT_NO_ACTIVE_DOCUMENT);
     if(!isPathNeuroSafe(document.fileName))
-        return ACTION_RESULT_NO_ACCESS;
+        return contextFailure(CONTEXT_NO_ACCESS);
 
     const regex = new RegExp(useRegex ? find : escapeRegExp(find), 'g');
     const cursorOffset = document.offsetAt(vscode.window.activeTextEditor!.selection.active);
@@ -331,8 +323,7 @@ export function handleDeleteText(actionData: ActionData): string | undefined {
             }
         }
         else {
-            logOutput('ERROR', 'Failed to apply text deletion edit');
-            NEURO.client?.sendContext('Failed to delete text');
+            NEURO.client?.sendContext(contextFailure('Failed to delete text'));
         }
     });
 }
@@ -344,9 +335,9 @@ export function handleFindText(actionData: ActionData): string | undefined {
 
     const document = vscode.window.activeTextEditor?.document;
     if(document === undefined)
-        return ACTION_RESULT_NO_ACTIVE_DOCUMENT;
+        return contextFailure(CONTEXT_NO_ACTIVE_DOCUMENT);
     if(!isPathNeuroSafe(document.fileName))
-        return ACTION_RESULT_NO_ACCESS;
+        return contextFailure(CONTEXT_NO_ACCESS);
 
     const regex = new RegExp(useRegex ? find : escapeRegExp(find), 'g');
     const cursorOffset = document.offsetAt(vscode.window.activeTextEditor!.selection.active);
@@ -381,9 +372,9 @@ export function handleFindText(actionData: ActionData): string | undefined {
 export function handleUndo(_actionData: ActionData): string | undefined {
     const document = vscode.window.activeTextEditor?.document;
     if(document === undefined)
-        return ACTION_RESULT_NO_ACTIVE_DOCUMENT;
+        return contextFailure(CONTEXT_NO_ACTIVE_DOCUMENT);
     if(!isPathNeuroSafe(document.fileName))
-        return ACTION_RESULT_NO_ACCESS;
+        return contextFailure(CONTEXT_NO_ACCESS);
 
     vscode.commands.executeCommand('undo').then(
         () => {
@@ -393,7 +384,7 @@ export function handleUndo(_actionData: ActionData): string | undefined {
         },
         (erm) => {
             logOutput('ERROR', `Failed to undo last action: ${erm}`);
-            NEURO.client?.sendContext('Failed to undo last action');
+            NEURO.client?.sendContext(contextFailure('Failed to undo last action'));
         },
     );
 }
@@ -401,11 +392,11 @@ export function handleUndo(_actionData: ActionData): string | undefined {
 export function handleSave(_actionData: ActionData): string | undefined {
     const document = vscode.window.activeTextEditor?.document;
     if (!document) {
-        NEURO.client?.sendContext(ACTION_RESULT_NO_ACTIVE_DOCUMENT);
+        NEURO.client?.sendContext(CONTEXT_NO_ACTIVE_DOCUMENT);
         return;
     }
     if (!isPathNeuroSafe(document.fileName)) {
-        NEURO.client?.sendContext(ACTION_RESULT_NO_ACCESS);
+        NEURO.client?.sendContext(CONTEXT_NO_ACCESS);
         return;
     }
 
@@ -424,7 +415,7 @@ export function handleSave(_actionData: ActionData): string | undefined {
         },
         (error: string) => {
             logOutput('ERROR', `Failed to save document: ${error}`);
-            NEURO.client?.sendContext('Failed to save document.', false);
+            NEURO.client?.sendContext(contextFailure('Failed to save document.'), false);
             NEURO.saving = false;
         },
     );

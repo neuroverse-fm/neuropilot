@@ -1,20 +1,16 @@
-/* eslint-disable @typescript-eslint/no-unused-vars -- Warnings disabled until handlers are all fixed */
-
 import * as vscode from 'vscode';
 import { NEURO } from './constants';
 import { handleRunTask, registerTaskActions, taskHandlers } from './tasks';
-import { fileActionHandlers, registerFileActions } from './file_actions';
-import { gitActionHandlers, registerGitActions } from './git';
+import { fileActions, registerFileActions } from './file_actions';
+import { gitActions, registerGitActions } from './git';
 import { editingActions, registerEditingActions } from './editing';
-import { ActionData, ActionResult, actionResultAccept, actionResultFailure, ActionWithHandler } from './neuro_client_helper';
+import { ActionData, ActionWithHandler } from './neuro_client_helper';
 import { registerTerminalActions, terminalAccessHandlers } from './pseudoterminal';
-import { lintActionHandlers, registerLintActions } from './lint_problems';
+import { lintActions, registerLintActions } from './lint_problems';
 import { cancelRequestAction, clearRceDialog } from './rce';
 import { validate } from 'jsonschema';
 import { getPermissionLevel, PermissionLevel, PERMISSIONS } from './config';
 import { CONFIG } from './config';
-
-/* eslint-enable @typescript-eslint/no-unused-vars */
 
 /**
  * Register unsupervised actions with the Neuro API.
@@ -23,12 +19,12 @@ import { CONFIG } from './config';
 
 const neuroActions: Record<string, ActionWithHandler> = {
     'cancel_request': cancelRequestAction,
-    // ...gitActionHandlers,
-    // ...fileActionHandlers,
-    // ...taskHandlers,
+    ...gitActions,
+    ...fileActions,
+    ...taskHandlers,
     ...editingActions,
     // ...terminalAccessHandlers,
-    // ...lintActionHandlers,
+    ...lintActions,
 };
 
 const actionKeys: string[] = Object.keys(neuroActions);
@@ -86,8 +82,8 @@ export function registerUnsupervisedHandlers() {
             // Validate custom
             if (action.validator) {
                 const actionResult = action.validator!(actionData);
-                if (!actionResult.success) {
-                    NEURO.client?.sendActionResult(actionData.id, false, actionResult.message);
+                if(!actionResult.success) {
+                    NEURO.client?.sendActionResult(actionData.id, !(actionResult.retry ?? false), actionResult.message);
                     return;
                 }
             }
