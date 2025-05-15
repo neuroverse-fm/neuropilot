@@ -4,7 +4,7 @@ import { NEURO } from './constants';
 import { GitExtension, Change, ForcePushMode, CommitOptions, Commit, Repository } from './types/git';
 import { StatusStrings, RefTypeStrings } from './types/git_status';
 import { getNormalizedRepoPathForGit, logOutput, simpleFileName } from './utils';
-import { ActionData, ActionValidationResult, actionValidationAccept, actionResultEnumFailure, actionValidationFailure, actionResultMissingParameter, actionValidationNoPermission, actionValidationRetry, ActionWithHandler, contextFailure } from './neuro_client_helper';
+import { ActionData, ActionValidationResult, actionValidationAccept, actionValidationFailure, ActionWithHandler, contextFailure } from './neuro_client_helper';
 import { PERMISSIONS, getPermissionLevel } from './config';
 import assert from 'assert';
 

@@ -1,20 +1,16 @@
-/* eslint-disable @typescript-eslint/no-unused-vars -- Warnings disabled until handlers are all fixed */
-
 import * as vscode from 'vscode';
 import { NEURO } from './constants';
 import { handleRunTask, registerTaskActions, taskHandlers } from './tasks';
 import { fileActions, registerFileActions } from './file_actions';
 import { gitActions, registerGitActions } from './git';
 import { editingActions, registerEditingActions } from './editing';
-import { ActionData, ActionValidationResult, actionValidationAccept, actionValidationFailure, ActionWithHandler } from './neuro_client_helper';
+import { ActionData, ActionWithHandler } from './neuro_client_helper';
 import { registerTerminalActions, terminalAccessHandlers } from './pseudoterminal';
 import { lintActions, registerLintActions } from './lint_problems';
-import { cancelRequestAction, handleCancelRequest, clearRceDialog } from './rce';
+import { cancelRequestAction, clearRceDialog } from './rce';
 import { validate } from 'jsonschema';
 import { getPermissionLevel, PermissionLevel, PERMISSIONS } from './config';
 import { CONFIG } from './config';
-
-/* eslint-enable @typescript-eslint/no-unused-vars */
 
 /**
  * Register unsupervised actions with the Neuro API.
@@ -25,7 +21,7 @@ const neuroActions: Record<string, ActionWithHandler> = {
     'cancel_request': cancelRequestAction,
     ...gitActions,
     ...fileActions,
-    // ...taskHandlers,
+    ...taskHandlers,
     ...editingActions,
     // ...terminalAccessHandlers,
     ...lintActions,
