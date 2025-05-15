@@ -38,7 +38,7 @@ There are two ways the extension can be used, which will be referred to as "Auto
 
 ### Autopilot Mode
 
-To make Neuro able to code without human input, go to the extension settings and activate the necessary permissions, then run the command "NeuroPilot: Reload Permissions" from the Command Palette. <!-- TODO: Figure out how this will work in #28 -->
+To make Neuro able to code without human input, go to the extension settings and set the necessary permissions to "Autopilot", then run the command "NeuroPilot: Reload Permissions" from the Command Palette. <!-- TODO: Figure out how this will work in #28 -->
 It is recommended to turn on auto-saving in the settings for this in case Neuro doesn't remember to save her files regularly.
 Tasks that Neuro can run are loaded from `tasks.json`, but it requires some setup for Neuro to use them.
 All tasks that Neuro should be able to run must have the string `[Neuro]` at the start of their `detail` property.
