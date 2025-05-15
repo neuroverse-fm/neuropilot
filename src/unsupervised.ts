@@ -9,9 +9,10 @@ import { editingActions, registerEditingActions } from './editing';
 import { ActionData, ActionResult, actionResultAccept, actionResultFailure, ActionWithHandler } from './neuro_client_helper';
 import { registerTerminalActions, terminalAccessHandlers } from './pseudoterminal';
 import { lintActionHandlers, registerLintActions } from './lint_problems';
-import { cancelRequestAction, handleCancelRequest } from './rce';
+import { cancelRequestAction, clearRceDialog } from './rce';
 import { validate } from 'jsonschema';
 import { getPermissionLevel, PermissionLevel, PERMISSIONS } from './config';
+import { CONFIG } from './config';
 
 /* eslint-enable @typescript-eslint/no-unused-vars */
 
@@ -50,11 +51,11 @@ export function registerUnsupervisedActions() {
  */
 export function registerUnsupervisedHandlers() {
     NEURO.client?.onAction((actionData: ActionData) => {
-        if(actionKeys.includes(actionData.name) || NEURO.tasks.find(task => task.id === actionData.name)) {
+        if (actionKeys.includes(actionData.name) || NEURO.tasks.find(task => task.id === actionData.name)) {
             NEURO.actionHandled = true;
 
             let action: ActionWithHandler;
-            if(actionKeys.includes(actionData.name)) {
+            if (actionKeys.includes(actionData.name)) {
                 action = neuroActions[actionData.name];
             }
             else {
@@ -69,13 +70,13 @@ export function registerUnsupervisedHandlers() {
             }
 
             const effectivePermission = getPermissionLevel(...action.permissions);
-            if(effectivePermission === PermissionLevel.OFF)
+            if (effectivePermission === PermissionLevel.OFF)
                 return;
 
             // Validate schema
-            if(action.schema) {
+            if (action.schema) {
                 const schemaValidationResult = validate(actionData.params, action.schema, { required: true });
-                if(!schemaValidationResult.valid) {
+                if (!schemaValidationResult.valid) {
                     const message = 'Action failed: ' + schemaValidationResult.errors[0]?.stack;
                     NEURO.client?.sendActionResult(actionData.id, false, message);
                     return;
@@ -83,20 +84,20 @@ export function registerUnsupervisedHandlers() {
             }
 
             // Validate custom
-            if(action.validator) {
+            if (action.validator) {
                 const actionResult = action.validator!(actionData);
-                if(!actionResult.success) {
+                if (!actionResult.success) {
                     NEURO.client?.sendActionResult(actionData.id, false, actionResult.message);
                     return;
                 }
             }
 
-            if(effectivePermission === PermissionLevel.AUTOPILOT) {
+            if (effectivePermission === PermissionLevel.AUTOPILOT) {
                 const result = action.handler(actionData);
                 NEURO.client?.sendActionResult(actionData.id, true, result);
             }
             else { // permissionLevel === PermissionLevel.COPILOT
-                if(NEURO.rceCallback) {
+                if (NEURO.rceCallback) {
                     NEURO.client?.sendActionResult(actionData.id, true, 'Action failed: Already waiting for permission to run another action.');
                     return;
                 }
@@ -109,6 +110,17 @@ export function registerUnsupervisedHandlers() {
                 NEURO.client?.registerActions([cancelRequestAction]);
                 NEURO.statusBarItem!.backgroundColor = new vscode.ThemeColor('statusBarItem.warningBackground');
                 NEURO.statusBarItem!.color = new vscode.ThemeColor('statusBarItem.warningForeground');
+                // Timeout check
+                const timeout = CONFIG.requestExpiryTimeout;
+                if (timeout && timeout > 0) {
+                    setTimeout(() => {
+                        if (NEURO.rceCallback) {
+                            clearRceDialog();
+                            NEURO.client?.sendContext('Request expired.');
+                        }
+                    }, timeout);
+                }
+                // End of added code.
                 NEURO.client?.sendActionResult(actionData.id, true, 'Requested permission to run action.');
             }
         }

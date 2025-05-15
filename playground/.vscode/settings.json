@@ -36,6 +36,7 @@
         }
     ],
     "neuropilot.sendNewLintingProblemsOn": "inCurrentFile",
+    "neuropilot.requestExpiryTimeout": 10000,
     // Debug engine override for GitHub Copilot
     "github.copilot.advanced": {
         "debug.overrideEngine": "someRandomString"

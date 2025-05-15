@@ -425,6 +425,11 @@
 						"type": "boolean",
 						"default": true,
 						"markdownDescription": "Automatically send save notifications to Neuro, as long as the auto-save setting is set to a value other than `off`."
+					},
+					"neuropilot.requestExpiryTimeout": {
+						"type": "number",
+						"default": 0,
+						"markdownDescription": "The time to wait (in milliseconds) before automatically rejecting Copilot-mode action requests from Neuro.\nSetting this to will cause the requests to never expire."
 					}
 				}
 			}

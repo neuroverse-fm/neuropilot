@@ -67,6 +67,8 @@ Neuro cannot open, edit, or otherwise access files or folders that start with a 
 This is mainly to prevent her from opening `.vscode/tasks.json` to essentially run arbitrary commands in the terminal.
 **Warning: If your workspace is inside such a folder, Neuro will not be able to edit *any* files!**
 
+You can customise what directories are included in the list using the `NeuroPilot > Include Pattern` and `NeuroPilot > Exclude Pattern`, and you can disable the default directory checks using `NeuroPilot > Allow Unsafe Paths`.
+
 ## Commands
 
 ### Give Cookie
@@ -93,6 +95,16 @@ Sends the entire current file as context to Neuro, along with the file name and 
 
 ## Actions
 
+### General
+
+If a permission level is set to Copilot, commands associated with that permission level first send a request to VS Code, which you can review, then allow/deny, using the NeuroPilot icon in the bottom bar.
+The icon will have a yellow background if a request is pending.
+
+#### `cancel_request`
+
+Only registered if she is attempting to execute a Copilot-level command.
+Allows Neuro to cancel her request. If the notification was acted upon after cancelling, no response will be returned to either side.
+
 ### Tasks
 
 Neuro has access to the following actions.
@@ -105,6 +117,8 @@ Neuro can only run one task at a time.
 Terminates the currently running task that was started using a task action.
 
 ### File Interactions
+
+Neuro
 
 #### `get_files`
 
@@ -191,10 +205,15 @@ By default, this cannot delete anything starting with a dot, or inside a folder 
 
 ### Git interactions
 
+In addition to requiring their respective permissions, the extension will also check for a repo before registering actions other than `init_git_repo`.
+
+Because this relies on the built-in Git extension, this extension will first check for the Git extension before attempting to execute each handler.
+
 #### `init_git_repo`
 
 *Requires Permission: Git Operations.*
-Initialises a Git repository in the workspace folder and registers git commands.
+Initialises a Git repository in the workspace folder and registers other git commands.
+The local repository will be reinitialised if a git repository already exists.
 
 #### `add_file_to_git`
 
@@ -310,6 +329,8 @@ Sets a key's value in the git configuration. Neuro can only change the repositor
 
 ### Shell interactions
 
+This allows Neuro **unfettered access** via a pseudoterminal (using VS Code APIs). Essentially, this is similar to tasks, except she doesn't have a limit on what she can run.
+
 #### `execute_in_terminal`
 
 *Requires Permissions: Terminal Access.*
@@ -327,6 +348,10 @@ Kills a running shell. If a shell isn't already running, Neuro will be notified.
 Returns the list of currently running shells to Neuro.
 
 ### Linting
+
+In addition to linting problems by built-in language servers (such as the JavaScript and TypeScript Language Server), problems informed by other language servers (e.g. Python extension) will also be sent to Neuro.
+
+Access to linting problems is also limited by the list of Neuro-safe paths.
 
 #### `get_file_lint_problems`
 
