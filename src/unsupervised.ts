@@ -3,12 +3,12 @@
 import * as vscode from 'vscode';
 import { NEURO } from './constants';
 import { handleRunTask, registerTaskActions, taskHandlers } from './tasks';
-import { fileActionHandlers, registerFileActions } from './file_actions';
+import { fileActions, registerFileActions } from './file_actions';
 import { gitActionHandlers, registerGitActions } from './git';
 import { editingActions, registerEditingActions } from './editing';
 import { ActionData, ActionResult, actionResultAccept, actionResultFailure, ActionWithHandler } from './neuro_client_helper';
 import { registerTerminalActions, terminalAccessHandlers } from './pseudoterminal';
-import { lintActionHandlers, registerLintActions } from './lint_problems';
+import { lintActions, registerLintActions } from './lint_problems';
 import { cancelRequestAction, handleCancelRequest } from './rce';
 import { validate } from 'jsonschema';
 import { getPermissionLevel, PermissionLevel, PERMISSIONS } from './config';
@@ -23,11 +23,11 @@ import { getPermissionLevel, PermissionLevel, PERMISSIONS } from './config';
 const neuroActions: Record<string, ActionWithHandler> = {
     'cancel_request': cancelRequestAction,
     // ...gitActionHandlers,
-    // ...fileActionHandlers,
+    ...fileActions,
     // ...taskHandlers,
     ...editingActions,
     // ...terminalAccessHandlers,
-    // ...lintActionHandlers,
+    ...lintActions,
 };
 
 const actionKeys: string[] = Object.keys(neuroActions);
