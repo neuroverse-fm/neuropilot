@@ -3,7 +3,7 @@
  */
 
 import { Action } from 'neuro-game-sdk';
-import { Permission } from './config';
+import { Permission, PermissionLevel } from './config';
 import { logOutput } from './utils';
 import { PromptGenerator } from './rce';
 
@@ -41,6 +41,8 @@ export interface ActionWithHandler extends Action {
     handler: (actionData: ActionData) => string | undefined;
     /** The function to generate a prompt for the action request (Copilot Mode). */
     promptGenerator: PromptGenerator;
+    /** Default permission for actions like chat, cancel_request, etc */
+    defaultPermission?: PermissionLevel;
 }
 
 /**

@@ -65,9 +65,11 @@ export function registerUnsupervisedHandlers() {
                 };
             }
 
-            const effectivePermission = getPermissionLevel(...action.permissions);
-            if (effectivePermission === PermissionLevel.OFF)
+            const effectivePermission = action.permissions.length > 0 ? getPermissionLevel(...action.permissions) : action.defaultPermission ?? PermissionLevel.COPILOT;
+            if (effectivePermission === PermissionLevel.OFF) {
+                NEURO.client?.sendActionResult(actionData.id, true, "Action failed: You don't have permission to execute this action.");
                 return;
+            }
 
             // Validate schema
             if (action.schema) {
