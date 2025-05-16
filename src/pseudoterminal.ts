@@ -5,7 +5,7 @@ import { TerminalSession, logOutput, delayAsync, getFence } from './utils';
 import { ActionData, ActionWithHandler, contextFailure } from './neuro_client_helper';
 import { CONFIG, PERMISSIONS, getPermissionLevel } from './config';
 
-export const terminalAccessHandlers: Record<string, ActionWithHandler> = {
+export const terminalAccessHandlers = {
     'execute_in_terminal': {
         name: 'execute_in_terminal',
         description: 'Run a command directly in the terminal',
@@ -42,7 +42,7 @@ export const terminalAccessHandlers: Record<string, ActionWithHandler> = {
         handler: handleGetCurrentlyRunningShells,
         promptGenerator: 'Neuro wants to get the list of currently running shells.',
     },
-};
+} satisfies Record<string, ActionWithHandler>;
 
 export function registerTerminalActions() {
     if (getPermissionLevel(PERMISSIONS.terminalAccess)) {

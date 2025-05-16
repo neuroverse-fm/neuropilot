@@ -10,7 +10,7 @@ const CONTEXT_NO_ACTIVE_DOCUMENT = 'No active document to edit.';
 
 const MATCH_OPTIONS: string[] = ['firstInFile', 'lastInFile', 'firstAfterCursor', 'lastBeforeCursor', 'allInFile'] as const;
 
-export const editingActions: Record<string, ActionWithHandler> = {
+export const editingActions = {
     place_cursor: {
         name: 'place_cursor',
         description: 'Place the cursor in the current file. Absolute line and column numbers are one-based.',
