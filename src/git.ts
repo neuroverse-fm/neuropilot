@@ -163,7 +163,7 @@ export const gitActions = {
         },
         permissions: [PERMISSIONS.gitOperations],
         handler: handleDiffFiles,
-        promptGenerator: 'Neuro wants to obtain a Git diff.', // TODO: Specify?
+        promptGenerator: (actionData: ActionData) => `Neuro wants to obtain ${actionData.params?.filePath ? `${actionData.params.filePath}'s` : 'a'} Git diff${actionData.params?.ref1 && actionData.params?.ref2 ? ` between ${actionData.params.ref1} and ${actionData.params.ref2}` : actionData.params?.ref1 ? ` at ref ${actionData.params.ref1}` : ''}${actionData.params?.diffType ? ` (of type "${actionData.params.diffType}")` : ''}.`,
         validator: gitValidator,
     },
     git_log: {
@@ -198,13 +198,13 @@ export const gitActions = {
             type: 'object',
             properties: {
                 name: { type: 'string' },
-                upstream: { type: 'string' }, // TODO: What is upstream?
+                upstream: { type: 'string' },
             },
             required: ['name', 'upstream'],
         },
         permissions: [PERMISSIONS.gitOperations, PERMISSIONS.gitTags],
         handler: handleTagHEAD,
-        promptGenerator: (actionData: ActionData) => `Neuro wants to tag the current commit with the name "${actionData.params.name}".`,
+        promptGenerator: (actionData: ActionData) => `Neuro wants to tag the current commit with the name "${actionData.params.name}" and associate it with the "${actionData.params.upstream}" remote.`,
         validator: gitValidator,
     },
     delete_tag: {
@@ -251,7 +251,7 @@ export const gitActions = {
         },
         permissions: [PERMISSIONS.gitOperations, PERMISSIONS.gitConfigs],
         handler: handleGetGitConfig,
-        promptGenerator: (actionData: ActionData) => `Neuro wants to get the Git config key "${actionData.params.key}".`,
+        promptGenerator: (actionData: ActionData) => actionData.params?.key ? `Neuro wants to get the Git config key "${actionData.params.key}".` : 'Neuro wants to get the Git config.',
         validator: gitValidator,
     },
 
@@ -878,7 +878,7 @@ export function handleTagHEAD(actionData: ActionData): string | undefined {
     const upstream: string = actionData.params.upstream;
 
     repo.tag(name, upstream).then(() => {
-        NEURO.client?.sendContext(`Tag ${name} created for ${upstream} upstream.`);
+        NEURO.client?.sendContext(`Tag ${name} created for ${upstream} remote.`);
     }, (err: string) => {
         NEURO.client?.sendContext('There was an error during tagging.');
         logOutput('ERROR', `Error trying to tag: ${err}`);
