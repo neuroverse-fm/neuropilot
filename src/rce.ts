@@ -7,6 +7,7 @@ import * as vscode from 'vscode';
 import { ActionData, ActionWithHandler } from './neuro_client_helper';
 import { NEURO } from './constants';
 import { logOutput } from './utils';
+import { PermissionLevel } from './config';
 
 /**
  * A prompt parameter can either be a string or a function that converts ActionData into a prompt string.
