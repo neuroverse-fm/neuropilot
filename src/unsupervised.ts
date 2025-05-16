@@ -9,8 +9,7 @@ import { registerTerminalActions, terminalAccessHandlers } from './pseudotermina
 import { lintActions, registerLintActions } from './lint_problems';
 import { cancelRequestAction, clearRceDialog } from './rce';
 import { validate } from 'jsonschema';
-import { getPermissionLevel, PermissionLevel, PERMISSIONS } from './config';
-import { CONFIG } from './config';
+import { getPermissionLevel, PermissionLevel, PERMISSIONS, CONFIG } from './config';
 
 /**
  * Register unsupervised actions with the Neuro API.
