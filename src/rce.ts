@@ -49,7 +49,7 @@ export function emergencyDenyRequests(): void {
 
 export function clearRceDialog(): void { // Function to clear out RCE dialogs
     NEURO.rceCallback = null;
-    NEURO.client?.unregisterActions(['cancel_request']);
+    NEURO.client?.unregisterActions([cancelRequestAction.name]);
     NEURO.statusBarItem!.tooltip = 'No active request';
     NEURO.statusBarItem!.color = new vscode.ThemeColor('statusBarItem.foreground');
     NEURO.statusBarItem!.backgroundColor = new vscode.ThemeColor('statusBarItem.background');
