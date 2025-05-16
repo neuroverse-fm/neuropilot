@@ -19,6 +19,7 @@ export const cancelRequestAction: ActionWithHandler = {
     permissions: [],
     handler: handleCancelRequest,
     promptGenerator: () => '', // No prompt needed for this action
+    defaultPermission: PermissionLevel.AUTOPILOT,
 };
 
 /**
