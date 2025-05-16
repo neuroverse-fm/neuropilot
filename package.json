@@ -429,7 +429,7 @@
 					"neuropilot.requestExpiryTimeout": {
 						"type": "number",
 						"default": 0,
-						"markdownDescription": "The time to wait (in milliseconds) before automatically rejecting Copilot-mode action requests from Neuro.\nSetting this to will cause the requests to never expire."
+						"markdownDescription": "The time to wait (in milliseconds) before automatically rejecting Copilot-mode action requests from Neuro.\nSetting this to 0 will cause the requests to never expire."
 					}
 				}
 			}
