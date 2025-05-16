@@ -66,7 +66,8 @@ export function registerUnsupervisedHandlers() {
 
             const effectivePermission = action.permissions.length > 0 ? getPermissionLevel(...action.permissions) : action.defaultPermission ?? PermissionLevel.COPILOT;
             if (effectivePermission === PermissionLevel.OFF) {
-                NEURO.client?.sendActionResult(actionData.id, true, "Action failed: You don't have permission to execute this action.");
+                const offPermission = action.permissions.find(permission => getPermissionLevel(permission) === PermissionLevel.OFF);
+                NEURO.client?.sendActionResult(actionData.id, true, `Action failed: You don't have permission to ${offPermission?.infinitive ?? 'execute this action'}.`);
                 return;
             }
 
