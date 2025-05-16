@@ -120,7 +120,7 @@ Terminates the currently running task that was started using a task action.
 
 ### File Interactions
 
-Neuro
+Neuro uses these actions for editing files within the current workspace. <!-- why did I put this here -->
 
 #### `get_files`
 
