@@ -87,6 +87,7 @@ Reregisters all actions according to the permissions.
 ### Disable all permissions
 
 Disable all permissions for Neuro immediately and reloads permissions. Also kills currently running tasks and any open shells.
+Any requests from Neuro when she used a Copilot-mode command is denied automatically.
 Since it's intended to be a panic button, it is recommended to bind that command to a keyboard shortcut.
 
 ### Send File As Context

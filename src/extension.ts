@@ -11,7 +11,7 @@ import { emergencyTerminalShutdown, saveContextForTerminal } from './pseudotermi
 import { CONFIG } from './config';
 import { sendDiagnosticsDiff } from './lint_problems';
 import { fileSaveListener, toggleSaveAction } from './editing';
-import { openRceDialog } from './rce';
+import { emergencyDenyRequests, openRceDialog } from './rce';
 
 export function activate(context: vscode.ExtensionContext) {
     NEURO.url = CONFIG.websocketUrl;
@@ -115,6 +115,7 @@ function disableAllPermissions() {
             NEURO.currentTaskExecution = null;
         }
         emergencyTerminalShutdown();
+        emergencyDenyRequests();
         // Send context and reload
         reloadPermissions();
         NEURO.client?.sendContext('Vedal has turned off all dangerous permissions.');

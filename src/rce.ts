@@ -6,6 +6,7 @@
 import * as vscode from 'vscode';
 import { ActionData, ActionWithHandler } from './neuro_client_helper';
 import { NEURO } from './constants';
+import { logOutput } from './utils';
 
 /**
  * A prompt parameter can either be a string or a function that converts ActionData into a prompt string.
@@ -29,6 +30,21 @@ export function handleCancelRequest(_actionData: ActionData): string | undefined
     }
     clearRceDialog();
     return 'Request cancelled.';
+}
+
+/**
+ * RCE's emergency shutdown component
+ * Automatically clears the RCE dialog and tell Neuro her requests was cancelled.
+ * Only runs if there is an RCE callback in NEURO.
+ */
+export function emergencyDenyRequests(): void {
+    if (!NEURO.rceCallback) {
+        return;
+    }
+    clearRceDialog();
+    logOutput("INFO", `Cancelled ${NEURO.rceCallback} due to emergency shutdown.`)
+    NEURO.client?.sendContext("Your last request was denied.")
+    vscode.window.showInformationMessage("The last request from Neuro has been denied automatically.")
 }
 
 export function clearRceDialog(): void { // Function to clear out RCE dialogs
