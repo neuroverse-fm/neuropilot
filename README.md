@@ -99,7 +99,8 @@ Sends the entire current file as context to Neuro, along with the file name and 
 ### General
 
 If a permission level is set to Copilot, commands associated with that permission level first send a request to VS Code, which you can review, then allow/deny, using the NeuroPilot icon in the bottom bar.
-The icon will have a yellow background if a request is pending.
+The icon will be highlighted if a request is pending.
+If an action requires multiple permissions, the minimum permission level is used (Autopilot > Copilot > Off).
 
 #### `cancel_request`
 
