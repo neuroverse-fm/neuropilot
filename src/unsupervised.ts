@@ -7,9 +7,9 @@ import { editingActions, registerEditingActions } from './editing';
 import { ActionData, ActionWithHandler } from './neuro_client_helper';
 import { registerTerminalActions, terminalAccessHandlers } from './pseudoterminal';
 import { lintActions, registerLintActions } from './lint_problems';
-import { cancelRequestAction, clearRceDialog, openRceDialog } from './rce';
+import { cancelRequestAction, openRceDialog } from './rce';
 import { validate } from 'jsonschema';
-import { getPermissionLevel, PermissionLevel, PERMISSIONS, CONFIG } from './config';
+import { getPermissionLevel, PermissionLevel, PERMISSIONS } from './config';
 
 /**
  * Register unsupervised actions with the Neuro API.

@@ -53,9 +53,9 @@ export function emergencyDenyRequests(): void {
         return;
     }
     clearRceDialog();
-    logOutput("INFO", `Cancelled ${NEURO.rceRequest.callback} due to emergency shutdown.`)
-    NEURO.client?.sendContext("Your last request was denied.")
-    vscode.window.showInformationMessage("The last request from Neuro has been denied automatically.")
+    logOutput('INFO', `Cancelled ${NEURO.rceRequest.callback} due to emergency shutdown.`);
+    NEURO.client?.sendContext('Your last request was denied.');
+    vscode.window.showInformationMessage('The last request from Neuro has been denied automatically.');
 }
 
 export function clearRceDialog(): void { // Function to clear out RCE dialogs
