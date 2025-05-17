@@ -91,7 +91,9 @@ This is mainly to prevent her from opening `.vscode/tasks.json` to essentially r
 
 Neuro also can't change the global git configuration, only the one local to the current repository.
 
-Note that if Neuro has direct terminal access, all security features are pretty much out the window, since she can just rewrite the settings file.
+Note that if Neuro has direct terminal access, you should assume all security features are pretty much out the window, since she can just rewrite the settings file and run whatever commands she wants.
+
+The same advice applies for ticking the `NeuroPilot > Allow Unsafe Paths` setting if you gave Autopilot-level permissions to Neuro for editing files.
 
 ## Commands
 
