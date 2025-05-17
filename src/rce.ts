@@ -71,12 +71,12 @@ export function openRceDialog(): void {
                 return;
             clearRceDialog();
             if(value === 'Accept') {
-                NEURO.client?.sendContext('Your request was accepted.');
+                NEURO.client?.sendContext('Vedal has accepted your request.');
                 const result = callback();
                 if(result)
                     NEURO.client?.sendContext(result);
             } else {
-                NEURO.client?.sendContext('Your request was denied.');
+                NEURO.client?.sendContext('Vedal has denied your request.');
             }
         },
     );
