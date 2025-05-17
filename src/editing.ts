@@ -8,7 +8,7 @@ import { PERMISSIONS, getPermissionLevel, CONFIG } from './config';
 const CONTEXT_NO_ACCESS = 'You do not have permission to access this file.';
 const CONTEXT_NO_ACTIVE_DOCUMENT = 'No active document to edit.';
 
-const MATCH_OPTIONS: string[] = [ 'firstInFile', 'lastInFile', 'firstAfterCursor', 'lastBeforeCursor', 'allInFile' ] as const;
+const MATCH_OPTIONS: string[] = ['firstInFile', 'lastInFile', 'firstAfterCursor', 'lastBeforeCursor', 'allInFile'] as const;
 
 export const editingActions = {
     place_cursor: {
@@ -114,7 +114,7 @@ export const editingActions = {
 } satisfies Record<string, ActionWithHandler>;
 
 export function registerEditingActions() {
-    if(getPermissionLevel(PERMISSIONS.editActiveDocument)) {
+    if (getPermissionLevel(PERMISSIONS.editActiveDocument)) {
         NEURO.client?.registerActions([
             editingActions.place_cursor,
             editingActions.get_cursor,
@@ -158,7 +158,7 @@ export function handlePlaceCursor(actionData: ActionData): string | undefined {
 
     let basedLine: number, basedColumn: number;
 
-    if(type === 'relative') {
+    if (type === 'relative') {
         line += vscode.window.activeTextEditor!.selection.active.line;
         column += vscode.window.activeTextEditor!.selection.active.character;
 
@@ -216,7 +216,7 @@ export function handleInsertText(actionData: ActionData): string | undefined {
     edit.insert(document.uri, vscode.window.activeTextEditor!.selection.active, text);
 
     vscode.workspace.applyEdit(edit).then(success => {
-        if(success) {
+        if (success) {
             logOutput('INFO', 'Inserting text into document');
             const document = vscode.window.activeTextEditor!.document;
             const insertEnd = vscode.window.activeTextEditor!.selection.active;
@@ -245,23 +245,23 @@ export function handleReplaceText(actionData: ActionData): string | undefined {
     const cursorOffset = document.offsetAt(vscode.window.activeTextEditor!.selection.active);
 
     const matches = findAndFilter(regex, document.getText(), cursorOffset, match);
-    if(matches.length === 0)
+    if (matches.length === 0)
         return 'No matches found for the given parameters.';
 
     const edit = new vscode.WorkspaceEdit();
-    for(const m of matches) {
+    for (const m of matches) {
         try {
             const replacement = useRegex ? substituteMatch(m, replaceWith) : replaceWith;
             edit.replace(document.uri, new vscode.Range(document.positionAt(m.index), document.positionAt(m.index + m[0].length)), replacement);
-        } catch(erm) {
+        } catch (erm) {
             logOutput('ERROR', `Error while substituting match: ${erm}`);
             return contextFailure(erm instanceof Error ? erm.message : 'Unknown error while substituting match');
         }
     }
     vscode.workspace.applyEdit(edit).then(success => {
-        if(success) {
+        if (success) {
             logOutput('INFO', 'Replacing text in document');
-            if(matches.length === 1) {
+            if (matches.length === 1) {
                 // Single match
                 const document = vscode.window.activeTextEditor!.document;
                 const startPosition = document.positionAt(matches[0].index);
@@ -298,17 +298,17 @@ export function handleDeleteText(actionData: ActionData): string | undefined {
     const cursorOffset = document.offsetAt(vscode.window.activeTextEditor!.selection.active);
 
     const matches = findAndFilter(regex, document.getText(), cursorOffset, match);
-    if(matches.length === 0)
+    if (matches.length === 0)
         return 'No matches found for the given parameters.';
 
     const edit = new vscode.WorkspaceEdit();
-    for(const m of matches) {
+    for (const m of matches) {
         edit.delete(document.uri, new vscode.Range(document.positionAt(m.index), document.positionAt(m.index + m[0].length)));
     }
     vscode.workspace.applyEdit(edit).then(success => {
-        if(success) {
+        if (success) {
             logOutput('INFO', 'Deleting text from document');
-            if(matches.length === 1) {
+            if (matches.length === 1) {
                 // Single match
                 const document = vscode.window.activeTextEditor!.document;
                 vscode.window.activeTextEditor!.selection = new vscode.Selection(document.positionAt(matches[0].index), document.positionAt(matches[0].index));
@@ -343,10 +343,10 @@ export function handleFindText(actionData: ActionData): string | undefined {
     const cursorOffset = document.offsetAt(vscode.window.activeTextEditor!.selection.active);
 
     const matches = findAndFilter(regex, document.getText(), cursorOffset, match);
-    if(matches.length === 0)
+    if (matches.length === 0)
         return 'No matches found for the given parameters.';
 
-    if(matches.length === 1) {
+    if (matches.length === 1) {
         // Single match
         const pos = matches[0].index;
         const line = document.positionAt(pos).line;
@@ -448,32 +448,32 @@ function findAndFilter(regex: RegExp, text: string, cursorOffset: number, match:
     const matches = text.matchAll(regex);
     let result: RegExpExecArray[] = [];
 
-    switch(match) {
+    switch (match) {
         case 'firstInFile':
-            for(const m of matches)
+            for (const m of matches)
                 return [m];
             return [];
 
         case 'lastInFile':
-            for(const m of matches)
+            for (const m of matches)
                 result = [m];
             return result;
 
         case 'firstAfterCursor':
-            for(const m of matches)
-                if(m.index >= cursorOffset)
+            for (const m of matches)
+                if (m.index >= cursorOffset)
                     return [m];
             return [];
 
         case 'lastBeforeCursor':
-            for(const m of matches)
-                if(m.index < cursorOffset)
+            for (const m of matches)
+                if (m.index < cursorOffset)
                     result = [m];
                 else break;
             return result;
 
         case 'allInFile':
-            for(const m of matches)
+            for (const m of matches)
                 result.push(m);
             return result;
 

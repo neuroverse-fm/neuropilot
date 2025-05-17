@@ -6,6 +6,8 @@
 import * as vscode from 'vscode';
 import { ActionData, ActionWithHandler } from './neuro_client_helper';
 import { NEURO } from './constants';
+import { logOutput } from './utils';
+import { PermissionLevel } from './config';
 
 /**
  * A prompt parameter can either be a string or a function that converts ActionData into a prompt string.
@@ -18,6 +20,7 @@ export const cancelRequestAction: ActionWithHandler = {
     permissions: [],
     handler: handleCancelRequest,
     promptGenerator: () => '', // No prompt needed for this action
+    defaultPermission: PermissionLevel.AUTOPILOT,
 };
 
 /**
@@ -31,9 +34,24 @@ export function handleCancelRequest(_actionData: ActionData): string | undefined
     return 'Request cancelled.';
 }
 
+/**
+ * RCE's emergency shutdown component
+ * Automatically clears the RCE dialog and tell Neuro her requests was cancelled.
+ * Only runs if there is an RCE callback in NEURO.
+ */
+export function emergencyDenyRequests(): void {
+    if (!NEURO.rceCallback) {
+        return;
+    }
+    clearRceDialog();
+    logOutput("INFO", `Cancelled ${NEURO.rceCallback} due to emergency shutdown.`)
+    NEURO.client?.sendContext("Your last request was denied.")
+    vscode.window.showInformationMessage("The last request from Neuro has been denied automatically.")
+}
+
 export function clearRceDialog(): void { // Function to clear out RCE dialogs
     NEURO.rceCallback = null;
-    NEURO.client?.unregisterActions(['cancel_request']);
+    NEURO.client?.unregisterActions([cancelRequestAction.name]);
     NEURO.statusBarItem!.tooltip = 'No active request';
     NEURO.statusBarItem!.color = new vscode.ThemeColor('statusBarItem.foreground');
     NEURO.statusBarItem!.backgroundColor = new vscode.ThemeColor('statusBarItem.background');
@@ -53,69 +71,14 @@ export function openRceDialog(): void {
                 return;
             clearRceDialog();
             if(value === 'Accept') {
-                NEURO.client?.sendContext('Your request was accepted.');
+                NEURO.client?.sendContext('Vedal has accepted your request.');
                 const result = callback();
                 if(result)
                     NEURO.client?.sendContext(result);
             } else {
-                NEURO.client?.sendContext('Your request was denied.');
+                NEURO.client?.sendContext('Vedal has denied your request.');
             }
         },
     );
 }
 
-// /**
-//  * Wraps an action handler with a confirmation prompt and permission check.
-//  * 
-//  * This wrapper uses the effective permission level calculated by hasPermissions:
-//  *   - OFF: immediately returns a no-permission result.
-//  *   - AUTOPILOT: immediately queues the handler and returns an early success result.
-//  *   - COPILOT: shows a confirmation prompt; if the user confirms, the handler is queued and a success result is returned,
-//  *     otherwise a cancellation message is returned.
-//  *
-//  * @param handler The action handler to wrap.
-//  * @param prompt A custom prompt message or generator function (optional).
-//  * @param earlyMessage The message to immediately return as a success result.
-//  * @param requiredPermissions One or more permissions required for the action.
-//  * @returns A new handler enforcing the permission and confirmation logic.
-//  */
-// export function wrapWithConfirmation(
-//     handler: (actionData: ActionData) => ActionResult,
-//     prompt?: PromptGenerator,
-//     earlyMessage = 'Requested to run command.',
-//     ...requiredPermissions: Permission[]
-// ): (actionData: ActionData) => Promise<ActionResult> {
-//     return async (actionData: ActionData): Promise<ActionResult> => {
-//         // Compute the effective permission level from the required permissions.
-//         const effectiveMode: PermissionLevel = getPermissionLevel(...requiredPermissions);
-
-//         if (effectiveMode === PermissionLevel.OFF) {
-//             // Disallow the command.
-//             return actionResultNoPermission(requiredPermissions.length > 0
-//                 ? requiredPermissions[0]
-//                 : { id: 'general', infinitive: 'perform this action' });
-//         }
-
-//         if (effectiveMode === PermissionLevel.AUTOPILOT) {
-//             // Immediately queue the handler asynchronously.
-//             setTimeout(() => {
-//                 handler(actionData);
-//             }, 0);
-//             return actionResultAccept(earlyMessage);
-//         } else { // COPILOT mode
-//             const message: string = typeof prompt === 'function'
-//                 ? prompt(actionData)
-//                 : prompt ?? `Neuro requested to run the action "${actionData.name}". Do you want to proceed?`;
-//             const confirmation = await vscode.window.showInformationMessage(message, { modal: true }, 'Confirm', 'Deny');
-//             NEURO.rceActive = false;
-//             NEURO.client?.unregisterActions(['cancel_request']);
-//             if (confirmation !== 'Confirm') {
-//                 return actionResultAccept('Command denied by user.');
-//             }
-//             setTimeout(() => {
-//                 handler(actionData);
-//             }, 0);
-//             return actionResultAccept(earlyMessage);
-//         }
-//     };
-// }

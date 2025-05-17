@@ -87,6 +87,7 @@ Reregisters all actions according to the permissions.
 ### Disable all permissions
 
 Disable all permissions for Neuro immediately and reloads permissions. Also kills currently running tasks and any open shells.
+Any requests from Neuro when she used a Copilot-mode command is denied automatically.
 Since it's intended to be a panic button, it is recommended to bind that command to a keyboard shortcut.
 
 ### Send File As Context
@@ -98,7 +99,8 @@ Sends the entire current file as context to Neuro, along with the file name and 
 ### General
 
 If a permission level is set to Copilot, commands associated with that permission level first send a request to VS Code, which you can review, then allow/deny, using the NeuroPilot icon in the bottom bar.
-The icon will have a yellow background if a request is pending.
+The icon will be highlighted if a request is pending.
+If an action requires multiple permissions, the minimum permission level is used (Autopilot > Copilot > Off).
 
 #### `cancel_request`
 
@@ -118,7 +120,7 @@ Terminates the currently running task that was started using a task action.
 
 ### File Interactions
 
-Neuro
+Neuro uses these actions for editing files within the current workspace. <!-- why did I put this here -->
 
 #### `get_files`
 

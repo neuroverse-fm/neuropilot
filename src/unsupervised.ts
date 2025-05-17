@@ -9,8 +9,7 @@ import { registerTerminalActions, terminalAccessHandlers } from './pseudotermina
 import { lintActions, registerLintActions } from './lint_problems';
 import { cancelRequestAction, clearRceDialog } from './rce';
 import { validate } from 'jsonschema';
-import { getPermissionLevel, PermissionLevel, PERMISSIONS } from './config';
-import { CONFIG } from './config';
+import { getPermissionLevel, PermissionLevel, PERMISSIONS, CONFIG } from './config';
 
 /**
  * Register unsupervised actions with the Neuro API.
@@ -23,7 +22,7 @@ const neuroActions: Record<string, ActionWithHandler> = {
     ...fileActions,
     ...taskHandlers,
     ...editingActions,
-    // ...terminalAccessHandlers,
+    ...terminalAccessHandlers,
     ...lintActions,
 };
 
@@ -65,9 +64,12 @@ export function registerUnsupervisedHandlers() {
                 };
             }
 
-            const effectivePermission = getPermissionLevel(...action.permissions);
-            if (effectivePermission === PermissionLevel.OFF)
+            const effectivePermission = action.permissions.length > 0 ? getPermissionLevel(...action.permissions) : action.defaultPermission ?? PermissionLevel.COPILOT;
+            if (effectivePermission === PermissionLevel.OFF) {
+                const offPermission = action.permissions.find(permission => getPermissionLevel(permission) === PermissionLevel.OFF);
+                NEURO.client?.sendActionResult(actionData.id, true, `Action failed: You don't have permission to ${offPermission?.infinitive ?? 'execute this action'}.`);
                 return;
+            }
 
             // Validate schema
             if (action.schema) {
