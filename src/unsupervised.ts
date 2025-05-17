@@ -104,7 +104,7 @@ export function registerUnsupervisedHandlers() {
                     prompt: typeof action.promptGenerator === 'string'
                         ? action.promptGenerator as string
                         : (action.promptGenerator as (actionData: ActionData) => string)(actionData),
-                    closeNotification: () => {},
+                    dismiss: () => {},
                 };
                 NEURO.statusBarItem!.tooltip = new vscode.MarkdownString(
                     NEURO.rceRequest!.prompt,
@@ -112,16 +112,7 @@ export function registerUnsupervisedHandlers() {
                 NEURO.client?.registerActions([cancelRequestAction]);
                 NEURO.statusBarItem!.backgroundColor = new vscode.ThemeColor('statusBarItem.warningBackground');
                 NEURO.statusBarItem!.color = new vscode.ThemeColor('statusBarItem.warningForeground');
-                // Timeout check
-                const timeout = CONFIG.requestExpiryTimeout;
-                if (timeout && timeout > 0) {
-                    setTimeout(() => {
-                        if (NEURO.rceRequest) {
-                            clearRceDialog();
-                            NEURO.client?.sendContext('Request expired.');
-                        }
-                    }, timeout);
-                }
+
                 // Show the RCE dialog
                 openRceDialog();
 

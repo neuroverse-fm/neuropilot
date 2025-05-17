@@ -20,7 +20,7 @@ export type PromptGenerator = string | ((actionData: ActionData) => string);
 export interface RceRequest {
     prompt: string;
     callback: () => string | undefined;
-    closeNotification: () => void;
+    dismiss: () => void;
 }
 
 export const cancelRequestAction: ActionWithHandler = {
@@ -59,7 +59,7 @@ export function emergencyDenyRequests(): void {
 }
 
 export function clearRceDialog(): void { // Function to clear out RCE dialogs
-    NEURO.rceRequest?.closeNotification();
+    NEURO.rceRequest?.dismiss();
     NEURO.rceRequest = null;
     NEURO.client?.unregisterActions([cancelRequestAction.name]);
     NEURO.statusBarItem!.tooltip = 'No active request';
@@ -85,10 +85,10 @@ export function openRceDialog(): void {
         (progress, cancellationToken) => new Promise<void>((resolve, _) => {
             const progressStep = 100; // step progress bar every 100ms, looks completely smooth
 
-            const timeout = CONFIG.requestExpiryTimeout;
-            const hasTimeout = timeout && timeout > 0;
+            const timeoutDuration = CONFIG.requestExpiryTimeout;
+            const hasTimeout = timeoutDuration && timeoutDuration > 0;
             // if there's no timeout we "don't pass" the increment, this makes the progress bar infinite
-            const increment = hasTimeout ? progressStep / timeout * 100 : undefined;
+            const increment = hasTimeout ? progressStep / timeoutDuration * 100 : undefined;
 
             // setInterval doesn't invoke immediately, so we have to report the progress once
             progress.report({ message, increment });
@@ -98,17 +98,26 @@ export function openRceDialog(): void {
                 denyRceRequest();
             });
 
-            // if there's a timeout, we need to report progress
             let interval: NodeJS.Timeout | null = null;
+            let timeout: NodeJS.Timeout | null = null;
             if (hasTimeout) {
+                // if there's a timeout, we need to report progress
                 interval = setInterval(() => progress.report({ message, increment }), progressStep);
+
+                // actually handle the timeout
+                timeout = setTimeout(() => {
+                    clearRceDialog();
+                    NEURO.client?.sendContext('Request expired.');
+                }, timeoutDuration);
             }
 
             // this will be called on request resolution
-            NEURO.rceRequest!.closeNotification = () => {
-                if (interval) {
+            NEURO.rceRequest!.dismiss = () => {
+                if (interval)
                     clearInterval(interval);
-                }
+                if (timeout)
+                    clearTimeout(timeout);
+
                 resolve();
             };
         }),
