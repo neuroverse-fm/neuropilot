@@ -113,7 +113,7 @@ Running this command is required if you change any of the permissions.
 
 ### Disable All Permissions
 
-Disable all permissions for Neuro immediately and unregister the actions.
+Set all permissions for Neuro to 'Off' immediately and unregister the actions.
 Also kills currently running tasks and any shells opened by Neuro.
 Since it's intended to be a panic button, it is recommended to bind this command to a keyboard shortcut.
 
