@@ -7,12 +7,21 @@ import * as vscode from 'vscode';
 import { ActionData, ActionWithHandler } from './neuro_client_helper';
 import { NEURO } from './constants';
 import { logOutput } from './utils';
-import { PermissionLevel } from './config';
+import { CONFIG, PermissionLevel } from './config';
 
 /**
  * A prompt parameter can either be a string or a function that converts ActionData into a prompt string.
  */
 export type PromptGenerator = string | ((actionData: ActionData) => string);
+
+/**
+ * RCE request object
+ */
+export interface RceRequest {
+    prompt: string;
+    callback: () => string | undefined;
+    closeNotification: () => void;
+}
 
 export const cancelRequestAction: ActionWithHandler = {
     name: 'cancel_request',
@@ -27,7 +36,7 @@ export const cancelRequestAction: ActionWithHandler = {
  * Handles cancellation requests from Neuro.
  */
 export function handleCancelRequest(_actionData: ActionData): string | undefined {
-    if (!NEURO.rceCallback) {
+    if (!NEURO.rceRequest) {
         return 'No active request to cancel.';
     }
     clearRceDialog();
@@ -40,17 +49,18 @@ export function handleCancelRequest(_actionData: ActionData): string | undefined
  * Only runs if there is an RCE callback in NEURO.
  */
 export function emergencyDenyRequests(): void {
-    if (!NEURO.rceCallback) {
+    if (!NEURO.rceRequest) {
         return;
     }
     clearRceDialog();
-    logOutput("INFO", `Cancelled ${NEURO.rceCallback} due to emergency shutdown.`)
+    logOutput("INFO", `Cancelled ${NEURO.rceRequest.callback} due to emergency shutdown.`)
     NEURO.client?.sendContext("Your last request was denied.")
     vscode.window.showInformationMessage("The last request from Neuro has been denied automatically.")
 }
 
 export function clearRceDialog(): void { // Function to clear out RCE dialogs
-    NEURO.rceCallback = null;
+    NEURO.rceRequest?.closeNotification();
+    NEURO.rceRequest = null;
     NEURO.client?.unregisterActions([cancelRequestAction.name]);
     NEURO.statusBarItem!.tooltip = 'No active request';
     NEURO.statusBarItem!.color = new vscode.ThemeColor('statusBarItem.foreground');
@@ -58,27 +68,71 @@ export function clearRceDialog(): void { // Function to clear out RCE dialogs
 }
 
 export function openRceDialog(): void {
-    if(!NEURO.rceCallback)
+    if(!NEURO.rceRequest)
         return;
 
-    const callback = NEURO.rceCallback;
-    const message = typeof NEURO.statusBarItem!.tooltip === 'string'
-        ? NEURO.statusBarItem!.tooltip
-        : NEURO.statusBarItem!.tooltip!.value;
-    vscode.window.showInformationMessage(message, 'Accept', 'Deny').then(
-        (value) => {
-            if(NEURO.rceCallback !== callback) // Multiple messages may be opened, ensure that callback is only called once
-                return;
-            clearRceDialog();
-            if(value === 'Accept') {
-                NEURO.client?.sendContext('Vedal has accepted your request.');
-                const result = callback();
-                if(result)
-                    NEURO.client?.sendContext(result);
-            } else {
-                NEURO.client?.sendContext('Vedal has denied your request.');
-            }
+    // we can't add any buttons to progress, so we have to add the accept link
+    const message = `${NEURO.rceRequest.prompt} [Accept](command:neuropilot.confirmRceRequest)`;
+
+    // weirdly enough, a "notification" isn't actually a thing in vscode.
+    // it's either a message, or in this case, progress report that takes shape of a notification
+    // this is a workaround to show a notification that can be dismissed programmatically
+    vscode.window.withProgress(
+        {
+            location: vscode.ProgressLocation.Notification,
+            cancellable: true,
         },
+        (progress, cancellationToken) => new Promise<void>((resolve, _) => {
+            const progressStep = 100; // step progress bar every 100ms, looks completely smooth
+
+            const timeout = CONFIG.requestExpiryTimeout;
+            const hasTimeout = timeout && timeout > 0;
+            // if there's no timeout we "don't pass" the increment, this makes the progress bar infinite
+            const increment = hasTimeout ? progressStep / timeout * 100 : undefined;
+
+            // setInterval doesn't invoke immediately, so we have to report the progress once
+            progress.report({ message, increment });
+
+            // handle manual cancellation
+            cancellationToken.onCancellationRequested(() => {
+                denyRceRequest();
+            });
+
+            // if there's a timeout, we need to report progress
+            let interval: NodeJS.Timeout | null = null;
+            if (hasTimeout) {
+                interval = setInterval(() => progress.report({ message, increment }), timeout);
+            }
+
+            // this will be called on request resolution
+            NEURO.rceRequest!.closeNotification = () => {
+                if (interval) {
+                    clearInterval(interval);
+                }
+                resolve();
+            };
+        }),
     );
 }
 
+export function confirmRceRequest(): void {
+    if (!NEURO.rceRequest)
+        return;
+
+    NEURO.client?.sendContext('Vedal has accepted your request.');
+
+    const result = NEURO.rceRequest.callback();
+    if (result)
+        NEURO.client?.sendContext(result);
+
+    clearRceDialog();
+}
+
+export function denyRceRequest(): void {
+    if (!NEURO.rceRequest)
+        return;
+
+    NEURO.client?.sendContext('Vedal has denied your request.');
+
+    clearRceDialog();
+}

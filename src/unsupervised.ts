@@ -7,7 +7,7 @@ import { editingActions, registerEditingActions } from './editing';
 import { ActionData, ActionWithHandler } from './neuro_client_helper';
 import { registerTerminalActions, terminalAccessHandlers } from './pseudoterminal';
 import { lintActions, registerLintActions } from './lint_problems';
-import { cancelRequestAction, clearRceDialog } from './rce';
+import { cancelRequestAction, clearRceDialog, openRceDialog } from './rce';
 import { validate } from 'jsonschema';
 import { getPermissionLevel, PermissionLevel, PERMISSIONS, CONFIG } from './config';
 
@@ -95,15 +95,19 @@ export function registerUnsupervisedHandlers() {
                 NEURO.client?.sendActionResult(actionData.id, true, result);
             }
             else { // permissionLevel === PermissionLevel.COPILOT
-                if (NEURO.rceCallback) {
+                if (NEURO.rceRequest) {
                     NEURO.client?.sendActionResult(actionData.id, true, 'Action failed: Already waiting for permission to run another action.');
                     return;
                 }
-                NEURO.rceCallback = () => action.handler(actionData);
-                NEURO.statusBarItem!.tooltip = new vscode.MarkdownString(
-                    typeof action.promptGenerator === 'string'
+                NEURO.rceRequest = {
+                    callback: () => action.handler(actionData),
+                    prompt: typeof action.promptGenerator === 'string'
                         ? action.promptGenerator as string
                         : (action.promptGenerator as (actionData: ActionData) => string)(actionData),
+                    closeNotification: () => {},
+                };
+                NEURO.statusBarItem!.tooltip = new vscode.MarkdownString(
+                    NEURO.rceRequest!.prompt,
                 );
                 NEURO.client?.registerActions([cancelRequestAction]);
                 NEURO.statusBarItem!.backgroundColor = new vscode.ThemeColor('statusBarItem.warningBackground');
@@ -112,12 +116,15 @@ export function registerUnsupervisedHandlers() {
                 const timeout = CONFIG.requestExpiryTimeout;
                 if (timeout && timeout > 0) {
                     setTimeout(() => {
-                        if (NEURO.rceCallback) {
+                        if (NEURO.rceRequest) {
                             clearRceDialog();
                             NEURO.client?.sendContext('Request expired.');
                         }
                     }, timeout);
                 }
+                // Show the RCE dialog
+                openRceDialog();
+
                 // End of added code.
                 NEURO.client?.sendActionResult(actionData.id, true, 'Requested permission to run action.');
             }

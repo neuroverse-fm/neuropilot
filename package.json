@@ -56,8 +56,13 @@
 				"category": "NeuroPilot"
 			},
 			{
-				"command": "neuropilot.openRceDialog",
-				"title": "Open RCE Dialog",
+				"command": "neuropilot.confirmRceRequest",
+				"title": "Confirm Neuro's Request",
+				"category": "NeuroPilot"
+			},
+			{
+				"command": "neuropilot.declineRceRequest",
+				"title": "Decline Neuro's Request",
 				"category": "NeuroPilot"
 			}
 		],
