@@ -101,7 +101,7 @@ export function openRceDialog(): void {
             // if there's a timeout, we need to report progress
             let interval: NodeJS.Timeout | null = null;
             if (hasTimeout) {
-                interval = setInterval(() => progress.report({ message, increment }), timeout);
+                interval = setInterval(() => progress.report({ message, increment }), progressStep);
             }
 
             // this will be called on request resolution
