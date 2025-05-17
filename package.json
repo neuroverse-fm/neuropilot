@@ -441,6 +441,13 @@
 					"fontPath": "icons.woff",
 					"fontCharacter": "\\E900"
 				}
+			},
+			"neuropilot-heart":{
+				"description": "NeuroPilot heart",
+				"default": {
+					"fontPath": "icons.woff",
+					"fontCharacter": "\\E901"
+				}
 			}
 		}
 	},
