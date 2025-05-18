@@ -7,7 +7,7 @@ import { editingActions, registerEditingActions } from './editing';
 import { ActionData, ActionWithHandler } from './neuro_client_helper';
 import { registerTerminalActions, terminalAccessHandlers } from './pseudoterminal';
 import { lintActions, registerLintActions } from './lint_problems';
-import { cancelRequestAction, createRceRequest, showRceNotification } from './rce';
+import { cancelRequestAction, createRceRequest, revealRceNotification } from './rce';
 import { validate } from 'jsonschema';
 import { CONFIG, getPermissionLevel, PermissionLevel, PERMISSIONS } from './config';
 
@@ -116,7 +116,7 @@ export function registerUnsupervisedHandlers() {
 
                 // Show the RCE dialog immediately if the config says so
                 if (!CONFIG.hideCopilotRequests)
-                    showRceNotification();
+                    revealRceNotification();
 
                 // End of added code.
                 NEURO.client?.sendActionResult(actionData.id, true, 'Requested permission to run action.');

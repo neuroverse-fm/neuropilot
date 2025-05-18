@@ -31,13 +31,13 @@ export interface RceRequest {
      */
     resolve: () => void;
     /**
-     * Attach a `window.showProgress` notification to the request, allowing it to be dismissed.
+     * Attach a `window.showProgress` notification to the request, allowing it to be dismissed on request resolution.
      * @param progress The progress object from `window.withProgress` to report the prompt and time passed to.
      * @returns A promise that resolves when the request is resolved.
      */
     attachNotification: (progress: vscode.Progress<{ message?: string; increment?: number }>) => Promise<void>;
     /**
-     * Whether the notification has been spawned already.
+     * Whether the notification has been revealed already.
      */
     notificationVisible: boolean;
 }
@@ -86,6 +86,11 @@ export function clearRceRequest(): void { // Function to clear out RCE dialogs
     NEURO.statusBarItem!.backgroundColor = new vscode.ThemeColor('statusBarItem.background');
 }
 
+/**
+ * Creates a new RCE request and attaches it to NEURO.
+ * @param prompt The prompt to be displayed in the notification.
+ * @param callback The callback function to be executed when the request is accepted.
+ */
 export function createRceRequest(
     prompt: string,
     callback: () => string | undefined,
@@ -150,12 +155,16 @@ export function createRceRequest(
             // we need to set the prompt and report time passed if there's a timeout
             progress.report({ message, increment: incremented });
 
+            // return this exact promise we're in so the notification closes on request resolution
             return promise;
         };
     });
 }
 
-export function showRceNotification(): void {
+/**
+ * Reveals the RCE notification for the current request if it is not already visible.
+ */
+export function revealRceNotification(): void {
     if(!NEURO.rceRequest)
         return;
 
@@ -184,6 +193,10 @@ export function showRceNotification(): void {
     );
 }
 
+/**
+ * Accepts the current RCE request and executes the callback function.
+ * If there is no request to accept, an error message is shown to the user.
+ */
 export function acceptRceRequest(): void {
     if (!NEURO.rceRequest) {
         vscode.window.showErrorMessage('No active request from Neuro to accept.');
@@ -199,6 +212,10 @@ export function acceptRceRequest(): void {
     clearRceRequest();
 }
 
+/**
+ * Denies the current RCE request and clears the request object.
+ * If there is no request to deny, an error message is shown to the user.
+ */
 export function denyRceRequest(): void {
     if (!NEURO.rceRequest) {
         vscode.window.showErrorMessage('No active request from Neuro to deny.');
