@@ -435,6 +435,11 @@
 						"type": "number",
 						"default": 0,
 						"markdownDescription": "The time to wait (in milliseconds) before automatically rejecting Copilot-mode action requests from Neuro.\nSetting this to 0 will cause the requests to never expire."
+					},
+					"neuropilot.hideCopilotRequests": {
+						"type": "boolean",
+						"default": false,
+						"markdownDescription": "Don't immediately show Copilot-mode action requests, requiring clicking the status bar item to reveal them."
 					}
 				}
 			}

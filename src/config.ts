@@ -90,6 +90,7 @@ class Config {
     get sendNewLintingProblemsOn(): string { return get('sendNewLintingProblemsOn')!; }
     get sendSaveNotifications(): boolean { return get('sendSaveNotifications')!; }
     get requestExpiryTimeout(): number { return get('requestExpiryTimeout')!; }
+    get hideCopilotRequests(): boolean { return get('hideCopilotRequests')!; }
 
     get terminals(): { name: string; path: string; args?: string[]; }[] { return get('terminals')!; }
 }
