@@ -9,7 +9,7 @@ import { registerTerminalActions, terminalAccessHandlers } from './pseudotermina
 import { lintActions, registerLintActions } from './lint_problems';
 import { cancelRequestAction, createRceRequest, openRceDialog } from './rce';
 import { validate } from 'jsonschema';
-import { getPermissionLevel, PermissionLevel, PERMISSIONS } from './config';
+import { CONFIG, getPermissionLevel, PermissionLevel, PERMISSIONS } from './config';
 
 /**
  * Register unsupervised actions with the Neuro API.
@@ -102,22 +102,21 @@ export function registerUnsupervisedHandlers() {
 
                 const prompt = typeof action.promptGenerator === 'string'
                     ? action.promptGenerator as string
-                    : (action.promptGenerator as (actionData: ActionData) => string)(actionData)
+                    : (action.promptGenerator as (actionData: ActionData) => string)(actionData);
 
                 createRceRequest(
                     prompt,
                     () => action.handler(actionData),
                 );
 
-                NEURO.statusBarItem!.tooltip = new vscode.MarkdownString(
-                    NEURO.rceRequest!.prompt,
-                );
+                NEURO.statusBarItem!.tooltip = new vscode.MarkdownString(prompt);
                 NEURO.client?.registerActions([cancelRequestAction]);
                 NEURO.statusBarItem!.backgroundColor = new vscode.ThemeColor('statusBarItem.warningBackground');
                 NEURO.statusBarItem!.color = new vscode.ThemeColor('statusBarItem.warningForeground');
 
-                // Show the RCE dialog
-                openRceDialog();
+                // Show the RCE dialog immediately if the config says so
+                if (!CONFIG.hideCopilotRequests)
+                    openRceDialog();
 
                 // End of added code.
                 NEURO.client?.sendActionResult(actionData.id, true, 'Requested permission to run action.');

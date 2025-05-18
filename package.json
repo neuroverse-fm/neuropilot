@@ -64,6 +64,11 @@
 				"command": "neuropilot.declineRceRequest",
 				"title": "Decline Neuro's Request",
 				"category": "NeuroPilot"
+			},
+			{
+				"command": "neuropilot.revealRceNotification",
+				"title": "Reveal Neuro's Request",
+				"category": "NeuroPilot"
 			}
 		],
 		"configuration": [

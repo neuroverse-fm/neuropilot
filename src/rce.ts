@@ -23,6 +23,7 @@ export interface RceRequest {
 
     attachNotification: (progress: vscode.Progress<{ message?: string; increment?: number }>) => Promise<void>;
     dismiss: () => void;
+    progressVisible: boolean;
 }
 
 export const cancelRequestAction: ActionWithHandler = {
@@ -41,7 +42,7 @@ export function handleCancelRequest(_actionData: ActionData): string | undefined
     if (!NEURO.rceRequest) {
         return 'No active request to cancel.';
     }
-    clearRceDialog();
+    clearRceRequest();
     return 'Request cancelled.';
 }
 
@@ -54,13 +55,13 @@ export function emergencyDenyRequests(): void {
     if (!NEURO.rceRequest) {
         return;
     }
-    clearRceDialog();
+    clearRceRequest();
     logOutput('INFO', `Cancelled ${NEURO.rceRequest.callback} due to emergency shutdown.`);
     NEURO.client?.sendContext('Your last request was denied.');
     vscode.window.showInformationMessage('The last request from Neuro has been denied automatically.');
 }
 
-export function clearRceDialog(): void { // Function to clear out RCE dialogs
+export function clearRceRequest(): void { // Function to clear out RCE dialogs
     NEURO.rceRequest?.dismiss();
     NEURO.rceRequest = null;
     NEURO.client?.unregisterActions([cancelRequestAction.name]);
@@ -76,6 +77,7 @@ export function createRceRequest(
     NEURO.rceRequest = {
         prompt,
         callback,
+        progressVisible: false,
 
         // these immediately get replaced synchronously, this is just so we don't have them be nullable in the type
         dismiss: () => {},
@@ -111,7 +113,7 @@ export function createRceRequest(
 
             // actually handle the timeout
             timeout = setTimeout(() => {
-                clearRceDialog();
+                clearRceRequest();
                 NEURO.client?.sendContext('Request expired.');
             }, timeoutDuration);
         }
@@ -127,12 +129,11 @@ export function createRceRequest(
         };
 
         NEURO.rceRequest!.attachNotification = async (p) => {
+            // set internal progress to the one from the notification
             progress = p;
-            if (incremented) {
-                // if we have a timeout, we need to report progress
-                progress.report({ message, increment: incremented });
-            }
-            // if we don't have a timeout, we don't need to report progress
+            // we need to set the prompt and report time passed if there's a timeout
+            progress.report({ message, increment: incremented });
+
             return promise;
         };
     });
@@ -142,6 +143,11 @@ export function openRceDialog(): void {
     if(!NEURO.rceRequest)
         return;
 
+    // don't show the notification if it's already open
+    if (NEURO.rceRequest.progressVisible)
+        return;
+
+    NEURO.rceRequest.progressVisible = true;
     // weirdly enough, a "notification" isn't actually a thing in vscode.
     // it's either a message, or in this case, progress report that takes shape of a notification
     // this is a workaround to show a notification that can be dismissed programmatically
@@ -171,7 +177,7 @@ export function confirmRceRequest(): void {
     if (result)
         NEURO.client?.sendContext(result);
 
-    clearRceDialog();
+    clearRceRequest();
 }
 
 export function declineRceRequest(): void {
@@ -180,5 +186,5 @@ export function declineRceRequest(): void {
 
     NEURO.client?.sendContext('Vedal has denied your request.');
 
-    clearRceDialog();
+    clearRceRequest();
 }
