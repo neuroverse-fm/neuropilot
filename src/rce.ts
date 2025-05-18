@@ -18,12 +18,28 @@ export type PromptGenerator = string | ((actionData: ActionData) => string);
  * RCE request object
  */
 export interface RceRequest {
+    /**
+     * The prompt that describes the request.
+     */
     prompt: string;
+    /**
+     * The callback function to be executed when the request is accepted.
+     */
     callback: () => string | undefined;
-
+    /**
+     * Resolve the request, closing all attached notifications and clearing timers.
+     */
+    resolve: () => void;
+    /**
+     * Attach a `window.showProgress` notification to the request, allowing it to be dismissed.
+     * @param progress The progress object from `window.withProgress` to report the prompt and time passed to.
+     * @returns A promise that resolves when the request is resolved.
+     */
     attachNotification: (progress: vscode.Progress<{ message?: string; increment?: number }>) => Promise<void>;
-    dismiss: () => void;
-    progressVisible: boolean;
+    /**
+     * Whether the notification has been spawned already.
+     */
+    notificationVisible: boolean;
 }
 
 export const cancelRequestAction: ActionWithHandler = {
@@ -62,7 +78,7 @@ export function emergencyDenyRequests(): void {
 }
 
 export function clearRceRequest(): void { // Function to clear out RCE dialogs
-    NEURO.rceRequest?.dismiss();
+    NEURO.rceRequest?.resolve();
     NEURO.rceRequest = null;
     NEURO.client?.unregisterActions([cancelRequestAction.name]);
     NEURO.statusBarItem!.tooltip = 'No active request';
@@ -77,16 +93,16 @@ export function createRceRequest(
     NEURO.rceRequest = {
         prompt,
         callback,
-        progressVisible: false,
+        notificationVisible: false,
 
         // these immediately get replaced synchronously, this is just so we don't have them be nullable in the type
-        dismiss: () => {},
+        resolve: () => {},
         attachNotification: async () => {},
     };
 
     const promise = new Promise<void>((resolve) => {
         // we can't add any buttons to progress, so we have to add the accept link
-        const message = `${NEURO.rceRequest!.prompt} [Accept](command:neuropilot.confirmRceRequest)`;
+        const message = `${NEURO.rceRequest!.prompt} [Accept](command:neuropilot.acceptRceRequest)`;
 
         // this is null initially but will be assigned when a notification gets spawned
         let progress: vscode.Progress<{ message?: string; increment?: number }> | null = null;
@@ -119,7 +135,7 @@ export function createRceRequest(
         }
 
         // this will be called on request resolution
-        NEURO.rceRequest!.dismiss = () => {
+        NEURO.rceRequest!.resolve = () => {
             if (interval)
                 clearInterval(interval);
             if (timeout)
@@ -139,15 +155,16 @@ export function createRceRequest(
     });
 }
 
-export function openRceDialog(): void {
+export function showRceNotification(): void {
     if(!NEURO.rceRequest)
         return;
 
     // don't show the notification if it's already open
-    if (NEURO.rceRequest.progressVisible)
+    if (NEURO.rceRequest.notificationVisible)
         return;
 
-    NEURO.rceRequest.progressVisible = true;
+    NEURO.rceRequest.notificationVisible = true;
+
     // weirdly enough, a "notification" isn't actually a thing in vscode.
     // it's either a message, or in this case, progress report that takes shape of a notification
     // this is a workaround to show a notification that can be dismissed programmatically
@@ -159,7 +176,7 @@ export function openRceDialog(): void {
         (progress, cancellationToken) => {
             // handle manual cancellation
             cancellationToken.onCancellationRequested(() => {
-                declineRceRequest();
+                denyRceRequest();
             });
 
             return NEURO.rceRequest!.attachNotification(progress);
@@ -167,9 +184,11 @@ export function openRceDialog(): void {
     );
 }
 
-export function confirmRceRequest(): void {
-    if (!NEURO.rceRequest)
+export function acceptRceRequest(): void {
+    if (!NEURO.rceRequest) {
+        vscode.window.showErrorMessage('No active request from Neuro to accept.');
         return;
+    }
 
     NEURO.client?.sendContext('Vedal has accepted your request.');
 
@@ -180,9 +199,11 @@ export function confirmRceRequest(): void {
     clearRceRequest();
 }
 
-export function declineRceRequest(): void {
-    if (!NEURO.rceRequest)
+export function denyRceRequest(): void {
+    if (!NEURO.rceRequest) {
+        vscode.window.showErrorMessage('No active request from Neuro to deny.');
         return;
+    }
 
     NEURO.client?.sendContext('Vedal has denied your request.');
 

@@ -56,13 +56,13 @@
 				"category": "NeuroPilot"
 			},
 			{
-				"command": "neuropilot.confirmRceRequest",
-				"title": "Confirm Neuro's Request",
+				"command": "neuropilot.acceptRceRequest",
+				"title": "Accept Neuro's Request",
 				"category": "NeuroPilot"
 			},
 			{
-				"command": "neuropilot.declineRceRequest",
-				"title": "Decline Neuro's Request",
+				"command": "neuropilot.denyRceRequest",
+				"title": "Deny Neuro's Request",
 				"category": "NeuroPilot"
 			},
 			{
