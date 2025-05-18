@@ -11,7 +11,7 @@ import { emergencyTerminalShutdown, saveContextForTerminal } from './pseudotermi
 import { CONFIG } from './config';
 import { sendDiagnosticsDiff } from './lint_problems';
 import { fileSaveListener, toggleSaveAction } from './editing';
-import { emergencyDenyRequests, confirmRceRequest, denyRceRequest } from './rce';
+import { emergencyDenyRequests, confirmRceRequest, declineRceRequest } from './rce';
 
 export function activate(context: vscode.ExtensionContext) {
     NEURO.url = CONFIG.websocketUrl;
@@ -32,7 +32,7 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand('neuropilot.reloadPermissions', reloadPermissions);
     vscode.commands.registerCommand('neuropilot.disableAllPermissions', disableAllPermissions);
     vscode.commands.registerCommand('neuropilot.confirmRceRequest', confirmRceRequest);
-    vscode.commands.registerCommand('neuropilot.denyRceRequest', denyRceRequest);
+    vscode.commands.registerCommand('neuropilot.declineRceRequest', declineRceRequest);
 
     registerChatParticipant(context);
     saveContextForTerminal(context);

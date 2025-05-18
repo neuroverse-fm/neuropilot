@@ -20,6 +20,8 @@ export type PromptGenerator = string | ((actionData: ActionData) => string);
 export interface RceRequest {
     prompt: string;
     callback: () => string | undefined;
+
+    attachNotification: (progress: vscode.Progress<{ message?: string; increment?: number }>) => Promise<void>;
     dismiss: () => void;
 }
 
@@ -67,12 +69,78 @@ export function clearRceDialog(): void { // Function to clear out RCE dialogs
     NEURO.statusBarItem!.backgroundColor = new vscode.ThemeColor('statusBarItem.background');
 }
 
+export function createRceRequest(
+    prompt: string,
+    callback: () => string | undefined,
+): void {
+    NEURO.rceRequest = {
+        prompt,
+        callback,
+
+        // these immediately get replaced synchronously, this is just so we don't have them be nullable in the type
+        dismiss: () => {},
+        attachNotification: async () => {},
+    };
+
+    const promise = new Promise<void>((resolve) => {
+        // we can't add any buttons to progress, so we have to add the accept link
+        const message = `${NEURO.rceRequest!.prompt} [Accept](command:neuropilot.confirmRceRequest)`;
+
+        // this is null initially but will be assigned when a notification gets spawned
+        let progress: vscode.Progress<{ message?: string; increment?: number }> | null = null;
+
+        const progressStep = 100; // step progress bar every 100ms, looks completely smooth
+
+        const timeoutDuration = CONFIG.requestExpiryTimeout;
+        const hasTimeout = timeoutDuration && timeoutDuration > 0;
+        // if there's no timeout we "don't pass" the increment, this makes the progress bar infinite
+        const increment = hasTimeout ? progressStep / timeoutDuration * 100 : undefined;
+
+        // keep track of the incremented value to correctly report progress when the notification gets attached
+        let incremented = increment;
+
+        let interval: NodeJS.Timeout | null = null;
+        let timeout: NodeJS.Timeout | null = null;
+        if (hasTimeout) {
+            // if there's a timeout, we need to report progress
+            interval = setInterval(() => {
+                progress?.report({ message, increment });
+                if (incremented)
+                    incremented += increment!;
+            }, progressStep);
+
+            // actually handle the timeout
+            timeout = setTimeout(() => {
+                clearRceDialog();
+                NEURO.client?.sendContext('Request expired.');
+            }, timeoutDuration);
+        }
+
+        // this will be called on request resolution
+        NEURO.rceRequest!.dismiss = () => {
+            if (interval)
+                clearInterval(interval);
+            if (timeout)
+                clearTimeout(timeout);
+
+            resolve();
+        };
+
+        NEURO.rceRequest!.attachNotification = async (p) => {
+            progress = p;
+            if (incremented) {
+                // if we have a timeout, we need to report progress
+                progress.report({ message, increment: incremented });
+            }
+            // if we don't have a timeout, we don't need to report progress
+            return promise;
+        };
+    });
+}
+
 export function openRceDialog(): void {
     if(!NEURO.rceRequest)
         return;
-
-    // we can't add any buttons to progress, so we have to add the accept link
-    const message = `${NEURO.rceRequest.prompt} [Accept](command:neuropilot.confirmRceRequest)`;
 
     // weirdly enough, a "notification" isn't actually a thing in vscode.
     // it's either a message, or in this case, progress report that takes shape of a notification
@@ -82,45 +150,14 @@ export function openRceDialog(): void {
             location: vscode.ProgressLocation.Notification,
             cancellable: true,
         },
-        (progress, cancellationToken) => new Promise<void>((resolve, _) => {
-            const progressStep = 100; // step progress bar every 100ms, looks completely smooth
-
-            const timeoutDuration = CONFIG.requestExpiryTimeout;
-            const hasTimeout = timeoutDuration && timeoutDuration > 0;
-            // if there's no timeout we "don't pass" the increment, this makes the progress bar infinite
-            const increment = hasTimeout ? progressStep / timeoutDuration * 100 : undefined;
-
-            // setInterval doesn't invoke immediately, so we have to report the progress once
-            progress.report({ message, increment });
-
+        (progress, cancellationToken) => {
             // handle manual cancellation
             cancellationToken.onCancellationRequested(() => {
-                denyRceRequest();
+                declineRceRequest();
             });
 
-            let interval: NodeJS.Timeout | null = null;
-            let timeout: NodeJS.Timeout | null = null;
-            if (hasTimeout) {
-                // if there's a timeout, we need to report progress
-                interval = setInterval(() => progress.report({ message, increment }), progressStep);
-
-                // actually handle the timeout
-                timeout = setTimeout(() => {
-                    clearRceDialog();
-                    NEURO.client?.sendContext('Request expired.');
-                }, timeoutDuration);
-            }
-
-            // this will be called on request resolution
-            NEURO.rceRequest!.dismiss = () => {
-                if (interval)
-                    clearInterval(interval);
-                if (timeout)
-                    clearTimeout(timeout);
-
-                resolve();
-            };
-        }),
+            return NEURO.rceRequest!.attachNotification(progress);
+        },
     );
 }
 
@@ -137,7 +174,7 @@ export function confirmRceRequest(): void {
     clearRceDialog();
 }
 
-export function denyRceRequest(): void {
+export function declineRceRequest(): void {
     if (!NEURO.rceRequest)
         return;
 

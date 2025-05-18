@@ -7,7 +7,7 @@ import { editingActions, registerEditingActions } from './editing';
 import { ActionData, ActionWithHandler } from './neuro_client_helper';
 import { registerTerminalActions, terminalAccessHandlers } from './pseudoterminal';
 import { lintActions, registerLintActions } from './lint_problems';
-import { cancelRequestAction, openRceDialog } from './rce';
+import { cancelRequestAction, createRceRequest, openRceDialog } from './rce';
 import { validate } from 'jsonschema';
 import { getPermissionLevel, PermissionLevel, PERMISSIONS } from './config';
 
@@ -99,13 +99,16 @@ export function registerUnsupervisedHandlers() {
                     NEURO.client?.sendActionResult(actionData.id, true, 'Action failed: Already waiting for permission to run another action.');
                     return;
                 }
-                NEURO.rceRequest = {
-                    callback: () => action.handler(actionData),
-                    prompt: typeof action.promptGenerator === 'string'
-                        ? action.promptGenerator as string
-                        : (action.promptGenerator as (actionData: ActionData) => string)(actionData),
-                    dismiss: () => {},
-                };
+
+                const prompt = typeof action.promptGenerator === 'string'
+                    ? action.promptGenerator as string
+                    : (action.promptGenerator as (actionData: ActionData) => string)(actionData)
+
+                createRceRequest(
+                    prompt,
+                    () => action.handler(actionData),
+                );
+
                 NEURO.statusBarItem!.tooltip = new vscode.MarkdownString(
                     NEURO.rceRequest!.prompt,
                 );
