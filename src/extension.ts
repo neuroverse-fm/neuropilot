@@ -71,7 +71,20 @@ export function activate(context: vscode.ExtensionContext) {
     NEURO.statusBarItem.tooltip = new vscode.MarkdownString('No active request');
     NEURO.statusBarItem.color = new vscode.ThemeColor('statusBarItem.foreground');
     NEURO.statusBarItem.backgroundColor = new vscode.ThemeColor('statusBarItem.background');
-    NEURO.statusBarItem.show();
+
+    // sync the status bar item visibility with the setting
+    if (CONFIG.hideCopilotRequests)
+        NEURO.statusBarItem.show();
+
+    vscode.workspace.onDidChangeConfiguration(event => {
+        if (event.affectsConfiguration('neuropilot.hideCopilotRequests')) {
+            if (CONFIG.hideCopilotRequests) {
+                NEURO.statusBarItem?.show();
+            } else {
+                NEURO.statusBarItem?.hide();
+            }
+        }
+    });
 }
 
 function reloadPermissions() {
