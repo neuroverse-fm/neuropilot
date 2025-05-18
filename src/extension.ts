@@ -65,7 +65,7 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(NEURO.statusBarItem);
     NEURO.statusBarItem.name = 'NeuroPilot';
     NEURO.statusBarItem.command = 'neuropilot.openRceDialog';
-    NEURO.statusBarItem.text = '$(neuropilot-logo)';
+    NEURO.statusBarItem.text = '$(neuropilot-heart)';
     NEURO.statusBarItem.tooltip = new vscode.MarkdownString('No active request');
     NEURO.statusBarItem.color = new vscode.ThemeColor('statusBarItem.foreground');
     NEURO.statusBarItem.backgroundColor = new vscode.ThemeColor('statusBarItem.background');
