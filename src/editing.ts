@@ -48,7 +48,7 @@ export const editingActions = {
         handler: handleInsertText,
         promptGenerator: (actionData: ActionData) => {
             const lineCount = actionData.params.text.trim().split('\n').length;
-            return `insert ${lineCount} line${lineCount === 1 ? '' : 's'} of code.`
+            return `insert ${lineCount} line${lineCount === 1 ? '' : 's'} of code.`;
         },
     },
     replace_text: {
