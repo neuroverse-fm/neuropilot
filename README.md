@@ -89,19 +89,20 @@ Neuro cannot open, edit, or otherwise access files or folders that start with a 
 This is mainly to prevent her from opening `.vscode/tasks.json` to essentially run arbitrary commands in the terminal, or editing `.vscode/settings.json` to escalate her permissions.
 **Warning: If your workspace is inside such a folder, Neuro will not be able to edit *any* files!**
 
-You can customise what directories are included in the list using the `NeuroPilot > Include Pattern` and `NeuroPilot > Exclude Pattern`, and you can disable the default directory checks using `NeuroPilot > Allow Unsafe Paths`.
+You can customise what directories are included in the list using the [*Include Pattern*](vscode://settings/neuropilot.includePattern) and [*Exclude Pattern*](vscode://settings/neuropilot.excludePattern), and you can disable the default directory checks using [*Allow Unsafe Paths*](vscode://settings/neuropilot.allowUnsafePaths).
 
 Neuro also can't change the global git configuration, only the one local to the current repository.
 
 Note that if Neuro has direct terminal access, you should assume all security features are pretty much out the window, since she can just rewrite the settings file and run whatever commands she wants.
 
-The same advice applies for ticking the `NeuroPilot > Allow Unsafe Paths` setting if you gave Autopilot-level permissions to Neuro for editing files.
+The same advice applies for ticking the [*Neuropilot: Allow Unsafe Paths*](vscode://settings/neuropilot.allowUnsafePaths) setting if you gave Autopilot-level permissions to Neuro for editing files.
 
 ## Commands
 
 ### Give Cookie
 
 Gives a cookie to Neuro (it tells her that Vedal gave her a cookie).
+Allows the user to specify the flavor as well.
 
 ### Reconnect
 
@@ -117,7 +118,7 @@ Running this command is required if you change any of the permissions.
 
 Set all permissions for Neuro to 'Off' immediately and unregister the actions.
 Also kills currently running tasks and any shells opened by Neuro.
-Any requests from Neuro when she used a Copilot-mode command is denied automatically.
+Any request from Neuro when she used a Copilot-mode command is denied automatically.
 Since it's intended to be a panic button, it is recommended to bind this command to a keyboard shortcut.
 
 ### Send File As Context
@@ -132,12 +133,20 @@ If a permission level is set to Copilot, commands associated with that permissio
 The icon will be highlighted if a request is pending.
 If an action requires multiple permissions, the minimum permission level is used (Autopilot > Copilot > Off).
 
-### General
+### Miscellaneous
 
 #### `cancel_request`
 
-Only registered if she is attempting to execute a Copilot-level command.
-Allows Neuro to cancel her request. If the notification was acted upon after cancelling, no response will be returned to either side.
+Only registered if she is requesting to execute a Copilot-level command.
+Allows Neuro to cancel her request.
+If the notification was acted upon after cancelling, no response will be returned to either side.
+
+#### `request_cookie`
+
+*Requires Permission: [Request Cookies](vscode://settings/neuropilot.permission.requestCookies)*
+
+Lets Neuro request a cookie from Vedal.
+She can also request a specific flavor.
 
 ### Tasks
 
@@ -160,7 +169,7 @@ Actions that allow Neuro to view and edit files in the workspace.
 *Requires Permission: [Open files](vscode://settings/neuropilot.permission.openFiles).*
 
 Gets a list of files in the workspace.
-What files Neuro can see can be configured with the settings [Include Pattern](vscode://settings/neuropilot.includePattern) and [Exclude Pattern](vscode://settings/neuropilot.excludePattern).
+What files Neuro can see can be configured with the settings [*Include Pattern*](vscode://settings/neuropilot.includePattern) and [*Exclude Pattern*](vscode://settings/neuropilot.excludePattern).
 The files are returned as paths relative to the workspace root.
 
 #### `open_file`
@@ -180,7 +189,7 @@ Places the cursor at the specified line and column or moves the cursor by the sp
 *Requires Permission: [Edit Active Document](vscode://settings/neuropilot.permission.editActiveDocument).*
 
 Returns the current cursor position, as well as the lines before and after the cursor.
-The number of lines returned can be controlled with the settings `neuropilot.beforeContext` and `neuropilot.afterContext`.
+The number of lines returned can be controlled with the settings [*Before Context*](vscode://settings/neuropilot.beforeContext) and [*After Context*](vscode://settings/neuropilot.afterContext).
 
 #### `insert_text`
 
@@ -221,14 +230,14 @@ Only works if VS Code is focused.
 
 *Requires Permission: Edit Active Document.*
 Saves the currently open document.
-Only registered if the `Files > Auto Save` setting isn't set to `afterDelay`.
+Only registered if the [*Files: Auto Save*](vscode://settings/files.autoSave) setting isn't set to `afterDelay`.
 
 #### `create_file`
 
 *Requires Permission: [Create](vscode://settings/neuropilot.permission.create).*
 
 Creates a new file in the workspace.
-If *Permission: Open Files* is given, the file is immediately opened.
+If [*Permission: Open Files*](vscode://settings/neuropilot.permission.openFiles) is given, the file is immediately opened.
 The file name cannot start with a dot, and cannot be created in a folder that starts with a dot.
 
 #### `create_folder`
@@ -236,21 +245,21 @@ The file name cannot start with a dot, and cannot be created in a folder that st
 *Requires Permission: [Create](vscode://settings/neuropilot.permission.create).*
 
 Creates a new folder in the workspace.
-A folder starting with a dot cannot be created this way.
+A folder starting with a dot cannot be created this way unless [*Allow Unsafe Paths*](vscode://settings/neuropilot.allowUnsafePaths) is activated.
 
 #### `rename_file_or_folder`
 
 *Requires Permission: [Rename](vscode://settings/neuropilot.permission.rename).*
 
 Renames a file or folder in the workspace.
-By default his cannot rename to or from a name starting with a dot, or within a folder that starts with a dot.
+This cannot rename to or from a name starting with a dot, or within a folder that starts with a dot, unless [*Allow Unsafe Paths*](vscode://settings/neuropilot.allowUnsafePaths) is activated.
 
 #### `delete_file_or_folder`
 
 *Requires Permission: [Delete](vscode://settings/neuropilot.permission.delete).*
 
 Deletes a file or folder in the workspace.
-By default, this cannot delete anything starting with a dot, or inside a folder starting with a dot.
+This cannot delete anything starting with a dot, or inside a folder starting with a dot, unless [*Allow Unsafe Paths*](vscode://settings/neuropilot.allowUnsafePaths) is activated.
 
 ### Git Interactions
 
@@ -302,13 +311,14 @@ Returns the diff between files.
 *Requires Permission: [Git Operations](vscode://settings/neuropilot.permission.gitOperations).*
 
 Merges another branch into the current branch.
+If the branch cannot be merged cleanly, [`abort_merge`](#abort_merge) is registered.
 
 #### `abort_merge`
 
 *Requires Permission: [Git Operations](vscode://settings/neuropilot.permission.gitOperations).*
 
-*Note: This is only registered if a merge failed to happen cleanly*
 Aborts a merge currently in progress.
+Only registered if a merge failed to happen cleanly.
 
 #### `git_log`
 
@@ -351,6 +361,7 @@ Switches to an existing branch.
 *Requires Permission: [Git Operations](vscode://settings/neuropilot.permission.gitOperations).*
 
 Deletes a branch from the repository.
+Branches that are not fully merged have to be deleted with the `force` parameter.
 
 #### `fetch_git_commits`
 
@@ -362,13 +373,13 @@ Fetches info about missing commits from the specified/default remote.
 
 *Requires Permissions: [Git Operations](vscode://settings/neuropilot.permission.gitOperations) & [Git Remotes](vscode://settings/neuropilot.permission.gitRemotes).*
 
-Pulls new git commits from the specified/default remote.
+Pulls new git commits from the specified or default remote.
 
 #### `push_git_commits`
 
 *Requires Permissions: [Git Operations](vscode://settings/neuropilot.permission.gitOperations) & [Git Remotes](vscode://settings/neuropilot.permission.gitRemotes).*
 
-Pushes unpublished commits to the remote server. If a remote branch is not set as the upstream, this will automatically do so.
+Pushes local commits to the remote. If a remote branch is not set as the upstream, this will automatically do so.
 
 #### `add_git_remote`
 
@@ -386,7 +397,7 @@ Removes a git remote.
 
 *Requires Permissions: [Git Operations](vscode://settings/neuropilot.permission.gitOperations), [Git Remotes](vscode://settings/neuropilot.permission.gitRemotes) & [Edit Remote Data](vscode://settings/neuropilot.permission.editRemoteData).*
 
-Renames a git remote. This only changes the name of the remote, not the location.
+Renames a git remote. This only changes the name of the remote, not the URL.
 
 #### `get_git_config`
 
@@ -417,13 +428,13 @@ If the terminal isn't already running, it will also initialise a terminal instan
 
 *Requires Permission: [Terminal Access](vscode://settings/neuropilot.permission.terminalAccess).*
 
-Kills a running shell. If a shell isn't already running, Neuro will be notified.
+Kills a running shell started by Neuro. If a shell isn't already running, Neuro will be notified.
 
 #### `get_currently_running_shells`
 
 *Requires Permission: [Terminal Access](vscode://settings/neuropilot.permission.terminalAccess).*
 
-Returns the list of currently running shells to Neuro.
+Returns the list of currently running shells started by Neuro to Neuro.
 
 ### Linting
 
@@ -431,23 +442,26 @@ Actions that let Neuro see linting problems reported by other extensions.
 
 In addition to linting problems by built-in language servers (such as the JavaScript and TypeScript Language Server), problems informed by other language servers (e.g. Python extension) will also be sent to Neuro.
 
-Access to linting problems is also limited by the list of Neuro-safe paths.
+Access to linting problems is also limited to Neuro-safe paths.
 
 #### `get_file_lint_problems`
 
 *Requires Permissions: [Access Linting Analysis](vscode://settings/neuropilot.permission.accessLintingAnalysis).*
+
 Returns the linting diagnostics list of a file to Neuro.
 The file must have been loaded first before diagnostics are available.
 
 #### `get_folder_lint_problems`
 
 *Requires Permissions: [Access Linting Analysis](vscode://settings/neuropilot.permission.accessLintingAnalysis).*
+
 Returns the linting diagnostics list of a folder's files to Neuro.
 Note that this only returns diagnostics of files in that folder that are loaded in the current session.
 
 #### `get_workspace_lint_problems`
 
 *Requires Permissions: [Access Linting Analysis](vscode://settings/neuropilot.permission.accessLintingAnalysis).*
+
 Returns the linting diagnostics list of the current workspace to Neuro.
 Note that this only returns diagnostics of files that are loaded in the current session.
 
@@ -457,7 +471,9 @@ This extension uses the [TypeScript/JavaScript SDK](https://github.com/AriesAlex
 
 ### "Why is there a file named rce.ts in it??? Is there an intentional RCE inside this extension???" <!-- had to add this just in case -->
 
-The framework developed for forcing Neuro to request to run actions instead of just directly allowing her to do that action is called the Requested Command Execution (or Request for Command Execution) framework when it was first conceived. The short answer is no, there isn't an intentional Remote Code Execution vulnerability in this extension, but by enabling Neuro's access to Pseudoterminals, one could say she already has access to a very powerful RCE, so be careful with that one.
+Copilot mode is developed for making Neuro request to do actions instead of directly allowing her to do that action.
+This was called the **R**equested **C**ommand **E**xecution (or Request for Command Execution) framework when it was first conceived.
+The short answer is no, there isn't an intentional Remote Code Execution vulnerability in this extension, but by enabling Neuro's access to Pseudoterminals, one could say she already has access to a very powerful RCE, so be careful with that one.
 
 ## Debugging
 
