@@ -11,7 +11,7 @@ import { emergencyTerminalShutdown, saveContextForTerminal } from './pseudotermi
 import { CONFIG } from './config';
 import { sendDiagnosticsDiff } from './lint_problems';
 import { fileSaveListener, toggleSaveAction } from './editing';
-import { emergencyDenyRequests, openRceDialog } from './rce';
+import { emergencyDenyRequests, acceptRceRequest, denyRceRequest, revealRceNotification } from './rce';
 
 export function activate(context: vscode.ExtensionContext) {
     NEURO.url = CONFIG.websocketUrl;
@@ -31,7 +31,9 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand('neuropilot.giveCookie', giveCookie);
     vscode.commands.registerCommand('neuropilot.reloadPermissions', reloadPermissions);
     vscode.commands.registerCommand('neuropilot.disableAllPermissions', disableAllPermissions);
-    vscode.commands.registerCommand('neuropilot.openRceDialog', openRceDialog);
+    vscode.commands.registerCommand('neuropilot.acceptRceRequest', acceptRceRequest);
+    vscode.commands.registerCommand('neuropilot.denyRceRequest', denyRceRequest);
+    vscode.commands.registerCommand('neuropilot.revealRceNotification', revealRceNotification);
 
     registerChatParticipant(context);
     saveContextForTerminal(context);
@@ -64,12 +66,25 @@ export function activate(context: vscode.ExtensionContext) {
     NEURO.statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
     context.subscriptions.push(NEURO.statusBarItem);
     NEURO.statusBarItem.name = 'NeuroPilot';
-    NEURO.statusBarItem.command = 'neuropilot.openRceDialog';
+    NEURO.statusBarItem.command = 'neuropilot.revealRceNotification';
     NEURO.statusBarItem.text = '$(neuropilot-heart)';
     NEURO.statusBarItem.tooltip = new vscode.MarkdownString('No active request');
     NEURO.statusBarItem.color = new vscode.ThemeColor('statusBarItem.foreground');
     NEURO.statusBarItem.backgroundColor = new vscode.ThemeColor('statusBarItem.background');
-    NEURO.statusBarItem.show();
+
+    // sync the status bar item visibility with the setting
+    if (CONFIG.hideCopilotRequests)
+        NEURO.statusBarItem.show();
+
+    vscode.workspace.onDidChangeConfiguration(event => {
+        if (event.affectsConfiguration('neuropilot.hideCopilotRequests')) {
+            if (CONFIG.hideCopilotRequests) {
+                NEURO.statusBarItem?.show();
+            } else {
+                NEURO.statusBarItem?.hide();
+            }
+        }
+    });
 }
 
 function reloadPermissions() {

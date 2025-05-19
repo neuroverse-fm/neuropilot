@@ -19,7 +19,7 @@ export const lintActions = {
         },
         permissions: [PERMISSIONS.accessLintingAnalysis],
         handler: handleGetFileLintProblems,
-        promptGenerator: (actionData: ActionData) => `Neuro wants to get linting diagnostics for "${actionData.params.file}".`,
+        promptGenerator: (actionData: ActionData) => `get linting diagnostics for "${actionData.params.file}".`,
     },
     get_folder_lint_problems: {
         name: 'get_folder_lint_problems',
@@ -33,14 +33,14 @@ export const lintActions = {
         },
         permissions: [PERMISSIONS.accessLintingAnalysis],
         handler: handleGetFolderLintProblems,
-        promptGenerator: (actionData: ActionData) => `Neuro wants to get linting diagnostics for "${actionData.params.folder}".`,
+        promptGenerator: (actionData: ActionData) => `get linting diagnostics for "${actionData.params.folder}".`,
     },
     get_workspace_lint_problems: {
         name: 'get_workspace_lint_problems',
         description: 'Gets linting diagnostics for the current workspace.',
         permissions: [PERMISSIONS.accessLintingAnalysis],
         handler: handleGetWorkspaceLintProblems,
-        promptGenerator: () => 'Neuro wants to get linting diagnostics for the current workspace.',
+        promptGenerator: () => 'get linting diagnostics for the current workspace.',
     },
 } satisfies Record<string, ActionWithHandler>;
 

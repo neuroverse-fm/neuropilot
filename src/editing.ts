@@ -25,14 +25,14 @@ export const editingActions = {
         },
         permissions: [PERMISSIONS.editActiveDocument],
         handler: handlePlaceCursor,
-        promptGenerator: (actionData: ActionData) => `Neuro wants to place the cursor at (${actionData.params.line}:${actionData.params.column})`,
+        promptGenerator: (actionData: ActionData) => `place the cursor at (${actionData.params.line}:${actionData.params.column}).`,
     },
     get_cursor: {
         name: 'get_cursor',
         description: 'Get the current cursor position and the text surrounding it',
         permissions: [PERMISSIONS.editActiveDocument],
         handler: handleGetCursor,
-        promptGenerator: 'Neuro wants to get the current cursor position and the text surrounding it',
+        promptGenerator: 'get the current cursor position and the text surrounding it.',
     },
     insert_text: {
         name: 'insert_text',
@@ -46,7 +46,10 @@ export const editingActions = {
         },
         permissions: [PERMISSIONS.editActiveDocument],
         handler: handleInsertText,
-        promptGenerator: (actionData: ActionData) => `Neuro wants to insert the following text:\n\n\`\`\`\n${actionData.params.text}\n\`\`\``,
+        promptGenerator: (actionData: ActionData) => {
+            const lineCount = actionData.params.text.trim().split('\n').length;
+            return `insert ${lineCount} line${lineCount === 1 ? '' : 's'} of code.`
+        },
     },
     replace_text: {
         name: 'replace_text',
@@ -63,7 +66,7 @@ export const editingActions = {
         },
         permissions: [PERMISSIONS.editActiveDocument],
         handler: handleReplaceText,
-        promptGenerator: (actionData: ActionData) => `Neuro wants to replace "${actionData.params.useRegex ? escapeRegExp(actionData.params.find) : actionData.params.find}" with "${actionData.params.replaceWith}".`,
+        promptGenerator: (actionData: ActionData) => `replace "${actionData.params.useRegex ? escapeRegExp(actionData.params.find) : actionData.params.find}" with "${actionData.params.replaceWith}".`,
     },
     delete_text: {
         name: 'delete_text',
@@ -79,7 +82,7 @@ export const editingActions = {
         },
         permissions: [PERMISSIONS.editActiveDocument],
         handler: handleDeleteText,
-        promptGenerator: (actionData: ActionData) => `Neuro wants to delete "${actionData.params.useRegex ? escapeRegExp(actionData.params.find) : actionData.params.find}".`,
+        promptGenerator: (actionData: ActionData) => `delete "${actionData.params.useRegex ? escapeRegExp(actionData.params.find) : actionData.params.find}".`,
     },
     find_text: {
         name: 'find_text',
@@ -95,21 +98,21 @@ export const editingActions = {
         },
         permissions: [PERMISSIONS.editActiveDocument],
         handler: handleFindText,
-        promptGenerator: (actionData: ActionData) => `Neuro wants to find "${actionData.params.useRegex ? escapeRegExp(actionData.params.find) : actionData.params.find}".`,
+        promptGenerator: (actionData: ActionData) => `find "${actionData.params.useRegex ? escapeRegExp(actionData.params.find) : actionData.params.find}".`,
     },
     undo: {
         name: 'undo',
         description: 'Undo the last action in the active document. If this doesn\'t work, tell Vedal to focus your VS Code window.',
         permissions: [PERMISSIONS.editActiveDocument],
         handler: handleUndo,
-        promptGenerator: 'Neuro wants to undo the last action.',
+        promptGenerator: 'undo the last action.',
     },
     save: {
         name: 'save',
         description: 'Manually save the currently open document.',
         permissions: [PERMISSIONS.editActiveDocument],
         handler: handleSave,
-        promptGenerator: 'Neuro wants to save.',
+        promptGenerator: 'save.',
     },
 } satisfies Record<string, ActionWithHandler>;
 
