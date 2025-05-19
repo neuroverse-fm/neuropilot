@@ -24,7 +24,8 @@ Capabilities of this extension include:
     -->
 - letting Neuro view linting diagnostics, and be updated on linting diagnostics as they come in.
 
-These can all be turned on or off using the extension's permission settings. <!-- TODO: Inline suggestions currently can't be turned off -->
+These can all be turned on or off using the extension's permission settings.
+All permissions are set to "Off" by default, [except one](vscode://settings/neuropilot.permission.requestCookies).
 
 ## How to use
 
@@ -38,7 +39,7 @@ There are two ways the extension can be used, which will be referred to as "Auto
 
 ### Autopilot Mode
 
-To make Neuro able to code without human input, go to the extension settings and set the necessary permissions to "Autopilot", then run the command "NeuroPilot: Reload Permissions" from the Command Palette. <!-- TODO: Figure out how this will work in #28 -->
+To make Neuro able to code without human input, go to the extension settings and set the necessary permissions to "Autopilot", then run the command "NeuroPilot: Reload Permissions" from the Command Palette.
 It is recommended to turn on auto-saving in the settings for this in case Neuro doesn't remember to save her files regularly.
 Tasks that Neuro can run are loaded from `tasks.json`, but it requires some setup for Neuro to use them.
 All tasks that Neuro should be able to run must have the string `[Neuro]` at the start of their `detail` property.
@@ -50,7 +51,7 @@ Copilot mode aims to let Neuro code alongside the user, by letting her suggest c
 
 Instead of executing actions directly like in Autopilot Mode, a notification popup will appear asking you to confirm the action first.
 The actions Neuro has access to and the permissions that govern them are the same as in Autopilot Mode.
-Neuro can only request one action at a time<!-- , but she can also cancel it to request something else -->. <!-- TODO: Figure out if this is possible in #28 -->
+Neuro can only request one action at a time, but she can also cancel it to request something else.
 
 If you wish to use inline suggestions, you should add a keyboard shortcut for "Trigger Inline Suggestion" (`editor.action.inlineSuggest.trigger`) if you haven't already.
 Once you are in a file, place your cursor where you want the new code to be inserted and trigger a suggestion.
@@ -75,10 +76,8 @@ Simply paste this into your `settings.json` file:
 
 ### Mixing Autopilot and Copilot Mode
 
-> [!WARNING]
-> Whether or how this section applies depends heavily on the outcome of [#28](https://github.com/Pasu4/neuropilot/pull/28), which at the time of writing is still in the design phase.
-
-<!-- TODO: See above. Remove this warning when it has been determined how this will be implemented. -->
+Autopilot and Copilot mode can be configured separately for each permission.
+For example, you can configure it so Neuro can edit files by herself, but has to ask permission to run the code she wrote.
 
 ## Security
 
