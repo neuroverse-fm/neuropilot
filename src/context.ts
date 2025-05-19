@@ -36,7 +36,13 @@ export function registerRequestCookieAction() {
     NEURO.client?.registerActions([
         {
             name: 'request_cookie',
-            description: 'Ask Vedal for a cookie.',
+            description: "Ask Vedal for a cookie. You can request a specific flavor, but it's up to Vedal to decide.",
+            schema: {
+                type: 'object',
+                properties: {
+                    flavor: { type: 'string' },
+                },
+            },
         },
     ]);
 }
@@ -58,10 +64,14 @@ export function registerRequestCookieHandler() {
             NEURO.waitingForCookie = true;
             NEURO.client?.sendActionResult(actionData.id, true, 'Vedal has been asked for a cookie.');
 
-            vscode.window.showInformationMessage('Neuro is asking for a cookie.', 'Give', 'Deny').then((value) => {
+            vscode.window.showInformationMessage(
+                `Neuro is asking for a${actionData.params?.flavor ? ' ' + actionData.params.flavor : ''} cookie.`,
+                'Give',
+                'Deny',
+            ).then((value) => {
                 if(value === 'Give') {
-                    giveCookie();
-                } else if(value === 'Deny') {
+                    giveCookie(true, actionData.params?.flavor);
+                } else if(value === 'Deny' || value === undefined) {
                     denyCookie();
                 }
                 NEURO.waitingForCookie = false;
@@ -70,7 +80,7 @@ export function registerRequestCookieHandler() {
     });
 }
 
-export function giveCookie() {
+export function giveCookie(isRequested = false, defaultFlavor = 'Chocolate Chip') {
     NEURO.waitingForCookie = false;
     if(!NEURO.connected) {
         logOutput('ERROR', 'Attempted to give cookie while disconnected');
@@ -78,8 +88,21 @@ export function giveCookie() {
         return;
     }
 
-    logOutput('INFO', 'Giving cookie to Neuro');
-    NEURO.client?.sendContext('Vedal gave you a cookie!');
+    vscode.window.showInputBox({
+        prompt: 'What flavor?',
+        placeHolder: 'Chocolate Chip',
+        value: defaultFlavor,
+        title: 'Give Neuro a cookie',
+    }).then((flavor) => {
+        if(!flavor) {
+            logOutput('INFO', 'No flavor given, canceling cookie');
+            if(isRequested)
+                NEURO.client?.sendContext("Vedal couldn't decide on a flavor for your cookie.");
+            return;
+        }
+        logOutput('INFO', 'Giving cookie to Neuro');
+        NEURO.client?.sendContext(`Vedal gave you a ${flavor} cookie!`);
+    });
 }
 
 export function denyCookie() {
