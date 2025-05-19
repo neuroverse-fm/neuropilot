@@ -60,7 +60,7 @@ export function registerRequestCookieHandler() {
 
             vscode.window.showInformationMessage('Neuro is asking for a cookie.', 'Give', 'Deny').then((value) => {
                 if(value === 'Give') {
-                    giveCookie();
+                    giveCookie(true);
                 } else if(value === 'Deny') {
                     denyCookie();
                 }
@@ -70,7 +70,7 @@ export function registerRequestCookieHandler() {
     });
 }
 
-export function giveCookie() {
+export function giveCookie(isRequested = false) {
     NEURO.waitingForCookie = false;
     if(!NEURO.connected) {
         logOutput('ERROR', 'Attempted to give cookie while disconnected');
@@ -78,8 +78,22 @@ export function giveCookie() {
         return;
     }
 
-    logOutput('INFO', 'Giving cookie to Neuro');
-    NEURO.client?.sendContext('Vedal gave you a cookie!');
+    vscode.window.showInputBox({
+        prompt: 'What flavor?',
+        placeHolder: 'Chocolate Chip',
+        value: 'Chocolate Chip',
+        title: 'Give Neuro a cookie',
+    }).then((flavor) => {
+        if(!flavor) {
+            logOutput('INFO', 'No flavor given, canceling cookie');
+            if(isRequested)
+                NEURO.client?.sendContext("Vedal couldn't decide on a flavor for your cookie.");
+            return;
+        }
+        logOutput('INFO', 'Giving cookie to Neuro');
+        NEURO.client?.sendContext(`Vedal gave you a ${flavor} cookie!`);
+    });
+
 }
 
 export function denyCookie() {
