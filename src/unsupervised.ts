@@ -101,8 +101,8 @@ export function registerUnsupervisedHandlers() {
                 }
 
                 const prompt = typeof action.promptGenerator === 'string'
-                    ? "Neuro wants to " + (action.promptGenerator as string).trim()
-                    : "Neuro wants to " + ((action.promptGenerator as (actionData: ActionData) => string)(actionData)).trim();
+                    ? 'Neuro wants to ' + (action.promptGenerator as string).trim()
+                    : 'Neuro wants to ' + (action.promptGenerator as (actionData: ActionData) => string)(actionData).trim();
 
                 createRceRequest(
                     prompt,
