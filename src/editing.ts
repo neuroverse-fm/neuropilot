@@ -25,7 +25,7 @@ export const editingActions = {
         },
         permissions: [PERMISSIONS.editActiveDocument],
         handler: handlePlaceCursor,
-        promptGenerator: (actionData: ActionData) => `place the cursor at (${actionData.params.line}:${actionData.params.column})`,
+        promptGenerator: (actionData: ActionData) => `place the cursor at (${actionData.params.line}:${actionData.params.column}).`,
     },
     get_cursor: {
         name: 'get_cursor',
