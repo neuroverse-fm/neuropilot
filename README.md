@@ -482,3 +482,8 @@ The short answer is no, there isn't an intentional Remote Code Execution vulnera
 - Run the `Run Extension` target in the Debug View. This will:
     - Start a task `npm: watch` to compile the code
     - Run the extension in a new VS Code window
+
+## Contributing
+
+If you have an idea or want to contribute a feature, please first create an issue or send a message to `@Pasu4` in the project's [post on the Neuro Discord](https://discord.com/channels/574720535888396288/1350968830230396938).
+If you make a pull request that contributes code, please run `npm run lint src` and resolve any errors that did not get auto-fixed, preferrably before each commit.
