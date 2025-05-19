@@ -89,6 +89,8 @@ Neuro cannot open, edit, or otherwise access files or folders that start with a 
 This is mainly to prevent her from opening `.vscode/tasks.json` to essentially run arbitrary commands in the terminal, or editing `.vscode/settings.json` to escalate her permissions.
 **Warning: If your workspace is inside such a folder, Neuro will not be able to edit *any* files!**
 
+You can customise what directories are included in the list using the `NeuroPilot > Include Pattern` and `NeuroPilot > Exclude Pattern`, and you can disable the default directory checks using `NeuroPilot > Allow Unsafe Paths`.
+
 Neuro also can't change the global git configuration, only the one local to the current repository.
 
 Note that if Neuro has direct terminal access, you should assume all security features are pretty much out the window, since she can just rewrite the settings file and run whatever commands she wants.
@@ -115,6 +117,7 @@ Running this command is required if you change any of the permissions.
 
 Set all permissions for Neuro to 'Off' immediately and unregister the actions.
 Also kills currently running tasks and any shells opened by Neuro.
+Any requests from Neuro when she used a Copilot-mode command is denied automatically.
 Since it's intended to be a panic button, it is recommended to bind this command to a keyboard shortcut.
 
 ### Send File As Context
@@ -125,6 +128,16 @@ Sends the entire current file as context to Neuro, along with the file name and 
 
 The following are all actions that Neuro has access to.
 Note that Neuro can only use an action if the relevant permission is enabled.
+If a permission level is set to Copilot, commands associated with that permission level first send a request to VS Code, which you can review, then allow/deny, using the NeuroPilot icon in the bottom bar.
+The icon will be highlighted if a request is pending.
+If an action requires multiple permissions, the minimum permission level is used (Autopilot > Copilot > Off).
+
+### General
+
+#### `cancel_request`
+
+Only registered if she is attempting to execute a Copilot-level command.
+Allows Neuro to cancel her request. If the notification was acted upon after cancelling, no response will be returned to either side.
 
 ### Tasks
 
@@ -204,6 +217,12 @@ Depending on the match mode, places the cursor at the location or returns all li
 Undoes the last editing action.
 Only works if VS Code is focused.
 
+#### `save`
+
+*Requires Permission: Edit Active Document.*
+Saves the currently open document.
+Only registered if the `Files > Auto Save` setting isn't set to `afterDelay`.
+
 #### `create_file`
 
 *Requires Permission: [Create](vscode://settings/neuropilot.permission.create).*
@@ -237,11 +256,16 @@ By default, this cannot delete anything starting with a dot, or inside a folder 
 
 Actions that allow Neuro to use Git for version control.
 
+In addition to requiring their respective permissions, the extension will also check for a repo before registering actions other than `init_git_repo`.
+
+Because this relies on the built-in Git extension, this extension will first check for the Git extension before attempting to execute each handler.
+
 #### `init_git_repo`
 
 *Requires Permission: [Git Operations](vscode://settings/neuropilot.permission.gitOperations).*
 
-Initialises a Git repository in the workspace folder and registers git commands.
+Initialises a Git repository in the workspace folder and registers other git commands.
+The local repository will be reinitialised if a git repository already exists.
 
 #### `add_file_to_git`
 
@@ -405,6 +429,10 @@ Returns the list of currently running shells to Neuro.
 
 Actions that let Neuro see linting problems reported by other extensions.
 
+In addition to linting problems by built-in language servers (such as the JavaScript and TypeScript Language Server), problems informed by other language servers (e.g. Python extension) will also be sent to Neuro.
+
+Access to linting problems is also limited by the list of Neuro-safe paths.
+
 #### `get_file_lint_problems`
 
 *Requires Permissions: [Access Linting Analysis](vscode://settings/neuropilot.permission.accessLintingAnalysis).*
@@ -426,6 +454,10 @@ Note that this only returns diagnostics of files that are loaded in the current 
 ## Further Info
 
 This extension uses the [TypeScript/JavaScript SDK](https://github.com/AriesAlex/typescript-neuro-game-sdk) by [AriesAlex](https://github.com/AriesAlex).
+
+### "Why is there a file named rce.ts in it??? Is there an intentional RCE inside this extension???" <!-- had to add this just in case -->
+
+The framework developed for forcing Neuro to request to run actions instead of just directly allowing her to do that action is called the Requested Command Execution (or Request for Command Execution) framework when it was first conceived. The short answer is no, there isn't an intentional Remote Code Execution vulnerability in this extension, but by enabling Neuro's access to Pseudoterminals, one could say she already has access to a very powerful RCE, so be careful with that one.
 
 ## Debugging
 

@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { NeuroClient } from 'neuro-game-sdk';
 import { TerminalSession } from './utils';
+import { RceRequest } from './rce';
 
 export interface NeuroTask {
     id: string;
@@ -36,6 +37,9 @@ interface Neuro {
     terminalRegistry: Map<string, TerminalSession>;
     /** This is needed because VSCode doesn't say what changed, only what files were changed */
     previousDiagnosticsMap: Map<string, vscode.Diagnostic[]>;
+    saving: boolean;
+    rceRequest: RceRequest | null;
+    statusBarItem: vscode.StatusBarItem | null;
 }
 
 
@@ -55,4 +59,7 @@ export const NEURO: Neuro = {
     terminalEnabled: false,
     terminalRegistry: new Map(),
     previousDiagnosticsMap: new Map(),
+    saving: false,
+    rceRequest: null,
+    statusBarItem: null,
 };
