@@ -1,13 +1,12 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
-import { NeuroClient } from "neuro-game-sdk";
-var globToRegExp = require('glob-to-regexp');
+import { NeuroClient } from 'neuro-game-sdk';
+import globToRegExp from 'glob-to-regexp';
 
 import { ChildProcessWithoutNullStreams } from 'child_process';
 
 import { NEURO } from './constants';
-import { Range } from 'vscode';
-import { CONFIG, Permission } from './config';
+import { CONFIG } from './config';
 
 export const REGEXP_ALWAYS = /^/;
 export const REGEXP_NEVER = /^\b$/;
@@ -82,7 +81,7 @@ export function onClientConnected(handler: () => void) {
 
 export function simpleFileName(fileName: string): string {
     const rootFolder = vscode.workspace.workspaceFolders?.[0].uri.fsPath.replace(/\\/, '/');
-    let result = fileName.replace(/\\/g, '/');
+    const result = fileName.replace(/\\/g, '/');
     if(rootFolder && result.startsWith(rootFolder))
         return result.substring(rootFolder.length);
     else
@@ -131,12 +130,12 @@ export function getPositionContext(document: vscode.TextDocument, position: vsco
         position = position2;
         position2 = temp;
     }
-    
+
     const startLine = Math.max(0, position.line - beforeContextLength);
-    const contextBefore = document.getText(new Range(new vscode.Position(startLine, 0), position));
+    const contextBefore = document.getText(new vscode.Range(new vscode.Position(startLine, 0), position));
     const endLine = Math.min(document.lineCount - 1, position2.line + afterContextLength);
-    const contextAfter = document.getText(new Range(position2, new vscode.Position(endLine, document.lineAt(endLine).text.length))).replace(/\r\n/g, '\n');
-    const contextBetween = document.getText(new Range(position, position2));
+    const contextAfter = document.getText(new vscode.Range(position2, new vscode.Position(endLine, document.lineAt(endLine).text.length))).replace(/\r\n/g, '\n');
+    const contextBetween = document.getText(new vscode.Range(position, position2));
 
     return {
         contextBefore: filterFileContents(contextBefore),
@@ -193,13 +192,13 @@ export function combineGlobLinesToRegExp(lines: string): RegExp {
  * @param checkPatterns Whether to check against include and exclude patterns.
  * @returns True if Neuro may safely access the path.
  */
-export function isPathNeuroSafe(path: string, checkPatterns: boolean = true): boolean {
+export function isPathNeuroSafe(path: string, checkPatterns = true): boolean {
     const rootFolder = getWorkspacePath();
     const normalizedPath = normalizePath(path);
-    const includePattern = CONFIG.includePattern || "**/*";
+    const includePattern = CONFIG.includePattern || '**/*';
     const excludePattern = CONFIG.excludePattern;
     const includeRegExp: RegExp = checkPatterns ? combineGlobLinesToRegExp(includePattern) : REGEXP_ALWAYS;
-    const excludeRegExp: RegExp = (checkPatterns && excludePattern) ? combineGlobLinesToRegExp(excludePattern) : REGEXP_NEVER;
+    const excludeRegExp: RegExp = checkPatterns && excludePattern ? combineGlobLinesToRegExp(excludePattern) : REGEXP_NEVER;
 
     if (CONFIG.allowUnsafePaths === true) {
         return includeRegExp.test(normalizedPath)       // Check against include pattern
@@ -219,13 +218,13 @@ export function isPathNeuroSafe(path: string, checkPatterns: boolean = true): bo
 
 // Helper function to normalize repository paths
 export function getNormalizedRepoPathForGit(repoPath: string): string {
-  // Remove trailing backslashes
-  let normalized = repoPath.replace(/\\+$/, '');
-  // Normalize the path to remove redundant separators etc.
-  normalized = path.normalize(normalized);
-  // Convert backslashes to forward slashes if needed by your Git library
-  normalized = normalized.replace(/\\/g, '/');
-  return normalized;
+    // Remove trailing backslashes
+    let normalized = repoPath.replace(/\\+$/, '');
+    // Normalize the path to remove redundant separators etc.
+    normalized = path.normalize(normalized);
+    // Convert backslashes to forward slashes if needed by your Git library
+    normalized = normalized.replace(/\\/g, '/');
+    return normalized;
 }
 
 /*

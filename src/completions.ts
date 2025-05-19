@@ -34,8 +34,13 @@ export function requestCompletion(beforeContext: string, afterContext: string, f
         {
             name: 'complete_code',
             description: maxCount == 1
-                ? `Suggest code to write. You may make one suggestion. Your suggestion can be a single line or a multi-line code snippet.`
-                : `Suggest code to write. You may make up to ${maxCount} suggestions, but only one will be used. Your suggestions can be single lines or multi-line code snippets.`,
+                ? 'Suggest code to write.' +
+                ' You may make one suggestion.' +
+                ' Your suggestion can be a single line or a multi-line code snippet.'
+
+                : 'Suggest code to write.' +
+                ` You may make up to ${maxCount} suggestions, but only one will be used.` +
+                ' Your suggestions can be single lines or multi-line code snippets.',
             schema: {
                 type: 'object',
                 properties: {
@@ -43,11 +48,11 @@ export function requestCompletion(beforeContext: string, afterContext: string, f
                         type: 'array',
                         items: { type: 'string' },
                         maxItems: maxCount,
-                    }
+                    },
                 },
                 required: ['suggestions'],
-            }
-        }
+            },
+        },
     ]);
 
     NEURO.client.forceActions(
@@ -112,7 +117,6 @@ export const completionsProvider: vscode.InlineCompletionItemProvider = {
             items: [],
         };
 
-        // Check for manual trigger vs. auto-trigger.
         const triggerAuto = CONFIG.completionTrigger === 'automatic';
         if (!triggerAuto && context.triggerKind !== vscode.InlineCompletionTriggerKind.Invoke) {
             return result;

@@ -9,6 +9,9 @@ import { registerUnsupervisedActions, registerUnsupervisedHandlers } from './uns
 import { reloadTasks, taskEndedHandler } from './tasks';
 import { emergencyTerminalShutdown, saveContextForTerminal } from './pseudoterminal';
 import { CONFIG } from './config';
+import { sendDiagnosticsDiff } from './lint_problems';
+import { fileSaveListener, toggleSaveAction } from './editing';
+import { emergencyDenyRequests, acceptRceRequest, denyRceRequest, revealRceNotification } from './rce';
 
 export function activate(context: vscode.ExtensionContext) {
     NEURO.url = CONFIG.websocketUrl;
@@ -28,6 +31,9 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand('neuropilot.giveCookie', giveCookie);
     vscode.commands.registerCommand('neuropilot.reloadPermissions', reloadPermissions);
     vscode.commands.registerCommand('neuropilot.disableAllPermissions', disableAllPermissions);
+    vscode.commands.registerCommand('neuropilot.acceptRceRequest', acceptRceRequest);
+    vscode.commands.registerCommand('neuropilot.denyRceRequest', denyRceRequest);
+    vscode.commands.registerCommand('neuropilot.revealRceNotification', revealRceNotification);
 
     registerChatParticipant(context);
     saveContextForTerminal(context);
@@ -42,9 +48,43 @@ export function activate(context: vscode.ExtensionContext) {
     onClientConnected(registerUnsupervisedHandlers);
     onClientConnected(registerPostActionHandler);
 
+    vscode.languages.onDidChangeDiagnostics(sendDiagnosticsDiff);
+
     vscode.tasks.onDidEndTask(taskEndedHandler);
 
+    vscode.workspace.onDidSaveTextDocument(fileSaveListener);
+
+    vscode.workspace.onDidChangeConfiguration(event => {
+        if (event.affectsConfiguration('files.autoSave')) {
+            NEURO.client?.sendContext('The Auto-Save setting has been modified.');
+            toggleSaveAction();
+        }
+    });
+
     createClient();
+
+    NEURO.statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
+    context.subscriptions.push(NEURO.statusBarItem);
+    NEURO.statusBarItem.name = 'NeuroPilot';
+    NEURO.statusBarItem.command = 'neuropilot.revealRceNotification';
+    NEURO.statusBarItem.text = '$(neuropilot-heart)';
+    NEURO.statusBarItem.tooltip = new vscode.MarkdownString('No active request');
+    NEURO.statusBarItem.color = new vscode.ThemeColor('statusBarItem.foreground');
+    NEURO.statusBarItem.backgroundColor = new vscode.ThemeColor('statusBarItem.background');
+
+    // sync the status bar item visibility with the setting
+    if (CONFIG.hideCopilotRequests)
+        NEURO.statusBarItem.show();
+
+    vscode.workspace.onDidChangeConfiguration(event => {
+        if (event.affectsConfiguration('neuropilot.hideCopilotRequests')) {
+            if (CONFIG.hideCopilotRequests) {
+                NEURO.statusBarItem?.show();
+            } else {
+                NEURO.statusBarItem?.hide();
+            }
+        }
+    });
 }
 
 function reloadPermissions() {
@@ -62,23 +102,26 @@ function registerPreActionHandler() {
 function registerPostActionHandler() {
     NEURO.client?.onAction((actionData) => {
         if(NEURO.actionHandled) return;
-        
+
         NEURO.client?.sendActionResult(actionData.id, true, 'Unknown action');
     });
 }
 
 function disableAllPermissions() {
     const config = vscode.workspace.getConfiguration('neuropilot');
-    const permissionKeys = config.get<{ [key: string]: boolean }>('permission');
+    const permissionKeys = config.get<Record<string, string>>('permission');
     // Disable each permission one-by-one
-    let promises: Thenable<void>[] = [];
+    const promises: Thenable<void>[] = [];
     if (permissionKeys) {
         for (const key of Object.keys(permissionKeys)) {
-            promises.push(config.update(`permission.${key}`, false, vscode.ConfigurationTarget.Workspace));
+            promises.push(config.update(`permission.${key}`, 'off', vscode.ConfigurationTarget.Workspace));
         }
     }
     if (CONFIG.allowUnsafePaths === true) {
-        promises.push(config.update('allowUnsafePaths', false, vscode.ConfigurationTarget.Workspace))
+        promises.push(config.update('allowUnsafePaths', false, vscode.ConfigurationTarget.Workspace));
+    }
+    if (CONFIG.sendNewLintingProblemsOn !== 'off') {
+        promises.push(config.update('sendNewLintingProblemsOn', 'off', vscode.ConfigurationTarget.Workspace));
     }
     Promise.all(promises).then(() => {
         const exe = NEURO.currentTaskExecution;
@@ -87,9 +130,10 @@ function disableAllPermissions() {
             NEURO.currentTaskExecution = null;
         }
         emergencyTerminalShutdown();
+        emergencyDenyRequests();
         // Send context and reload
         reloadPermissions();
-        NEURO.client?.sendContext("Vedal has turned off all dangerous permissions.");
-        vscode.window.showInformationMessage("All dangerous permissions have been turned off and actions have been re-registered. Terminal shells have also been killed, if any.");
+        NEURO.client?.sendContext('Vedal has turned off all dangerous permissions.');
+        vscode.window.showInformationMessage('All dangerous permissions have been turned off and actions have been re-registered. Terminal shells have also been killed, if any.');
     });
 }
