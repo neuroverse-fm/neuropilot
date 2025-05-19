@@ -29,7 +29,7 @@ export const gitActions = {
         description: 'Initialize a new Git repository in the current workspace folder',
         permissions: [PERMISSIONS.gitOperations],
         handler: handleNewGitRepo,
-        promptGenerator: 'Neuro wants to initialize a Git repository in the workspace.',
+        promptGenerator: 'initialize a Git repository in the workspace.',
     },
     add_file_to_git: {
         name: 'add_file_to_git',
@@ -43,7 +43,7 @@ export const gitActions = {
         },
         permissions: [PERMISSIONS.gitOperations],
         handler: handleAddFileToGit,
-        promptGenerator: (actionData: ActionData) => `Neuro wants to add the file "${actionData.params.filePath}" to the staging area.`,
+        promptGenerator: (actionData: ActionData) => `add the file "${actionData.params.filePath}" to the staging area.`,
         validator: gitValidator,
     },
     make_git_commit: {
@@ -62,7 +62,7 @@ export const gitActions = {
         },
         permissions: [PERMISSIONS.gitOperations],
         handler: handleMakeGitCommit,
-        promptGenerator: (actionData: ActionData) => `Neuro wants to commit changes with the message "${actionData.params.message}".`,
+        promptGenerator: (actionData: ActionData) => `commit changes with the message "${actionData.params.message}".`,
         validator: gitValidator,
     },
     merge_to_current_branch: {
@@ -77,7 +77,7 @@ export const gitActions = {
         },
         permissions: [PERMISSIONS.gitOperations],
         handler: handleGitMerge,
-        promptGenerator: (actionData: ActionData) => `Neuro wants to merge "${actionData.params.ref_to_merge}" into the current branch.`,
+        promptGenerator: (actionData: ActionData) => `merge "${actionData.params.ref_to_merge}" into the current branch.`,
         validator: gitValidator,
     },
     git_status: {
@@ -85,7 +85,7 @@ export const gitActions = {
         description: 'Get the current status of the Git repository',
         permissions: [PERMISSIONS.gitOperations],
         handler: handleGitStatus,
-        promptGenerator: 'Neuro wants to get the Git status.',
+        promptGenerator: 'get the Git status.',
         validator: gitValidator,
     },
     remove_file_from_git: {
@@ -100,7 +100,7 @@ export const gitActions = {
         },
         permissions: [PERMISSIONS.gitOperations],
         handler: handleRemoveFileFromGit,
-        promptGenerator: (actionData: ActionData) => `Neuro wants to remove the file "${actionData.params.filePath}" from the staging area.`,
+        promptGenerator: (actionData: ActionData) => `remove the file "${actionData.params.filePath}" from the staging area.`,
         validator: gitValidator,
     },
     delete_git_branch: {
@@ -116,7 +116,7 @@ export const gitActions = {
         },
         permissions: [PERMISSIONS.gitOperations],
         handler: handleDeleteGitBranch,
-        promptGenerator: (actionData: ActionData) => `Neuro wants to delete the branch "${actionData.params.branchName}".`,
+        promptGenerator: (actionData: ActionData) => `delete the branch "${actionData.params.branchName}".`,
         validator: gitValidator,
     },
     switch_git_branch: {
@@ -131,7 +131,7 @@ export const gitActions = {
         },
         permissions: [PERMISSIONS.gitOperations],
         handler: handleSwitchGitBranch,
-        promptGenerator: (actionData: ActionData) => `Neuro wants to switch to the branch "${actionData.params.branchName}".`,
+        promptGenerator: (actionData: ActionData) => `switch to the branch "${actionData.params.branchName}".`,
         validator: gitValidator,
     },
     new_git_branch: {
@@ -146,7 +146,7 @@ export const gitActions = {
         },
         permissions: [PERMISSIONS.gitOperations],
         handler: handleNewGitBranch,
-        promptGenerator: (actionData: ActionData) => `Neuro wants to create a new branch "${actionData.params.branchName}".`,
+        promptGenerator: (actionData: ActionData) => `create a new branch "${actionData.params.branchName}".`,
         validator: gitValidator,
     },
     diff_files: {
@@ -163,7 +163,7 @@ export const gitActions = {
         },
         permissions: [PERMISSIONS.gitOperations],
         handler: handleDiffFiles,
-        promptGenerator: (actionData: ActionData) => `Neuro wants to obtain ${actionData.params?.filePath ? `${actionData.params.filePath}'s` : 'a'} Git diff${actionData.params?.ref1 && actionData.params?.ref2 ? ` between ${actionData.params.ref1} and ${actionData.params.ref2}` : actionData.params?.ref1 ? ` at ref ${actionData.params.ref1}` : ''}${actionData.params?.diffType ? ` (of type "${actionData.params.diffType}")` : ''}.`,
+        promptGenerator: (actionData: ActionData) => `obtain ${actionData.params?.filePath ? `${actionData.params.filePath}'s` : 'a'} Git diff${actionData.params?.ref1 && actionData.params?.ref2 ? ` between ${actionData.params.ref1} and ${actionData.params.ref2}` : actionData.params?.ref1 ? ` at ref ${actionData.params.ref1}` : ''}${actionData.params?.diffType ? ` (of type "${actionData.params.diffType}")` : ''}.`,
         validator: gitValidator,
     },
     git_log: {
@@ -171,7 +171,7 @@ export const gitActions = {
         description: 'Get the commit history of the current branch',
         permissions: [PERMISSIONS.gitOperations],
         handler: handleGitLog,
-        promptGenerator: 'Neuro wants to get the Git log.',
+        promptGenerator: 'get the Git log.',
         validator: gitValidator,
     },
     git_blame: {
@@ -186,7 +186,7 @@ export const gitActions = {
         },
         permissions: [PERMISSIONS.gitOperations],
         handler: handleGitBlame,
-        promptGenerator: (actionData: ActionData) => `Neuro wants to get the Git blame for the file "${actionData.params.filePath}".`,
+        promptGenerator: (actionData: ActionData) => `get the Git blame for the file "${actionData.params.filePath}".`,
         validator: gitValidator,
     },
 
@@ -204,7 +204,7 @@ export const gitActions = {
         },
         permissions: [PERMISSIONS.gitOperations, PERMISSIONS.gitTags],
         handler: handleTagHEAD,
-        promptGenerator: (actionData: ActionData) => `Neuro wants to tag the current commit with the name "${actionData.params.name}" and associate it with the "${actionData.params.upstream}" remote.`,
+        promptGenerator: (actionData: ActionData) => `tag the current commit with the name "${actionData.params.name}" and associate it with the "${actionData.params.upstream}" remote.`,
         validator: gitValidator,
     },
     delete_tag: {
@@ -219,7 +219,7 @@ export const gitActions = {
         },
         permissions: [PERMISSIONS.gitOperations, PERMISSIONS.gitTags],
         handler: handleDeleteTag,
-        promptGenerator: (actionData: ActionData) => `Neuro wants to delete the tag "${actionData.params.name}".`,
+        promptGenerator: (actionData: ActionData) => `delete the tag "${actionData.params.name}".`,
         validator: gitValidator,
     },
 
@@ -237,7 +237,7 @@ export const gitActions = {
         },
         permissions: [PERMISSIONS.gitOperations, PERMISSIONS.gitConfigs],
         handler: handleSetGitConfig,
-        promptGenerator: (actionData: ActionData) => `Neuro wants to set the Git config key "${actionData.params.key}" to "${actionData.params.value}".`,
+        promptGenerator: (actionData: ActionData) => `set the Git config key "${actionData.params.key}" to "${actionData.params.value}".`,
         validator: gitValidator,
     },
     get_git_config: {
@@ -251,7 +251,7 @@ export const gitActions = {
         },
         permissions: [PERMISSIONS.gitOperations, PERMISSIONS.gitConfigs],
         handler: handleGetGitConfig,
-        promptGenerator: (actionData: ActionData) => actionData.params?.key ? `Neuro wants to get the Git config key "${actionData.params.key}".` : 'Neuro wants to get the Git config.',
+        promptGenerator: (actionData: ActionData) => actionData.params?.key ? `get the Git config key "${actionData.params.key}".` : 'get the Git config.',
         validator: gitValidator,
     },
 
@@ -270,12 +270,12 @@ export const gitActions = {
         handler: handleFetchGitCommits,
         promptGenerator: (actionData: ActionData) => {
             if(actionData.params.remoteName && actionData.params.branchName)
-                return `Neuro wants to fetch commits ${actionData.params.remoteName}/${actionData.params.branchName}.`;
+                return `fetch commits ${actionData.params.remoteName}/${actionData.params.branchName}.`;
             else if(actionData.params.remoteName)
-                return `Neuro wants to fetch commits from ${actionData.params.remoteName}.`;
+                return `fetch commits from ${actionData.params.remoteName}.`;
             else if(actionData.params.branchName)
-                return `Neuro wants to fetch commits from ${actionData.params.branchName}.`;
-            return 'Neuro wants to fetch commits.';
+                return `fetch commits from ${actionData.params.branchName}.`;
+            return 'fetch commits.';
         },
         validator: gitValidator,
     },
@@ -284,7 +284,7 @@ export const gitActions = {
         description: 'Pull commits from the remote repository',
         permissions: [PERMISSIONS.gitOperations, PERMISSIONS.gitRemotes],
         handler: handlePullGitCommits,
-        promptGenerator: 'Neuro wants to pull commits.',
+        promptGenerator: 'pull commits.',
         validator: gitValidator,
     },
     push_git_commits: {
@@ -303,12 +303,12 @@ export const gitActions = {
         promptGenerator: (actionData: ActionData) => {
             const force = actionData.params.forcePush ? 'force ' : '';
             if(actionData.params.remoteName && actionData.params.branchName)
-                return `Neuro wants to ${force}push commits to ${actionData.params.remoteName}/${actionData.params.branchName}.`;
+                return `${force}push commits to ${actionData.params.remoteName}/${actionData.params.branchName}.`;
             else if(actionData.params.remoteName)
-                return `Neuro wants to ${force}push commits to ${actionData.params.remoteName}.`;
+                return `${force}push commits to ${actionData.params.remoteName}.`;
             else if(actionData.params.branchName)
-                return `Neuro wants to ${force}push commits to ${actionData.params.branchName}.`;
-            return `Neuro wants to ${force}push commits.`;
+                return `${force}push commits to ${actionData.params.branchName}.`;
+            return `${force}push commits.`;
         },
         validator: gitValidator,
     },
@@ -327,7 +327,7 @@ export const gitActions = {
         },
         permissions: [PERMISSIONS.gitOperations, PERMISSIONS.gitRemotes, PERMISSIONS.editRemoteData],
         handler: handleAddGitRemote,
-        promptGenerator: (actionData: ActionData) => `Neuro wants to add a new remote "${actionData.params.remoteName}" with URL "${actionData.params.remoteURL}".`,
+        promptGenerator: (actionData: ActionData) => `add a new remote "${actionData.params.remoteName}" with URL "${actionData.params.remoteURL}".`,
         validator: gitValidator,
     },
     remove_git_remote: {
@@ -342,7 +342,7 @@ export const gitActions = {
         },
         permissions: [PERMISSIONS.gitOperations, PERMISSIONS.gitRemotes, PERMISSIONS.editRemoteData],
         handler: handleRemoveGitRemote,
-        promptGenerator: (actionData: ActionData) => `Neuro wants to remove the remote "${actionData.params.remoteName}".`,
+        promptGenerator: (actionData: ActionData) => `remove the remote "${actionData.params.remoteName}".`,
         validator: gitValidator,
     },
     rename_git_remote: {
@@ -358,14 +358,14 @@ export const gitActions = {
         },
         permissions: [PERMISSIONS.gitOperations, PERMISSIONS.gitRemotes, PERMISSIONS.editRemoteData],
         handler: handleRenameGitRemote,
-        promptGenerator: (actionData: ActionData) => `Neuro wants to rename the remote "${actionData.params.oldRemoteName}" to "${actionData.params.newRemoteName}".`,
+        promptGenerator: (actionData: ActionData) => `rename the remote "${actionData.params.oldRemoteName}" to "${actionData.params.newRemoteName}".`,
     },
     abort_merge: {
         name: 'abort_merge',
         description: 'Aborts the current merge operation.',
         permissions: [PERMISSIONS.gitOperations],
         handler: handleAbortMerge,
-        promptGenerator: 'Neuro wants to abort the current merge operation.',
+        promptGenerator: 'abort the current merge operation.',
         validator: gitValidator,
     },
 } satisfies Record<string, ActionWithHandler>;

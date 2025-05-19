@@ -11,7 +11,7 @@ export const fileActions = {
         description: 'Get a list of files in the workspace',
         permissions: [PERMISSIONS.openFiles],
         handler: handleGetFiles,
-        promptGenerator: 'Neuro wants to get a list of files in the workspace.',
+        promptGenerator: 'get a list of files in the workspace.',
     },
     open_file: {
         name: 'open_file',
@@ -25,7 +25,7 @@ export const fileActions = {
         },
         permissions: [PERMISSIONS.openFiles],
         handler: handleOpenFile,
-        promptGenerator: (actionData: ActionData) => `Neuro wants to open the file "${actionData.params?.path}".`,
+        promptGenerator: (actionData: ActionData) => `open the file "${actionData.params?.path}".`,
     },
     create_file: {
         name: 'create_file',
@@ -39,7 +39,7 @@ export const fileActions = {
         },
         permissions: [PERMISSIONS.create],
         handler: handleCreateFile,
-        promptGenerator: (actionData: ActionData) => `Neuro wants to create the file "${actionData.params?.filePath}".`,
+        promptGenerator: (actionData: ActionData) => `create the file "${actionData.params?.filePath}".`,
     },
     create_folder: {
         name: 'create_folder',
@@ -53,7 +53,7 @@ export const fileActions = {
         },
         permissions: [PERMISSIONS.create],
         handler: handleCreateFolder,
-        promptGenerator: (actionData: ActionData) => `Neuro wants to create the folder "${actionData.params?.folderPath}".`,
+        promptGenerator: (actionData: ActionData) => `create the folder "${actionData.params?.folderPath}".`,
     },
     rename_file_or_folder: {
         name: 'rename_file_or_folder',
@@ -68,7 +68,7 @@ export const fileActions = {
         },
         permissions: [PERMISSIONS.rename],
         handler: handleRenameFileOrFolder,
-        promptGenerator: (actionData: ActionData) => `Neuro wants to rename "${actionData.params?.oldPath}" to "${actionData.params?.newPath}".`,
+        promptGenerator: (actionData: ActionData) => `rename "${actionData.params?.oldPath}" to "${actionData.params?.newPath}".`,
     },
     delete_file_or_folder: {
         name: 'delete_file_or_folder',
@@ -83,7 +83,7 @@ export const fileActions = {
         },
         permissions: [PERMISSIONS.delete],
         handler: handleDeleteFileOrFolder,
-        promptGenerator: (actionData: ActionData) => `Neuro wants to delete "${actionData.params?.pathToDelete}".`,
+        promptGenerator: (actionData: ActionData) => `delete "${actionData.params?.pathToDelete}".`,
     },
 } satisfies Record<string, ActionWithHandler>;
 

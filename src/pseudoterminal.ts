@@ -19,7 +19,7 @@ export const terminalAccessHandlers = {
         },
         permissions: [PERMISSIONS.terminalAccess],
         handler: handleRunCommand,
-        promptGenerator: (actionData: ActionData) => `Neuro wants to run "${actionData.params?.command}" in the "${actionData.params?.shell}" shell.`,
+        promptGenerator: (actionData: ActionData) => `run "${actionData.params?.command}" in the "${actionData.params?.shell}" shell.`,
     },
     'kill_terminal_process': {
         name: 'kill_terminal_process',
@@ -33,14 +33,14 @@ export const terminalAccessHandlers = {
         },
         permissions: [PERMISSIONS.terminalAccess],
         handler: handleKillTerminal,
-        promptGenerator: (actionData: ActionData) => `Neuro wants to kill the "${actionData.params?.shell}" shell.`,
+        promptGenerator: (actionData: ActionData) => `kill the "${actionData.params?.shell}" shell.`,
     },
     'get_currently_running_shells': {
         name: 'get_currently_running_shells',
         description: 'Get the list of terminal processes that are spawned.',
         permissions: [PERMISSIONS.terminalAccess],
         handler: handleGetCurrentlyRunningShells,
-        promptGenerator: 'Neuro wants to get the list of currently running shells.',
+        promptGenerator: 'get the list of currently running shells.',
     },
 } satisfies Record<string, ActionWithHandler>;
 

@@ -12,7 +12,7 @@ export const taskHandlers = {
         description: 'Terminate the currently running task',
         permissions: [PERMISSIONS.runTasks],
         handler: handleTerminateTask,
-        promptGenerator: () => 'Neuro wants to terminate the currently running task.',
+        promptGenerator: () => 'terminate the currently running task.',
         validator: () => NEURO.currentTaskExecution !== null
             ? actionValidationAccept()
             : actionValidationFailure('No task to terminate.'),

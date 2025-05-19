@@ -39,7 +39,12 @@ export interface ActionWithHandler extends Action {
     validator?: (actionData: ActionData) => ActionValidationResult;
     /** The function to handle the action. */
     handler: (actionData: ActionData) => string | undefined;
-    /** The function to generate a prompt for the action request (Copilot Mode). */
+    /** 
+     * The function to generate a prompt for the action request (Copilot Mode). 
+     * The prompt should fit the phrasing scheme "Neuro wants to [prompt]".
+     * It is this way due to a potential new addition in Neuro API "v2". (not officially proposed)
+     * More info (comment): https://github.com/VedalAI/neuro-game-sdk/discussions/58#discussioncomment-12938623
+     */
     promptGenerator: PromptGenerator;
     /** Default permission for actions like chat, cancel_request, etc */
     defaultPermission?: PermissionLevel;
