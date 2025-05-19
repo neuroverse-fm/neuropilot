@@ -46,7 +46,10 @@ export const editingActions = {
         },
         permissions: [PERMISSIONS.editActiveDocument],
         handler: handleInsertText,
-        promptGenerator: (actionData: ActionData) => `insert the following text:\n\n\`\`\`\n${actionData.params.text}\n\`\`\``,
+        promptGenerator: (actionData: ActionData) => {
+            const lineCount = actionData.params.text.trim().split('\n').length;
+            return `insert ${lineCount} line${lineCount === 1 ? '' : 's'} of code.`
+        },
     },
     replace_text: {
         name: 'replace_text',
