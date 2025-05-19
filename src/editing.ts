@@ -32,7 +32,7 @@ export const editingActions = {
         description: 'Get the current cursor position and the text surrounding it',
         permissions: [PERMISSIONS.editActiveDocument],
         handler: handleGetCursor,
-        promptGenerator: 'get the current cursor position and the text surrounding it',
+        promptGenerator: 'get the current cursor position and the text surrounding it.',
     },
     insert_text: {
         name: 'insert_text',
