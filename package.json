@@ -90,10 +90,12 @@
 						"default": "invokeOnly",
 						"description": "When to trigger completions",
 						"enum": [
+							"off",
 							"invokeOnly",
 							"automatic"
 						],
 						"enumDescriptions": [
+							"Disable inline completion suggestions",
 							"Only request completions when the user explicitly invokes the completion provider",
 							"Automatically request completions when the user stops typing"
 						]
