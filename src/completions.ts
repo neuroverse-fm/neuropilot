@@ -7,19 +7,22 @@ import { CONFIG } from './config';
 let lastSuggestions: string[] = [];
 
 export function requestCompletion(beforeContext: string, afterContext: string, fileName: string, language: string, maxCount: number) {
+    // If completions are disabled, notify and return early.
+    if (CONFIG.completionTrigger === 'off') {
+        vscode.window.showInformationMessage('Inline completions with NeuroPilot are disabled.');
+        return;
+    }
+
+    // Obviously we need Neuro to be connected
     if (!NEURO.connected) {
         logOutput('ERROR', 'Attempted to request completion while disconnected');
         vscode.window.showErrorMessage('Not connected to Neuro API.');
         return;
     }
+
+    // You can't request a completion while already waiting
     if (NEURO.waiting) {
         logOutput('WARNING', 'Attempted to request completion while waiting for response');
-        return;
-    }
-
-    // If completions are disabled, notify and return early.
-    if (CONFIG.completionTrigger === 'off') {
-        vscode.window.showInformationMessage('Inline completions are disabled (completionTrigger is set to "off").');
         return;
     }
 
