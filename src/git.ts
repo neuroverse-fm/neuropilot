@@ -554,7 +554,14 @@ export function handleDeleteGitBranch(actionData: ActionData): string | undefine
  * Actions with the Git index
  */
 
-export function handleGitStatus(_actionData: ActionData): string | undefined {
+interface StateStringProps {
+    fileName?: string;
+    originalFileName?: string;
+    renamedFileName?: string;
+    status: string
+}
+
+export function handleGitStatus(__actionData: ActionData): string | undefined {
     assert(repo);
 
     repo.status().then(() => {
@@ -575,7 +582,7 @@ export function handleGitStatus(_actionData: ActionData): string | undefined {
             mergeChanges: repo.state.mergeChanges.map((change: Change) => translateChange(change)),
             HEAD: {
                 name: repo.state.HEAD?.name,
-                type: repo.state.HEAD !== undefined ? RefTypeStrings[repo.state.HEAD?.type] : undefined,
+                type: repo.state.HEAD !== undefined ? RefTypeStrings[repo.state.HEAD.type] : undefined,
                 ahead: repo.state.HEAD?.ahead,
                 behind: repo.state.HEAD?.behind,
                 commit: repo.state.HEAD?.commit,
@@ -583,7 +590,47 @@ export function handleGitStatus(_actionData: ActionData): string | undefined {
                 upstream: repo.state.HEAD?.upstream,
             },
         };
-        NEURO.client?.sendContext(`Git status: ${JSON.stringify(state)}`);
+
+        // Helper function to map changes
+        function mapChanges(array: StateStringProps[], prefix?: string) {
+            let changes: string[] = []
+            array.map((change: StateStringProps) => {
+                if (change.originalFileName && change.renamedFileName) {
+                    changes.push(`${prefix ? prefix : ''}(${change.status}) ${change.originalFileName} -> ${change.renamedFileName}\n`)
+                } else if (change.fileName) {
+                    changes.push(`${prefix ? prefix : ''}(${change.status}) ${change.fileName}\n`)
+                } else {
+                    changes.push(`${prefix ? prefix : ''}A(n) ${change.status} file had some missing data.`)
+                }
+            })
+            return changes
+        }
+        
+        // Constructing the state string
+        const mergeStateString: string = (
+            `Index changes: ${mapChanges(state.indexChanges, '    ').join('\n')}\n` +
+            `Working tree changes: ${mapChanges(state.workingTreeChanges, '    ').join('\n')}\n` +
+            `Merge changes: ${mapChanges(state.mergeChanges, '    ').join('\n')}\n`
+        )
+
+        const HEADUpstreamState: string = (
+            `       Remote branch name: ${state.HEAD.upstream?.name}\n` +
+            `       On remote ${state.HEAD.upstream?.remote}\n` +
+            `       ${state.HEAD.upstream?.commit ? `At commit ${state.HEAD.upstream?.commit}\n` : 'No commit on remote.\n'}`
+        )
+
+        const HEADStateString: string = (
+            'Current HEAD:\n' +
+            `   Name: ${state.HEAD.name}\n` +
+            `   Type: ${state.HEAD.type}\n` +
+            `   At commit ${state.HEAD.commit}\n` +
+            `   ${state.HEAD.upstream ? `Remote branch details:\n${HEADUpstreamState}\n` : 'No remote branch details.\n'}` +
+            `   ${state.HEAD.upstream ? `Changes since last pull/push: ${state.HEAD.ahead} ahead | ${state.HEAD.behind} behind\n}` : 'No remote, so no pull/push info available.\n'}`
+        )
+
+        const stateStringArray: string[] = [mergeStateString, HEADStateString]
+
+        NEURO.client?.sendContext(`Git status:\n\n${stateStringArray.join("\n")}`);
     }, (err: string) => {
         NEURO.client?.sendContext('Failed to get Git repository status');
         logOutput('ERROR', `Failed to get Git status: ${err}`);
