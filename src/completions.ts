@@ -9,7 +9,7 @@ let lastSuggestions: string[] = [];
 export function requestCompletion(beforeContext: string, afterContext: string, fileName: string, language: string, maxCount: number) {
     // If completions are disabled, notify and return early.
     if (CONFIG.completionTrigger === 'off') {
-        if (NEURO.warnOnCompletionsOff) {
+        if (!NEURO.warnOnCompletionsOff) {
             return;
         }
         vscode.window.showInformationMessage('Inline completions with NeuroPilot are disabled.', 'Don\'t show again this session')
