@@ -63,5 +63,5 @@ export const NEURO: Neuro = {
     saving: false,
     rceRequest: null,
     statusBarItem: null,
-    warnOnCompletionsOff: true
+    warnOnCompletionsOff: true,
 };

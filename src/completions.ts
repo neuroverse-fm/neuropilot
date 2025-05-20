@@ -15,7 +15,7 @@ export function requestCompletion(beforeContext: string, afterContext: string, f
         vscode.window.showInformationMessage('Inline completions with NeuroPilot are disabled.', 'Don\'t show again this session')
             .then(selection => {
                 if (selection === 'Don\'t show again this session') {
-                    NEURO.warnOnCompletionsOff = false
+                    NEURO.warnOnCompletionsOff = false;
                 }
             });
         return;
