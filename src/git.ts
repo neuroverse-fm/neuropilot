@@ -3,7 +3,7 @@ import * as path from 'path';
 import { NEURO } from './constants';
 import { GitExtension, Change, ForcePushMode, CommitOptions, Commit, Repository } from './types/git';
 import { StatusStrings, RefTypeStrings } from './types/git_status';
-import { getNormalizedRepoPathForGit, logOutput, simpleFileName } from './utils';
+import { getNormalizedRepoPathForGit, logOutput, simpleFileName, isPathNeuroSafe } from './utils';
 import { ActionData, ActionValidationResult, actionValidationAccept, actionValidationFailure, ActionWithHandler, contextFailure } from './neuro_client_helper';
 import { PERMISSIONS, getPermissionLevel } from './config';
 import assert from 'assert';
@@ -665,30 +665,34 @@ function getAbsoluteFilePath(filePath: string | undefined): string {
 export function handleAddFileToGit(actionData: ActionData): string | undefined {
     assert(repo);
     const filePath: string = actionData.params.filePath;
+    if (!isPathNeuroSafe(filePath)) {
+        NEURO.client?.sendContext('The provided file path is not allowed.');
+        return;
+    }
     const absolutePath = getAbsoluteFilePath(filePath);
-
     repo.add([absolutePath]).then(() => {
         NEURO.client?.sendContext(`Added ${filePath || '*'} to staging area.`);
     }, (erm: string) => {
         NEURO.client?.sendContext('Adding files to staging area failed');
         logOutput('ERROR', `Failed to git add: ${erm}\nTried to add ${absolutePath}`);
     });
-
     return;
 }
 
 export function handleRemoveFileFromGit(actionData: ActionData): string | undefined {
     assert(repo);
     const filePath: string = actionData.params.filePath;
+    if (!isPathNeuroSafe(filePath)) {
+        NEURO.client?.sendContext('The provided file path is not allowed.');
+        return;
+    }
     const absolutePath = getAbsoluteFilePath(filePath);
-
     repo.revert([absolutePath]).then(() => {
         NEURO.client?.sendContext(`Removed ${filePath || '*'} from the index.`);
     }, (erm: string) => {
         NEURO.client?.sendContext('Removing files from the index failed');
         logOutput('ERROR', `Git remove failed: ${erm}\nTried to remove ${absolutePath}`);
     });
-
     return;
 }
 
@@ -776,10 +780,12 @@ export function handleDiffFiles(actionData: ActionData): string | undefined {
     const ref1: string | undefined = actionData.params.ref1;
     const ref2: string | undefined = actionData.params.ref2;
     const filePath: string = actionData.params.filePath ?? '.';
-    const diffType: string = actionData.params.diffType ?? 'diffWithHEAD'; // Default to diffWithHEAD
-
-    // Get the normalized workspace root path
+    if (!isPathNeuroSafe(filePath)) {
+        NEURO.client?.sendContext('The provided file path is not allowed.');
+        return;
+    }
     const diffThisFile = getAbsoluteFilePath(filePath);
+    const diffType: string = actionData.params.diffType ?? 'diffWithHEAD'; // Default to diffWithHEAD
 
     switch (diffType) {
         case 'diffWithHEAD':
@@ -894,14 +900,18 @@ export function handleGitLog(actionData: ActionData): string | undefined {
 export function handleGitBlame(actionData: ActionData): string | undefined {
     assert(repo);
     const filePath: string = actionData.params.filePath;
+    if (!isPathNeuroSafe(filePath)) {
+        NEURO.client?.sendContext('The provided file path is not allowed.');
+        return;
+    }
     // Normalize the file path if provided; otherwise, use wildcard.
     const absolutePath: string = getAbsoluteFilePath(filePath);
 
     repo.blame(absolutePath).then((blame: string) => {
-        NEURO.client?.sendContext(`Blame attribution: ${blame}`);
+        NEURO.client?.sendContext(`Blame attribution for ${filePath}:\n${blame}`);
     }, (erm: string) => {
         NEURO.client?.sendContext('Failed to get blame attribution.');
-        logOutput('ERROR', `Error getting blame attribs: ${erm}`);
+        logOutput('ERROR', `Error getting blame attribs for ${filePath}: ${erm}`);
     });
 
     return;

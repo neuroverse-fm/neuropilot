@@ -42,7 +42,7 @@ export function getPermissionLevel(...permissions: Permission[]): PermissionLeve
                     return PermissionLevel.OFF;
             }
         })
-        .reduce((lowest, level) => level < lowest ? level : lowest, PermissionLevel.AUTOPILOT);
+        .reduce((lowest, level) => level < lowest ? level : lowest, PermissionLevel.COPILOT);
 }
 
 export interface Permission {
