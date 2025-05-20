@@ -40,6 +40,7 @@ interface Neuro {
     saving: boolean;
     rceRequest: RceRequest | null;
     statusBarItem: vscode.StatusBarItem | null;
+    warnOnCompletionsOff: boolean
 }
 
 
@@ -62,4 +63,5 @@ export const NEURO: Neuro = {
     saving: false,
     rceRequest: null,
     statusBarItem: null,
+    warnOnCompletionsOff: true
 };
