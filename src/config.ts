@@ -22,11 +22,11 @@ export function get<T>(key: string): T | undefined {
  *
  * @param permissions The permission(s) to query.
  * @returns The lowest permission level in the list of permissions.
- * If no permissions are specified, this function assumes Autopilot
+ * If no permissions are specified, this function assumes Copilot
  */
 export function getPermissionLevel(...permissions: Permission[]): PermissionLevel {
     if (permissions.length === 0) {
-        return PermissionLevel.AUTOPILOT;
+        return PermissionLevel.COPILOT;
     }
     return permissions
         .map(permission => {
