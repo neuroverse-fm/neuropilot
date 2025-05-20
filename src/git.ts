@@ -482,8 +482,8 @@ export function handleGetGitConfig(actionData: ActionData): string | undefined {
     if (!configKey) {
         repo.getConfigs().then((configs: { key: string; value: string; }[]) => {
             NEURO.client?.sendContext(`Git config:\n${configs.map((config) =>
-                `- ${config.key}: ${config.value}\n`,
-            )}`);
+                `- ${config.key}: ${config.value}`,
+            ).join('\n')}`);
             return;
         });
     }
@@ -607,11 +607,12 @@ export function handleGitStatus(__actionData: ActionData): string | undefined {
             const changes: string[] = [];
             array.map((change: StateStringProps) => {
                 if (change.originalFileName && change.renamedFileName) {
-                    changes.push(`${prefix ? prefix : ''}(${change.status}) ${change.originalFileName} -> ${change.renamedFileName}\n`);
+                    changes.push(`${prefix ?? ''}(${change.status}) ${change.originalFileName} -> ${change.renamedFileName}`);
                 } else if (change.fileName) {
-                    changes.push(`${prefix ? prefix : ''}(${change.status}) ${change.fileName}\n`);
+                    changes.push(`${prefix ?? ''}(${change.status}) ${change.fileName}`);
                 } else {
-                    changes.push(`${prefix ? prefix : ''}A(n) ${change.status} file had some missing data.`);
+                    const a = 'aeiou'.includes(change.status[0]) ? 'an' : 'a';
+                    changes.push(`${prefix ?? ''}${a} ${change.status} file had some missing data.`);
                 }
             });
             return changes;
@@ -619,9 +620,9 @@ export function handleGitStatus(__actionData: ActionData): string | undefined {
 
         // Constructing the state string
         const mergeStateString: string =
-            `Index changes: ${mapChanges(state.indexChanges, '    ').join('\n')}\n` +
-            `Working tree changes: ${mapChanges(state.workingTreeChanges, '    ').join('\n')}\n` +
-            `Merge changes: ${mapChanges(state.mergeChanges, '    ').join('\n')}\n`;
+            `Index changes: ${mapChanges(state.indexChanges, '- ').join('\n')}\n\n` +
+            `Working tree changes: ${mapChanges(state.workingTreeChanges, '- ').join('\n')}\n\n` +
+            `Merge changes: ${mapChanges(state.mergeChanges, '- ').join('\n')}\n\n`;
 
 
         const HEADUpstreamState: string =
@@ -665,11 +666,12 @@ function getAbsoluteFilePath(filePath: string | undefined): string {
 export function handleAddFileToGit(actionData: ActionData): string | undefined {
     assert(repo);
     const filePath: string = actionData.params.filePath;
-    if (!isPathNeuroSafe(filePath)) {
+    const absolutePath = getAbsoluteFilePath(filePath);
+
+    if (!isPathNeuroSafe(absolutePath)) {
         NEURO.client?.sendContext('The provided file path is not allowed.');
         return;
     }
-    const absolutePath = getAbsoluteFilePath(filePath);
     repo.add([absolutePath]).then(() => {
         NEURO.client?.sendContext(`Added ${filePath || '*'} to staging area.`);
     }, (erm: string) => {
@@ -682,11 +684,12 @@ export function handleAddFileToGit(actionData: ActionData): string | undefined {
 export function handleRemoveFileFromGit(actionData: ActionData): string | undefined {
     assert(repo);
     const filePath: string = actionData.params.filePath;
-    if (!isPathNeuroSafe(filePath)) {
+    const absolutePath = getAbsoluteFilePath(filePath);
+
+    if (!isPathNeuroSafe(absolutePath)) {
         NEURO.client?.sendContext('The provided file path is not allowed.');
         return;
     }
-    const absolutePath = getAbsoluteFilePath(filePath);
     repo.revert([absolutePath]).then(() => {
         NEURO.client?.sendContext(`Removed ${filePath || '*'} from the index.`);
     }, (erm: string) => {
@@ -881,7 +884,7 @@ export function handleGitLog(actionData: ActionData): string | undefined {
     repo.log().then((commits: Commit[]) => {
         // If log_limit is defined, restrict number of commits to that value.
         if (logLimit) {
-            commits = commits.slice(0, logLimit - 1);
+            commits = commits.slice(0, logLimit);
         }
         // Build a readable commit log string.
         const commitLog = commits.map(commit =>
@@ -900,12 +903,12 @@ export function handleGitLog(actionData: ActionData): string | undefined {
 export function handleGitBlame(actionData: ActionData): string | undefined {
     assert(repo);
     const filePath: string = actionData.params.filePath;
-    if (!isPathNeuroSafe(filePath)) {
+    const absolutePath: string = getAbsoluteFilePath(filePath);
+
+    if (!isPathNeuroSafe(absolutePath)) {
         NEURO.client?.sendContext('The provided file path is not allowed.');
         return;
     }
-    // Normalize the file path if provided; otherwise, use wildcard.
-    const absolutePath: string = getAbsoluteFilePath(filePath);
 
     repo.blame(absolutePath).then((blame: string) => {
         NEURO.client?.sendContext(`Blame attribution for ${filePath}:\n${blame}`);

@@ -22,7 +22,7 @@ export function get<T>(key: string): T | undefined {
  *
  * @param permissions The permission(s) to query.
  * @returns The lowest permission level in the list of permissions.
- * If no permissions are specified, this function assumes Copilot
+ * If no permissions are specified, this function assumes Autopilot
  */
 export function getPermissionLevel(...permissions: Permission[]): PermissionLevel {
     if (permissions.length === 0) {
@@ -42,7 +42,7 @@ export function getPermissionLevel(...permissions: Permission[]): PermissionLeve
                     return PermissionLevel.OFF;
             }
         })
-        .reduce((lowest, level) => level < lowest ? level : lowest, PermissionLevel.COPILOT);
+        .reduce((lowest, level) => level < lowest ? level : lowest, PermissionLevel.AUTOPILOT);
 }
 
 export interface Permission {
