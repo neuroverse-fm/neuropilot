@@ -185,10 +185,10 @@ export function combineGlobLinesToRegExp(lines: string): RegExp {
 }
 
 /**
- * Check if a path is safe for Neuro to access.
+ * Check if an absolute path is safe for Neuro to access.
  * Neuro may not access paths outside the workspace, or files and folders starting with a dot.
  * This is a security measure to prevent Neuro from modifying her own permissions or adding arbitrary tasks.
- * @param path The path to check.
+ * @param path The absolute path to check.
  * @param checkPatterns Whether to check against include and exclude patterns.
  * @returns True if Neuro may safely access the path.
  */
