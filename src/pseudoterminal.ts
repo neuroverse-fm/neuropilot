@@ -322,8 +322,8 @@ export function emergencyTerminalShutdown() {
             // Dispose of the terminal.
             session.terminal.dispose();
             logOutput('INFO', `Terminal session for shell type "${shellType}" has been terminated.`);
-        } catch (error) {
-            logOutput('ERROR', `Failed to terminate terminal session for shell type "${shellType}": ${error}`);
+        } catch (erm) {
+            logOutput('ERROR', `Failed to terminate terminal session for shell type "${shellType}": ${erm}`);
             failedShutdownTerminals.push(shellType);
             failedShutdownCount += 1;
         }

@@ -416,8 +416,8 @@ export function handleSave(_actionData: ActionData): string | undefined {
             }
             NEURO.saving = false;
         },
-        (error: string) => {
-            logOutput('ERROR', `Failed to save document: ${error}`);
+        (erm: string) => {
+            logOutput('ERROR', `Failed to save document: ${erm}`);
             NEURO.client?.sendContext(contextFailure('Failed to save document.'), false);
             NEURO.saving = false;
         },

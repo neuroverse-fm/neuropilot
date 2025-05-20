@@ -126,8 +126,8 @@ export function handleGetFileLintProblems(actionData: ActionData): string | unde
         }
         const formattedDiagnostics = getFormattedDiagnosticsForFile(relativePath, rawDiagnostics); // use relativePath
         return `Linting problems for file ${relativePath}:${formattedDiagnostics}`;
-    } catch (error) {
-        logOutput('ERROR', `Getting diagnostics for ${relativePath} failed: ${error}`);
+    } catch (erm) {
+        logOutput('ERROR', `Getting diagnostics for ${relativePath} failed: ${erm}`);
         return contextFailure(`Failed to get linting diagnostics for "${relativePath}".`);
     }
 }
@@ -166,8 +166,8 @@ export function handleGetFolderLintProblems(actionData: ActionData): string | un
         }).join('\n');
 
         return `Linting problems for folder ${relativeFolder}: ${formattedDiagnostics}`;
-    } catch (error) {
-        logOutput('ERROR', `Getting diagnostics for folder ${relativeFolder} failed: ${error}`);
+    } catch (erm) {
+        logOutput('ERROR', `Getting diagnostics for folder ${relativeFolder} failed: ${erm}`);
         return contextFailure(`Failed to get linting diagnostics for folder "${relativeFolder}".`);
     }
 }
@@ -194,8 +194,8 @@ export function handleGetWorkspaceLintProblems(_actionData: ActionData): string 
         }).join('\n\n');
 
         return `Linting problems for the current workspace: ${formattedDiagnostics}`;
-    } catch (error) {
-        logOutput('ERROR', `Failed to get diagnostics for workspace. Error: ${error}`);
+    } catch (erm) {
+        logOutput('ERROR', `Failed to get diagnostics for workspace. Error: ${erm}`);
         return contextFailure("Couldn't get diagnostics for the workspace.");
     }
 }

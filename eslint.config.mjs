@@ -7,6 +7,7 @@
 import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
 import stylistic from '@stylistic/eslint-plugin';
+import eslintPluginUnicorn from 'eslint-plugin-unicorn';
 
 export default tseslint.config(
     {
@@ -23,6 +24,7 @@ export default tseslint.config(
     {
         plugins: {
             '@stylistic': stylistic,
+            'unicorn': eslintPluginUnicorn,
         },
         rules: {
             'curly': 'off',
@@ -46,6 +48,12 @@ export default tseslint.config(
                 'warn',
                 {
                     'argsIgnorePattern': '^_',
+                },
+            ],
+            'unicorn/catch-error-name': [
+                'error',
+                {
+                    'name': 'erm',
                 },
             ],
         },

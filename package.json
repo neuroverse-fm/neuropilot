@@ -457,7 +457,7 @@
 					"fontCharacter": "\\E900"
 				}
 			},
-			"neuropilot-heart":{
+			"neuropilot-heart": {
 				"description": "NeuroPilot heart",
 				"default": {
 					"fontPath": "icons.woff",
@@ -485,6 +485,7 @@
 		"@types/vscode": "^1.95.0",
 		"@types/ws": "^8.18.0",
 		"eslint": "^9.13.0",
+		"eslint-plugin-unicorn": "^59.0.1",
 		"typescript": "^5.8.2",
 		"typescript-eslint": "^8.26.0"
 	},
