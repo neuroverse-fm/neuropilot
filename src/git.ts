@@ -783,11 +783,12 @@ export function handleDiffFiles(actionData: ActionData): string | undefined {
     const ref1: string | undefined = actionData.params.ref1;
     const ref2: string | undefined = actionData.params.ref2;
     const filePath: string = actionData.params.filePath ?? '.';
-    if (!isPathNeuroSafe(filePath)) {
+    const diffThisFile = getAbsoluteFilePath(filePath);
+
+    if (!isPathNeuroSafe(diffThisFile)) {
         NEURO.client?.sendContext('The provided file path is not allowed.');
         return;
     }
-    const diffThisFile = getAbsoluteFilePath(filePath);
     const diffType: string = actionData.params.diffType ?? 'diffWithHEAD'; // Default to diffWithHEAD
 
     switch (diffType) {
