@@ -193,8 +193,8 @@ export function combineGlobLinesToRegExp(lines: string): RegExp {
  * @returns True if Neuro may safely access the path.
  */
 export function isPathNeuroSafe(path: string, checkPatterns = true): boolean {
-    const rootFolder = getWorkspacePath();
-    const normalizedPath = normalizePath(path);
+    const rootFolder = getWorkspacePath()?.toLowerCase();
+    const normalizedPath = normalizePath(path).toLowerCase();
     const includePattern = CONFIG.includePattern || '**/*';
     const excludePattern = CONFIG.excludePattern;
     const includeRegExp: RegExp = checkPatterns ? combineGlobLinesToRegExp(includePattern) : REGEXP_ALWAYS;
