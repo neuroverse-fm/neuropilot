@@ -282,6 +282,6 @@
 	},
 	"dependencies": {
 		"glob-to-regexp": "^0.4.1",
-		"neuro-game-sdk": "github:AriesAlex/typescript-neuro-game-sdk#49a4a711e031447bcf4c9e5bd8caab3922ed02b5"
+		"neuro-game-sdk": "^1.0.5"
 	}
 }
