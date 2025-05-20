@@ -174,9 +174,9 @@ export const gitActions = {
             properties: {
                 log_limit: {
                     type: 'integer',
-                    minimum: 1
-                }
-            }
+                    minimum: 1,
+                },
+            },
         },
         permissions: [PERMISSIONS.gitOperations],
         handler: handleGitLog,
@@ -481,9 +481,9 @@ export function handleGetGitConfig(actionData: ActionData): string | undefined {
 
     if (!configKey) {
         repo.getConfigs().then((configs: { key: string; value: string; }[]) => {
-            NEURO.client?.sendContext(`Git config:\n${configs.map((config) => (
-                `- ${config.key}: ${config.value}\n`
-            ))}`);
+            NEURO.client?.sendContext(`Git config:\n${configs.map((config) =>
+                `- ${config.key}: ${config.value}\n`,
+            )}`);
             return;
         });
     }
@@ -604,44 +604,44 @@ export function handleGitStatus(__actionData: ActionData): string | undefined {
 
         // Helper function to map changes
         function mapChanges(array: StateStringProps[], prefix?: string) {
-            let changes: string[] = []
+            const changes: string[] = [];
             array.map((change: StateStringProps) => {
                 if (change.originalFileName && change.renamedFileName) {
-                    changes.push(`${prefix ? prefix : ''}(${change.status}) ${change.originalFileName} -> ${change.renamedFileName}\n`)
+                    changes.push(`${prefix ? prefix : ''}(${change.status}) ${change.originalFileName} -> ${change.renamedFileName}\n`);
                 } else if (change.fileName) {
-                    changes.push(`${prefix ? prefix : ''}(${change.status}) ${change.fileName}\n`)
+                    changes.push(`${prefix ? prefix : ''}(${change.status}) ${change.fileName}\n`);
                 } else {
-                    changes.push(`${prefix ? prefix : ''}A(n) ${change.status} file had some missing data.`)
+                    changes.push(`${prefix ? prefix : ''}A(n) ${change.status} file had some missing data.`);
                 }
-            })
-            return changes
+            });
+            return changes;
         }
 
         // Constructing the state string
-        const mergeStateString: string = (
+        const mergeStateString: string =
             `Index changes: ${mapChanges(state.indexChanges, '    ').join('\n')}\n` +
             `Working tree changes: ${mapChanges(state.workingTreeChanges, '    ').join('\n')}\n` +
-            `Merge changes: ${mapChanges(state.mergeChanges, '    ').join('\n')}\n`
-        )
+            `Merge changes: ${mapChanges(state.mergeChanges, '    ').join('\n')}\n`;
 
-        const HEADUpstreamState: string = (
+
+        const HEADUpstreamState: string =
             `       Remote branch name: ${state.HEAD.upstream?.name}\n` +
             `       On remote ${state.HEAD.upstream?.remote}\n` +
-            `       ${state.HEAD.upstream?.commit ? `At commit ${state.HEAD.upstream?.commit}\n` : 'No commit on remote.\n'}`
-        )
+            `       ${state.HEAD.upstream?.commit ? `At commit ${state.HEAD.upstream?.commit}\n` : 'No commit on remote.\n'}`;
 
-        const HEADStateString: string = (
+
+        const HEADStateString: string =
             'Current HEAD:\n' +
             `   Name: ${state.HEAD.name}\n` +
             `   Type: ${state.HEAD.type}\n` +
             `   At commit ${state.HEAD.commit}\n` +
             `   ${state.HEAD.upstream ? `Remote branch details:\n${HEADUpstreamState}\n` : 'No remote branch details.\n'}` +
-            `   ${state.HEAD.upstream ? `Changes since last pull/push: ${state.HEAD.ahead} ahead | ${state.HEAD.behind} behind\n}` : 'No remote, so no pull/push info available.\n'}`
-        )
+            `   ${state.HEAD.upstream ? `Changes since last pull/push: ${state.HEAD.ahead} ahead | ${state.HEAD.behind} behind\n}` : 'No remote, so no pull/push info available.\n'}`;
 
-        const stateStringArray: string[] = [mergeStateString, HEADStateString]
 
-        NEURO.client?.sendContext(`Git status:\n\n${stateStringArray.join("\n")}`);
+        const stateStringArray: string[] = [mergeStateString, HEADStateString];
+
+        NEURO.client?.sendContext(`Git status:\n\n${stateStringArray.join('\n')}`);
     }, (erm: string) => {
         NEURO.client?.sendContext('Failed to get Git repository status');
         logOutput('ERROR', `Failed to get Git status: ${erm}`);
@@ -666,7 +666,7 @@ export function handleAddFileToGit(actionData: ActionData): string | undefined {
     assert(repo);
     const filePath: string = actionData.params.filePath;
     const absolutePath = getAbsoluteFilePath(filePath);
-    
+
     repo.add([absolutePath]).then(() => {
         NEURO.client?.sendContext(`Added ${filePath || '*'} to staging area.`);
     }, (erm: string) => {
@@ -681,7 +681,7 @@ export function handleRemoveFileFromGit(actionData: ActionData): string | undefi
     assert(repo);
     const filePath: string = actionData.params.filePath;
     const absolutePath = getAbsoluteFilePath(filePath);
-    
+
     repo.revert([absolutePath]).then(() => {
         NEURO.client?.sendContext(`Removed ${filePath || '*'} from the index.`);
     }, (erm: string) => {
@@ -879,7 +879,7 @@ export function handleGitLog(actionData: ActionData): string | undefined {
         }
         // Build a readable commit log string.
         const commitLog = commits.map(commit =>
-            `Commit: ${commit.hash}\nMessage: ${commit.message}\nAuthor: ${commit.authorName}\nDate: ${commit.authorDate}\n`
+            `Commit: ${commit.hash}\nMessage: ${commit.message}\nAuthor: ${commit.authorName}\nDate: ${commit.authorDate}\n`,
         ).join('\n');
 
         NEURO.client?.sendContext(`Commit log:\n${commitLog}`);
