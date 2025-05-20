@@ -280,16 +280,14 @@
 					},
 					"neuropilot.permission.requestCookies": {
 						"type": "string",
-						"default": "Off",
+						"default": "Copilot",
 						"enum": [
 							"Off",
-							"Copilot",
-							"Autopilot"
+							"Copilot"
 						],
 						"enumDescriptions": [
 							"Disable this permission.",
-							"Require approval before execution.",
-							"Execute without oversight."
+							"Require approval before execution."
 						],
 						"markdownDescription": "Neuro may ask for cookies while coding.\n\nRequires reloading permissions if changed."
 					},
