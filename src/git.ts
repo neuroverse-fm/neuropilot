@@ -3,7 +3,7 @@ import * as path from 'path';
 import { NEURO } from './constants';
 import { GitExtension, Change, ForcePushMode, CommitOptions, Commit, Repository } from './types/git';
 import { StatusStrings, RefTypeStrings } from './types/git_status';
-import { getNormalizedRepoPathForGit, logOutput, simpleFileName } from './utils';
+import { getNormalizedRepoPathForGit, logOutput, simpleFileName, isPathNeuroSafe } from './utils';
 import { ActionData, ActionValidationResult, actionValidationAccept, actionValidationFailure, ActionWithHandler, contextFailure } from './neuro_client_helper';
 import { PERMISSIONS, getPermissionLevel } from './config';
 import assert from 'assert';
@@ -169,6 +169,15 @@ export const gitActions = {
     git_log: {
         name: 'git_log',
         description: 'Get the commit history of the current branch',
+        schema: {
+            type: 'object',
+            properties: {
+                log_limit: {
+                    type: 'integer',
+                    minimum: 1,
+                },
+            },
+        },
         permissions: [PERMISSIONS.gitOperations],
         handler: handleGitLog,
         promptGenerator: 'get the Git log.',
@@ -269,11 +278,11 @@ export const gitActions = {
         permissions: [PERMISSIONS.gitOperations, PERMISSIONS.gitRemotes],
         handler: handleFetchGitCommits,
         promptGenerator: (actionData: ActionData) => {
-            if(actionData.params.remoteName && actionData.params.branchName)
+            if (actionData.params.remoteName && actionData.params.branchName)
                 return `fetch commits ${actionData.params.remoteName}/${actionData.params.branchName}.`;
-            else if(actionData.params.remoteName)
+            else if (actionData.params.remoteName)
                 return `fetch commits from ${actionData.params.remoteName}.`;
-            else if(actionData.params.branchName)
+            else if (actionData.params.branchName)
                 return `fetch commits from ${actionData.params.branchName}.`;
             return 'fetch commits.';
         },
@@ -302,11 +311,11 @@ export const gitActions = {
         handler: handlePushGitCommits,
         promptGenerator: (actionData: ActionData) => {
             const force = actionData.params.forcePush ? 'force ' : '';
-            if(actionData.params.remoteName && actionData.params.branchName)
+            if (actionData.params.remoteName && actionData.params.branchName)
                 return `${force}push commits to ${actionData.params.remoteName}/${actionData.params.branchName}.`;
-            else if(actionData.params.remoteName)
+            else if (actionData.params.remoteName)
                 return `${force}push commits to ${actionData.params.remoteName}.`;
-            else if(actionData.params.branchName)
+            else if (actionData.params.branchName)
                 return `${force}push commits to ${actionData.params.branchName}.`;
             return `${force}push commits.`;
         },
@@ -472,7 +481,9 @@ export function handleGetGitConfig(actionData: ActionData): string | undefined {
 
     if (!configKey) {
         repo.getConfigs().then((configs: { key: string; value: string; }[]) => {
-            NEURO.client?.sendContext(`Git config: ${JSON.stringify(configs)}`);
+            NEURO.client?.sendContext(`Git config:\n${configs.map((config) =>
+                `- ${config.key}: ${config.value}`,
+            ).join('\n')}`);
             return;
         });
     }
@@ -554,7 +565,14 @@ export function handleDeleteGitBranch(actionData: ActionData): string | undefine
  * Actions with the Git index
  */
 
-export function handleGitStatus(_actionData: ActionData): string | undefined {
+interface StateStringProps {
+    fileName?: string;
+    originalFileName?: string;
+    renamedFileName?: string;
+    status: string
+}
+
+export function handleGitStatus(__actionData: ActionData): string | undefined {
     assert(repo);
 
     repo.status().then(() => {
@@ -575,7 +593,7 @@ export function handleGitStatus(_actionData: ActionData): string | undefined {
             mergeChanges: repo.state.mergeChanges.map((change: Change) => translateChange(change)),
             HEAD: {
                 name: repo.state.HEAD?.name,
-                type: repo.state.HEAD !== undefined ? RefTypeStrings[repo.state.HEAD?.type] : undefined,
+                type: repo.state.HEAD !== undefined ? RefTypeStrings[repo.state.HEAD.type] : undefined,
                 ahead: repo.state.HEAD?.ahead,
                 behind: repo.state.HEAD?.behind,
                 commit: repo.state.HEAD?.commit,
@@ -583,7 +601,48 @@ export function handleGitStatus(_actionData: ActionData): string | undefined {
                 upstream: repo.state.HEAD?.upstream,
             },
         };
-        NEURO.client?.sendContext(`Git status: ${JSON.stringify(state)}`);
+
+        // Helper function to map changes
+        function mapChanges(array: StateStringProps[], prefix?: string) {
+            const changes: string[] = [];
+            array.map((change: StateStringProps) => {
+                if (change.originalFileName && change.renamedFileName) {
+                    changes.push(`${prefix ?? ''}(${change.status}) ${change.originalFileName} -> ${change.renamedFileName}`);
+                } else if (change.fileName) {
+                    changes.push(`${prefix ?? ''}(${change.status}) ${change.fileName}`);
+                } else {
+                    const a = 'aeiou'.includes(change.status[0]) ? 'an' : 'a';
+                    changes.push(`${prefix ?? ''}${a} ${change.status} file had some missing data.`);
+                }
+            });
+            return changes;
+        }
+
+        // Constructing the state string
+        const mergeStateString: string =
+            `Index changes: ${mapChanges(state.indexChanges, '- ').join('\n')}\n\n` +
+            `Working tree changes: ${mapChanges(state.workingTreeChanges, '- ').join('\n')}\n\n` +
+            `Merge changes: ${mapChanges(state.mergeChanges, '- ').join('\n')}\n\n`;
+
+
+        const HEADUpstreamState: string =
+            `       Remote branch name: ${state.HEAD.upstream?.name}\n` +
+            `       On remote ${state.HEAD.upstream?.remote}\n` +
+            `       ${state.HEAD.upstream?.commit ? `At commit ${state.HEAD.upstream?.commit}\n` : 'No commit on remote.\n'}`;
+
+
+        const HEADStateString: string =
+            'Current HEAD:\n' +
+            `   Name: ${state.HEAD.name}\n` +
+            `   Type: ${state.HEAD.type}\n` +
+            `   At commit ${state.HEAD.commit}\n` +
+            `   ${state.HEAD.upstream ? `Remote branch details:\n${HEADUpstreamState}\n` : 'No remote branch details.\n'}` +
+            `   ${state.HEAD.upstream ? `Changes since last pull/push: ${state.HEAD.ahead} ahead | ${state.HEAD.behind} behind\n}` : 'No remote, so no pull/push info available.\n'}`;
+
+
+        const stateStringArray: string[] = [mergeStateString, HEADStateString];
+
+        NEURO.client?.sendContext(`Git status:\n\n${stateStringArray.join('\n')}`);
     }, (erm: string) => {
         NEURO.client?.sendContext('Failed to get Git repository status');
         logOutput('ERROR', `Failed to get Git status: ${erm}`);
@@ -592,63 +651,51 @@ export function handleGitStatus(_actionData: ActionData): string | undefined {
     return;
 }
 
+// Helper to convert a provided file path (or wildcard) to an absolute path using the workspace folder (or repo root if not available)
+function getAbsoluteFilePath(filePath: string | undefined): string {
+    // Normalize the file path if provided; otherwise, use wildcard.
+    const normalizedPath: string = filePath ? getNormalizedRepoPathForGit(filePath) : '*';
+    // Get the workspace folder; if not available, fall back to repo root.
+    const workspaceFolder = vscode.workspace.workspaceFolders?.[0].uri.fsPath || repo!.rootUri.fsPath;
+    // Compute absolute path by joining the workspace folder with the normalized path.
+    return path.isAbsolute(normalizedPath)
+        ? normalizedPath
+        : path.join(workspaceFolder, normalizedPath);
+}
+
 export function handleAddFileToGit(actionData: ActionData): string | undefined {
     assert(repo);
     const filePath: string = actionData.params.filePath;
+    const absolutePath = getAbsoluteFilePath(filePath);
 
-    // Normalize the file path if provided; otherwise, use wildcard.
-    const stageFiles: string = filePath ? getNormalizedRepoPathForGit(filePath) : '*';
-
-    // Compute an absolute path. If the stageFiles is already absolute, use it.
-    // Otherwise, join it with the repository's root path.
-    let absolutePath: string;
-    if (path.isAbsolute(stageFiles)) {
-        absolutePath = stageFiles;
-    } else {
-        absolutePath = path.join(repo.rootUri.fsPath, stageFiles);
-        if (stageFiles === '.') {
-            absolutePath = `${absolutePath}\\${stageFiles}`;
-        }
+    if (!isPathNeuroSafe(absolutePath)) {
+        NEURO.client?.sendContext('The provided file path is not allowed.');
+        return;
     }
-
-    // Pass the absolute path to the Git add command.
     repo.add([absolutePath]).then(() => {
-        NEURO.client?.sendContext(`Added ${stageFiles} to staging area.`);
+        NEURO.client?.sendContext(`Added ${filePath || '*'} to staging area.`);
     }, (erm: string) => {
         NEURO.client?.sendContext('Adding files to staging area failed');
         logOutput('ERROR', `Failed to git add: ${erm}\nTried to add ${absolutePath}`);
     });
-
     return;
 }
 
 export function handleRemoveFileFromGit(actionData: ActionData): string | undefined {
     assert(repo);
     const filePath: string = actionData.params.filePath;
+    const absolutePath = getAbsoluteFilePath(filePath);
 
-    // Normalize the file path if provided; otherwise, use wildcard.
-    const revertFiles: string = filePath ? getNormalizedRepoPathForGit(filePath) : '*';
-
-    // Compute an absolute path. If the removeFiles is already absolute, use it.
-    // Otherwise, join it with the repository's root path.
-    let absolutePath: string;
-    if (path.isAbsolute(revertFiles)) {
-        absolutePath = revertFiles;
-    } else {
-        absolutePath = path.join(repo.rootUri.fsPath, revertFiles);
-        if (revertFiles === '.') {
-            absolutePath = `${absolutePath}\\${revertFiles}`;
-        }
+    if (!isPathNeuroSafe(absolutePath)) {
+        NEURO.client?.sendContext('The provided file path is not allowed.');
+        return;
     }
-
-    // Pass the absolute path to the Git remove command.
     repo.revert([absolutePath]).then(() => {
-        NEURO.client?.sendContext(`Removed ${revertFiles} from the index.`);
+        NEURO.client?.sendContext(`Removed ${filePath || '*'} from the index.`);
     }, (erm: string) => {
         NEURO.client?.sendContext('Removing files from the index failed');
         logOutput('ERROR', `Git remove failed: ${erm}\nTried to remove ${absolutePath}`);
     });
-
     return;
 }
 
@@ -666,7 +713,7 @@ export function handleMakeGitCommit(actionData: ActionData): string | undefined 
         const invalidCommitOptions: string[] = [];
         commitOptions.map((option) => {
             if (!ExtraCommitOptions) return;
-            switch(option) {
+            switch (option) {
                 case 'amend':
                     ExtraCommitOptions.amend = true;
                     break;
@@ -736,10 +783,13 @@ export function handleDiffFiles(actionData: ActionData): string | undefined {
     const ref1: string | undefined = actionData.params.ref1;
     const ref2: string | undefined = actionData.params.ref2;
     const filePath: string = actionData.params.filePath ?? '.';
-    const diffType: string = actionData.params.diffType ?? 'diffWithHEAD'; // Default to diffWithHEAD
+    const diffThisFile = getAbsoluteFilePath(filePath);
 
-    // Get the normalized workspace root path
-    const diffThisFile = getNormalizedRepoPathForGit(filePath);
+    if (!isPathNeuroSafe(diffThisFile)) {
+        NEURO.client?.sendContext('The provided file path is not allowed.');
+        return;
+    }
+    const diffType: string = actionData.params.diffType ?? 'diffWithHEAD'; // Default to diffWithHEAD
 
     switch (diffType) {
         case 'diffWithHEAD':
@@ -827,11 +877,22 @@ export function handleDiffFiles(actionData: ActionData): string | undefined {
     return;
 }
 
-export function handleGitLog(_actionData: ActionData): string | undefined {
+export function handleGitLog(actionData: ActionData): string | undefined {
     assert(repo);
 
+    const logLimit: number | undefined = actionData.params?.log_limit;
+
     repo.log().then((commits: Commit[]) => {
-        NEURO.client?.sendContext(`Commit log: ${JSON.stringify(commits)}`);
+        // If log_limit is defined, restrict number of commits to that value.
+        if (logLimit) {
+            commits = commits.slice(0, logLimit);
+        }
+        // Build a readable commit log string.
+        const commitLog = commits.map(commit =>
+            `Commit: ${commit.hash}\nMessage: ${commit.message}\nAuthor: ${commit.authorName}\nDate: ${commit.authorDate}\n`,
+        ).join('\n');
+
+        NEURO.client?.sendContext(`Commit log:\n${commitLog}`);
     }, (erm: string) => {
         NEURO.client?.sendContext('Failed to get git log.');
         logOutput('ERROR', `Failed to get git log: ${erm}`);
@@ -842,26 +903,19 @@ export function handleGitLog(_actionData: ActionData): string | undefined {
 
 export function handleGitBlame(actionData: ActionData): string | undefined {
     assert(repo);
-
     const filePath: string = actionData.params.filePath;
+    const absolutePath: string = getAbsoluteFilePath(filePath);
 
-    // Normalize the file path if provided; otherwise, use wildcard.
-    const stageFiles: string = filePath ? getNormalizedRepoPathForGit(filePath) : '*';
-
-    // Compute an absolute path. If the stageFiles is already absolute, use it.
-    // Otherwise, join it with the repository's root path.
-    let absolutePath: string;
-    if (path.isAbsolute(stageFiles)) {
-        absolutePath = stageFiles;
-    } else {
-        absolutePath = path.join(repo.rootUri.fsPath, stageFiles);
+    if (!isPathNeuroSafe(absolutePath)) {
+        NEURO.client?.sendContext('The provided file path is not allowed.');
+        return;
     }
 
     repo.blame(absolutePath).then((blame: string) => {
-        NEURO.client?.sendContext(`Blame attribution: ${blame}`);
+        NEURO.client?.sendContext(`Blame attribution for ${filePath}:\n${blame}`);
     }, (erm: string) => {
         NEURO.client?.sendContext('Failed to get blame attribution.');
-        logOutput('ERROR', `Error getting blame attribs: ${erm}`);
+        logOutput('ERROR', `Error getting blame attribs for ${filePath}: ${erm}`);
     });
 
     return;
