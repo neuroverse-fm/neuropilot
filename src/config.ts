@@ -26,7 +26,7 @@ export function get<T>(key: string): T | undefined {
  */
 export function getPermissionLevel(...permissions: Permission[]): PermissionLevel {
     if (permissions.length === 0) {
-        return PermissionLevel.COPILOT;
+        return PermissionLevel.AUTOPILOT;
     }
     return permissions
         .map(permission => {
