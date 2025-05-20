@@ -286,17 +286,17 @@ export function handleKillTerminal(actionData: ActionData): string | undefined {
  * Each entry includes the shell type and its status.
  */
 export function handleGetCurrentlyRunningShells(_actionData: ActionData): string | undefined {
-    const runningShells: { shellType: string; status: string }[] = [];
+    const runningShells: string[] = [];
 
     for (const [shellType, session] of NEURO.terminalRegistry.entries()) {
         const status = session.shellProcess && !session.shellProcess.killed ? 'Running' : 'Stopped';
-        runningShells.push({ shellType, status });
+        runningShells.push(`Name: ${shellType}\nStatus: ${status}\n`);
     }
 
     if (runningShells.length === 0)
         return contextFailure('No running shells found.');
     else
-        return `Currently running shells: ${JSON.stringify(runningShells)}`;
+        return `Currently running shells: ${runningShells.join('\n')}`;
 }
 
 /**

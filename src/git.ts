@@ -169,6 +169,15 @@ export const gitActions = {
     git_log: {
         name: 'git_log',
         description: 'Get the commit history of the current branch',
+        schema: {
+            type: 'object',
+            properties: {
+                log_limit: {
+                    type: 'integer',
+                    minimum: 1
+                }
+            }
+        },
         permissions: [PERMISSIONS.gitOperations],
         handler: handleGitLog,
         promptGenerator: 'get the Git log.',
@@ -472,7 +481,9 @@ export function handleGetGitConfig(actionData: ActionData): string | undefined {
 
     if (!configKey) {
         repo.getConfigs().then((configs: { key: string; value: string; }[]) => {
-            NEURO.client?.sendContext(`Git config: ${JSON.stringify(configs)}`);
+            NEURO.client?.sendContext(`Git config:\n${configs.map((config) => (
+                `- ${config.key}: ${config.value}\n`
+            ))}`);
             return;
         });
     }
@@ -642,21 +653,13 @@ export function handleGitStatus(__actionData: ActionData): string | undefined {
 export function handleAddFileToGit(actionData: ActionData): string | undefined {
     assert(repo);
     const filePath: string = actionData.params.filePath;
-
     // Normalize the file path if provided; otherwise, use wildcard.
     const stageFiles: string = filePath ? getNormalizedRepoPathForGit(filePath) : '*';
 
-    // Compute an absolute path. If the stageFiles is already absolute, use it.
-    // Otherwise, join it with the repository's root path.
-    let absolutePath: string;
-    if (path.isAbsolute(stageFiles)) {
-        absolutePath = stageFiles;
-    } else {
-        absolutePath = path.join(repo.rootUri.fsPath, stageFiles);
-        if (stageFiles === '.') {
-            absolutePath = `${absolutePath}\\${stageFiles}`;
-        }
-    }
+    // Compute an absolute path using path.resolve
+    const absolutePath: string = path.isAbsolute(stageFiles)
+        ? stageFiles
+        : path.resolve(repo.rootUri.fsPath, stageFiles);
 
     // Pass the absolute path to the Git add command.
     repo.add([absolutePath]).then(() => {
@@ -874,11 +877,22 @@ export function handleDiffFiles(actionData: ActionData): string | undefined {
     return;
 }
 
-export function handleGitLog(_actionData: ActionData): string | undefined {
+export function handleGitLog(actionData: ActionData): string | undefined {
     assert(repo);
 
+    const logLimit: number | undefined = actionData.params?.log_limit;
+
     repo.log().then((commits: Commit[]) => {
-        NEURO.client?.sendContext(`Commit log: ${JSON.stringify(commits)}`);
+        // If log_limit is defined, restrict number of commits to that value.
+        if (logLimit) {
+            commits = commits.slice(0, logLimit - 1);
+        }
+        // Build a readable commit log string.
+        const commitLog = commits.map(commit =>
+            `Commit: ${commit.hash}\nMessage: ${commit.message}\nAuthor: ${commit.authorName}\nDate: ${commit.authorDate}\n`
+        ).join('\n');
+
+        NEURO.client?.sendContext(`Commit log:\n${commitLog}`);
     }, (err: string) => {
         NEURO.client?.sendContext('Failed to get git log.');
         logOutput('ERROR', `Failed to get git log: ${err}`);
