@@ -12,6 +12,8 @@ import { CONFIG } from './config';
 import { sendDiagnosticsDiff } from './lint_problems';
 import { fileSaveListener, toggleSaveAction } from './editing';
 import { emergencyDenyRequests, acceptRceRequest, denyRceRequest, revealRceNotification } from './rce';
+// Import the new diagnostic request function:
+import { requestAIResponseForDiagnostic } from './lint_problems';
 
 export function activate(context: vscode.ExtensionContext) {
     NEURO.url = CONFIG.websocketUrl;
@@ -35,6 +37,108 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand('neuropilot.denyRceRequest', denyRceRequest);
     vscode.commands.registerCommand('neuropilot.revealRceNotification', revealRceNotification);
 
+    // Create a dedicated output channel for Neuro chat history.
+    const chatHistoryChannel = vscode.window.createOutputChannel("Neuro Chat History");
+
+    // Helper to append messages to the chat history.
+    function addToChatHistory(message: string) {
+        const timestamp = new Date().toLocaleTimeString();
+        chatHistoryChannel.appendLine(`[${timestamp}] ${message}`);
+    }
+
+    // NEW: Register commands for Ask Neuro to fix and explain diagnostics.
+    vscode.commands.registerCommand('neuropilot.fixWithNeuro', async (...args: any[]) => {
+        let document: vscode.TextDocument;
+        let diagnostics: vscode.Diagnostic[];
+        if (args && args.length >= 2) {
+            document = args[0];
+            diagnostics = args[1];
+        } else {
+            const editor = vscode.window.activeTextEditor;
+            if (!editor) {
+                vscode.window.showErrorMessage("No active editor found.");
+                return;
+            }
+            document = editor.document;
+            diagnostics = vscode.languages.getDiagnostics(document.uri);
+        }
+        if (!diagnostics || diagnostics.length === 0) {
+            vscode.window.showInformationMessage("No diagnostics found in the active file.");
+            return;
+        }
+        // For simplicity, pick the first diagnostic.
+        const diagnostic = diagnostics[0];
+        const tokenSource = new vscode.CancellationTokenSource();
+        const response = await requestAIResponseForDiagnostic(document, diagnostic, 'fix', tokenSource.token);
+
+        // Append the response to the chat history.
+        addToChatHistory("Fix: " + response);
+        // Show an info message with an option to view the chat history.
+        const choice = await vscode.window.showInformationMessage("Neuro suggests: " + response, "View Chat History");
+        if (choice === "View Chat History") {
+            chatHistoryChannel.show();
+        }
+    });
+
+    vscode.commands.registerCommand('neuropilot.explainWithNeuro', async (...args: any[]) => {
+        let document: vscode.TextDocument;
+        let diagnostics: vscode.Diagnostic[];
+        if (args && args.length >= 2) {
+            document = args[0];
+            diagnostics = args[1];
+        } else {
+            const editor = vscode.window.activeTextEditor;
+            if (!editor) {
+                vscode.window.showErrorMessage("No active editor found.");
+                return;
+            }
+            document = editor.document;
+            diagnostics = vscode.languages.getDiagnostics(document.uri);
+        }
+        if (!diagnostics || diagnostics.length === 0) {
+            vscode.window.showInformationMessage("No diagnostics found in the active file.");
+            return;
+        }
+        // For simplicity, pick the first diagnostic.
+        const diagnostic = diagnostics[0];
+        const tokenSource = new vscode.CancellationTokenSource();
+        const response = await requestAIResponseForDiagnostic(document, diagnostic, 'explain', tokenSource.token);
+
+        // Append the response to the chat history.
+        addToChatHistory("Explain: " + response);
+        // Show an info message with an option to view the chat history.
+        const choice = await vscode.window.showInformationMessage("Neuro explains: " + response, "View Chat History");
+        if (choice === "View Chat History") {
+            chatHistoryChannel.show();
+        }
+    });
+
+    // Update the CodeActionProvider to pass the document and diagnostics.
+    vscode.languages.registerCodeActionsProvider(
+        { scheme: 'file' },
+        new (class implements vscode.CodeActionProvider {
+            provideCodeActions(document: vscode.TextDocument, range: vscode.Range, context: vscode.CodeActionContext, token: vscode.CancellationToken): vscode.ProviderResult<vscode.CodeAction[]> {
+                if (context.diagnostics.length === 0) {
+                    return [];
+                }
+                // Pass the active document, diagnostic range, and all diagnostics as command arguments.
+                const fixAction = new vscode.CodeAction("Ask Neuro to fix", vscode.CodeActionKind.QuickFix);
+                fixAction.command = {
+                    command: 'neuropilot.fixWithNeuro',
+                    title: "Ask Neuro to fix",
+                    arguments: [document, context.diagnostics]
+                };
+                const explainAction = new vscode.CodeAction("Ask Neuro to explain", vscode.CodeActionKind.QuickFix);
+                explainAction.command = {
+                    command: 'neuropilot.explainWithNeuro',
+                    title: "Ask Neuro to explain",
+                    arguments: [document, context.diagnostics]
+                };
+                return [fixAction, explainAction];
+            }
+        })()
+    );
+
     registerChatParticipant(context);
     saveContextForTerminal(context);
 
@@ -47,6 +151,11 @@ export function activate(context: vscode.ExtensionContext) {
     onClientConnected(registerUnsupervisedActions);
     onClientConnected(registerUnsupervisedHandlers);
     onClientConnected(registerPostActionHandler);
+
+    // Allows Neuro to be prompted to fix lint problems
+    const selector: vscode.DocumentSelector = { scheme: 'file' };
+
+    const provider =
 
     vscode.languages.onDidChangeDiagnostics(sendDiagnosticsDiff);
 

@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 import { NEURO } from './constants';
+import { cancelChatRequest } from './chat';
 import { normalizePath, getWorkspacePath, logOutput, isPathNeuroSafe } from './utils';
 import { PERMISSIONS, getPermissionLevel, CONFIG } from './config';
 import { ActionData, ActionWithHandler, contextFailure, contextNoAccess } from './neuro_client_helper';
@@ -270,4 +271,91 @@ export function sendDiagnosticsDiff(e: vscode.DiagnosticChangeEvent): void {
         .join('\n\n');
 
     NEURO.client?.sendContext(`New linting problems:\n${output}`, false);
+}
+
+let lastChatResponse = '';
+
+/**
+ * Ask Neuro to either “fix” or “explain” a given diagnostic.
+ *
+ * @param document   The TextDocument containing the error.
+ * @param diagnostic The diagnostic (lint/compile error) to fix/explain.
+ * @param mode       Either 'fix' or 'explain'.
+ * @param token      A CancellationToken, so VS Code can cancel if the user dismisses the lightbulb.
+ * @returns          A string containing either the new code (for fix) or the explanation (for explain).
+ */
+export async function requestAIResponseForDiagnostic(
+  document: vscode.TextDocument,
+  diagnostic: vscode.Diagnostic,
+  mode: 'fix' | 'explain',
+  token: vscode.CancellationToken
+): Promise<string> {
+  // Use a minimal prompt (simply the diagnostic message)
+  const prompt = diagnostic.message;
+
+  logOutput('INFO', `Requesting AI ${mode} response for diagnostic: ${diagnostic.message}`);
+
+  // Configure Neuro/AI actions schema using the "chat" registration
+  NEURO.waiting = true;
+  NEURO.cancelled = false;
+
+  NEURO.client?.registerActions([
+    {
+      name: 'chat',
+      description: mode === 'fix'
+        ? 'Generate a code fix for the provided diagnostic.'
+        : 'Explain why the diagnostic occurred.',
+      schema: {
+        type: 'object',
+        properties: {
+          answer: { type: 'string' },
+        },
+        required: ['answer'],
+      },
+    },
+  ]);
+
+  // Kick off the request using the basic prompt
+  NEURO.client?.forceActions(
+    prompt,
+    ['chat'],
+    document.uri.toString(),
+    true
+  );
+
+  // Wire up cancellation (if the CodeAction is cancelled by VS Code)
+  token.onCancellationRequested(() => {
+    logOutput('INFO', 'User cancelled AI request');
+    NEURO.cancelled = true;
+    cancelChatRequest();
+  });
+
+  // Race between Neuro's response and a timeout
+  const timeoutMs = CONFIG.timeout || 15000; // 15s default
+  const timeoutP = new Promise<string>((_, reject) =>
+    setTimeout(() => reject('AI request timed out'), timeoutMs)
+  );
+  const responseP = new Promise<string>((resolve) => {
+    const interval = setInterval(() => {
+      if (!NEURO.waiting) {
+        clearInterval(interval);
+        resolve(lastChatResponse);
+      }
+    }, 100);
+  });
+
+  try {
+    const neuroAnswer = await Promise.race([timeoutP, responseP]);
+    return neuroAnswer;
+  } catch (erm) {
+    if (typeof erm === 'string') {
+      logOutput('ERROR', erm);
+      NEURO.cancelled = true;
+      return erm;
+    }
+    throw erm;
+  } finally {
+    // Ensure waiting flag is cleared
+    NEURO.waiting = false;
+  }
 }

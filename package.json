@@ -69,6 +69,16 @@
 				"command": "neuropilot.revealRceNotification",
 				"title": "Reveal Neuro's Request",
 				"category": "NeuroPilot"
+			},
+			{
+				"command": "neuropilot.fixWithNeuro",
+				"title": "Ask Neuro to fix",
+				"category": "NeuroPilot"
+			},
+			{
+				"command": "neuropilot.explainWithNeuro",
+				"title": "Ask Neuro to explain",
+				"category": "NeuroPilot"
 			}
 		],
 		"configuration": [
