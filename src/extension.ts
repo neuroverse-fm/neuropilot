@@ -117,27 +117,62 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.languages.registerCodeActionsProvider(
         { scheme: 'file' },
         new (class implements vscode.CodeActionProvider {
-            provideCodeActions(document: vscode.TextDocument, range: vscode.Range, context: vscode.CodeActionContext, token: vscode.CancellationToken): vscode.ProviderResult<vscode.CodeAction[]> {
-                if (context.diagnostics.length === 0) {
-                    return [];
-                }
-                // Pass the active document, diagnostic range, and all diagnostics as command arguments.
-                const fixAction = new vscode.CodeAction("Ask Neuro to fix", vscode.CodeActionKind.QuickFix);
-                fixAction.command = {
+        public static readonly providedCodeActionKinds = [
+        vscode.CodeActionKind.QuickFix
+    ];
+
+    public provideCodeActions(
+      document: vscode.TextDocument,
+      range: vscode.Range,
+      context: vscode.CodeActionContext,
+      token: vscode.CancellationToken
+    ): vscode.ProviderResult<vscode.CodeAction[]> {
+      const actions: vscode.CodeAction[] = [];
+
+        // Only offer your “Ask Neuro” actions for *each* diagnostic under the cursor
+            context.diagnostics.forEach(diagnostic => {
+                // 1) “Ask Neuro to fix” for this specific diagnostic
+                const fix = new vscode.CodeAction(
+                    "Ask Neuro to fix",
+                    vscode.CodeActionKind.QuickFix
+                );
+
+                fix.command = {
                     command: 'neuropilot.fixWithNeuro',
                     title: "Ask Neuro to fix",
-                    arguments: [document, context.diagnostics]
+                    arguments: [document, diagnostic]
                 };
-                const explainAction = new vscode.CodeAction("Ask Neuro to explain", vscode.CodeActionKind.QuickFix);
-                explainAction.command = {
+                
+                // This is the crucial line that was missing:
+                // tie this code action to the one diagnostic we're fixing.
+                fix.diagnostics = [diagnostic];
+                actions.push(fix);
+
+                // 2) “Ask Neuro to explain” for that diagnostic
+                const explain = new vscode.CodeAction(
+                    "Ask Neuro to explain",
+                    vscode.CodeActionKind.QuickFix
+                );
+
+                explain.command = {
                     command: 'neuropilot.explainWithNeuro',
                     title: "Ask Neuro to explain",
-                    arguments: [document, context.diagnostics]
+                    arguments: [document, diagnostic]
                 };
-                return [fixAction, explainAction];
+
+                // Again, tie it to the same diagnostic
+                explain.diagnostics = [diagnostic];
+                actions.push(explain);
+            });
+
+            return actions;
             }
-        })()
+        })(),
+        {
+            providedCodeActionKinds: [vscode.CodeActionKind.QuickFix]
+        }
     );
+
 
     registerChatParticipant(context);
     saveContextForTerminal(context);
