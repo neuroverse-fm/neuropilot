@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 
 import { NEURO } from './constants';
-import { logOutput, createClient, onClientConnected } from './utils';
+import { logOutput, createClient, onClientConnected, isPathNeuroSafe, setVirtualCursor } from './utils';
 import { completionsProvider, registerCompletionResultHandler } from './completions';
 import { giveCookie, registerRequestCookieAction, registerRequestCookieHandler, sendCurrentFile } from './context';
 import { registerChatParticipant, registerChatResponseHandler } from './chat';
@@ -63,6 +63,7 @@ export function activate(context: vscode.ExtensionContext) {
 
     createClient();
 
+    // Create status bar item
     NEURO.statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
     context.subscriptions.push(NEURO.statusBarItem);
     NEURO.statusBarItem.name = 'NeuroPilot';
@@ -75,6 +76,44 @@ export function activate(context: vscode.ExtensionContext) {
     // sync the status bar item visibility with the setting
     if (CONFIG.hideCopilotRequests)
         NEURO.statusBarItem.show();
+
+    // Set virtual cursor position for new files
+    vscode.window.onDidChangeActiveTextEditor(editor => {
+        if(editor) {
+            const uri = editor.document.uri;
+            if(!NEURO.cursorPositions.has(uri)) {
+                if(isPathNeuroSafe(uri.fsPath))
+                    setVirtualCursor(editor.selection.active);
+                else
+                    setVirtualCursor(null);
+            }
+            else {
+                setVirtualCursor();
+            }
+        }
+    });
+
+    // Create cursor decoration type
+    NEURO.cursorDecorationType = vscode.window.createTextEditorDecorationType({
+        backgroundColor: 'rgba(0, 0, 0, 0)',
+        border: '1px solid rgba(0, 0, 0, 0)',
+        borderRadius: '1px',
+        overviewRulerColor: 'rgba(255, 85, 229, 0.5)',
+        overviewRulerLane: vscode.OverviewRulerLane.Right,
+        gutterIconPath: context.asAbsolutePath('icon.png'),
+        gutterIconSize: 'contain',
+        rangeBehavior: vscode.DecorationRangeBehavior.ClosedClosed,
+        before: {
+            contentText: 'ᛙ',
+            margin: '0 0 0 -0.25ch',
+            textDecoration: 'none; position: absolute; display: inline-block; top: 0; font-size: 200%; font-weight: bold, z-index: 1',
+            color: 'rgba(255, 85, 229)',
+        },
+    });
+
+    if(vscode.window.activeTextEditor && isPathNeuroSafe(vscode.window.activeTextEditor.document.fileName)) {
+        setVirtualCursor(vscode.window.activeTextEditor.selection.active);
+    }
 
     vscode.workspace.onDidChangeConfiguration(event => {
         if (event.affectsConfiguration('neuropilot.hideCopilotRequests')) {

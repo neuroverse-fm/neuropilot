@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 
 import { NEURO } from './constants';
-import { combineGlobLines, filterFileContents, getFence, getWorkspacePath, isPathNeuroSafe, logOutput, normalizePath } from './utils';
+import { combineGlobLines, filterFileContents, getFence, getVirtualCursor, getWorkspacePath, isPathNeuroSafe, logOutput, normalizePath } from './utils';
 import { ActionData, contextNoAccess, ActionWithHandler, contextFailure } from './neuro_client_helper';
 import { CONFIG, PERMISSIONS, getPermissionLevel } from './config';
 
@@ -331,19 +331,24 @@ export function handleOpenFile(actionData: ActionData): string | undefined {
     if(!isPathNeuroSafe(uri.fsPath))
         return contextNoAccess(uri.fsPath);
 
-    vscode.workspace.openTextDocument(uri).then(
-        (document) => {
-            vscode.window.showTextDocument(document);
+    openFileAsync();
+    return;
+
+    async function openFileAsync() {
+        try {
+            const document = await vscode.workspace.openTextDocument(uri);
+            await vscode.window.showTextDocument(document);
+
             logOutput('INFO', `Opened file ${relativePath}`);
-            const cursorOffset = document.offsetAt(vscode.window.activeTextEditor!.selection.active);
+            const cursorOffset = document.offsetAt(getVirtualCursor() ?? new vscode.Position(0, 0));
             let text = document.getText();
             text = text.slice(0, cursorOffset) + '<<<|>>>' + text.slice(cursorOffset);
             const fence = getFence(text);
             NEURO.client?.sendContext(`Opened file ${relativePath}\n\nContent (cursor position denoted by \`<<<|>>>\`):\n\n${fence}${document.languageId}\n${filterFileContents(text)}\n${fence}`);
-        },
-        () => {
+        }
+        catch {
             logOutput('ERROR', `Failed to open file ${relativePath}`);
             NEURO.client?.sendContext(`Failed to open file ${relativePath}`);
-        },
-    );
+        }
+    }
 }

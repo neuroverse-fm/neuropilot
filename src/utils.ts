@@ -252,7 +252,8 @@ export function escapeRegExp(string: string): string {
  * Returns the string that would be inserted by the {@link String.replace} method.
  * @param match The match object returned by a regular expression.
  * @param replacement The replacement string, which can contain substitutions.
- * The substitutions ` $` `, $' and $_ are not supported.
+ * Supports JavaScript-style and .NET-style substitutions.
+ * The substitutions `` $` ``, `$'` and `$_` are not supported.
  * @returns The substituted string.
  * @throws Error if the substitution is invalid or if the capture group does not exist.
  */
@@ -334,4 +335,58 @@ export function getMaxFenceLength(text: string): number {
 export function getFence(text: string): string {
     const maxFenceLength = getMaxFenceLength(text);
     return '`'.repeat(maxFenceLength ? maxFenceLength + 1 : 3);
+}
+
+/**
+ * Places the virtual cursor at the specified position in the current text editor.
+ * @param position The position to place the virtual cursor.
+ * If set to `null`, the cursor is removed.
+ * If not provided, the cursor is placed at the last known position,
+ * but if no last known position is available, the cursor is not placed and an error is logged.
+ */
+export function setVirtualCursor(position?: vscode.Position | null) {
+    const editor = vscode.window.activeTextEditor;
+    if(!editor) return;
+
+    if(position === undefined) {
+        position = NEURO.cursorPositions.get(editor.document.uri);
+    }
+
+    if(position === undefined) {
+        logOutput('ERROR', 'No last known position available');
+        return;
+    }
+
+    NEURO.cursorPositions.set(editor.document.uri, position);
+
+    if(position !== null) {
+        editor.setDecorations(NEURO.cursorDecorationType!, [
+            {
+                range: new vscode.Range(position, position),
+                hoverMessage: 'Neuro',
+            },
+        ] satisfies vscode.DecorationOptions[]);
+
+        if(CONFIG.cursorFollowsNeuro)
+            editor.selection = new vscode.Selection(position, position);
+    }
+    else {
+        editor.setDecorations(NEURO.cursorDecorationType!, []);
+    }
+}
+
+/**
+ * Gets the position of the virtual cursor in the current text editor.
+ * @returns The position of the virtual cursor in the current text editor,
+ * or `null` if the text editor is not Neuro-safe,
+ * or `undefined` if the text editor does not exist or has no virtual cursor.
+ */
+export function getVirtualCursor(): vscode.Position | null | undefined {
+    const editor = vscode.window.activeTextEditor;
+    if(!editor) return undefined;
+    const result = NEURO.cursorPositions.get(editor.document.uri);
+    if(result === undefined)
+        // Virtual cursor should always be set by onDidChangeActiveTextEditor
+        logOutput('ERROR', 'No last known position available');
+    return result;
 }
