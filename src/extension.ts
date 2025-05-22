@@ -10,7 +10,7 @@ import { reloadTasks, taskEndedHandler } from './tasks';
 import { emergencyTerminalShutdown, saveContextForTerminal } from './pseudoterminal';
 import { CONFIG } from './config';
 import { sendDiagnosticsDiff } from './lint_problems';
-import { fileSaveListener, toggleSaveAction } from './editing';
+import { fileSaveListener, toggleSaveAction, workspaceEditHandler } from './editing';
 import { emergencyDenyRequests, acceptRceRequest, denyRceRequest, revealRceNotification } from './rce';
 
 export function activate(context: vscode.ExtensionContext) {
@@ -81,7 +81,7 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.window.onDidChangeActiveTextEditor(editor => {
         if(editor) {
             const uri = editor.document.uri;
-            if(!NEURO.cursorPositions.has(uri)) {
+            if(!NEURO.cursorOffsets.has(uri)) {
                 if(isPathNeuroSafe(uri.fsPath))
                     setVirtualCursor(editor.selection.active);
                 else
@@ -111,9 +111,11 @@ export function activate(context: vscode.ExtensionContext) {
         },
     });
 
-    if(vscode.window.activeTextEditor && isPathNeuroSafe(vscode.window.activeTextEditor.document.fileName)) {
+    vscode.workspace.onDidChangeTextDocument(workspaceEditHandler);
+
+    // Set virtual cursor for the initial file on startup
+    if(vscode.window.activeTextEditor && isPathNeuroSafe(vscode.window.activeTextEditor.document.fileName))
         setVirtualCursor(vscode.window.activeTextEditor.selection.active);
-    }
 
     vscode.workspace.onDidChangeConfiguration(event => {
         if (event.affectsConfiguration('neuropilot.hideCopilotRequests')) {

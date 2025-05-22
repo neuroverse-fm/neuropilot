@@ -44,5 +44,5 @@
     },
     // VS Code settings
     "files.autoSaveDelay": 1000,
-    "neuropilot.cursorFollowsNeuro": true
+    "neuropilot.cursorFollowsNeuro": false
 }

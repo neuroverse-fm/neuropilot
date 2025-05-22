@@ -348,31 +348,41 @@ export function setVirtualCursor(position?: vscode.Position | null) {
     const editor = vscode.window.activeTextEditor;
     if(!editor) return;
 
-    if(position === undefined) {
-        position = NEURO.cursorPositions.get(editor.document.uri);
+    if(position === null) {
+        // Remove the virtual cursor
+        NEURO.cursorOffsets.set(editor.document.uri, null);
+        editor.setDecorations(NEURO.cursorDecorationType!, []);
+        return;
     }
 
-    if(position === undefined) {
+    const offset = position !== undefined
+        ? editor.document.offsetAt(position)
+        : NEURO.cursorOffsets.get(editor.document.uri);
+
+    if(offset === null) {
+        // Remove the virtual cursor
+        NEURO.cursorOffsets.set(editor.document.uri, null);
+        editor.setDecorations(NEURO.cursorDecorationType!, []);
+        return;
+    }
+
+    if(offset === undefined) {
         logOutput('ERROR', 'No last known position available');
         return;
     }
 
-    NEURO.cursorPositions.set(editor.document.uri, position);
+    NEURO.cursorOffsets.set(editor.document.uri, offset);
+    const cursorPosition = editor.document.positionAt(offset);
 
-    if(position !== null) {
-        editor.setDecorations(NEURO.cursorDecorationType!, [
-            {
-                range: new vscode.Range(position, position),
-                hoverMessage: 'Neuro',
-            },
-        ] satisfies vscode.DecorationOptions[]);
+    editor.setDecorations(NEURO.cursorDecorationType!, [
+        {
+            range: new vscode.Range(cursorPosition, cursorPosition),
+            hoverMessage: 'Neuro',
+        },
+    ] satisfies vscode.DecorationOptions[]);
 
-        if(CONFIG.cursorFollowsNeuro)
-            editor.selection = new vscode.Selection(position, position);
-    }
-    else {
-        editor.setDecorations(NEURO.cursorDecorationType!, []);
-    }
+    if(CONFIG.cursorFollowsNeuro)
+        editor.selection = new vscode.Selection(cursorPosition, cursorPosition);
 }
 
 /**
@@ -384,9 +394,17 @@ export function setVirtualCursor(position?: vscode.Position | null) {
 export function getVirtualCursor(): vscode.Position | null | undefined {
     const editor = vscode.window.activeTextEditor;
     if(!editor) return undefined;
-    const result = NEURO.cursorPositions.get(editor.document.uri);
-    if(result === undefined)
+    const result = NEURO.cursorOffsets.get(editor.document.uri);
+    if(result === undefined) {
         // Virtual cursor should always be set by onDidChangeActiveTextEditor
         logOutput('ERROR', 'No last known position available');
-    return result;
+        return undefined;
+    }
+    else if(result === null) {
+        return null;
+    }
+    else {
+        return editor.document.positionAt(result);
+    }
+
 }

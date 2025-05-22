@@ -42,10 +42,10 @@ interface Neuro {
     statusBarItem: vscode.StatusBarItem | null;
     warnOnCompletionsOff: boolean;
     /**
-     * The current position of the virtual cursor for each file.
-     * The position is null for files that are not Neuro-safe.
+     * The current offset of the virtual cursor for each file.
+     * The offset is null for files that are not Neuro-safe.
      */
-    cursorPositions: Map<vscode.Uri, vscode.Position | null>;
+    cursorOffsets: Map<vscode.Uri, number | null>;
     /** Decoration type for the virtual cursor. */
     cursorDecorationType: vscode.TextEditorDecorationType | null;
 }
@@ -71,6 +71,6 @@ export const NEURO: Neuro = {
     rceRequest: null,
     statusBarItem: null,
     warnOnCompletionsOff: true,
-    cursorPositions: new Map(),
+    cursorOffsets: new Map(),
     cursorDecorationType: null,
 };

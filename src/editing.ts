@@ -492,3 +492,33 @@ function formatContext(context: NeuroPositionContext): string {
     const fence = getFence(context.contextBefore + context.contextBetween + context.contextAfter);
     return `Context (lines ${context.startLine + 1}-${context.endLine + 1}, cursor position denoted by \`<<<|>>>\`):\n\n${fence}\n${context.contextBefore}${context.contextBetween}<<<|>>>${context.contextAfter}\n${fence}`;
 }
+
+export function workspaceEditHandler(event: vscode.TextDocumentChangeEvent) {
+    if(event.contentChanges.length === 0) return;
+    if(event.document !== vscode.window.activeTextEditor?.document) return;
+
+    const cursorOffset = NEURO.cursorOffsets.get(event.document.uri);
+    if(cursorOffset === undefined || cursorOffset === null) return;
+
+    for(const change of event.contentChanges) {
+        logOutput('DEBUG', `Change detected in document ${event.document.fileName}: ${JSON.stringify(change)}`);
+
+        const startOffset = event.document.offsetAt(change.range.start);
+
+        if(startOffset > cursorOffset)
+            // Change is after the cursor, no need to update it
+            continue;
+
+        const endOffset = change.rangeOffset + change.rangeLength;
+
+        if(endOffset > cursorOffset) {
+            // Change includes the cursor, place it at the end of the change
+            setVirtualCursor(event.document.positionAt(change.rangeOffset + change.text.length));
+        }
+        else {
+            // Change is before the cursor, move it by the change length
+            const delta = change.text.length - change.rangeLength;
+            setVirtualCursor(event.document.positionAt(cursorOffset + delta));
+        }
+    }
+}
