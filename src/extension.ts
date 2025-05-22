@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 
 import { NEURO } from './constants';
-import { logOutput, createClient, onClientConnected, isPathNeuroSafe, setVirtualCursor } from './utils';
+import { logOutput, createClient, onClientConnected, isPathNeuroSafe, setVirtualCursor, getVirtualCursor } from './utils';
 import { completionsProvider, registerCompletionResultHandler } from './completions';
 import { giveCookie, registerRequestCookieAction, registerRequestCookieHandler, sendCurrentFile } from './context';
 import { registerChatParticipant, registerChatResponseHandler } from './chat';
@@ -10,7 +10,7 @@ import { reloadTasks, taskEndedHandler } from './tasks';
 import { emergencyTerminalShutdown, saveContextForTerminal } from './pseudoterminal';
 import { CONFIG } from './config';
 import { sendDiagnosticsDiff } from './lint_problems';
-import { fileSaveListener, toggleSaveAction, workspaceEditHandler } from './editing';
+import { editorChangeHandler, fileSaveListener, moveNeuroCursorHere, toggleSaveAction, workspaceEditHandler } from './editing';
 import { emergencyDenyRequests, acceptRceRequest, denyRceRequest, revealRceNotification } from './rce';
 
 export function activate(context: vscode.ExtensionContext) {
@@ -23,10 +23,8 @@ export function activate(context: vscode.ExtensionContext) {
 
     vscode.languages.registerInlineCompletionItemProvider({ pattern: '**' }, completionsProvider);
 
-    vscode.commands.registerCommand('neuropilot.reconnect', async (..._args) => {
-        logOutput('INFO', 'Attempting to reconnect to Neuro API');
-        createClient();
-    });
+    vscode.commands.registerCommand('neuropilot.reconnect', reconnect);
+    vscode.commands.registerCommand('neuropilot.moveNeuroCursorHere', moveNeuroCursorHere);
     vscode.commands.registerCommand('neuropilot.sendCurrentFile', sendCurrentFile);
     vscode.commands.registerCommand('neuropilot.giveCookie', giveCookie);
     vscode.commands.registerCommand('neuropilot.reloadPermissions', reloadPermissions);
@@ -78,38 +76,10 @@ export function activate(context: vscode.ExtensionContext) {
         NEURO.statusBarItem.show();
 
     // Set virtual cursor position for new files
-    vscode.window.onDidChangeActiveTextEditor(editor => {
-        if(editor) {
-            const uri = editor.document.uri;
-            if(!NEURO.cursorOffsets.has(uri)) {
-                if(isPathNeuroSafe(uri.fsPath))
-                    setVirtualCursor(editor.selection.active);
-                else
-                    setVirtualCursor(null);
-            }
-            else {
-                setVirtualCursor();
-            }
-        }
-    });
+    vscode.window.onDidChangeActiveTextEditor(editorChangeHandler);
 
     // Create cursor decoration type
-    NEURO.cursorDecorationType = vscode.window.createTextEditorDecorationType({
-        backgroundColor: 'rgba(0, 0, 0, 0)',
-        border: '1px solid rgba(0, 0, 0, 0)',
-        borderRadius: '1px',
-        overviewRulerColor: 'rgba(255, 85, 229, 0.5)',
-        overviewRulerLane: vscode.OverviewRulerLane.Right,
-        gutterIconPath: context.asAbsolutePath('icon.png'),
-        gutterIconSize: 'contain',
-        rangeBehavior: vscode.DecorationRangeBehavior.ClosedClosed,
-        before: {
-            contentText: 'ᛙ',
-            margin: '0 0 0 -0.25ch',
-            textDecoration: 'none; position: absolute; display: inline-block; top: 0; font-size: 200%; font-weight: bold, z-index: 1',
-            color: 'rgba(255, 85, 229)',
-        },
-    });
+    NEURO.cursorDecorationType = vscode.window.createTextEditorDecorationType(getDecorationRenderOptions(context));
 
     vscode.workspace.onDidChangeTextDocument(workspaceEditHandler);
 
@@ -126,6 +96,11 @@ export function activate(context: vscode.ExtensionContext) {
             }
         }
     });
+}
+
+function reconnect() {
+    logOutput('INFO', 'Attempting to reconnect to Neuro API');
+    createClient();
 }
 
 function reloadPermissions() {
@@ -177,4 +152,23 @@ function disableAllPermissions() {
         NEURO.client?.sendContext('Vedal has turned off all dangerous permissions.');
         vscode.window.showInformationMessage('All dangerous permissions have been turned off and actions have been re-registered. Terminal shells have also been killed, if any.');
     });
+}
+
+function getDecorationRenderOptions(context: vscode.ExtensionContext) {
+    return {
+        backgroundColor: 'rgba(0, 0, 0, 0)',
+        border: '1px solid rgba(0, 0, 0, 0)',
+        borderRadius: '1px',
+        overviewRulerColor: 'rgba(255, 85, 229, 0.5)',
+        overviewRulerLane: vscode.OverviewRulerLane.Right,
+        gutterIconPath: context.asAbsolutePath('icon.png'),
+        gutterIconSize: 'contain',
+        rangeBehavior: vscode.DecorationRangeBehavior.ClosedClosed,
+        before: {
+            contentText: 'ᛙ',
+            margin: '0 0 0 -0.25ch',
+            textDecoration: 'none; position: absolute; display: inline-block; top: 0; font-size: 200%; font-weight: bold, z-index: 1',
+            color: 'rgba(255, 85, 229)',
+        },
+    };
 }

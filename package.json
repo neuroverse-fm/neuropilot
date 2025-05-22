@@ -36,6 +36,11 @@
 				"category": "NeuroPilot"
 			},
 			{
+				"command": "neuropilot.moveNeuroCursorHere",
+				"title": "Move Neuro's Cursor Here",
+				"category": "NeuroPilot"
+			},
+			{
 				"command": "neuropilot.sendCurrentFile",
 				"title": "Send Current File As Context",
 				"category": "NeuroPilot"

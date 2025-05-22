@@ -493,6 +493,30 @@ function formatContext(context: NeuroPositionContext): string {
     return `Context (lines ${context.startLine + 1}-${context.endLine + 1}, cursor position denoted by \`<<<|>>>\`):\n\n${fence}\n${context.contextBefore}${context.contextBetween}<<<|>>>${context.contextAfter}\n${fence}`;
 }
 
+/**
+ * Sets and displays the virtual cursor position when the active text editor changes.
+ * @param editor The active text editor.
+ */
+export function editorChangeHandler(editor: vscode.TextEditor | undefined) {
+    if(editor) {
+        const uri = editor.document.uri;
+        if(!NEURO.cursorOffsets.has(uri)) {
+            if(isPathNeuroSafe(uri.fsPath))
+                setVirtualCursor(editor.selection.active);
+            else
+                setVirtualCursor(null);
+        }
+        else {
+            setVirtualCursor();
+        }
+    }
+}
+
+/**
+ * Moves the virtual cursor when the text document changes.
+ * @param event The editing event.
+ * @returns 
+ */
 export function workspaceEditHandler(event: vscode.TextDocumentChangeEvent) {
     if(event.contentChanges.length === 0) return;
     if(event.document !== vscode.window.activeTextEditor?.document) return;
@@ -521,4 +545,21 @@ export function workspaceEditHandler(event: vscode.TextDocumentChangeEvent) {
             setVirtualCursor(event.document.positionAt(cursorOffset + delta));
         }
     }
+}
+
+export function moveNeuroCursorHere() {
+    const editor = vscode.window.activeTextEditor;
+    if(!editor) {
+        vscode.window.showErrorMessage('No active text editor');
+        return;
+    }
+    if(!isPathNeuroSafe(editor.document.fileName)) {
+        vscode.window.showErrorMessage('Neuro does not have permission to access this file');
+        return;
+    }
+    setVirtualCursor(editor.selection.active);
+
+    const cursorContext = getPositionContext(editor.document, editor.selection.active);
+
+    NEURO.client?.sendContext(`Vedal moved your cursor.\n\n${formatContext(cursorContext)}`);
 }
