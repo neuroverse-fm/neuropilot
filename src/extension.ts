@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 
 import { NEURO } from './constants';
-import { logOutput, createClient, onClientConnected, isPathNeuroSafe, setVirtualCursor, getVirtualCursor } from './utils';
+import { logOutput, createClient, onClientConnected, isPathNeuroSafe, setVirtualCursor } from './utils';
 import { completionsProvider, registerCompletionResultHandler } from './completions';
 import { giveCookie, registerRequestCookieAction, registerRequestCookieHandler, sendCurrentFile } from './context';
 import { registerChatParticipant, registerChatResponseHandler } from './chat';
@@ -94,6 +94,14 @@ export function activate(context: vscode.ExtensionContext) {
             } else {
                 NEURO.statusBarItem?.hide();
             }
+        }
+        if (
+            event.affectsConfiguration('neuropilot.allowUnsafePaths')
+            || event.affectsConfiguration('neuropilot.includePattern')
+            || event.affectsConfiguration('neuropilot.excludePattern')
+            || event.affectsConfiguration('neuropilot.permission.editActiveDocument')
+        ) {
+            setVirtualCursor();
         }
     });
 }

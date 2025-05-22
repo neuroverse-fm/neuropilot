@@ -6,7 +6,7 @@ import globToRegExp from 'glob-to-regexp';
 import { ChildProcessWithoutNullStreams } from 'child_process';
 
 import { NEURO } from './constants';
-import { CONFIG } from './config';
+import { CONFIG, getPermissionLevel, PERMISSIONS } from './config';
 
 export const REGEXP_ALWAYS = /^/;
 export const REGEXP_NEVER = /^\b$/;
@@ -348,22 +348,18 @@ export function setVirtualCursor(position?: vscode.Position | null) {
     const editor = vscode.window.activeTextEditor;
     if(!editor) return;
 
-    if(position === null) {
-        // Remove the virtual cursor
-        NEURO.cursorOffsets.set(editor.document.uri, null);
-        editor.setDecorations(NEURO.cursorDecorationType!, []);
+    if(position === null || !getPermissionLevel(PERMISSIONS.editActiveDocument) || !isPathNeuroSafe(editor.document.fileName)) {
+        removeVirtualCursor();
         return;
     }
 
-    const offset = position !== undefined
+    let offset = position !== undefined
         ? editor.document.offsetAt(position)
         : NEURO.cursorOffsets.get(editor.document.uri);
 
     if(offset === null) {
-        // Remove the virtual cursor
-        NEURO.cursorOffsets.set(editor.document.uri, null);
-        editor.setDecorations(NEURO.cursorDecorationType!, []);
-        return;
+        // Some setting changed that made the file Neuro-safe
+        offset = editor.document.offsetAt(editor.selection.active);
     }
 
     if(offset === undefined) {
@@ -383,6 +379,13 @@ export function setVirtualCursor(position?: vscode.Position | null) {
 
     if(CONFIG.cursorFollowsNeuro)
         editor.selection = new vscode.Selection(cursorPosition, cursorPosition);
+
+    return;
+
+    function removeVirtualCursor() {
+        NEURO.cursorOffsets.set(editor!.document.uri, null);
+        editor!.setDecorations(NEURO.cursorDecorationType!, []);
+    }
 }
 
 /**
@@ -406,5 +409,4 @@ export function getVirtualCursor(): vscode.Position | null | undefined {
     else {
         return editor.document.positionAt(result);
     }
-
 }

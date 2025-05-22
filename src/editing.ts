@@ -224,7 +224,6 @@ export function handleInsertText(actionData: ActionData): string | undefined {
             logOutput('INFO', 'Inserting text into document');
             const document = vscode.window.activeTextEditor!.document;
             const insertEnd = document.positionAt(document.offsetAt(insertStart) + text.length);
-            setVirtualCursor(insertEnd);
             const cursorContext = getPositionContext(document, insertStart, insertEnd);
             NEURO.client?.sendContext(`Inserted text into document\n\n${formatContext(cursorContext)}`);
         }
@@ -520,13 +519,15 @@ export function editorChangeHandler(editor: vscode.TextEditor | undefined) {
 export function workspaceEditHandler(event: vscode.TextDocumentChangeEvent) {
     if(event.contentChanges.length === 0) return;
     if(event.document !== vscode.window.activeTextEditor?.document) return;
+    if(!getPermissionLevel(PERMISSIONS.editActiveDocument)) return;
 
-    const cursorOffset = NEURO.cursorOffsets.get(event.document.uri);
-    if(cursorOffset === undefined || cursorOffset === null) return;
+    const initialCursorOffset = NEURO.cursorOffsets.get(event.document.uri);
+    if(initialCursorOffset === undefined || initialCursorOffset === null) return;
 
     for(const change of event.contentChanges) {
         logOutput('DEBUG', `Change detected in document ${event.document.fileName}: ${JSON.stringify(change)}`);
 
+        const cursorOffset = NEURO.cursorOffsets.get(event.document.uri)!;
         const startOffset = event.document.offsetAt(change.range.start);
 
         if(startOffset > cursorOffset)
