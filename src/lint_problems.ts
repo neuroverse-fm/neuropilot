@@ -275,7 +275,7 @@ export function sendDiagnosticsDiff(e: vscode.DiagnosticChangeEvent): void {
 
 const lastChatResponse = '';
 
-export async function fixWithNeuro(...args: any[]): Promise<void> {
+export async function fixWithNeuro(...args: any[]): Promise<void> { // TODO: Typing
     let document: vscode.TextDocument;
     let diagnostics: vscode.Diagnostic[];
     if (args && args.length >= 2) {
@@ -308,7 +308,7 @@ export async function fixWithNeuro(...args: any[]): Promise<void> {
     }
 }
 
-export async function explainWithNeuro(...args: any[]): Promise<void> {
+export async function explainWithNeuro(...args: any[]): Promise<void> { // TODO: Typing
     let document: vscode.TextDocument;
     let diagnostics: vscode.Diagnostic[];
     if (args && args.length >= 2) {
@@ -440,6 +440,7 @@ export class NeuroCodeActionsProvider implements vscode.CodeActionProvider {
         const actions: vscode.CodeAction[] = [];
 
         // Only offer your “Ask Neuro” actions for *each* diagnostic under the cursor
+        // TODO: This shows multiple same actions, instead make one action with all the diagnostics?
         context.diagnostics.forEach(diagnostic => {
             // 1) “Ask Neuro to fix” for this specific diagnostic
             const fix = new vscode.CodeAction(
