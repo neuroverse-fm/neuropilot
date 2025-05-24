@@ -55,8 +55,14 @@ export function registerChatResponseHandler() {
 
 export function registerChatParticipant(context: vscode.ExtensionContext) {
     const handler: vscode.ChatRequestHandler = async (request: vscode.ChatRequest, context: vscode.ChatContext, stream: vscode.ChatResponseStream, token: vscode.CancellationToken): Promise<NeuroChatResult> => {
-        // if(request.command === 'code') {
-        // }
+        let prefix = '';
+
+        if(request.command === 'fix') {
+            prefix = 'Vedal wants you to fix the following error(s):\n';
+        }
+        else if(request.command === 'explain') {
+            prefix = 'Vedal wants you to explain the following:\n';
+        }
 
         if(!NEURO.connected) {
             stream.markdown('Not connected to Neuro API.');
@@ -118,7 +124,7 @@ export function registerChatParticipant(context: vscode.ExtensionContext) {
         // Query Neuro API
         stream.progress('Waiting for Neuro to respond...');
 
-        const answer = await requestChatResponse(request.prompt, JSON.stringify({ references: references }), token);
+        const answer = await requestChatResponse(prefix + request.prompt, JSON.stringify({ references: references }), token);
 
         stream.markdown(answer);
 

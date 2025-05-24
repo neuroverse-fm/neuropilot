@@ -9,7 +9,7 @@ import { registerUnsupervisedActions, registerUnsupervisedHandlers } from './uns
 import { reloadTasks, taskEndedHandler } from './tasks';
 import { emergencyTerminalShutdown, saveContextForTerminal } from './pseudoterminal';
 import { CONFIG } from './config';
-import { sendDiagnosticsDiff } from './lint_problems';
+import { explainWithNeuro, fixWithNeuro, NeuroCodeActionsProvider, sendDiagnosticsDiff } from './lint_problems';
 import { editorChangeHandler, fileSaveListener, moveNeuroCursorHere, toggleSaveAction, workspaceEditHandler } from './editing';
 import { emergencyDenyRequests, acceptRceRequest, denyRceRequest, revealRceNotification } from './rce';
 
@@ -32,6 +32,15 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand('neuropilot.acceptRceRequest', acceptRceRequest);
     vscode.commands.registerCommand('neuropilot.denyRceRequest', denyRceRequest);
     vscode.commands.registerCommand('neuropilot.revealRceNotification', revealRceNotification);
+    vscode.commands.registerCommand('neuropilot.fixWithNeuro', fixWithNeuro);
+    vscode.commands.registerCommand('neuropilot.explainWithNeuro', explainWithNeuro);
+
+    // Update the CodeActionProvider to pass the document and diagnostics.
+    vscode.languages.registerCodeActionsProvider(
+        { scheme: 'file' },
+        new NeuroCodeActionsProvider(),
+        { providedCodeActionKinds: NeuroCodeActionsProvider.providedCodeActionKinds},
+    );
 
     registerChatParticipant(context);
     saveContextForTerminal(context);

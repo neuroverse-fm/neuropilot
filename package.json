@@ -26,7 +26,17 @@
 				"name": "neuro",
 				"fullName": "Neuro-sama",
 				"description": "Chat with Neuro-sama",
-				"isSticky": true
+				"isSticky": true,
+				"commands": [
+					{
+						"name": "fix",
+						"description": "Ask Neuro to fix an error"
+					},
+					{
+						"name": "explain",
+						"description": "Ask Neuro to explain an something in your code"
+					}
+				]
 			}
 		],
 		"commands": [
@@ -73,6 +83,16 @@
 			{
 				"command": "neuropilot.revealRceNotification",
 				"title": "Reveal Neuro's Request",
+				"category": "NeuroPilot"
+			},
+			{
+				"command": "neuropilot.fixWithNeuro",
+				"title": "Ask Neuro to fix",
+				"category": "NeuroPilot"
+			},
+			{
+				"command": "neuropilot.explainWithNeuro",
+				"title": "Ask Neuro to explain",
 				"category": "NeuroPilot"
 			}
 		],

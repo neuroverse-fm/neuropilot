@@ -271,3 +271,92 @@ export function sendDiagnosticsDiff(e: vscode.DiagnosticChangeEvent): void {
 
     NEURO.client?.sendContext(`New linting problems:\n${output}`, false);
 }
+
+export async function fixWithNeuro(document?: vscode.TextDocument, diagnostics?: vscode.Diagnostic | vscode.Diagnostic[]): Promise<void> {
+    if (document && diagnostics) {
+        if (!Array.isArray(diagnostics))
+            diagnostics = [diagnostics];
+    } else {
+        const editor = vscode.window.activeTextEditor;
+        if (!editor) {
+            vscode.window.showErrorMessage('No active editor found.');
+            return;
+        }
+        document = editor.document;
+        diagnostics = vscode.languages.getDiagnostics(document.uri);
+    }
+    if (!diagnostics || diagnostics.length === 0) {
+        vscode.window.showInformationMessage('No diagnostics found in the active file.');
+        return;
+    }
+
+    vscode.commands.executeCommand('workbench.action.chat.open', {
+        query: `@neuro /fix ${diagnostics.map(d => d.message).join('\n')}`,
+    });
+}
+
+export async function explainWithNeuro(document?: vscode.TextDocument, diagnostics?: vscode.Diagnostic | vscode.Diagnostic[]): Promise<void> { // TODO: Typing
+    if (document && diagnostics) {
+        if (!Array.isArray(diagnostics))
+            diagnostics = [diagnostics];
+    } else {
+        const editor = vscode.window.activeTextEditor;
+        if (!editor) {
+            vscode.window.showErrorMessage('No active editor found.');
+            return;
+        }
+        document = editor.document;
+        diagnostics = vscode.languages.getDiagnostics(document.uri);
+    }
+    if (!diagnostics || diagnostics.length === 0) {
+        vscode.window.showInformationMessage('No diagnostics found in the active file.');
+        return;
+    }
+
+    vscode.commands.executeCommand('workbench.action.chat.open', {
+        query: `@neuro /explain ${diagnostics.map(d => d.message).join('\n')}`,
+    });
+}
+
+export class NeuroCodeActionsProvider implements vscode.CodeActionProvider {
+    public static readonly providedCodeActionKinds = [
+        vscode.CodeActionKind.QuickFix,
+    ];
+
+    public provideCodeActions(
+        document: vscode.TextDocument,
+        _range: vscode.Range,
+        context: vscode.CodeActionContext,
+        _token: vscode.CancellationToken,
+    ): vscode.ProviderResult<vscode.CodeAction[]> {
+        const actions: vscode.CodeAction[] = [];
+
+        const fix = new vscode.CodeAction(
+            'Ask Neuro to fix',
+            vscode.CodeActionKind.QuickFix,
+        );
+        fix.command = {
+            command: 'neuropilot.fixWithNeuro',
+            title: 'Ask Neuro to fix',
+            arguments: [document, context.diagnostics],
+        };
+        fix.diagnostics = context.diagnostics.map(d => d);
+        actions.push(fix);
+
+        const explain = new vscode.CodeAction(
+            'Ask Neuro to explain',
+            vscode.CodeActionKind.QuickFix,
+        );
+
+        explain.command = {
+            command: 'neuropilot.explainWithNeuro',
+            title: 'Ask Neuro to explain',
+            arguments: [document, context.diagnostics],
+        };
+
+        explain.diagnostics = context.diagnostics.map(d => d);
+        actions.push(explain);
+
+        return actions;
+    }
+}
