@@ -275,15 +275,10 @@ export function sendDiagnosticsDiff(e: vscode.DiagnosticChangeEvent): void {
 
 const lastChatResponse = '';
 
-export async function fixWithNeuro(...args: [vscode.TextDocument, vscode.Diagnostic[]] | []): Promise<void> { // TODO: Typing
-    let document: vscode.TextDocument;
-    let diagnostics: vscode.Diagnostic[];
-    if (args && args.length >= 2) {
-        document = args[0]!;
-        diagnostics = args[1]!;
-        if (!Array.isArray(diagnostics)) {
+export async function fixWithNeuro(document?: vscode.TextDocument, diagnostics?: vscode.Diagnostic | vscode.Diagnostic[]): Promise<void> {
+    if (document && diagnostics) {
+        if (!Array.isArray(diagnostics))
             diagnostics = [diagnostics];
-        };
     } else {
         const editor = vscode.window.activeTextEditor;
         if (!editor) {
@@ -297,29 +292,29 @@ export async function fixWithNeuro(...args: [vscode.TextDocument, vscode.Diagnos
         vscode.window.showInformationMessage('No diagnostics found in the active file.');
         return;
     }
-    // For simplicity, pick the first diagnostic.
-    const diagnostic = diagnostics[0];
-    const tokenSource = new vscode.CancellationTokenSource();
-    const response = await requestResponseForDiagnostic(document, diagnostic, 'fix', tokenSource.token);
 
-    // Append the response to the chat history.
-    addToChatHistory(response !== 'Neuro timed out.' ? `Fix to "${vscode.workspace.asRelativePath(document.uri)}": ${response}` : `Neuro did not suggest a fix for the lint error "${diagnostics}".`);
-    // Show an info message with an option to view the chat history.
-    const choice = await vscode.window.showInformationMessage('Neuro suggests: ' + response, 'View Chat History');
-    if (choice === 'View Chat History') {
-        NEURO.chatHistoryChannel!.show();
-    }
+    vscode.commands.executeCommand('workbench.action.chat.open', {
+        query: `@neuro /fix ${diagnostics.map(d => d.message).join(', ')}`,
+    });
+
+    // // For simplicity, pick the first diagnostic.
+    // const diagnostic = diagnostics[0];
+    // const tokenSource = new vscode.CancellationTokenSource();
+    // const response = await requestResponseForDiagnostic(document, diagnostic, 'fix', tokenSource.token);
+
+    // // Append the response to the chat history.
+    // addToChatHistory(response !== 'Neuro timed out.' ? `Fix to "${vscode.workspace.asRelativePath(document.uri)}": ${response}` : `Neuro did not suggest a fix for the lint error "${diagnostics}".`);
+    // // Show an info message with an option to view the chat history.
+    // const choice = await vscode.window.showInformationMessage('Neuro suggests: ' + response, 'View Chat History');
+    // if (choice === 'View Chat History') {
+    //     NEURO.chatHistoryChannel!.show();
+    // }
 }
 
-export async function explainWithNeuro(...args: [vscode.TextDocument, vscode.Diagnostic[]] | []): Promise<void> { // TODO: Typing
-    let document: vscode.TextDocument;
-    let diagnostics: vscode.Diagnostic[];
-    if (args && args.length >= 2) {
-        document = args[0]!;
-        diagnostics = args[1]!;
-        if (!Array.isArray(diagnostics)) {
+export async function explainWithNeuro(document?: vscode.TextDocument, diagnostics?: vscode.Diagnostic | vscode.Diagnostic[]): Promise<void> { // TODO: Typing
+    if (document && diagnostics) {
+        if (!Array.isArray(diagnostics))
             diagnostics = [diagnostics];
-        };
     } else {
         const editor = vscode.window.activeTextEditor;
         if (!editor) {
@@ -333,18 +328,23 @@ export async function explainWithNeuro(...args: [vscode.TextDocument, vscode.Dia
         vscode.window.showInformationMessage('No diagnostics found in the active file.');
         return;
     }
-    // For simplicity, pick the first diagnostic.
-    const diagnostic = diagnostics[0];
-    const tokenSource = new vscode.CancellationTokenSource();
-    const response = await requestResponseForDiagnostic(document, diagnostic, 'explain', tokenSource.token);
 
-    // Append the response to the chat history.
-    addToChatHistory(response !== 'Neuro timed out.' ? `Fix to "${vscode.workspace.asRelativePath(document.uri)}": ${response}` : `Neuro did not suggest a fix for the lint error "${diagnostics}".`);
-    // Show an info message with an option to view the chat history.
-    const choice = await vscode.window.showInformationMessage(response !== 'Neuro timed out' ? 'Neuro explains: ' + response : "Neuro didn't answer in time.", 'View Chat History');
-    if (choice === 'View Chat History') {
-        NEURO.chatHistoryChannel!.show();
-    }
+    vscode.commands.executeCommand('workbench.action.chat.open', {
+        query: `@neuro /explain ${diagnostics.map(d => d.message).join(', ')}`,
+    });
+
+    // // For simplicity, pick the first diagnostic.
+    // const diagnostic = diagnostics[0];
+    // const tokenSource = new vscode.CancellationTokenSource();
+    // const response = await requestResponseForDiagnostic(document, diagnostic, 'explain', tokenSource.token);
+
+    // // Append the response to the chat history.
+    // addToChatHistory(response !== 'Neuro timed out.' ? `Fix to "${vscode.workspace.asRelativePath(document.uri)}": ${response}` : `Neuro did not suggest a fix for the lint error "${diagnostics}".`);
+    // // Show an info message with an option to view the chat history.
+    // const choice = await vscode.window.showInformationMessage(response !== 'Neuro timed out' ? 'Neuro explains: ' + response : "Neuro didn't answer in time.", 'View Chat History');
+    // if (choice === 'View Chat History') {
+    //     NEURO.chatHistoryChannel!.show();
+    // }
 }
 
 /**
