@@ -23,6 +23,24 @@ function gitValidator(_actionData: ActionData): ActionValidationResult {
     return actionValidationAccept();
 }
 
+function neuroSafeGitValidator(actionData: ActionData): ActionValidationResult {
+    const filePath: string | string[] = actionData.params?.filePath;
+    if (typeof filePath === 'string') {
+        if (!isPathNeuroSafe(getAbsoluteFilePath(filePath))) {
+            return actionValidationFailure('You are not allowed to access this file path.');
+        }
+    }
+    else if (Array.isArray(filePath)) {
+        for (const file in filePath) {
+            if (!isPathNeuroSafe(getAbsoluteFilePath(file))) {
+                return actionValidationFailure('You are not allowed to access this file path.');
+            }
+        }
+    }
+
+    return actionValidationAccept();
+}
+
 export const gitActions = {
     init_git_repo: {
         name: 'init_git_repo',
@@ -30,6 +48,10 @@ export const gitActions = {
         permissions: [PERMISSIONS.gitOperations],
         handler: handleNewGitRepo,
         promptGenerator: 'initialize a Git repository in the workspace.',
+        validator: [(_actionData: ActionData) => {
+            if (!git) return actionValidationFailure('Git extension not available.');
+            return actionValidationAccept();
+        }],
     },
     add_file_to_git: {
         name: 'add_file_to_git',
@@ -44,7 +66,7 @@ export const gitActions = {
         permissions: [PERMISSIONS.gitOperations],
         handler: handleAddFileToGit,
         promptGenerator: (actionData: ActionData) => `add the file "${actionData.params.filePath}" to the staging area.`,
-        validator: [gitValidator],
+        validator: [gitValidator, neuroSafeGitValidator],
     },
     make_git_commit: {
         name: 'make_git_commit',
@@ -101,7 +123,7 @@ export const gitActions = {
         permissions: [PERMISSIONS.gitOperations],
         handler: handleRemoveFileFromGit,
         promptGenerator: (actionData: ActionData) => `remove the file "${actionData.params.filePath}" from the staging area.`,
-        validator: [gitValidator],
+        validator: [gitValidator, neuroSafeGitValidator],
     },
     delete_git_branch: {
         name: 'delete_git_branch',
@@ -164,7 +186,7 @@ export const gitActions = {
         permissions: [PERMISSIONS.gitOperations],
         handler: handleDiffFiles,
         promptGenerator: (actionData: ActionData) => `obtain ${actionData.params?.filePath ? `${actionData.params.filePath}'s` : 'a'} Git diff${actionData.params?.ref1 && actionData.params?.ref2 ? ` between ${actionData.params.ref1} and ${actionData.params.ref2}` : actionData.params?.ref1 ? ` at ref ${actionData.params.ref1}` : ''}${actionData.params?.diffType ? ` (of type "${actionData.params.diffType}")` : ''}.`,
-        validator: [gitValidator],
+        validator: [gitValidator, neuroSafeGitValidator],
     },
     git_log: {
         name: 'git_log',
@@ -196,7 +218,7 @@ export const gitActions = {
         permissions: [PERMISSIONS.gitOperations],
         handler: handleGitBlame,
         promptGenerator: (actionData: ActionData) => `get the Git blame for the file "${actionData.params.filePath}".`,
-        validator: [gitValidator],
+        validator: [gitValidator, neuroSafeGitValidator],
     },
 
     // Requires gitTags
