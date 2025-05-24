@@ -1,3 +1,6 @@
+// This version of NeuroPilot has some special cases that needs to be addressed due to the WebWorker environment restriction.
+// This should be bundled up using webpack but I've yet to figure that one out.
+
 import * as vscode from 'vscode';
 
 import { NEURO } from '../constants';

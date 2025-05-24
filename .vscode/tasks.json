@@ -17,6 +17,13 @@
 			}
 		},
 		{
+      		"type": "npm",
+      		"script": "watch-web",
+      		"group": "build",
+      		"isBackground": true,
+      		"problemMatcher": ["$ts-webpack-watch"]
+    	},
+		{
 			"label": "Publish extension",
 			"type": "shell",
 			"command": "vsce publish ${input:version} --allow-star-activation",

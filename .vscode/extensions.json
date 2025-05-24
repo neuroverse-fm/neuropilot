@@ -1,0 +1,4 @@
+{
+    "recommendations": ["GitHub.copilot", "GitHub.copilot-chat", "amodio.tsl-problem-matcher", "dbaeumer.vscode-eslint"],
+    "unwantedRecommendations": ["github.vscode-github-actions"]
+}
