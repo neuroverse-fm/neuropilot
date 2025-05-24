@@ -36,6 +36,11 @@
 				"category": "NeuroPilot"
 			},
 			{
+				"command": "neuropilot.moveNeuroCursorHere",
+				"title": "Move Neuro's Cursor Here",
+				"category": "NeuroPilot"
+			},
+			{
 				"command": "neuropilot.sendCurrentFile",
 				"title": "Send Current File As Context",
 				"category": "NeuroPilot"
@@ -445,6 +450,11 @@
 						"type": "boolean",
 						"default": false,
 						"markdownDescription": "Don't immediately show Copilot-mode action requests, requiring clicking the status bar item to reveal them."
+					},
+					"neuropilot.cursorFollowsNeuro": {
+						"type": "boolean",
+						"default": false,
+						"markdownDescription": "Make the real cursor follow Neuro's cursor."
 					}
 				}
 			}

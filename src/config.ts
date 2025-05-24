@@ -91,6 +91,7 @@ class Config {
     get sendSaveNotifications(): boolean { return get('sendSaveNotifications')!; }
     get requestExpiryTimeout(): number { return get('requestExpiryTimeout')!; }
     get hideCopilotRequests(): boolean { return get('hideCopilotRequests')!; }
+    get cursorFollowsNeuro(): boolean { return get('cursorFollowsNeuro')!; }
 
     get terminals(): { name: string; path: string; args?: string[]; }[] { return get('terminals')!; }
 }
