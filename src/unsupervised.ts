@@ -1,3 +1,6 @@
+// This version of NeuroPilot has some special cases that needs to be addressed due to the WebWorker environment restriction.
+// This should be bundled up using webpack but I've yet to figure that one out.
+
 import * as vscode from 'vscode';
 import { NEURO } from './constants';
 import { handleRunTask, registerTaskActions, taskHandlers } from './tasks';
@@ -26,7 +29,15 @@ const neuroActions: Record<string, ActionWithHandler> = {
     ...lintActions,
 };
 
+const webNeuroActions: Record<string, ActionWithHandler> = {
+    'cancel_request': cancelRequestAction,
+    ...fileActions,
+    ...editingActions,
+    ...lintActions
+}
+
 const actionKeys: string[] = Object.keys(neuroActions);
+const webActionKeys: string[] = Object.keys(webNeuroActions);
 
 export function registerUnsupervisedActions() {
     // Unregister all actions first to properly refresh everything
@@ -37,6 +48,14 @@ export function registerUnsupervisedActions() {
     registerTaskActions();
     registerEditingActions();
     registerTerminalActions();
+    registerLintActions();
+}
+
+export function registerWebUnsupervisedActions() {
+    NEURO.client?.unregisterActions(webActionKeys);
+
+    registerFileActions();
+    registerEditingActions();
     registerLintActions();
 }
 
@@ -51,6 +70,87 @@ export function registerUnsupervisedHandlers() {
 
             let action: ActionWithHandler;
             if (actionKeys.includes(actionData.name)) {
+                action = neuroActions[actionData.name];
+            }
+            else {
+                const task = NEURO.tasks.find(task => task.id === actionData.name)!;
+                action = {
+                    name: task.id,
+                    description: task.description,
+                    permissions: [PERMISSIONS.runTasks],
+                    handler: handleRunTask,
+                    promptGenerator: () => `Neuro wants to run the task "${task.id}".`,
+                };
+            }
+
+            const effectivePermission = action.permissions.length > 0 ? getPermissionLevel(...action.permissions) : action.defaultPermission ?? PermissionLevel.COPILOT;
+            if (effectivePermission === PermissionLevel.OFF) {
+                const offPermission = action.permissions.find(permission => getPermissionLevel(permission) === PermissionLevel.OFF);
+                NEURO.client?.sendActionResult(actionData.id, true, `Action failed: You don't have permission to ${offPermission?.infinitive ?? 'execute this action'}.`);
+                return;
+            }
+
+            // Validate schema
+            if (action.schema) {
+                const schemaValidationResult = validate(actionData.params, action.schema, { required: true });
+                if (!schemaValidationResult.valid) {
+                    const message = 'Action failed: ' + schemaValidationResult.errors[0]?.stack;
+                    NEURO.client?.sendActionResult(actionData.id, false, message);
+                    return;
+                }
+            }
+
+            // Validate custom
+            if (action.validator) {
+                const actionResult = action.validator!(actionData);
+                if(!actionResult.success) {
+                    NEURO.client?.sendActionResult(actionData.id, !(actionResult.retry ?? false), actionResult.message);
+                    return;
+                }
+            }
+
+            if (effectivePermission === PermissionLevel.AUTOPILOT) {
+                const result = action.handler(actionData);
+                NEURO.client?.sendActionResult(actionData.id, true, result);
+            }
+            else { // permissionLevel === PermissionLevel.COPILOT
+                if (NEURO.rceRequest) {
+                    NEURO.client?.sendActionResult(actionData.id, true, 'Action failed: Already waiting for permission to run another action.');
+                    return;
+                }
+
+                const prompt = typeof action.promptGenerator === 'string'
+                    ? 'Neuro wants to ' + (action.promptGenerator as string).trim()
+                    : 'Neuro wants to ' + (action.promptGenerator as (actionData: ActionData) => string)(actionData).trim();
+
+                createRceRequest(
+                    prompt,
+                    () => action.handler(actionData),
+                );
+
+                NEURO.statusBarItem!.tooltip = new vscode.MarkdownString(prompt);
+                NEURO.client?.registerActions([cancelRequestAction]);
+                NEURO.statusBarItem!.backgroundColor = new vscode.ThemeColor('statusBarItem.warningBackground');
+                NEURO.statusBarItem!.color = new vscode.ThemeColor('statusBarItem.warningForeground');
+
+                // Show the RCE dialog immediately if the config says so
+                if (!CONFIG.hideCopilotRequests)
+                    revealRceNotification();
+
+                // End of added code.
+                NEURO.client?.sendActionResult(actionData.id, true, 'Requested permission to run action.');
+            }
+        }
+    });
+}
+
+export function registerWebUnsupervisedHandlers() {
+    NEURO.client?.onAction((actionData: ActionData) => {
+        if (webActionKeys.includes(actionData.name) || NEURO.tasks.find(task => task.id === actionData.name)) {
+            NEURO.actionHandled = true;
+
+            let action: ActionWithHandler;
+            if (webActionKeys.includes(actionData.name)) {
                 action = neuroActions[actionData.name];
             }
             else {

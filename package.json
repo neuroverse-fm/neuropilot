@@ -483,11 +483,13 @@
 		"@types/glob-to-regexp": "^0.4.4",
 		"@types/node": "^20",
 		"@types/vscode": "^1.95.0",
+		"@types/webpack-env": "^1.18.8",
 		"@types/ws": "^8.18.0",
 		"eslint": "^9.13.0",
 		"eslint-plugin-unicorn": "^59.0.1",
 		"typescript": "^5.8.2",
-		"typescript-eslint": "^8.26.0"
+		"typescript-eslint": "^8.26.0",
+		"webpack": "^5.99.9"
 	},
 	"dependencies": {
 		"glob-to-regexp": "^0.4.1",
