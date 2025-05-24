@@ -20,7 +20,7 @@ export function activate(context: vscode.ExtensionContext) {
     NEURO.waiting = false;
     NEURO.cancelled = false;
     NEURO.outputChannel = vscode.window.createOutputChannel('NeuroPilot');
-    NEURO.chatHistoryChannel = vscode.window.createOutputChannel('Neuro Chat History');
+    NEURO.chatHistoryChannel = vscode.window.createOutputChannel('Neuro Linting Fixes/Explanations');
 
     vscode.languages.registerInlineCompletionItemProvider({ pattern: '**' }, completionsProvider);
 
@@ -57,11 +57,6 @@ export function activate(context: vscode.ExtensionContext) {
     onClientConnected(registerUnsupervisedActions);
     onClientConnected(registerUnsupervisedHandlers);
     onClientConnected(registerPostActionHandler);
-
-    // Allows Neuro to be prompted to fix lint problems
-    // const selector: vscode.DocumentSelector = { scheme: 'file' };
-
-    // const provider =
 
     vscode.languages.onDidChangeDiagnostics(sendDiagnosticsDiff);
 

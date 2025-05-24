@@ -275,12 +275,15 @@ export function sendDiagnosticsDiff(e: vscode.DiagnosticChangeEvent): void {
 
 const lastChatResponse = '';
 
-export async function fixWithNeuro(...args: any[]): Promise<void> { // TODO: Typing
+export async function fixWithNeuro(...args: [vscode.TextDocument, vscode.Diagnostic[]] | []): Promise<void> { // TODO: Typing
     let document: vscode.TextDocument;
     let diagnostics: vscode.Diagnostic[];
     if (args && args.length >= 2) {
-        document = args[0];
-        diagnostics = args[1];
+        document = args[0]!;
+        diagnostics = args[1]!;
+        if (!Array.isArray(diagnostics)) {
+            diagnostics = [diagnostics];
+        };
     } else {
         const editor = vscode.window.activeTextEditor;
         if (!editor) {
@@ -297,10 +300,10 @@ export async function fixWithNeuro(...args: any[]): Promise<void> { // TODO: Typ
     // For simplicity, pick the first diagnostic.
     const diagnostic = diagnostics[0];
     const tokenSource = new vscode.CancellationTokenSource();
-    const response = await requestAIResponseForDiagnostic(document, diagnostic, 'fix', tokenSource.token);
+    const response = await requestResponseForDiagnostic(document, diagnostic, 'fix', tokenSource.token);
 
     // Append the response to the chat history.
-    addToChatHistory('Fix: ' + response);
+    addToChatHistory(response !== 'Neuro timed out.' ? `Fix to "${vscode.workspace.asRelativePath(document.uri)}": ${response}` : `Neuro did not suggest a fix for the lint error "${diagnostics}".`);
     // Show an info message with an option to view the chat history.
     const choice = await vscode.window.showInformationMessage('Neuro suggests: ' + response, 'View Chat History');
     if (choice === 'View Chat History') {
@@ -308,12 +311,15 @@ export async function fixWithNeuro(...args: any[]): Promise<void> { // TODO: Typ
     }
 }
 
-export async function explainWithNeuro(...args: any[]): Promise<void> { // TODO: Typing
+export async function explainWithNeuro(...args: [vscode.TextDocument, vscode.Diagnostic[]] | []): Promise<void> { // TODO: Typing
     let document: vscode.TextDocument;
     let diagnostics: vscode.Diagnostic[];
     if (args && args.length >= 2) {
-        document = args[0];
-        diagnostics = args[1];
+        document = args[0]!;
+        diagnostics = args[1]!;
+        if (!Array.isArray(diagnostics)) {
+            diagnostics = [diagnostics];
+        };
     } else {
         const editor = vscode.window.activeTextEditor;
         if (!editor) {
@@ -330,12 +336,12 @@ export async function explainWithNeuro(...args: any[]): Promise<void> { // TODO:
     // For simplicity, pick the first diagnostic.
     const diagnostic = diagnostics[0];
     const tokenSource = new vscode.CancellationTokenSource();
-    const response = await requestAIResponseForDiagnostic(document, diagnostic, 'explain', tokenSource.token);
+    const response = await requestResponseForDiagnostic(document, diagnostic, 'explain', tokenSource.token);
 
     // Append the response to the chat history.
-    addToChatHistory('Explain: ' + response);
+    addToChatHistory(response !== 'Neuro timed out.' ? `Fix to "${vscode.workspace.asRelativePath(document.uri)}": ${response}` : `Neuro did not suggest a fix for the lint error "${diagnostics}".`);
     // Show an info message with an option to view the chat history.
-    const choice = await vscode.window.showInformationMessage('Neuro explains: ' + response, 'View Chat History');
+    const choice = await vscode.window.showInformationMessage(response !== 'Neuro timed out' ? 'Neuro explains: ' + response : "Neuro didn't answer in time.", 'View Chat History');
     if (choice === 'View Chat History') {
         NEURO.chatHistoryChannel!.show();
     }
@@ -350,27 +356,28 @@ export async function explainWithNeuro(...args: any[]): Promise<void> { // TODO:
  * @param token      A CancellationToken, so VS Code can cancel if the user dismisses the lightbulb.
  * @returns          A string containing either the new code (for fix) or the explanation (for explain).
  */
-export async function requestAIResponseForDiagnostic(
+export async function requestResponseForDiagnostic(
     document: vscode.TextDocument,
     diagnostic: vscode.Diagnostic,
     mode: 'fix' | 'explain',
     token: vscode.CancellationToken,
 ): Promise<string> {
     // Use a minimal prompt (simply the diagnostic message)
-    const prompt = diagnostic.message;
+    const prompt = `Vedal wants you to ${mode} the lint error: ${diagnostic.message}`;
 
-    logOutput('INFO', `Requesting AI ${mode} response for diagnostic: ${diagnostic.message}`);
+    // Craft a state string to let Neuro know the environment.
+    const state = `You are currently in ${vscode.workspace.asRelativePath(document.uri)}`;
 
-    // Configure Neuro/AI actions schema using the "chat" registration
+    logOutput('INFO', `Requesting Neuro to ${mode} the diagnostic: ${diagnostic.message}`);
+
     NEURO.waiting = true;
     NEURO.cancelled = false;
 
     NEURO.client?.registerActions([
         {
             name: 'chat',
-            description: mode === 'fix'
-                ? 'Generate a code fix for the provided diagnostic.'
-                : 'Explain why the diagnostic occurred.',
+            description: `Use this to give a ${mode} to the lint error.` +
+                'Your response will be displayed as plaintext due to limitations.',
             schema: {
                 type: 'object',
                 properties: {
@@ -385,21 +392,21 @@ export async function requestAIResponseForDiagnostic(
     NEURO.client?.forceActions(
         prompt,
         ['chat'],
-        document.uri.toString(),
+        state,
         true,
     );
 
     // Wire up cancellation (if the CodeAction is cancelled by VS Code)
     token.onCancellationRequested(() => {
-        logOutput('INFO', 'User cancelled AI request');
+        logOutput('INFO', `Cancelled ${mode} linting action force to Neuro.`);
         NEURO.cancelled = true;
         cancelChatRequest();
     });
 
     // Race between Neuro's response and a timeout
-    const timeoutMs = CONFIG.timeout || 15000; // 15s default
+    const timeoutMs = CONFIG.timeout || 10000;
     const timeoutP = new Promise<string>((_, reject) =>
-        setTimeout(() => reject('AI request timed out'), timeoutMs),
+        setTimeout(() => reject('Neuro timed out'), timeoutMs),
     );
     const responseP = new Promise<string>((resolve) => {
         const interval = setInterval(() => {
