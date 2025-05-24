@@ -294,7 +294,7 @@ export async function fixWithNeuro(document?: vscode.TextDocument, diagnostics?:
     }
 
     vscode.commands.executeCommand('workbench.action.chat.open', {
-        query: `@neuro /fix ${diagnostics.map(d => d.message).join(', ')}`,
+        query: `@neuro /fix ${diagnostics.map(d => d.message).join('\n')}`,
     });
 
     // // For simplicity, pick the first diagnostic.
@@ -330,7 +330,7 @@ export async function explainWithNeuro(document?: vscode.TextDocument, diagnosti
     }
 
     vscode.commands.executeCommand('workbench.action.chat.open', {
-        query: `@neuro /explain ${diagnostics.map(d => d.message).join(', ')}`,
+        query: `@neuro /explain ${diagnostics.map(d => d.message).join('\n')}`,
     });
 
     // // For simplicity, pick the first diagnostic.
@@ -448,40 +448,32 @@ export class NeuroCodeActionsProvider implements vscode.CodeActionProvider {
 
         // Only offer your “Ask Neuro” actions for *each* diagnostic under the cursor
         // TODO: This shows multiple same actions, instead make one action with all the diagnostics?
-        context.diagnostics.forEach(diagnostic => {
-            // 1) “Ask Neuro to fix” for this specific diagnostic
-            const fix = new vscode.CodeAction(
-                'Ask Neuro to fix',
-                vscode.CodeActionKind.QuickFix,
-            );
 
-            fix.command = {
-                command: 'neuropilot.fixWithNeuro',
-                title: 'Ask Neuro to fix',
-                arguments: [document, diagnostic],
-            };
+        const fix = new vscode.CodeAction(
+            'Ask Neuro to fix',
+            vscode.CodeActionKind.QuickFix,
+        );
+        fix.command = {
+            command: 'neuropilot.fixWithNeuro',
+            title: 'Ask Neuro to fix',
+            arguments: [document, context.diagnostics],
+        };
+        fix.diagnostics = context.diagnostics.map(d => d);
+        actions.push(fix);
 
-            // This is the crucial line that was missing:
-            // tie this code action to the one diagnostic we're fixing.
-            fix.diagnostics = [diagnostic];
-            actions.push(fix);
+        const explain = new vscode.CodeAction(
+            'Ask Neuro to explain',
+            vscode.CodeActionKind.QuickFix,
+        );
 
-            // 2) “Ask Neuro to explain” for that diagnostic
-            const explain = new vscode.CodeAction(
-                'Ask Neuro to explain',
-                vscode.CodeActionKind.QuickFix,
-            );
+        explain.command = {
+            command: 'neuropilot.explainWithNeuro',
+            title: 'Ask Neuro to explain',
+            arguments: [document, context.diagnostics],
+        };
 
-            explain.command = {
-                command: 'neuropilot.explainWithNeuro',
-                title: 'Ask Neuro to explain',
-                arguments: [document, diagnostic],
-            };
-
-            // Again, tie it to the same diagnostic
-            explain.diagnostics = [diagnostic];
-            actions.push(explain);
-        });
+        explain.diagnostics = context.diagnostics.map(d => d);
+        actions.push(explain);
 
         return actions;
     }
