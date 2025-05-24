@@ -273,7 +273,73 @@ export function sendDiagnosticsDiff(e: vscode.DiagnosticChangeEvent): void {
     NEURO.client?.sendContext(`New linting problems:\n${output}`, false);
 }
 
-let lastChatResponse = '';
+const lastChatResponse = '';
+
+export async function fixWithNeuro(...args: any[]): Promise<void> { // TODO: Typing
+    let document: vscode.TextDocument;
+    let diagnostics: vscode.Diagnostic[];
+    if (args && args.length >= 2) {
+        document = args[0];
+        diagnostics = args[1];
+    } else {
+        const editor = vscode.window.activeTextEditor;
+        if (!editor) {
+            vscode.window.showErrorMessage('No active editor found.');
+            return;
+        }
+        document = editor.document;
+        diagnostics = vscode.languages.getDiagnostics(document.uri);
+    }
+    if (!diagnostics || diagnostics.length === 0) {
+        vscode.window.showInformationMessage('No diagnostics found in the active file.');
+        return;
+    }
+    // For simplicity, pick the first diagnostic.
+    const diagnostic = diagnostics[0];
+    const tokenSource = new vscode.CancellationTokenSource();
+    const response = await requestAIResponseForDiagnostic(document, diagnostic, 'fix', tokenSource.token);
+
+    // Append the response to the chat history.
+    addToChatHistory('Fix: ' + response);
+    // Show an info message with an option to view the chat history.
+    const choice = await vscode.window.showInformationMessage('Neuro suggests: ' + response, 'View Chat History');
+    if (choice === 'View Chat History') {
+        NEURO.chatHistoryChannel!.show();
+    }
+}
+
+export async function explainWithNeuro(...args: any[]): Promise<void> { // TODO: Typing
+    let document: vscode.TextDocument;
+    let diagnostics: vscode.Diagnostic[];
+    if (args && args.length >= 2) {
+        document = args[0];
+        diagnostics = args[1];
+    } else {
+        const editor = vscode.window.activeTextEditor;
+        if (!editor) {
+            vscode.window.showErrorMessage('No active editor found.');
+            return;
+        }
+        document = editor.document;
+        diagnostics = vscode.languages.getDiagnostics(document.uri);
+    }
+    if (!diagnostics || diagnostics.length === 0) {
+        vscode.window.showInformationMessage('No diagnostics found in the active file.');
+        return;
+    }
+    // For simplicity, pick the first diagnostic.
+    const diagnostic = diagnostics[0];
+    const tokenSource = new vscode.CancellationTokenSource();
+    const response = await requestAIResponseForDiagnostic(document, diagnostic, 'explain', tokenSource.token);
+
+    // Append the response to the chat history.
+    addToChatHistory('Explain: ' + response);
+    // Show an info message with an option to view the chat history.
+    const choice = await vscode.window.showInformationMessage('Neuro explains: ' + response, 'View Chat History');
+    if (choice === 'View Chat History') {
+        NEURO.chatHistoryChannel!.show();
+    }
+}
 
 /**
  * Ask Neuro to either “fix” or “explain” a given diagnostic.
@@ -285,77 +351,136 @@ let lastChatResponse = '';
  * @returns          A string containing either the new code (for fix) or the explanation (for explain).
  */
 export async function requestAIResponseForDiagnostic(
-  document: vscode.TextDocument,
-  diagnostic: vscode.Diagnostic,
-  mode: 'fix' | 'explain',
-  token: vscode.CancellationToken
+    document: vscode.TextDocument,
+    diagnostic: vscode.Diagnostic,
+    mode: 'fix' | 'explain',
+    token: vscode.CancellationToken,
 ): Promise<string> {
-  // Use a minimal prompt (simply the diagnostic message)
-  const prompt = diagnostic.message;
+    // Use a minimal prompt (simply the diagnostic message)
+    const prompt = diagnostic.message;
 
-  logOutput('INFO', `Requesting AI ${mode} response for diagnostic: ${diagnostic.message}`);
+    logOutput('INFO', `Requesting AI ${mode} response for diagnostic: ${diagnostic.message}`);
 
-  // Configure Neuro/AI actions schema using the "chat" registration
-  NEURO.waiting = true;
-  NEURO.cancelled = false;
+    // Configure Neuro/AI actions schema using the "chat" registration
+    NEURO.waiting = true;
+    NEURO.cancelled = false;
 
-  NEURO.client?.registerActions([
-    {
-      name: 'chat',
-      description: mode === 'fix'
-        ? 'Generate a code fix for the provided diagnostic.'
-        : 'Explain why the diagnostic occurred.',
-      schema: {
-        type: 'object',
-        properties: {
-          answer: { type: 'string' },
+    NEURO.client?.registerActions([
+        {
+            name: 'chat',
+            description: mode === 'fix'
+                ? 'Generate a code fix for the provided diagnostic.'
+                : 'Explain why the diagnostic occurred.',
+            schema: {
+                type: 'object',
+                properties: {
+                    answer: { type: 'string' },
+                },
+                required: ['answer'],
+            },
         },
-        required: ['answer'],
-      },
-    },
-  ]);
+    ]);
 
-  // Kick off the request using the basic prompt
-  NEURO.client?.forceActions(
-    prompt,
-    ['chat'],
-    document.uri.toString(),
-    true
-  );
+    // Kick off the request using the basic prompt
+    NEURO.client?.forceActions(
+        prompt,
+        ['chat'],
+        document.uri.toString(),
+        true,
+    );
 
-  // Wire up cancellation (if the CodeAction is cancelled by VS Code)
-  token.onCancellationRequested(() => {
-    logOutput('INFO', 'User cancelled AI request');
-    NEURO.cancelled = true;
-    cancelChatRequest();
-  });
+    // Wire up cancellation (if the CodeAction is cancelled by VS Code)
+    token.onCancellationRequested(() => {
+        logOutput('INFO', 'User cancelled AI request');
+        NEURO.cancelled = true;
+        cancelChatRequest();
+    });
 
-  // Race between Neuro's response and a timeout
-  const timeoutMs = CONFIG.timeout || 15000; // 15s default
-  const timeoutP = new Promise<string>((_, reject) =>
-    setTimeout(() => reject('AI request timed out'), timeoutMs)
-  );
-  const responseP = new Promise<string>((resolve) => {
-    const interval = setInterval(() => {
-      if (!NEURO.waiting) {
-        clearInterval(interval);
-        resolve(lastChatResponse);
-      }
-    }, 100);
-  });
+    // Race between Neuro's response and a timeout
+    const timeoutMs = CONFIG.timeout || 15000; // 15s default
+    const timeoutP = new Promise<string>((_, reject) =>
+        setTimeout(() => reject('AI request timed out'), timeoutMs),
+    );
+    const responseP = new Promise<string>((resolve) => {
+        const interval = setInterval(() => {
+            if (!NEURO.waiting) {
+                clearInterval(interval);
+                resolve(lastChatResponse);
+            }
+        }, 100);
+    });
 
-  try {
-    const neuroAnswer = await Promise.race([timeoutP, responseP]);
-    return neuroAnswer;
-  } catch (erm) {
-    if (typeof erm === 'string') {
-      logOutput('ERROR', erm);
-      NEURO.cancelled = true;
-      return erm;
-    }
-    throw erm;
-  } finally {
+    try {
+        const neuroAnswer = await Promise.race([timeoutP, responseP]);
+        return neuroAnswer;
+    } catch (erm) {
+        if (typeof erm === 'string') {
+            logOutput('ERROR', erm);
+            NEURO.cancelled = true;
+            return erm;
+        }
+        throw erm;
+    } finally {
     // Ensure waiting flag is cleared
-    NEURO.waiting = false;
-  }
+        NEURO.waiting = false;
+    }
+}
+
+export class NeuroCodeActionsProvider implements vscode.CodeActionProvider {
+    public static readonly providedCodeActionKinds = [
+        vscode.CodeActionKind.QuickFix,
+    ];
+
+    public provideCodeActions(
+        document: vscode.TextDocument,
+        _range: vscode.Range,
+        context: vscode.CodeActionContext,
+        _token: vscode.CancellationToken,
+    ): vscode.ProviderResult<vscode.CodeAction[]> {
+        const actions: vscode.CodeAction[] = [];
+
+        // Only offer your “Ask Neuro” actions for *each* diagnostic under the cursor
+        // TODO: This shows multiple same actions, instead make one action with all the diagnostics?
+        context.diagnostics.forEach(diagnostic => {
+            // 1) “Ask Neuro to fix” for this specific diagnostic
+            const fix = new vscode.CodeAction(
+                'Ask Neuro to fix',
+                vscode.CodeActionKind.QuickFix,
+            );
+
+            fix.command = {
+                command: 'neuropilot.fixWithNeuro',
+                title: 'Ask Neuro to fix',
+                arguments: [document, diagnostic],
+            };
+
+            // This is the crucial line that was missing:
+            // tie this code action to the one diagnostic we're fixing.
+            fix.diagnostics = [diagnostic];
+            actions.push(fix);
+
+            // 2) “Ask Neuro to explain” for that diagnostic
+            const explain = new vscode.CodeAction(
+                'Ask Neuro to explain',
+                vscode.CodeActionKind.QuickFix,
+            );
+
+            explain.command = {
+                command: 'neuropilot.explainWithNeuro',
+                title: 'Ask Neuro to explain',
+                arguments: [document, diagnostic],
+            };
+
+            // Again, tie it to the same diagnostic
+            explain.diagnostics = [diagnostic];
+            actions.push(explain);
+        });
+
+        return actions;
+    }
+}
+
+function addToChatHistory(message: string) {
+    const timestamp = new Date().toLocaleTimeString();
+    NEURO.chatHistoryChannel!.appendLine(`[${timestamp}] ${message}`);
 }
