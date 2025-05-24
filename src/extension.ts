@@ -20,7 +20,6 @@ export function activate(context: vscode.ExtensionContext) {
     NEURO.waiting = false;
     NEURO.cancelled = false;
     NEURO.outputChannel = vscode.window.createOutputChannel('NeuroPilot');
-    NEURO.chatHistoryChannel = vscode.window.createOutputChannel('Neuro Linting Fixes/Explanations');
 
     vscode.languages.registerInlineCompletionItemProvider({ pattern: '**' }, completionsProvider);
 

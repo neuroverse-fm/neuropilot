@@ -2,7 +2,6 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 import { NEURO } from './constants';
-import { cancelChatRequest } from './chat';
 import { normalizePath, getWorkspacePath, logOutput, isPathNeuroSafe } from './utils';
 import { PERMISSIONS, getPermissionLevel, CONFIG } from './config';
 import { ActionData, ActionWithHandler, contextFailure, contextNoAccess } from './neuro_client_helper';
@@ -273,8 +272,6 @@ export function sendDiagnosticsDiff(e: vscode.DiagnosticChangeEvent): void {
     NEURO.client?.sendContext(`New linting problems:\n${output}`, false);
 }
 
-const lastChatResponse = '';
-
 export async function fixWithNeuro(document?: vscode.TextDocument, diagnostics?: vscode.Diagnostic | vscode.Diagnostic[]): Promise<void> {
     if (document && diagnostics) {
         if (!Array.isArray(diagnostics))
@@ -296,19 +293,6 @@ export async function fixWithNeuro(document?: vscode.TextDocument, diagnostics?:
     vscode.commands.executeCommand('workbench.action.chat.open', {
         query: `@neuro /fix ${diagnostics.map(d => d.message).join('\n')}`,
     });
-
-    // // For simplicity, pick the first diagnostic.
-    // const diagnostic = diagnostics[0];
-    // const tokenSource = new vscode.CancellationTokenSource();
-    // const response = await requestResponseForDiagnostic(document, diagnostic, 'fix', tokenSource.token);
-
-    // // Append the response to the chat history.
-    // addToChatHistory(response !== 'Neuro timed out.' ? `Fix to "${vscode.workspace.asRelativePath(document.uri)}": ${response}` : `Neuro did not suggest a fix for the lint error "${diagnostics}".`);
-    // // Show an info message with an option to view the chat history.
-    // const choice = await vscode.window.showInformationMessage('Neuro suggests: ' + response, 'View Chat History');
-    // if (choice === 'View Chat History') {
-    //     NEURO.chatHistoryChannel!.show();
-    // }
 }
 
 export async function explainWithNeuro(document?: vscode.TextDocument, diagnostics?: vscode.Diagnostic | vscode.Diagnostic[]): Promise<void> { // TODO: Typing
@@ -332,105 +316,6 @@ export async function explainWithNeuro(document?: vscode.TextDocument, diagnosti
     vscode.commands.executeCommand('workbench.action.chat.open', {
         query: `@neuro /explain ${diagnostics.map(d => d.message).join('\n')}`,
     });
-
-    // // For simplicity, pick the first diagnostic.
-    // const diagnostic = diagnostics[0];
-    // const tokenSource = new vscode.CancellationTokenSource();
-    // const response = await requestResponseForDiagnostic(document, diagnostic, 'explain', tokenSource.token);
-
-    // // Append the response to the chat history.
-    // addToChatHistory(response !== 'Neuro timed out.' ? `Fix to "${vscode.workspace.asRelativePath(document.uri)}": ${response}` : `Neuro did not suggest a fix for the lint error "${diagnostics}".`);
-    // // Show an info message with an option to view the chat history.
-    // const choice = await vscode.window.showInformationMessage(response !== 'Neuro timed out' ? 'Neuro explains: ' + response : "Neuro didn't answer in time.", 'View Chat History');
-    // if (choice === 'View Chat History') {
-    //     NEURO.chatHistoryChannel!.show();
-    // }
-}
-
-/**
- * Ask Neuro to either “fix” or “explain” a given diagnostic.
- *
- * @param document   The TextDocument containing the error.
- * @param diagnostic The diagnostic (lint/compile error) to fix/explain.
- * @param mode       Either 'fix' or 'explain'.
- * @param token      A CancellationToken, so VS Code can cancel if the user dismisses the lightbulb.
- * @returns          A string containing either the new code (for fix) or the explanation (for explain).
- */
-export async function requestResponseForDiagnostic(
-    document: vscode.TextDocument,
-    diagnostic: vscode.Diagnostic,
-    mode: 'fix' | 'explain',
-    token: vscode.CancellationToken,
-): Promise<string> {
-    // Use a minimal prompt (simply the diagnostic message)
-    const prompt = `Vedal wants you to ${mode} the lint error: ${diagnostic.message}`;
-
-    // Craft a state string to let Neuro know the environment.
-    const state = `You are currently in ${vscode.workspace.asRelativePath(document.uri)}`;
-
-    logOutput('INFO', `Requesting Neuro to ${mode} the diagnostic: ${diagnostic.message}`);
-
-    NEURO.waiting = true;
-    NEURO.cancelled = false;
-
-    NEURO.client?.registerActions([
-        {
-            name: 'chat',
-            description: `Use this to give a ${mode} to the lint error.` +
-                'Your response will be displayed as plaintext due to limitations.',
-            schema: {
-                type: 'object',
-                properties: {
-                    answer: { type: 'string' },
-                },
-                required: ['answer'],
-            },
-        },
-    ]);
-
-    // Kick off the request using the basic prompt
-    NEURO.client?.forceActions(
-        prompt,
-        ['chat'],
-        state,
-        true,
-    );
-
-    // Wire up cancellation (if the CodeAction is cancelled by VS Code)
-    token.onCancellationRequested(() => {
-        logOutput('INFO', `Cancelled ${mode} linting action force to Neuro.`);
-        NEURO.cancelled = true;
-        cancelChatRequest();
-    });
-
-    // Race between Neuro's response and a timeout
-    const timeoutMs = CONFIG.timeout || 10000;
-    const timeoutP = new Promise<string>((_, reject) =>
-        setTimeout(() => reject('Neuro timed out'), timeoutMs),
-    );
-    const responseP = new Promise<string>((resolve) => {
-        const interval = setInterval(() => {
-            if (!NEURO.waiting) {
-                clearInterval(interval);
-                resolve(lastChatResponse);
-            }
-        }, 100);
-    });
-
-    try {
-        const neuroAnswer = await Promise.race([timeoutP, responseP]);
-        return neuroAnswer;
-    } catch (erm) {
-        if (typeof erm === 'string') {
-            logOutput('ERROR', erm);
-            NEURO.cancelled = true;
-            return erm;
-        }
-        throw erm;
-    } finally {
-    // Ensure waiting flag is cleared
-        NEURO.waiting = false;
-    }
 }
 
 export class NeuroCodeActionsProvider implements vscode.CodeActionProvider {
@@ -445,9 +330,6 @@ export class NeuroCodeActionsProvider implements vscode.CodeActionProvider {
         _token: vscode.CancellationToken,
     ): vscode.ProviderResult<vscode.CodeAction[]> {
         const actions: vscode.CodeAction[] = [];
-
-        // Only offer your “Ask Neuro” actions for *each* diagnostic under the cursor
-        // TODO: This shows multiple same actions, instead make one action with all the diagnostics?
 
         const fix = new vscode.CodeAction(
             'Ask Neuro to fix',
@@ -477,9 +359,4 @@ export class NeuroCodeActionsProvider implements vscode.CodeActionProvider {
 
         return actions;
     }
-}
-
-function addToChatHistory(message: string) {
-    const timestamp = new Date().toLocaleTimeString();
-    NEURO.chatHistoryChannel!.appendLine(`[${timestamp}] ${message}`);
 }
