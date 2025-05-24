@@ -36,12 +36,19 @@ interface Neuro {
     actionHandled: boolean;
     terminalEnabled: boolean;
     terminalRegistry: Map<string, TerminalSession>;
-    /** This is needed because VSCode doesn't say what changed, only what files were changed */
+    /** This is needed because VSCode doesn't say what changed, only what files were changed. */
     previousDiagnosticsMap: Map<string, vscode.Diagnostic[]>;
     saving: boolean;
     rceRequest: RceRequest | null;
     statusBarItem: vscode.StatusBarItem | null;
-    warnOnCompletionsOff: boolean
+    warnOnCompletionsOff: boolean;
+    /**
+     * The current offset of the virtual cursor for each file.
+     * The offset is null for files that are not Neuro-safe.
+     */
+    cursorOffsets: Map<vscode.Uri, number | null>;
+    /** Decoration type for the virtual cursor. */
+    cursorDecorationType: vscode.TextEditorDecorationType | null;
 }
 
 
@@ -66,4 +73,6 @@ export const NEURO: Neuro = {
     rceRequest: null,
     statusBarItem: null,
     warnOnCompletionsOff: true,
+    cursorOffsets: new Map(),
+    cursorDecorationType: null,
 };

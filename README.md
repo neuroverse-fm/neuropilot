@@ -108,6 +108,11 @@ Allows the user to specify the flavor as well.
 Attempts to reconnect to the API.
 Shows a notification when it succeeds or fails.
 
+### Move Neuro's Cursor Here
+
+Moves Neuro's cursor to the current cursor position.
+Only works if there is an active text editor, and only in files Neuro has access to.
+
 ### Reload Permissions
 
 Reregisters all actions according to the permissions.

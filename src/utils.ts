@@ -6,7 +6,7 @@ import globToRegExp from 'glob-to-regexp';
 import { ChildProcessWithoutNullStreams } from 'child_process';
 
 import { NEURO } from './constants';
-import { CONFIG } from './config';
+import { CONFIG, getPermissionLevel, PERMISSIONS } from './config';
 
 export const REGEXP_ALWAYS = /^/;
 export const REGEXP_NEVER = /^\b$/;
@@ -252,7 +252,8 @@ export function escapeRegExp(string: string): string {
  * Returns the string that would be inserted by the {@link String.replace} method.
  * @param match The match object returned by a regular expression.
  * @param replacement The replacement string, which can contain substitutions.
- * The substitutions ` $` `, $' and $_ are not supported.
+ * Supports JavaScript-style and .NET-style substitutions.
+ * The substitutions `` $` ``, `$'` and `$_` are not supported.
  * @returns The substituted string.
  * @throws Error if the substitution is invalid or if the capture group does not exist.
  */
@@ -334,4 +335,78 @@ export function getMaxFenceLength(text: string): number {
 export function getFence(text: string): string {
     const maxFenceLength = getMaxFenceLength(text);
     return '`'.repeat(maxFenceLength ? maxFenceLength + 1 : 3);
+}
+
+/**
+ * Places the virtual cursor at the specified position in the current text editor.
+ * @param position The position to place the virtual cursor.
+ * If set to `null`, the cursor is removed.
+ * If not provided, the cursor is placed at the last known position,
+ * but if no last known position is available, the cursor is not placed and an error is logged.
+ */
+export function setVirtualCursor(position?: vscode.Position | null) {
+    const editor = vscode.window.activeTextEditor;
+    if(!editor) return;
+
+    if(position === null || !getPermissionLevel(PERMISSIONS.editActiveDocument) || !isPathNeuroSafe(editor.document.fileName)) {
+        removeVirtualCursor();
+        return;
+    }
+
+    let offset = position !== undefined
+        ? editor.document.offsetAt(position)
+        : NEURO.cursorOffsets.get(editor.document.uri);
+
+    if(offset === null) {
+        // Some setting changed that made the file Neuro-safe
+        offset = editor.document.offsetAt(editor.selection.active);
+    }
+
+    if(offset === undefined) {
+        logOutput('ERROR', 'No last known position available');
+        return;
+    }
+
+    NEURO.cursorOffsets.set(editor.document.uri, offset);
+    const cursorPosition = editor.document.positionAt(offset);
+
+    editor.setDecorations(NEURO.cursorDecorationType!, [
+        {
+            range: new vscode.Range(cursorPosition, cursorPosition),
+            hoverMessage: 'Neuro',
+        },
+    ] satisfies vscode.DecorationOptions[]);
+
+    if(CONFIG.cursorFollowsNeuro)
+        editor.selection = new vscode.Selection(cursorPosition, cursorPosition);
+
+    return;
+
+    function removeVirtualCursor() {
+        NEURO.cursorOffsets.set(editor!.document.uri, null);
+        editor!.setDecorations(NEURO.cursorDecorationType!, []);
+    }
+}
+
+/**
+ * Gets the position of the virtual cursor in the current text editor.
+ * @returns The position of the virtual cursor in the current text editor,
+ * or `null` if the text editor is not Neuro-safe,
+ * or `undefined` if the text editor does not exist or has no virtual cursor.
+ */
+export function getVirtualCursor(): vscode.Position | null | undefined {
+    const editor = vscode.window.activeTextEditor;
+    if(!editor) return undefined;
+    const result = NEURO.cursorOffsets.get(editor.document.uri);
+    if(result === undefined) {
+        // Virtual cursor should always be set by onDidChangeActiveTextEditor
+        logOutput('ERROR', 'No last known position available');
+        return undefined;
+    }
+    else if(result === null) {
+        return null;
+    }
+    else {
+        return editor.document.positionAt(result);
+    }
 }

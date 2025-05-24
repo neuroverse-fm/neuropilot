@@ -37,6 +37,7 @@ export default tseslint.config(
             '@stylistic/no-trailing-spaces': ['warn', { 'ignoreComments': true }],
             '@stylistic/quotes': ['error', 'single', { 'avoidEscape': true }],
             '@typescript-eslint/no-empty-function': 'off',
+            'prefer-const': 'warn',
             '@typescript-eslint/naming-convention': [
                 'warn',
                 {

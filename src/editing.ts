@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 
 import { NEURO } from './constants';
-import { escapeRegExp, getFence, getPositionContext, isPathNeuroSafe, logOutput, NeuroPositionContext, substituteMatch } from './utils';
+import { escapeRegExp, getFence, getPositionContext, getVirtualCursor, isPathNeuroSafe, logOutput, NeuroPositionContext, setVirtualCursor, substituteMatch } from './utils';
 import { ActionData, ActionWithHandler, contextFailure } from './neuro_client_helper';
 import { PERMISSIONS, getPermissionLevel, CONFIG } from './config';
 
@@ -162,8 +162,9 @@ export function handlePlaceCursor(actionData: ActionData): string | undefined {
     let basedLine: number, basedColumn: number;
 
     if (type === 'relative') {
-        line += vscode.window.activeTextEditor!.selection.active.line;
-        column += vscode.window.activeTextEditor!.selection.active.character;
+        const cursor = getVirtualCursor()!;
+        line += cursor.line;
+        column += cursor.character;
 
         basedLine = line + 1;
         basedColumn = column + 1;
@@ -182,8 +183,9 @@ export function handlePlaceCursor(actionData: ActionData): string | undefined {
     if(column > document.lineAt(line).text.length || column < 0)
         return contextFailure(`Column is out of bounds, the last column of line ${basedLine} is ${document.lineAt(line).text.length + 1}.`);
 
-    vscode.window.activeTextEditor!.selection = new vscode.Selection(line, column, line, column);
-    const cursorContext = getPositionContext(document, new vscode.Position(line, column));
+    const cursorPosition = new vscode.Position(line, column);
+    setVirtualCursor(cursorPosition);
+    const cursorContext = getPositionContext(document, cursorPosition);
     logOutput('INFO', `Placed cursor at (${basedLine}:${basedColumn}).`);
 
     return `Cursor placed at (${basedLine}:${basedColumn})\n\n${formatContext(cursorContext)}`;
@@ -196,13 +198,12 @@ export function handleGetCursor(_actionData: ActionData): string | undefined {
     if(!isPathNeuroSafe(document.fileName))
         return contextFailure(CONTEXT_NO_ACCESS);
 
-    const cursorContext = getPositionContext(document, vscode.window.activeTextEditor!.selection.active);
-    const line = vscode.window.activeTextEditor!.selection.active.line;
-    const character = vscode.window.activeTextEditor!.selection.active.character;
+    const cursorPosition = getVirtualCursor()!;
+    const cursorContext = getPositionContext(document, cursorPosition);
     const relativePath = vscode.workspace.asRelativePath(document.uri);
     logOutput('INFO', 'Sending cursor position to Neuro');
 
-    return `In file ${relativePath}\n\nCursor is at (${line + 1}:${character + 1})\n\n${formatContext(cursorContext)}`;
+    return `In file ${relativePath}\n\nCursor is at (${cursorPosition.line + 1}:${cursorPosition.character + 1})\n\n${formatContext(cursorContext)}`;
 }
 
 export function handleInsertText(actionData: ActionData): string | undefined {
@@ -214,15 +215,15 @@ export function handleInsertText(actionData: ActionData): string | undefined {
     if(!isPathNeuroSafe(document.fileName))
         return contextFailure(CONTEXT_NO_ACCESS);
 
-    const insertStart = vscode.window.activeTextEditor!.selection.active;
+    const insertStart = getVirtualCursor()!;
     const edit = new vscode.WorkspaceEdit();
-    edit.insert(document.uri, vscode.window.activeTextEditor!.selection.active, text);
+    edit.insert(document.uri, insertStart, text);
 
     vscode.workspace.applyEdit(edit).then(success => {
         if (success) {
             logOutput('INFO', 'Inserting text into document');
             const document = vscode.window.activeTextEditor!.document;
-            const insertEnd = vscode.window.activeTextEditor!.selection.active;
+            const insertEnd = document.positionAt(document.offsetAt(insertStart) + text.length);
             const cursorContext = getPositionContext(document, insertStart, insertEnd);
             NEURO.client?.sendContext(`Inserted text into document\n\n${formatContext(cursorContext)}`);
         }
@@ -245,7 +246,7 @@ export function handleReplaceText(actionData: ActionData): string | undefined {
         return contextFailure(CONTEXT_NO_ACCESS);
 
     const regex = new RegExp(useRegex ? find : escapeRegExp(find), 'g');
-    const cursorOffset = document.offsetAt(vscode.window.activeTextEditor!.selection.active);
+    const cursorOffset = document.offsetAt(getVirtualCursor()!);
 
     const matches = findAndFilter(regex, document.getText(), cursorOffset, match);
     if (matches.length === 0)
@@ -269,7 +270,7 @@ export function handleReplaceText(actionData: ActionData): string | undefined {
                 const document = vscode.window.activeTextEditor!.document;
                 const startPosition = document.positionAt(matches[0].index);
                 const endPosition = document.positionAt(matches[0].index + substituteMatch(matches[0], replaceWith).length);
-                vscode.window.activeTextEditor!.selection = new vscode.Selection(endPosition, endPosition);
+                setVirtualCursor(endPosition);
                 const cursorContext = getPositionContext(document, startPosition, endPosition);
                 NEURO.client?.sendContext(`Replaced text in document\n\n${formatContext(cursorContext)}`);
             }
@@ -298,7 +299,7 @@ export function handleDeleteText(actionData: ActionData): string | undefined {
         return contextFailure(CONTEXT_NO_ACCESS);
 
     const regex = new RegExp(useRegex ? find : escapeRegExp(find), 'g');
-    const cursorOffset = document.offsetAt(vscode.window.activeTextEditor!.selection.active);
+    const cursorOffset = document.offsetAt(getVirtualCursor()!);
 
     const matches = findAndFilter(regex, document.getText(), cursorOffset, match);
     if (matches.length === 0)
@@ -314,7 +315,7 @@ export function handleDeleteText(actionData: ActionData): string | undefined {
             if (matches.length === 1) {
                 // Single match
                 const document = vscode.window.activeTextEditor!.document;
-                vscode.window.activeTextEditor!.selection = new vscode.Selection(document.positionAt(matches[0].index), document.positionAt(matches[0].index));
+                setVirtualCursor(document.positionAt(matches[0].index));
                 const cursorContext = getPositionContext(document, document.positionAt(matches[0].index));
                 NEURO.client?.sendContext(`Deleted text from document\n\n${formatContext(cursorContext)}`);
             }
@@ -343,7 +344,7 @@ export function handleFindText(actionData: ActionData): string | undefined {
         return contextFailure(CONTEXT_NO_ACCESS);
 
     const regex = new RegExp(useRegex ? find : escapeRegExp(find), 'g');
-    const cursorOffset = document.offsetAt(vscode.window.activeTextEditor!.selection.active);
+    const cursorOffset = document.offsetAt(getVirtualCursor()!);
 
     const matches = findAndFilter(regex, document.getText(), cursorOffset, match);
     if (matches.length === 0)
@@ -351,13 +352,12 @@ export function handleFindText(actionData: ActionData): string | undefined {
 
     if (matches.length === 1) {
         // Single match
-        const pos = matches[0].index;
-        const line = document.positionAt(pos).line;
-        const character = document.positionAt(pos).character;
-        vscode.window.activeTextEditor!.selection = new vscode.Selection(line, character, line, character);
-        const cursorContext = getPositionContext(document, new vscode.Position(line, character));
-        logOutput('INFO', `Placed cursor at (${line + 1}:${character + 1})`);
-        return `Found match and placed cursor at (${line + 1}:${character + 1})\n\n${formatContext(cursorContext)}`;
+        const offset = matches[0].index;
+        const pos = document.positionAt(offset);
+        setVirtualCursor(pos);
+        const cursorContext = getPositionContext(document, pos);
+        logOutput('INFO', `Placed cursor at (${pos.line + 1}:${pos.character + 1})`);
+        return `Found match and placed cursor at (${pos.line + 1}:${pos.character + 1})\n\n${formatContext(cursorContext)}`;
     }
     else {
         // Multiple matches
@@ -382,7 +382,9 @@ export function handleUndo(_actionData: ActionData): string | undefined {
     vscode.commands.executeCommand('undo').then(
         () => {
             logOutput('INFO', 'Undoing last action in document');
+            // We don't keep track of the cursor position in the undo stack, so we reset it to the real cursor position
             const cursorContext = getPositionContext(document, vscode.window.activeTextEditor!.selection.active);
+            setVirtualCursor(vscode.window.activeTextEditor!.selection.active);
             NEURO.client?.sendContext(`Undid last action in document\n\n${formatContext(cursorContext)}`);
         },
         (erm) => {
@@ -436,7 +438,7 @@ export function fileSaveListener(e: vscode.TextDocument) {
         return;
     }
     const relativePath = vscode.workspace.asRelativePath(e.uri);
-    NEURO.client?.sendContext(`File ${relativePath} has been saved.`, false);
+    NEURO.client?.sendContext(`File ${relativePath} has been saved.`, true);
 }
 
 /**
@@ -488,4 +490,77 @@ function findAndFilter(regex: RegExp, text: string, cursorOffset: number, match:
 function formatContext(context: NeuroPositionContext): string {
     const fence = getFence(context.contextBefore + context.contextBetween + context.contextAfter);
     return `Context (lines ${context.startLine + 1}-${context.endLine + 1}, cursor position denoted by \`<<<|>>>\`):\n\n${fence}\n${context.contextBefore}${context.contextBetween}<<<|>>>${context.contextAfter}\n${fence}`;
+}
+
+/**
+ * Sets and displays the virtual cursor position when the active text editor changes.
+ * @param editor The active text editor.
+ */
+export function editorChangeHandler(editor: vscode.TextEditor | undefined) {
+    if(editor) {
+        const uri = editor.document.uri;
+        if(!NEURO.cursorOffsets.has(uri)) {
+            if(isPathNeuroSafe(uri.fsPath))
+                setVirtualCursor(editor.selection.active);
+            else
+                setVirtualCursor(null);
+        }
+        else {
+            setVirtualCursor();
+        }
+    }
+}
+
+/**
+ * Moves the virtual cursor when the text document changes.
+ * @param event The editing event.
+ * @returns 
+ */
+export function workspaceEditHandler(event: vscode.TextDocumentChangeEvent) {
+    if(event.contentChanges.length === 0) return;
+    if(event.document !== vscode.window.activeTextEditor?.document) return;
+    if(!getPermissionLevel(PERMISSIONS.editActiveDocument)) return;
+
+    const initialCursorOffset = NEURO.cursorOffsets.get(event.document.uri);
+    if(initialCursorOffset === undefined || initialCursorOffset === null) return;
+
+    for(const change of event.contentChanges) {
+        logOutput('DEBUG', `Change detected in document ${event.document.fileName}: ${JSON.stringify(change)}`);
+
+        const cursorOffset = NEURO.cursorOffsets.get(event.document.uri)!;
+        const startOffset = event.document.offsetAt(change.range.start);
+
+        if(startOffset > cursorOffset)
+            // Change is after the cursor, no need to update it
+            continue;
+
+        const endOffset = change.rangeOffset + change.rangeLength;
+
+        if(endOffset > cursorOffset) {
+            // Change includes the cursor, place it at the end of the change
+            setVirtualCursor(event.document.positionAt(change.rangeOffset + change.text.length));
+        }
+        else {
+            // Change is before the cursor, move it by the change length
+            const delta = change.text.length - change.rangeLength;
+            setVirtualCursor(event.document.positionAt(cursorOffset + delta));
+        }
+    }
+}
+
+export function moveNeuroCursorHere() {
+    const editor = vscode.window.activeTextEditor;
+    if(!editor) {
+        vscode.window.showErrorMessage('No active text editor');
+        return;
+    }
+    if(!isPathNeuroSafe(editor.document.fileName)) {
+        vscode.window.showErrorMessage('Neuro does not have permission to access this file');
+        return;
+    }
+    setVirtualCursor(editor.selection.active);
+
+    const cursorContext = getPositionContext(editor.document, editor.selection.active);
+
+    NEURO.client?.sendContext(`Vedal moved your cursor.\n\n${formatContext(cursorContext)}`);
 }
