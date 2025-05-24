@@ -83,10 +83,12 @@ export function registerUnsupervisedHandlers() {
 
             // Validate custom
             if (action.validator) {
-                const actionResult = action.validator!(actionData);
-                if(!actionResult.success) {
-                    NEURO.client?.sendActionResult(actionData.id, !(actionResult.retry ?? false), actionResult.message);
-                    return;
+                for (const validate of action.validator) {
+                    const actionResult = validate(actionData);
+                    if (!actionResult.success) {
+                        NEURO.client?.sendActionResult(actionData.id, !(actionResult.retry ?? false), actionResult.message);
+                        return;
+                    }
                 }
             }
 
