@@ -2,7 +2,6 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 import { NEURO } from './constants';
-import { cancelChatRequest } from './chat';
 import { normalizePath, getWorkspacePath, logOutput, isPathNeuroSafe } from './utils';
 import { PERMISSIONS, getPermissionLevel, CONFIG } from './config';
 import { ActionData, ActionWithHandler, contextFailure, contextNoAccess } from './neuro_client_helper';
@@ -273,17 +272,10 @@ export function sendDiagnosticsDiff(e: vscode.DiagnosticChangeEvent): void {
     NEURO.client?.sendContext(`New linting problems:\n${output}`, false);
 }
 
-const lastChatResponse = '';
-
-export async function fixWithNeuro(...args: [vscode.TextDocument, vscode.Diagnostic[]] | []): Promise<void> { // TODO: Typing
-    let document: vscode.TextDocument;
-    let diagnostics: vscode.Diagnostic[];
-    if (args && args.length >= 2) {
-        document = args[0]!;
-        diagnostics = args[1]!;
-        if (!Array.isArray(diagnostics)) {
+export async function fixWithNeuro(document?: vscode.TextDocument, diagnostics?: vscode.Diagnostic | vscode.Diagnostic[]): Promise<void> {
+    if (document && diagnostics) {
+        if (!Array.isArray(diagnostics))
             diagnostics = [diagnostics];
-        };
     } else {
         const editor = vscode.window.activeTextEditor;
         if (!editor) {
@@ -297,29 +289,16 @@ export async function fixWithNeuro(...args: [vscode.TextDocument, vscode.Diagnos
         vscode.window.showInformationMessage('No diagnostics found in the active file.');
         return;
     }
-    // For simplicity, pick the first diagnostic.
-    const diagnostic = diagnostics[0];
-    const tokenSource = new vscode.CancellationTokenSource();
-    const response = await requestResponseForDiagnostic(document, diagnostic, 'fix', tokenSource.token);
 
-    // Append the response to the chat history.
-    addToChatHistory(response !== 'Neuro timed out.' ? `Fix to "${vscode.workspace.asRelativePath(document.uri)}": ${response}` : `Neuro did not suggest a fix for the lint error "${diagnostics}".`);
-    // Show an info message with an option to view the chat history.
-    const choice = await vscode.window.showInformationMessage('Neuro suggests: ' + response, 'View Chat History');
-    if (choice === 'View Chat History') {
-        NEURO.chatHistoryChannel!.show();
-    }
+    vscode.commands.executeCommand('workbench.action.chat.open', {
+        query: `@neuro /fix ${diagnostics.map(d => d.message).join('\n')}`,
+    });
 }
 
-export async function explainWithNeuro(...args: [vscode.TextDocument, vscode.Diagnostic[]] | []): Promise<void> { // TODO: Typing
-    let document: vscode.TextDocument;
-    let diagnostics: vscode.Diagnostic[];
-    if (args && args.length >= 2) {
-        document = args[0]!;
-        diagnostics = args[1]!;
-        if (!Array.isArray(diagnostics)) {
+export async function explainWithNeuro(document?: vscode.TextDocument, diagnostics?: vscode.Diagnostic | vscode.Diagnostic[]): Promise<void> { // TODO: Typing
+    if (document && diagnostics) {
+        if (!Array.isArray(diagnostics))
             diagnostics = [diagnostics];
-        };
     } else {
         const editor = vscode.window.activeTextEditor;
         if (!editor) {
@@ -333,104 +312,10 @@ export async function explainWithNeuro(...args: [vscode.TextDocument, vscode.Dia
         vscode.window.showInformationMessage('No diagnostics found in the active file.');
         return;
     }
-    // For simplicity, pick the first diagnostic.
-    const diagnostic = diagnostics[0];
-    const tokenSource = new vscode.CancellationTokenSource();
-    const response = await requestResponseForDiagnostic(document, diagnostic, 'explain', tokenSource.token);
 
-    // Append the response to the chat history.
-    addToChatHistory(response !== 'Neuro timed out.' ? `Fix to "${vscode.workspace.asRelativePath(document.uri)}": ${response}` : `Neuro did not suggest a fix for the lint error "${diagnostics}".`);
-    // Show an info message with an option to view the chat history.
-    const choice = await vscode.window.showInformationMessage(response !== 'Neuro timed out' ? 'Neuro explains: ' + response : "Neuro didn't answer in time.", 'View Chat History');
-    if (choice === 'View Chat History') {
-        NEURO.chatHistoryChannel!.show();
-    }
-}
-
-/**
- * Ask Neuro to either “fix” or “explain” a given diagnostic.
- *
- * @param document   The TextDocument containing the error.
- * @param diagnostic The diagnostic (lint/compile error) to fix/explain.
- * @param mode       Either 'fix' or 'explain'.
- * @param token      A CancellationToken, so VS Code can cancel if the user dismisses the lightbulb.
- * @returns          A string containing either the new code (for fix) or the explanation (for explain).
- */
-export async function requestResponseForDiagnostic(
-    document: vscode.TextDocument,
-    diagnostic: vscode.Diagnostic,
-    mode: 'fix' | 'explain',
-    token: vscode.CancellationToken,
-): Promise<string> {
-    // Use a minimal prompt (simply the diagnostic message)
-    const prompt = `Vedal wants you to ${mode} the lint error: ${diagnostic.message}`;
-
-    // Craft a state string to let Neuro know the environment.
-    const state = `You are currently in ${vscode.workspace.asRelativePath(document.uri)}`;
-
-    logOutput('INFO', `Requesting Neuro to ${mode} the diagnostic: ${diagnostic.message}`);
-
-    NEURO.waiting = true;
-    NEURO.cancelled = false;
-
-    NEURO.client?.registerActions([
-        {
-            name: 'chat',
-            description: `Use this to give a ${mode} to the lint error.` +
-                'Your response will be displayed as plaintext due to limitations.',
-            schema: {
-                type: 'object',
-                properties: {
-                    answer: { type: 'string' },
-                },
-                required: ['answer'],
-            },
-        },
-    ]);
-
-    // Kick off the request using the basic prompt
-    NEURO.client?.forceActions(
-        prompt,
-        ['chat'],
-        state,
-        true,
-    );
-
-    // Wire up cancellation (if the CodeAction is cancelled by VS Code)
-    token.onCancellationRequested(() => {
-        logOutput('INFO', `Cancelled ${mode} linting action force to Neuro.`);
-        NEURO.cancelled = true;
-        cancelChatRequest();
+    vscode.commands.executeCommand('workbench.action.chat.open', {
+        query: `@neuro /explain ${diagnostics.map(d => d.message).join('\n')}`,
     });
-
-    // Race between Neuro's response and a timeout
-    const timeoutMs = CONFIG.timeout || 10000;
-    const timeoutP = new Promise<string>((_, reject) =>
-        setTimeout(() => reject('Neuro timed out'), timeoutMs),
-    );
-    const responseP = new Promise<string>((resolve) => {
-        const interval = setInterval(() => {
-            if (!NEURO.waiting) {
-                clearInterval(interval);
-                resolve(lastChatResponse);
-            }
-        }, 100);
-    });
-
-    try {
-        const neuroAnswer = await Promise.race([timeoutP, responseP]);
-        return neuroAnswer;
-    } catch (erm) {
-        if (typeof erm === 'string') {
-            logOutput('ERROR', erm);
-            NEURO.cancelled = true;
-            return erm;
-        }
-        throw erm;
-    } finally {
-    // Ensure waiting flag is cleared
-        NEURO.waiting = false;
-    }
 }
 
 export class NeuroCodeActionsProvider implements vscode.CodeActionProvider {
@@ -446,48 +331,32 @@ export class NeuroCodeActionsProvider implements vscode.CodeActionProvider {
     ): vscode.ProviderResult<vscode.CodeAction[]> {
         const actions: vscode.CodeAction[] = [];
 
-        // Only offer your “Ask Neuro” actions for *each* diagnostic under the cursor
-        // TODO: This shows multiple same actions, instead make one action with all the diagnostics?
-        context.diagnostics.forEach(diagnostic => {
-            // 1) “Ask Neuro to fix” for this specific diagnostic
-            const fix = new vscode.CodeAction(
-                'Ask Neuro to fix',
-                vscode.CodeActionKind.QuickFix,
-            );
+        const fix = new vscode.CodeAction(
+            'Ask Neuro to fix',
+            vscode.CodeActionKind.QuickFix,
+        );
+        fix.command = {
+            command: 'neuropilot.fixWithNeuro',
+            title: 'Ask Neuro to fix',
+            arguments: [document, context.diagnostics],
+        };
+        fix.diagnostics = context.diagnostics.map(d => d);
+        actions.push(fix);
 
-            fix.command = {
-                command: 'neuropilot.fixWithNeuro',
-                title: 'Ask Neuro to fix',
-                arguments: [document, diagnostic],
-            };
+        const explain = new vscode.CodeAction(
+            'Ask Neuro to explain',
+            vscode.CodeActionKind.QuickFix,
+        );
 
-            // This is the crucial line that was missing:
-            // tie this code action to the one diagnostic we're fixing.
-            fix.diagnostics = [diagnostic];
-            actions.push(fix);
+        explain.command = {
+            command: 'neuropilot.explainWithNeuro',
+            title: 'Ask Neuro to explain',
+            arguments: [document, context.diagnostics],
+        };
 
-            // 2) “Ask Neuro to explain” for that diagnostic
-            const explain = new vscode.CodeAction(
-                'Ask Neuro to explain',
-                vscode.CodeActionKind.QuickFix,
-            );
-
-            explain.command = {
-                command: 'neuropilot.explainWithNeuro',
-                title: 'Ask Neuro to explain',
-                arguments: [document, diagnostic],
-            };
-
-            // Again, tie it to the same diagnostic
-            explain.diagnostics = [diagnostic];
-            actions.push(explain);
-        });
+        explain.diagnostics = context.diagnostics.map(d => d);
+        actions.push(explain);
 
         return actions;
     }
-}
-
-function addToChatHistory(message: string) {
-    const timestamp = new Date().toLocaleTimeString();
-    NEURO.chatHistoryChannel!.appendLine(`[${timestamp}] ${message}`);
 }
