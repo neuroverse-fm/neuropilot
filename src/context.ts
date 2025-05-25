@@ -65,7 +65,7 @@ export function registerRequestCookieHandler() {
             NEURO.client?.sendActionResult(actionData.id, true, 'Vedal has been asked for a cookie.');
 
             vscode.window.showInformationMessage(
-                `Neuro is asking for a${actionData.params?.flavor ? ' ' + actionData.params.flavor : ''} cookie.`,
+                `${NEURO.currentController} is asking for a${actionData.params?.flavor ? ' ' + actionData.params.flavor : ''} cookie.`,
                 'Give',
                 'Deny',
             ).then((value) => {
@@ -92,7 +92,7 @@ export function giveCookie(isRequested = false, defaultFlavor = 'Chocolate Chip'
         prompt: 'What flavor?',
         placeHolder: 'Chocolate Chip',
         value: defaultFlavor,
-        title: 'Give Neuro a cookie',
+        title: `Give ${NEURO.currentController} a cookie`,
     }).then((flavor) => {
         if(!flavor) {
             logOutput('INFO', 'No flavor given, canceling cookie');

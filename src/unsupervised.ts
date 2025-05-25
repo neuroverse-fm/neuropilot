@@ -104,8 +104,8 @@ export function registerUnsupervisedHandlers() {
 
                 // literally why can't we use " 'x wants to' + typeof action.promptGenerator === 'string' "
                 const prompt = typeof action.promptGenerator === 'string'
-                    ? CONFIG.currentlyAsNeuroAPI + ' wants to ' + (action.promptGenerator as string).trim()
-                    : CONFIG.currentlyAsNeuroAPI + ' wants to ' + (action.promptGenerator as (actionData: ActionData) => string)(actionData).trim();
+                    ? NEURO.currentController + ' wants to ' + (action.promptGenerator as string).trim()
+                    : NEURO.currentController + ' wants to ' + (action.promptGenerator as (actionData: ActionData) => string)(actionData).trim();
 
                 createRceRequest(
                     prompt,

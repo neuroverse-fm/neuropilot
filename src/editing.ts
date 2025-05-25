@@ -421,7 +421,7 @@ export function handleSave(_actionData: ActionData): string | undefined {
         return contextFailure(CONTEXT_NO_ACCESS);
 
     NEURO.saving = true;
-    logOutput('INFO', `${CONFIG.currentlyAsNeuroAPI} is saving the current document.`);
+    logOutput('INFO', `${NEURO.currentController} is saving the current document.`);
 
     document.save().then(
         (saved) => {
@@ -573,7 +573,7 @@ export function moveNeuroCursorHere() {
         return;
     }
     if(!isPathNeuroSafe(editor.document.fileName)) {
-        vscode.window.showErrorMessage('Neuro does not have permission to access this file');
+        vscode.window.showErrorMessage(NEURO.currentController + ' does not have permission to access this file');
         return;
     }
     setVirtualCursor(editor.selection.active);

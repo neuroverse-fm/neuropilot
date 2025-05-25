@@ -5,7 +5,7 @@ import { GitExtension, Change, ForcePushMode, CommitOptions, Commit, Repository 
 import { StatusStrings, RefTypeStrings } from './types/git_status';
 import { getNormalizedRepoPathForGit, logOutput, simpleFileName, isPathNeuroSafe } from './utils';
 import { ActionData, ActionValidationResult, actionValidationAccept, actionValidationFailure, ActionWithHandler, contextFailure } from './neuro_client_helper';
-import { CONFIG, PERMISSIONS, getPermissionLevel } from './config';
+import { PERMISSIONS, getPermissionLevel } from './config';
 import assert from 'assert';
 
 /* All actions located in here requires neuropilot.permission.gitOperations to be enabled. */
@@ -733,7 +733,7 @@ export function handleRemoveFileFromGit(actionData: ActionData): string | undefi
 
 export function handleMakeGitCommit(actionData: ActionData): string | undefined {
     assert(repo);
-    const message = `${CONFIG.currentlyAsNeuroAPI} committed: ${actionData.params?.message}`;
+    const message = `${NEURO.currentController} committed: ${actionData.params?.message}`;
     const commitOptions: string[] | undefined = actionData.params?.options;
     let ExtraCommitOptions: CommitOptions | undefined = {};
 

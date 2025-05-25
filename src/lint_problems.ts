@@ -318,7 +318,7 @@ export async function fixWithNeuro(document?: vscode.TextDocument, diagnostics?:
     }
 
     vscode.commands.executeCommand('workbench.action.chat.open', {
-        query: `@neuro /fix ${diagnostics.map(d => d.message).join('\n')}`,
+        query: `@${NEURO.currentController !== 'Evil' && NEURO.currentController !== 'Neuro' ? 'neuropilot' : NEURO.currentController.toLowerCase()} /fix ${diagnostics.map(d => d.message).join('\n')}`,
     });
 }
 
@@ -341,7 +341,7 @@ export async function explainWithNeuro(document?: vscode.TextDocument, diagnosti
     }
 
     vscode.commands.executeCommand('workbench.action.chat.open', {
-        query: `@neuro /explain ${diagnostics.map(d => d.message).join('\n')}`,
+        query: `@${NEURO.currentController !== 'Evil' && NEURO.currentController !== 'Neuro' ? 'neuropilot' : NEURO.currentController.toLowerCase()} /explain ${diagnostics.map(d => d.message).join('\n')}`,
     });
 }
 
