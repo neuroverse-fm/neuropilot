@@ -30,8 +30,10 @@ function neuroSafeDeleteValidation(actionData: ActionData): ActionValidationResu
 }
 
 function neuroSafeRenameValidation(actionData: ActionData): ActionValidationResult {
-    validatePath(actionData.params.oldPath, 'directory');
-    validatePath(actionData.params.newPath, 'directory');
+    let check = validatePath(actionData.params.oldPath, 'directory');
+    if (!check.success) return check;
+    check = validatePath(actionData.params.newPath, 'directory');
+    if (!check.success) return check;
 
     return actionValidationAccept();
 }
