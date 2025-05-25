@@ -24,8 +24,8 @@ function neuroSafeValidation(actionData: ActionData): ActionValidationResult {
 }
 
 function neuroSafeDeleteValidation(actionData: ActionData): ActionValidationResult {
-    validatePath(actionData.params.path, actionData.params.recursive ? 'folder' : 'file');
-
+    const check = validatePath(actionData.params.path, actionData.params.recursive ? 'folder' : 'file');
+    if (!check.success) return check;
     return actionValidationAccept();
 }
 
