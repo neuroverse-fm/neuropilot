@@ -69,6 +69,13 @@ export function activate(context: vscode.ExtensionContext) {
     });
 
     createClient();
+    NEURO.currentController = CONFIG.currentlyAsNeuroAPI;
+    vscode.workspace.onDidChangeConfiguration(event => {
+        if (event.affectsConfiguration('neuropilot.currentlyAsNeuroAPI')) {
+            NEURO.currentController = CONFIG.currentlyAsNeuroAPI;
+            logOutput('DEBUG', `Changed current controller name to ${NEURO.currentController}.`);
+        }
+    });
 
     // Create status bar item
     NEURO.statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);

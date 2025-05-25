@@ -48,6 +48,7 @@ interface Neuro {
     cursorOffsets: Map<vscode.Uri, number | null>;
     /** Decoration type for the virtual cursor. */
     cursorDecorationType: vscode.TextEditorDecorationType | null;
+    currentController: string | null;
 }
 
 
@@ -73,4 +74,5 @@ export const NEURO: Neuro = {
     warnOnCompletionsOff: true,
     cursorOffsets: new Map(),
     cursorDecorationType: null,
+    currentController: null,
 };

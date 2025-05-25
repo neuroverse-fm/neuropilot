@@ -10,7 +10,6 @@ function validatePath(path: string, directoryType: string): ActionValidationResu
         return actionValidationFailure(`You are not allowed to access this ${directoryType}.`);
     }
     return actionValidationAccept();
-    }
 };
 
 function neuroSafeValidation(actionData: ActionData): ActionValidationResult {
