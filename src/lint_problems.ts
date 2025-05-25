@@ -22,7 +22,8 @@ function validateDirectoryAccess(actionData: ActionData): ActionValidationResult
     if (actionData.params?.file) {
         const relativePath = actionData.params.file;
         const normalizedPath = normalizePath(path.join(workspacePath, relativePath));
-        validatePath(normalizedPath, 'file');
+        const check = validatePath(normalizedPath, 'file');
+        if (!check.success) return check;
         if (!fs.existsSync(normalizedPath)) {
             return actionValidationFailure(`File "${relativePath}" does not exist.`);
         }
