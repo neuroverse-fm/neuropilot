@@ -31,7 +31,7 @@ function neuroSafeGitValidator(actionData: ActionData): ActionValidationResult {
         }
     }
     else if (Array.isArray(filePath)) {
-        for (const file in filePath) {
+        for (const file of filePath) {
             if (!isPathNeuroSafe(getAbsoluteFilePath(file))) {
                 return actionValidationFailure('You are not allowed to access this file path.');
             }
