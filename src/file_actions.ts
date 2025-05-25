@@ -12,14 +12,15 @@ function validatePath(path: string, directoryType: string): ActionValidationResu
 };
 
 function neuroSafeValidation(actionData: ActionData): ActionValidationResult {
+    let result: ActionValidationResult = actionValidationAccept();
     if (actionData.params?.filePath) {
-        validatePath(actionData.params.filePath, 'file');
+        result = validatePath(actionData.params.filePath, 'file');
     }
+    if (!result.success) return result;
     if (actionData.params?.folderPath) {
-        validatePath(actionData.params.folderPath, 'folder');
+        result = validatePath(actionData.params.folderPath, 'folder');
     }
-
-    return actionValidationAccept();
+    return result;
 }
 
 function neuroSafeDeleteValidation(actionData: ActionData): ActionValidationResult {
