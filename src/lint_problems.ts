@@ -30,7 +30,8 @@ function validateDirectoryAccess(actionData: ActionData): ActionValidationResult
     if (actionData.params?.folder) {
         const relativePath = actionData.params.folder;
         const normalizedPath = normalizePath(path.join(workspacePath, relativePath));
-        validatePath(normalizedPath, 'folder');
+        const check = validatePath(normalizedPath, 'folder');
+        if (!check.success) return check;
         if (!fs.existsSync(normalizedPath)) {
             return actionValidationFailure(`Folder "${relativePath}" does not exist.`);
         }
