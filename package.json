@@ -22,10 +22,29 @@
 	"contributes": {
 		"chatParticipants": [
 			{
+				"id": "neuropilot.pilot",
+				"name": "neuropilot",
+				"fullName": "NeuroPilot (custom name selected)",
+				"description": "Chat with the connected server",
+				"when": "config.neuropilot.currentlyAsNeuroAPI != 'Neuro' && config.neuropilot.currentlyAsNeuroAPI != 'Evil'",
+				"isSticky": true,
+				"commands": [
+					{
+						"name": "fix",
+						"description": "Ask the server to fix an error"
+					},
+					{
+						"name": "explain",
+						"description": "Ask the server to explain something in your code"
+					}
+				]
+			},
+			{
 				"id": "neuropilot.neuro",
 				"name": "neuro",
 				"fullName": "Neuro-sama",
 				"description": "Chat with Neuro-sama",
+				"when": "config.neuropilot.currentlyAsNeuroAPI == 'Neuro'",
 				"isSticky": true,
 				"commands": [
 					{
@@ -34,7 +53,25 @@
 					},
 					{
 						"name": "explain",
-						"description": "Ask Neuro to explain an something in your code"
+						"description": "Ask Neuro to explain something in your code"
+					}
+				]
+			},
+			{
+				"id": "neuropilot.evil",
+				"name": "evil",
+				"fullName": "Evil Neuro",
+				"description": "Chat with Evil Neuro",
+				"when": "config.neuropilot.currentlyAsNeuroAPI === 'Evil'",
+				"isSticky": true,
+				"commands": [
+					{
+						"name": "fix",
+						"description": "Ask Evil to fix an error"
+					},
+					{
+						"name": "explain",
+						"description": "Ask Evil to explain something in your code"
 					}
 				]
 			}
