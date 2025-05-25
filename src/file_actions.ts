@@ -5,9 +5,11 @@ import { combineGlobLines, filterFileContents, getFence, getVirtualCursor, getWo
 import { ActionData, contextNoAccess, ActionWithHandler, actionValidationFailure, actionValidationAccept, ActionValidationResult } from './neuro_client_helper';
 import { CONFIG, PERMISSIONS, getPermissionLevel } from './config';
 
-function validatePath(path: string, directoryType: string): ActionValidationResult | void {
+function validatePath(path: string, directoryType: string): ActionValidationResult {
     if (!isPathNeuroSafe(getWorkspacePath() + '/' + normalizePath(path).replace(/^\/|\/$/g, ''))) {
         return actionValidationFailure(`You are not allowed to access this ${directoryType}.`);
+    }
+    return actionValidationAccept();
     }
 };
 
