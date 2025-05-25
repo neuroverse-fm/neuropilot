@@ -7,10 +7,11 @@ import { PERMISSIONS, getPermissionLevel, CONFIG } from './config';
 import { ActionData, actionValidationAccept, actionValidationFailure, ActionValidationResult, ActionWithHandler, contextFailure } from './neuro_client_helper';
 import assert from 'assert';
 
-function validatePath(path: string, directoryType: string): ActionValidationResult | void {
+function validatePath(path: string, directoryType: string): ActionValidationResult {
     if (!isPathNeuroSafe(getWorkspacePath() + '/' + normalizePath(path).replace(/^\/|\/$/g, ''))) {
         return actionValidationFailure(`You are not allowed to access this ${directoryType}.`);
     }
+    return actionValidationAccept();
 };
 
 function validateDirectoryAccess(actionData: ActionData): ActionValidationResult {
