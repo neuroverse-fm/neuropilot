@@ -718,7 +718,7 @@ export function handleRemoveFileFromGit(actionData: ActionData): string | undefi
     const filePath: string[] = actionData.params.filePath;
     const absolutePaths: string[] = [];
 
-    for (const path in filePath) {
+    for (const path of filePath) {
         absolutePaths.push(getAbsoluteFilePath(path));
     }
 
