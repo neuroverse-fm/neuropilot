@@ -4,7 +4,40 @@ import * as path from 'path';
 import { NEURO } from './constants';
 import { normalizePath, getWorkspacePath, logOutput, isPathNeuroSafe } from './utils';
 import { PERMISSIONS, getPermissionLevel, CONFIG } from './config';
-import { ActionData, ActionWithHandler, contextFailure, contextNoAccess } from './neuro_client_helper';
+import { ActionData, actionValidationAccept, actionValidationFailure, ActionValidationResult, ActionWithHandler, contextFailure } from './neuro_client_helper';
+import assert from 'assert';
+
+function validatePath(path: string, directoryType: string): ActionValidationResult | void {
+    if (!isPathNeuroSafe(getWorkspacePath() + '/' + normalizePath(path).replace(/^\/|\/$/g, ''))) {
+        return actionValidationFailure(`You are not allowed to access this ${directoryType}.`);
+    }
+};
+
+function validateDirectoryAccess(actionData: ActionData): ActionValidationResult {
+    const workspacePath = getWorkspacePath();
+    if (!workspacePath) {
+        return actionValidationFailure('Unable to get current workspace.');
+    }
+
+    if (actionData.params?.file) {
+        const relativePath = actionData.params.file;
+        const normalizedPath = normalizePath(path.join(workspacePath, relativePath));
+        validatePath(normalizedPath, 'file');
+        if (!fs.existsSync(normalizedPath)) {
+            return actionValidationFailure(`File "${relativePath}" does not exist.`);
+        }
+    }
+    if (actionData.params?.folder) {
+        const relativePath = actionData.params.folder;
+        const normalizedPath = normalizePath(path.join(workspacePath, relativePath));
+        validatePath(normalizedPath, 'folder');
+        if (!fs.existsSync(normalizedPath)) {
+            return actionValidationFailure(`Folder "${relativePath}" does not exist.`);
+        }
+    }
+
+    return actionValidationAccept();
+}
 
 export const lintActions = {
     get_file_lint_problems: {
@@ -19,6 +52,7 @@ export const lintActions = {
         },
         permissions: [PERMISSIONS.accessLintingAnalysis],
         handler: handleGetFileLintProblems,
+        validator: [validateDirectoryAccess],
         promptGenerator: (actionData: ActionData) => `get linting diagnostics for "${actionData.params.file}".`,
     },
     get_folder_lint_problems: {
@@ -33,6 +67,7 @@ export const lintActions = {
         },
         permissions: [PERMISSIONS.accessLintingAnalysis],
         handler: handleGetFolderLintProblems,
+        validator: [validateDirectoryAccess],
         promptGenerator: (actionData: ActionData) => `get linting diagnostics for "${actionData.params.folder}".`,
     },
     get_workspace_lint_problems: {
@@ -40,6 +75,14 @@ export const lintActions = {
         description: 'Gets linting diagnostics for the current workspace.',
         permissions: [PERMISSIONS.accessLintingAnalysis],
         handler: handleGetWorkspaceLintProblems,
+        validator: [() => {
+            const workspace = getWorkspacePath();
+            if (!workspace) {
+                return actionValidationFailure('Unable to get current workspace.');
+            }
+            validatePath(workspace, 'workspace');
+            return actionValidationAccept();
+        }],
         promptGenerator: () => 'get linting diagnostics for the current workspace.',
     },
 } satisfies Record<string, ActionWithHandler>;
@@ -106,19 +149,11 @@ export function getFormattedDiagnosticsForFile(filePath: string, diagnostics: vs
 export function handleGetFileLintProblems(actionData: ActionData): string | undefined {
     const relativePath = actionData.params.file;
     const workspacePath = getWorkspacePath();
-    if (!workspacePath) {
-        return contextFailure('Unable to get workspace path.');
-    }
+    assert(workspacePath);
 
     try {
         const absolutePath = path.join(workspacePath, relativePath);
         const normalizedPath = normalizePath(absolutePath);
-        if (!isPathNeuroSafe(normalizedPath)) {
-            return contextNoAccess(normalizedPath);
-        }
-        if (!fs.existsSync(normalizedPath)) {
-            return contextFailure(`File "${relativePath}" does not exist.`);
-        }
 
         const rawDiagnostics = vscode.languages.getDiagnostics(vscode.Uri.file(normalizedPath));
         if (rawDiagnostics.length === 0) {
@@ -137,19 +172,11 @@ export function handleGetFolderLintProblems(actionData: ActionData): string | un
     const relativeFolder = actionData?.params.folder;
 
     const workspacePath = getWorkspacePath();
-    if (!workspacePath) {
-        return contextFailure('Unable to get workspace path.');
-    }
+    assert(workspacePath);
 
     try {
         const absoluteFolderPath = path.join(workspacePath, relativeFolder);
         const normalizedFolderPath = normalizePath(absoluteFolderPath);
-        if (!isPathNeuroSafe(normalizedFolderPath)) {
-            return contextNoAccess(normalizedFolderPath);
-        }
-        if (!fs.existsSync(normalizedFolderPath)) {
-            return contextFailure(`Folder "${relativeFolder}" does not exist.`);
-        }
 
         const diagnostics = vscode.languages.getDiagnostics();
         const folderDiagnostics = diagnostics.filter(([uri, diags]) => {
@@ -175,10 +202,7 @@ export function handleGetFolderLintProblems(actionData: ActionData): string | un
 // Handle diagnostics for the entire workspace
 export function handleGetWorkspaceLintProblems(_actionData: ActionData): string | undefined {
     const workspacePath = getWorkspacePath();
-    if (!workspacePath) {
-        logOutput('ERROR', 'Workspace folder not found.');
-        return contextFailure('Unable to get workspace path.');
-    }
+    assert(workspacePath);
 
     try {
         const diagnostics = vscode.languages.getDiagnostics();

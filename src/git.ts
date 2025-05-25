@@ -5,7 +5,7 @@ import { GitExtension, Change, ForcePushMode, CommitOptions, Commit, Repository 
 import { StatusStrings, RefTypeStrings } from './types/git_status';
 import { getNormalizedRepoPathForGit, logOutput, simpleFileName, isPathNeuroSafe } from './utils';
 import { ActionData, ActionValidationResult, actionValidationAccept, actionValidationFailure, ActionWithHandler, contextFailure } from './neuro_client_helper';
-import { PERMISSIONS, getPermissionLevel } from './config';
+import { CONFIG, PERMISSIONS, getPermissionLevel } from './config';
 import assert from 'assert';
 
 /* All actions located in here requires neuropilot.permission.gitOperations to be enabled. */
@@ -59,7 +59,12 @@ export const gitActions = {
         schema: {
             type: 'object',
             properties: {
-                filePath: { type: 'string' },
+                filePath: {
+                    type: 'array',
+                    items: { type: 'string' },
+                    minItems: 1,
+                    uniqueItems: true,
+                },
             },
             required: ['filePath'],
         },
@@ -116,7 +121,12 @@ export const gitActions = {
         schema: {
             type: 'object',
             properties: {
-                filePath: { type: 'string' },
+                filePath: {
+                    type: 'array',
+                    items: { type: 'string' },
+                    minItems: 1,
+                    uniqueItems: true,
+                },
             },
             required: ['filePath'],
         },
@@ -687,43 +697,43 @@ function getAbsoluteFilePath(filePath: string | undefined): string {
 
 export function handleAddFileToGit(actionData: ActionData): string | undefined {
     assert(repo);
-    const filePath: string = actionData.params.filePath;
-    const absolutePath = getAbsoluteFilePath(filePath);
+    const filePath: string[] = actionData.params.filePath;
+    const absolutePaths: string[] = [];
 
-    if (!isPathNeuroSafe(absolutePath)) {
-        NEURO.client?.sendContext('The provided file path is not allowed.');
-        return;
+    for (const path in filePath) {
+        absolutePaths.push(getAbsoluteFilePath(path));
     }
-    repo.add([absolutePath]).then(() => {
-        NEURO.client?.sendContext(`Added ${filePath || '*'} to staging area.`);
+
+    repo.add(absolutePaths).then(() => {
+        NEURO.client?.sendContext(`Added files "${filePath.join(', ')}" to staging area.`);
     }, (erm: string) => {
         NEURO.client?.sendContext('Adding files to staging area failed');
-        logOutput('ERROR', `Failed to git add: ${erm}\nTried to add ${absolutePath}`);
+        logOutput('ERROR', `Failed to git add: ${erm}\nTried to add ${absolutePaths}`);
     });
     return;
 }
 
 export function handleRemoveFileFromGit(actionData: ActionData): string | undefined {
     assert(repo);
-    const filePath: string = actionData.params.filePath;
-    const absolutePath = getAbsoluteFilePath(filePath);
+    const filePath: string[] = actionData.params.filePath;
+    const absolutePaths: string[] = [];
 
-    if (!isPathNeuroSafe(absolutePath)) {
-        NEURO.client?.sendContext('The provided file path is not allowed.');
-        return;
+    for (const path in filePath) {
+        absolutePaths.push(getAbsoluteFilePath(path));
     }
-    repo.revert([absolutePath]).then(() => {
+
+    repo.revert(absolutePaths).then(() => {
         NEURO.client?.sendContext(`Removed ${filePath || '*'} from the index.`);
     }, (erm: string) => {
         NEURO.client?.sendContext('Removing files from the index failed');
-        logOutput('ERROR', `Git remove failed: ${erm}\nTried to remove ${absolutePath}`);
+        logOutput('ERROR', `Git remove failed: ${erm}\nTried to remove ${absolutePaths}`);
     });
     return;
 }
 
 export function handleMakeGitCommit(actionData: ActionData): string | undefined {
     assert(repo);
-    const message = `Neuro commit: ${actionData.params?.message}`;
+    const message = `${CONFIG.currentlyAsNeuroAPI} committed: ${actionData.params?.message}`;
     const commitOptions: string[] | undefined = actionData.params?.options;
     let ExtraCommitOptions: CommitOptions | undefined = {};
 
@@ -807,10 +817,6 @@ export function handleDiffFiles(actionData: ActionData): string | undefined {
     const filePath: string = actionData.params.filePath ?? '.';
     const diffThisFile = getAbsoluteFilePath(filePath);
 
-    if (!isPathNeuroSafe(diffThisFile)) {
-        NEURO.client?.sendContext('The provided file path is not allowed.');
-        return;
-    }
     const diffType: string = actionData.params.diffType ?? 'diffWithHEAD'; // Default to diffWithHEAD
 
     switch (diffType) {

@@ -110,6 +110,27 @@
 						"default": "Visual Studio Code",
 						"description": "The name to use for this \"game\""
 					},
+					"neuropilot.currentlyAsNeuroAPI": {
+						"type": "string",
+						"markdownDescription": "Who is currently acting as the Neuro API server?\nThis only changes the name in certain areas (such as Copilot-mode requests or Git commit messages) due to limitations.\n\nYou can add custom characters using `settings.json` if you ignore the lint error from VS Code.\n\n(Most) names mentioned here are not associated with NeuroPilot.",
+						"default": "Neuro-sama",
+						"enum": [
+							"Neuro",
+							"Evil",
+							"Randy",
+							"Jippity",
+							"Tony",
+							"Gary"
+						],
+						"enumDescriptions": [
+							"#1 at osu!",
+							"Evil, but actually nice.",
+							"Random Dot Range (Alex)",
+							"A GPT model (EnterpriseScratchDev)",
+							"The human operator (Pasu4)",
+							"Literally in your computer walls (Govorunb)"
+						]
+					},
 					"neuropilot.beforeContext": {
 						"type": "integer",
 						"default": 10,
@@ -143,7 +164,7 @@
 					"neuropilot.initialContext": {
 						"type": "string",
 						"default": "You are using an extension in Visual Studio Code that allows you to code together with Vedal.",
-						"description": "The initial context to sent to Neuro-sama",
+						"description": "The initial context to sent to Neuro-sama (or whatever is connected to NeuroPilot)",
 						"editPresentation": "multilineText"
 					},
 					"neuropilot.timeout": {
@@ -190,7 +211,7 @@
 							],
 							"additionalProperties": false
 						},
-						"description": "A list of terminals Neuro can use.",
+						"markdownDescription": "A list of terminals Neuro can use.\nChanging this requires a [permission reload](command:neuropilot.reloadPermissions).",
 						"default": [
 							{
 								"name": "PowerShell",
@@ -226,7 +247,7 @@
 							"Require approval before execution.",
 							"Execute without oversight."
 						],
-						"markdownDescription": "Let Neuro open files in the workspace. For security reasons, Neuro cannot open anything that starts with a dot or has a parent folder that starts with a dot (e.g. `.git`, `.vscode`, ...), unless you enable Allow Unsafe Paths.\n\nRequires reloading permissions if changed."
+						"markdownDescription": "Let Neuro open files in the workspace. For security reasons, Neuro cannot open anything that starts with a dot or has a parent folder that starts with a dot (e.g. `.git`, `.vscode`, ...), unless you enable Allow Unsafe Paths.\n\nRequires [reloading permissions](command:neuropilot.reloadPermissions) if turned from \"on\" to off, and vice versa."
 					},
 					"neuropilot.permission.editActiveDocument": {
 						"type": "string",
@@ -241,7 +262,7 @@
 							"Require approval before execution.",
 							"Execute without oversight."
 						],
-						"markdownDescription": "Let Neuro edit the active file directly.\n\nRequires reloading permissions if changed."
+						"markdownDescription": "Let Neuro edit the active file directly.\n\nRequires [reloading permissions](command:neuropilot.reloadPermissions) if turned from \"on\" to off, and vice versa."
 					},
 					"neuropilot.permission.create": {
 						"type": "string",
@@ -256,7 +277,7 @@
 							"Require approval before execution.",
 							"Execute without oversight."
 						],
-						"markdownDescription": "Let Neuro create new files and folders in the workspace.\n\nRequires reloading permissions if changed."
+						"markdownDescription": "Let Neuro create new files and folders in the workspace.\n\nRequires [reloading permissions](command:neuropilot.reloadPermissions) if turned from \"on\" to off, and vice versa."
 					},
 					"neuropilot.permission.rename": {
 						"type": "string",
@@ -271,7 +292,7 @@
 							"Require approval before execution.",
 							"Execute without oversight."
 						],
-						"markdownDescription": "Let Neuro rename files and folders in the workspace.\n\nRequires reloading permissions if changed."
+						"markdownDescription": "Let Neuro rename files and folders in the workspace.\n\nRequires [reloading permissions](command:neuropilot.reloadPermissions) if turned from \"on\" to off, and vice versa."
 					},
 					"neuropilot.permission.delete": {
 						"type": "string",
@@ -286,7 +307,7 @@
 							"Require approval before execution.",
 							"Execute without oversight."
 						],
-						"markdownDescription": "Let Neuro delete files and folders in the workspace.\n\nRequires reloading permissions if changed."
+						"markdownDescription": "Let Neuro delete files and folders in the workspace.\n\nRequires [reloading permissions](command:neuropilot.reloadPermissions) if turned from \"on\" to off, and vice versa."
 					},
 					"neuropilot.permission.runTasks": {
 						"type": "string",
@@ -301,7 +322,7 @@
 							"Require approval before execution.",
 							"Execute without oversight."
 						],
-						"markdownDescription": "Let Neuro run workspace tasks defined in `tasks.json`.\n\nRequires reloading permissions if changed."
+						"markdownDescription": "Let Neuro run workspace tasks defined in `tasks.json`.\n\nRequires [reloading permissions](command:neuropilot.reloadPermissions) if turned from \"on\" to off, and vice versa."
 					},
 					"neuropilot.permission.requestCookies": {
 						"type": "string",
@@ -314,7 +335,7 @@
 							"Disable this permission.",
 							"Require approval before execution."
 						],
-						"markdownDescription": "Neuro may ask for cookies while coding.\n\nRequires reloading permissions if changed."
+						"markdownDescription": "Neuro may ask for cookies while coding.\n\nRequires [reloading permissions](command:neuropilot.reloadPermissions) if turned from \"on\" to off, and vice versa."
 					},
 					"neuropilot.permission.gitOperations": {
 						"type": "string",
@@ -329,7 +350,7 @@
 							"Require approval before execution.",
 							"Execute without oversight."
 						],
-						"markdownDescription": "Allow Neuro to perform Git operations in the workspace.\n\nRequires reloading permissions if changed."
+						"markdownDescription": "Allow Neuro to perform Git operations in the workspace.\n\nRequires [reloading permissions](command:neuropilot.reloadPermissions) if turned from \"on\" to off, and vice versa."
 					},
 					"neuropilot.permission.gitTags": {
 						"type": "string",
@@ -344,7 +365,7 @@
 							"Require approval before execution.",
 							"Execute without oversight."
 						],
-						"markdownDescription": "Allow Neuro to create and delete tags in Git repositories.\n\nRequires reloading permissions if changed."
+						"markdownDescription": "Allow Neuro to create and delete tags in Git repositories.\nAlso requires [Git Operations](vscode://settings/neuropilot.permission.gitOperations) permission to be enabled.\n\nRequires [reloading permissions](command:neuropilot.reloadPermissions) if turned from \"on\" to off, and vice versa."
 					},
 					"neuropilot.permission.gitRemotes": {
 						"type": "string",
@@ -359,7 +380,7 @@
 							"Require approval before execution.",
 							"Execute without oversight."
 						],
-						"markdownDescription": "Allow Neuro to push, pull and fetch commits.\nAlso requires Git Operations permission to be enabled.\n\nRequires reloading permissions if changed."
+						"markdownDescription": "Allow Neuro to push, pull and fetch commits.\nAlso requires [Git Operations](vscode://settings/neuropilot.permission.gitOperations) permission to be enabled.\n\nRequires [reloading permissions](command:neuropilot.reloadPermissions) if turned from \"on\" to off, and vice versa."
 					},
 					"neuropilot.permission.editRemoteData": {
 						"type": "string",
@@ -374,7 +395,7 @@
 							"Require approval before execution.",
 							"Execute without oversight."
 						],
-						"markdownDescription": "Allow Neuro to add, remove and rename remotes.\nAlso requires Git Operations & Git Remotes permissions to be enabled.\n\nRequires reloading permissions if changed."
+						"markdownDescription": "Allow Neuro to add, remove and rename remotes.\nAlso requires [Git Operations](vscode://settings/neuropilot.permission.gitOperations) & [Git Remotes](vscode://settings/neuropilot.permission.gitRemotes) permissions to be enabled.\n\nRequires [reloading permissions](command:neuropilot.reloadPermissions) if turned from \"on\" to off, and vice versa."
 					},
 					"neuropilot.permission.gitConfigs": {
 						"type": "string",
@@ -389,7 +410,7 @@
 							"Require approval before execution.",
 							"Execute without oversight."
 						],
-						"markdownDescription": "Allow Neuro to view and edit Git configuration in the workspace.\nAlso requires Git Operations permission to be enabled.\n\nRequires reloading permissions if changed."
+						"markdownDescription": "Allow Neuro to view and edit Git configuration in the workspace.\nAlso requires [Git Operations](vscode://settings/neuropilot.permission.gitOperations) permission to be enabled.\n\nRequires [reloading permissions](command:neuropilot.reloadPermissions) if turned from \"on\" to off, and vice versa."
 					},
 					"neuropilot.permission.terminalAccess": {
 						"type": "string",
@@ -404,7 +425,7 @@
 							"Require approval before execution.",
 							"Execute without oversight."
 						],
-						"markdownDescription": "Allow Neuro __direct terminal access__. Be very careful with this."
+						"markdownDescription": "Allow Neuro __direct terminal access__. Be very careful with this.\nRequires [reloading permissions](command:neuropilot.reloadPermissions) if turned from \"on\" to off, and vice versa."
 					},
 					"neuropilot.permission.accessLintingAnalysis": {
 						"type": "string",
