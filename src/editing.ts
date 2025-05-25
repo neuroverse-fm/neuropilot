@@ -4,7 +4,6 @@ import { NEURO } from './constants';
 import { escapeRegExp, getFence, getPositionContext, getVirtualCursor, isPathNeuroSafe, logOutput, NeuroPositionContext, setVirtualCursor, substituteMatch } from './utils';
 import { ActionData, actionValidationAccept, actionValidationFailure, ActionValidationResult, ActionWithHandler, contextFailure } from './neuro_client_helper';
 import { PERMISSIONS, getPermissionLevel, CONFIG } from './config';
-import assert from 'assert';
 
 const CONTEXT_NO_ACCESS = 'You do not have permission to access this file.';
 const CONTEXT_NO_ACTIVE_DOCUMENT = 'No active document to edit.';
@@ -170,7 +169,10 @@ export function handlePlaceCursor(actionData: ActionData): string | undefined {
     const type = actionData.params.type;
 
     const document = vscode.window.activeTextEditor?.document;
-    assert(document);
+    if(document === undefined)
+        return contextFailure(CONTEXT_NO_ACTIVE_DOCUMENT);
+    if(!isPathNeuroSafe(document.fileName))
+        return contextFailure(CONTEXT_NO_ACCESS);
 
     let basedLine: number, basedColumn: number;
 
@@ -199,19 +201,22 @@ export function handlePlaceCursor(actionData: ActionData): string | undefined {
     const cursorPosition = new vscode.Position(line, column);
     setVirtualCursor(cursorPosition);
     const cursorContext = getPositionContext(document, cursorPosition);
-    logOutput('INFO', `Placed ${CONFIG.currentlyAsNeuroAPI}'s virtual cursor at (${basedLine}:${basedColumn}).`);
+    logOutput('INFO', `Placed ${NEURO.currentController}'s virtual cursor at (${basedLine}:${basedColumn}).`);
 
     return `Cursor placed at (${basedLine}:${basedColumn})\n\n${formatContext(cursorContext)}`;
 }
 
 export function handleGetCursor(_actionData: ActionData): string | undefined {
     const document = vscode.window.activeTextEditor?.document;
-    assert(document);
+    if(document === undefined)
+        return contextFailure(CONTEXT_NO_ACTIVE_DOCUMENT);
+    if(!isPathNeuroSafe(document.fileName))
+        return contextFailure(CONTEXT_NO_ACCESS);
 
     const cursorPosition = getVirtualCursor()!;
     const cursorContext = getPositionContext(document, cursorPosition);
     const relativePath = vscode.workspace.asRelativePath(document.uri);
-    logOutput('INFO', `Sending cursor position to ${CONFIG.currentlyAsNeuroAPI}`);
+    logOutput('INFO', `Sending cursor position to ${NEURO.currentController}`);
 
     return `In file ${relativePath}\n\nCursor is at (${cursorPosition.line + 1}:${cursorPosition.character + 1})\n\n${formatContext(cursorContext)}`;
 }
@@ -220,7 +225,10 @@ export function handleInsertText(actionData: ActionData): string | undefined {
     const text: string = actionData.params.text;
 
     const document = vscode.window.activeTextEditor?.document;
-    assert(document);
+    if(document === undefined)
+        return contextFailure(CONTEXT_NO_ACTIVE_DOCUMENT);
+    if(!isPathNeuroSafe(document.fileName))
+        return contextFailure(CONTEXT_NO_ACCESS);
 
     const insertStart = getVirtualCursor()!;
     const edit = new vscode.WorkspaceEdit();
@@ -249,7 +257,10 @@ export function handleReplaceText(actionData: ActionData): string | undefined {
     const useRegex = actionData.params.useRegex ?? false;
 
     const document = vscode.window.activeTextEditor?.document;
-    assert(document);
+    if(document === undefined)
+        return contextFailure(CONTEXT_NO_ACTIVE_DOCUMENT);
+    if(!isPathNeuroSafe(document.fileName))
+        return contextFailure(CONTEXT_NO_ACCESS);
 
     const regex = new RegExp(useRegex ? find : escapeRegExp(find), 'g');
     const cursorOffset = document.offsetAt(getVirtualCursor()!);
@@ -299,7 +310,10 @@ export function handleDeleteText(actionData: ActionData): string | undefined {
     const useRegex = actionData.params?.useRegex ?? false;
 
     const document = vscode.window.activeTextEditor?.document;
-    assert(document);
+    if(document === undefined)
+        return contextFailure(CONTEXT_NO_ACTIVE_DOCUMENT);
+    if(!isPathNeuroSafe(document.fileName))
+        return contextFailure(CONTEXT_NO_ACCESS);
 
     const regex = new RegExp(useRegex ? find : escapeRegExp(find), 'g');
     const cursorOffset = document.offsetAt(getVirtualCursor()!);
@@ -341,7 +355,10 @@ export function handleFindText(actionData: ActionData): string | undefined {
     const useRegex = actionData.params?.useRegex ?? false;
 
     const document = vscode.window.activeTextEditor?.document;
-    assert(document);
+    if(document === undefined)
+        return contextFailure(CONTEXT_NO_ACTIVE_DOCUMENT);
+    if(!isPathNeuroSafe(document.fileName))
+        return contextFailure(CONTEXT_NO_ACCESS);
 
     const regex = new RegExp(useRegex ? find : escapeRegExp(find), 'g');
     const cursorOffset = document.offsetAt(getVirtualCursor()!);
@@ -374,7 +391,10 @@ export function handleFindText(actionData: ActionData): string | undefined {
 
 export function handleUndo(_actionData: ActionData): string | undefined {
     const document = vscode.window.activeTextEditor?.document;
-    assert(document);
+    if(document === undefined)
+        return contextFailure(CONTEXT_NO_ACTIVE_DOCUMENT);
+    if(!isPathNeuroSafe(document.fileName))
+        return contextFailure(CONTEXT_NO_ACCESS);
 
     vscode.commands.executeCommand('undo').then(
         () => {
@@ -395,7 +415,10 @@ export function handleUndo(_actionData: ActionData): string | undefined {
 
 export function handleSave(_actionData: ActionData): string | undefined {
     const document = vscode.window.activeTextEditor?.document;
-    assert(document);
+    if(document === undefined)
+        return contextFailure(CONTEXT_NO_ACTIVE_DOCUMENT);
+    if(!isPathNeuroSafe(document.fileName))
+        return contextFailure(CONTEXT_NO_ACCESS);
 
     NEURO.saving = true;
     logOutput('INFO', `${CONFIG.currentlyAsNeuroAPI} is saving the current document.`);
