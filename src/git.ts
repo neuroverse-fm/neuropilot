@@ -700,7 +700,7 @@ export function handleAddFileToGit(actionData: ActionData): string | undefined {
     const filePath: string[] = actionData.params.filePath;
     const absolutePaths: string[] = [];
 
-    for (const path in filePath) {
+    for (const path of filePath) {
         absolutePaths.push(getAbsoluteFilePath(path));
     }
 
