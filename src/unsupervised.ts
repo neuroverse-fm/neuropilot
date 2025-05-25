@@ -60,7 +60,7 @@ export function registerUnsupervisedHandlers() {
                     description: task.description,
                     permissions: [PERMISSIONS.runTasks],
                     handler: handleRunTask,
-                    promptGenerator: () => `Neuro wants to run the task "${task.id}".`,
+                    promptGenerator: () => `run the task "${task.id}".`,
                 };
             }
 
