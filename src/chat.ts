@@ -19,7 +19,7 @@ const NEURO_PARTICIPANTS: Participant[] = [
         relativeIconPath: 'evilpilot.png',
     },
     {
-        id: 'neuropilot.pilot',
+        id: 'neuropilot.api',
         relativeIconPath: 'icon.png',
     },
 ];

@@ -22,9 +22,9 @@
 	"contributes": {
 		"chatParticipants": [
 			{
-				"id": "neuropilot.pilot",
-				"name": "neuropilot",
-				"fullName": "NeuroPilot (custom name selected)",
+				"id": "neuropilot.api",
+				"name": "neuroapi",
+				"fullName": "Neuro API (custom name selected)",
 				"description": "Chat with the connected server",
 				"when": "config.neuropilot.currentlyAsNeuroAPI != 'Neuro' && config.neuropilot.currentlyAsNeuroAPI != 'Evil'",
 				"isSticky": true,
