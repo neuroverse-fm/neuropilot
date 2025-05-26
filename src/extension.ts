@@ -34,6 +34,7 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand('neuropilot.revealRceNotification', revealRceNotification);
     vscode.commands.registerCommand('neuropilot.fixWithNeuro', fixWithNeuro);
     vscode.commands.registerCommand('neuropilot.explainWithNeuro', explainWithNeuro);
+    vscode.commands.registerCommand('neuropilot.switchNeuroAPIUser', switchCurrentNeuroAPIUser);
 
     // Update the CodeActionProvider to pass the document and diagnostics.
     vscode.languages.registerCodeActionsProvider(
@@ -69,6 +70,13 @@ export function activate(context: vscode.ExtensionContext) {
     });
 
     createClient();
+    NEURO.currentController = CONFIG.currentlyAsNeuroAPI;
+    vscode.workspace.onDidChangeConfiguration(event => {
+        if (event.affectsConfiguration('neuropilot.currentlyAsNeuroAPI')) {
+            NEURO.currentController = CONFIG.currentlyAsNeuroAPI;
+            logOutput('DEBUG', `Changed current controller name to ${NEURO.currentController}.`);
+        }
+    });
 
     // Create status bar item
     NEURO.statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
@@ -188,4 +196,29 @@ function getDecorationRenderOptions(context: vscode.ExtensionContext) {
             color: 'rgba(255, 85, 229)',
         },
     };
+}
+
+function switchCurrentNeuroAPIUser() {
+    const quickPick = vscode.window.createQuickPick();
+    quickPick.items = [
+        { label: 'Neuro' },
+        { label: 'Evil' },
+        { label: 'Randy' },
+        { label: 'Jippity' },
+        { label: 'Tony' },
+        { label: 'Gary' },
+    ];
+    quickPick.placeholder = 'Switch to who?';
+    quickPick.activeItems = quickPick.items.filter(item => item.label === NEURO.currentController);
+    quickPick.onDidAccept(() => {
+        const selected = quickPick.activeItems[0].label ?? quickPick.value;
+        if (!selected) {
+            logOutput('ERROR', 'No selection was made.');
+            quickPick.hide();
+            return;
+        }
+        vscode.workspace.getConfiguration('neuropilot').update('currentlyAsNeuroAPI', selected, vscode.ConfigurationTarget.Workspace);
+        quickPick.hide();
+    });
+    quickPick.show();
 }

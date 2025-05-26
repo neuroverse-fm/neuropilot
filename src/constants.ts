@@ -10,9 +10,13 @@ export interface NeuroTask {
 }
 
 interface Neuro {
+    /** Whether or not the NeuroClient connection has been initialized. */
     initialized: boolean;
+    /** Stores the NeuroClient class from the SDK being used. */
     client: NeuroClient | null;
+    /** The WebSocket URL set to be connected to. */
     url: string;
+    /** The set name of the "game", which is sent to Neuro. */
     gameName: string;
     /** Whether the client successfully connected to the API. */
     connected: boolean;
@@ -26,20 +30,29 @@ interface Neuro {
      * This is used to tell Neuro that the request was canceled.
      */
     cancelled: boolean;
+    /** The extension's output channel (logging) */
     outputChannel: vscode.OutputChannel | null;
     /** Whether Neuro has asked for a cookie. */
     waitingForCookie: boolean;
+    /** The array of tasks that Neuro can execute. */
     tasks: NeuroTask[];
+    /** Stores the currently executed task. */
     currentTaskExecution: vscode.TaskExecution | null;
     /** Whether the current action has been handled. */
     actionHandled: boolean;
+    /** Whether or not terminals are currently running. */
     terminalEnabled: boolean;
+    /** The map of terminals currently active. */
     terminalRegistry: Map<string, TerminalSession>;
     /** This is needed because VSCode doesn't say what changed, only what files were changed. */
     previousDiagnosticsMap: Map<string, vscode.Diagnostic[]>;
+    /** Whether or not Neuro is manually saving. */
     saving: boolean;
+    /** Stores the current RCE request prompt & callback. */
     rceRequest: RceRequest | null;
+    /** Stores the state of the status bar item. */
     statusBarItem: vscode.StatusBarItem | null;
+    /** Whether or not to warn when requesting completions while the relevant permission is disabled. */
     warnOnCompletionsOff: boolean;
     /**
      * The current offset of the virtual cursor for each file.
@@ -48,6 +61,8 @@ interface Neuro {
     cursorOffsets: Map<vscode.Uri, number | null>;
     /** Decoration type for the virtual cursor. */
     cursorDecorationType: vscode.TextEditorDecorationType | null;
+    /** Current name set as the API controller */
+    currentController: string | null;
 }
 
 
@@ -73,4 +88,5 @@ export const NEURO: Neuro = {
     warnOnCompletionsOff: true,
     cursorOffsets: new Map(),
     cursorDecorationType: null,
+    currentController: null,
 };

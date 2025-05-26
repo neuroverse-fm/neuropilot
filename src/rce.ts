@@ -74,7 +74,7 @@ export function emergencyDenyRequests(): void {
     clearRceRequest();
     logOutput('INFO', `Cancelled ${NEURO.rceRequest.callback} due to emergency shutdown.`);
     NEURO.client?.sendContext('Your last request was denied.');
-    vscode.window.showInformationMessage('The last request from Neuro has been denied automatically.');
+    vscode.window.showInformationMessage(`The last request from ${NEURO.currentController} has been denied automatically.`);
 }
 
 export function clearRceRequest(): void { // Function to clear out RCE dialogs
@@ -199,7 +199,7 @@ export function revealRceNotification(): void {
  */
 export function acceptRceRequest(): void {
     if (!NEURO.rceRequest) {
-        vscode.window.showErrorMessage('No active request from Neuro to accept.');
+        vscode.window.showErrorMessage(`No active request from ${NEURO.currentController} to accept.`);
         return;
     }
 
@@ -218,7 +218,7 @@ export function acceptRceRequest(): void {
  */
 export function denyRceRequest(): void {
     if (!NEURO.rceRequest) {
-        vscode.window.showErrorMessage('No active request from Neuro to deny.');
+        vscode.window.showErrorMessage(`No active request from ${NEURO.currentController} to deny.`);
         return;
     }
 

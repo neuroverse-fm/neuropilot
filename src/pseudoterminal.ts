@@ -2,8 +2,16 @@ import * as vscode from 'vscode';
 import { spawn } from 'child_process';
 import { NEURO } from './constants';
 import { TerminalSession, logOutput, delayAsync, getFence } from './utils';
-import { ActionData, ActionWithHandler, contextFailure } from './neuro_client_helper';
+import { ActionData, actionValidationAccept, actionValidationFailure, ActionValidationResult, ActionWithHandler, contextFailure } from './neuro_client_helper';
 import { CONFIG, PERMISSIONS, getPermissionLevel } from './config';
+
+function checkLiveTerminals(actionData: ActionData): ActionValidationResult {
+    const shellType: string = actionData.params.shell;
+    const session = NEURO.terminalRegistry.get(shellType);
+    if (!session)
+        return actionValidationFailure(`No terminal session found for shell type "${shellType}".`);
+    return actionValidationAccept();
+}
 
 export const terminalAccessHandlers = {
     'execute_in_terminal': {
@@ -33,6 +41,7 @@ export const terminalAccessHandlers = {
         },
         permissions: [PERMISSIONS.terminalAccess],
         handler: handleKillTerminal,
+        validator: [checkLiveTerminals],
         promptGenerator: (actionData: ActionData) => `kill the "${actionData.params?.shell}" shell.`,
     },
     'get_currently_running_shells': {
@@ -264,21 +273,16 @@ export function handleRunCommand(actionData: ActionData): string | undefined {
  * Checks if the terminal registry contains the open shell and forcefully kills the shell if found.
  */
 export function handleKillTerminal(actionData: ActionData): string | undefined {
-
     // Validate shell type parameter.
     const shellType: string = actionData.params?.shell;
-
-    // Check if the terminal session exists in the registry.
-    const session = NEURO.terminalRegistry.get(shellType);
-    if (!session)
-        return contextFailure(`No terminal session found for shell type "${shellType}".`);
+    const session = NEURO.terminalRegistry.get(shellType)!;
 
     // Dispose of the terminal and remove it from the registry.
     session.terminal.dispose();
     NEURO.terminalRegistry.delete(shellType);
 
     // Notify Neuro and the user.
-    return contextFailure(`Terminal session for shell type "${shellType}" has been terminated.`);
+    return `Terminal session for shell type "${shellType}" has been terminated.`;
 }
 
 /**

@@ -23,6 +23,24 @@ function gitValidator(_actionData: ActionData): ActionValidationResult {
     return actionValidationAccept();
 }
 
+function neuroSafeGitValidator(actionData: ActionData): ActionValidationResult {
+    const filePath: string | string[] = actionData.params?.filePath;
+    if (typeof filePath === 'string') {
+        if (!isPathNeuroSafe(getAbsoluteFilePath(filePath))) {
+            return actionValidationFailure('You are not allowed to access this file path.');
+        }
+    }
+    else if (Array.isArray(filePath)) {
+        for (const file of filePath) {
+            if (!isPathNeuroSafe(getAbsoluteFilePath(file))) {
+                return actionValidationFailure('You are not allowed to access this file path.');
+            }
+        }
+    }
+
+    return actionValidationAccept();
+}
+
 export const gitActions = {
     init_git_repo: {
         name: 'init_git_repo',
@@ -30,6 +48,10 @@ export const gitActions = {
         permissions: [PERMISSIONS.gitOperations],
         handler: handleNewGitRepo,
         promptGenerator: 'initialize a Git repository in the workspace.',
+        validator: [(_actionData: ActionData) => {
+            if (!git) return actionValidationFailure('Git extension not available.');
+            return actionValidationAccept();
+        }],
     },
     add_file_to_git: {
         name: 'add_file_to_git',
@@ -37,14 +59,19 @@ export const gitActions = {
         schema: {
             type: 'object',
             properties: {
-                filePath: { type: 'string' },
+                filePath: {
+                    type: 'array',
+                    items: { type: 'string' },
+                    minItems: 1,
+                    uniqueItems: true,
+                },
             },
             required: ['filePath'],
         },
         permissions: [PERMISSIONS.gitOperations],
         handler: handleAddFileToGit,
         promptGenerator: (actionData: ActionData) => `add the file "${actionData.params.filePath}" to the staging area.`,
-        validator: gitValidator,
+        validator: [gitValidator, neuroSafeGitValidator],
     },
     make_git_commit: {
         name: 'make_git_commit',
@@ -63,7 +90,7 @@ export const gitActions = {
         permissions: [PERMISSIONS.gitOperations],
         handler: handleMakeGitCommit,
         promptGenerator: (actionData: ActionData) => `commit changes with the message "${actionData.params.message}".`,
-        validator: gitValidator,
+        validator: [gitValidator],
     },
     merge_to_current_branch: {
         name: 'merge_to_current_branch',
@@ -78,7 +105,7 @@ export const gitActions = {
         permissions: [PERMISSIONS.gitOperations],
         handler: handleGitMerge,
         promptGenerator: (actionData: ActionData) => `merge "${actionData.params.ref_to_merge}" into the current branch.`,
-        validator: gitValidator,
+        validator: [gitValidator],
     },
     git_status: {
         name: 'git_status',
@@ -86,7 +113,7 @@ export const gitActions = {
         permissions: [PERMISSIONS.gitOperations],
         handler: handleGitStatus,
         promptGenerator: 'get the Git status.',
-        validator: gitValidator,
+        validator: [gitValidator],
     },
     remove_file_from_git: {
         name: 'remove_file_from_git',
@@ -94,14 +121,19 @@ export const gitActions = {
         schema: {
             type: 'object',
             properties: {
-                filePath: { type: 'string' },
+                filePath: {
+                    type: 'array',
+                    items: { type: 'string' },
+                    minItems: 1,
+                    uniqueItems: true,
+                },
             },
             required: ['filePath'],
         },
         permissions: [PERMISSIONS.gitOperations],
         handler: handleRemoveFileFromGit,
         promptGenerator: (actionData: ActionData) => `remove the file "${actionData.params.filePath}" from the staging area.`,
-        validator: gitValidator,
+        validator: [gitValidator, neuroSafeGitValidator],
     },
     delete_git_branch: {
         name: 'delete_git_branch',
@@ -117,7 +149,7 @@ export const gitActions = {
         permissions: [PERMISSIONS.gitOperations],
         handler: handleDeleteGitBranch,
         promptGenerator: (actionData: ActionData) => `delete the branch "${actionData.params.branchName}".`,
-        validator: gitValidator,
+        validator: [gitValidator],
     },
     switch_git_branch: {
         name: 'switch_git_branch',
@@ -132,7 +164,7 @@ export const gitActions = {
         permissions: [PERMISSIONS.gitOperations],
         handler: handleSwitchGitBranch,
         promptGenerator: (actionData: ActionData) => `switch to the branch "${actionData.params.branchName}".`,
-        validator: gitValidator,
+        validator: [gitValidator],
     },
     new_git_branch: {
         name: 'new_git_branch',
@@ -147,7 +179,7 @@ export const gitActions = {
         permissions: [PERMISSIONS.gitOperations],
         handler: handleNewGitBranch,
         promptGenerator: (actionData: ActionData) => `create a new branch "${actionData.params.branchName}".`,
-        validator: gitValidator,
+        validator: [gitValidator],
     },
     diff_files: {
         name: 'diff_files',
@@ -164,7 +196,7 @@ export const gitActions = {
         permissions: [PERMISSIONS.gitOperations],
         handler: handleDiffFiles,
         promptGenerator: (actionData: ActionData) => `obtain ${actionData.params?.filePath ? `${actionData.params.filePath}'s` : 'a'} Git diff${actionData.params?.ref1 && actionData.params?.ref2 ? ` between ${actionData.params.ref1} and ${actionData.params.ref2}` : actionData.params?.ref1 ? ` at ref ${actionData.params.ref1}` : ''}${actionData.params?.diffType ? ` (of type "${actionData.params.diffType}")` : ''}.`,
-        validator: gitValidator,
+        validator: [gitValidator, neuroSafeGitValidator],
     },
     git_log: {
         name: 'git_log',
@@ -181,7 +213,7 @@ export const gitActions = {
         permissions: [PERMISSIONS.gitOperations],
         handler: handleGitLog,
         promptGenerator: 'get the Git log.',
-        validator: gitValidator,
+        validator: [gitValidator],
     },
     git_blame: {
         name: 'git_blame',
@@ -196,7 +228,7 @@ export const gitActions = {
         permissions: [PERMISSIONS.gitOperations],
         handler: handleGitBlame,
         promptGenerator: (actionData: ActionData) => `get the Git blame for the file "${actionData.params.filePath}".`,
-        validator: gitValidator,
+        validator: [gitValidator, neuroSafeGitValidator],
     },
 
     // Requires gitTags
@@ -214,7 +246,7 @@ export const gitActions = {
         permissions: [PERMISSIONS.gitOperations, PERMISSIONS.gitTags],
         handler: handleTagHEAD,
         promptGenerator: (actionData: ActionData) => `tag the current commit with the name "${actionData.params.name}" and associate it with the "${actionData.params.upstream}" remote.`,
-        validator: gitValidator,
+        validator: [gitValidator],
     },
     delete_tag: {
         name: 'delete_tag',
@@ -229,7 +261,7 @@ export const gitActions = {
         permissions: [PERMISSIONS.gitOperations, PERMISSIONS.gitTags],
         handler: handleDeleteTag,
         promptGenerator: (actionData: ActionData) => `delete the tag "${actionData.params.name}".`,
-        validator: gitValidator,
+        validator: [gitValidator],
     },
 
     // Requires gitConfigs
@@ -247,7 +279,7 @@ export const gitActions = {
         permissions: [PERMISSIONS.gitOperations, PERMISSIONS.gitConfigs],
         handler: handleSetGitConfig,
         promptGenerator: (actionData: ActionData) => `set the Git config key "${actionData.params.key}" to "${actionData.params.value}".`,
-        validator: gitValidator,
+        validator: [gitValidator],
     },
     get_git_config: {
         name: 'get_git_config',
@@ -261,7 +293,7 @@ export const gitActions = {
         permissions: [PERMISSIONS.gitOperations, PERMISSIONS.gitConfigs],
         handler: handleGetGitConfig,
         promptGenerator: (actionData: ActionData) => actionData.params?.key ? `get the Git config key "${actionData.params.key}".` : 'get the Git config.',
-        validator: gitValidator,
+        validator: [gitValidator],
     },
 
     // Requires gitRemotes
@@ -286,7 +318,7 @@ export const gitActions = {
                 return `fetch commits from ${actionData.params.branchName}.`;
             return 'fetch commits.';
         },
-        validator: gitValidator,
+        validator: [gitValidator],
     },
     pull_git_commits: {
         name: 'pull_git_commits',
@@ -294,7 +326,7 @@ export const gitActions = {
         permissions: [PERMISSIONS.gitOperations, PERMISSIONS.gitRemotes],
         handler: handlePullGitCommits,
         promptGenerator: 'pull commits.',
-        validator: gitValidator,
+        validator: [gitValidator],
     },
     push_git_commits: {
         name: 'push_git_commits',
@@ -319,7 +351,7 @@ export const gitActions = {
                 return `${force}push commits to ${actionData.params.branchName}.`;
             return `${force}push commits.`;
         },
-        validator: gitValidator,
+        validator: [gitValidator],
     },
 
     // Requires gitRemotes and editRemoteData
@@ -337,7 +369,7 @@ export const gitActions = {
         permissions: [PERMISSIONS.gitOperations, PERMISSIONS.gitRemotes, PERMISSIONS.editRemoteData],
         handler: handleAddGitRemote,
         promptGenerator: (actionData: ActionData) => `add a new remote "${actionData.params.remoteName}" with URL "${actionData.params.remoteURL}".`,
-        validator: gitValidator,
+        validator: [gitValidator],
     },
     remove_git_remote: {
         name: 'remove_git_remote',
@@ -352,7 +384,7 @@ export const gitActions = {
         permissions: [PERMISSIONS.gitOperations, PERMISSIONS.gitRemotes, PERMISSIONS.editRemoteData],
         handler: handleRemoveGitRemote,
         promptGenerator: (actionData: ActionData) => `remove the remote "${actionData.params.remoteName}".`,
-        validator: gitValidator,
+        validator: [gitValidator],
     },
     rename_git_remote: {
         name: 'rename_git_remote',
@@ -375,7 +407,7 @@ export const gitActions = {
         permissions: [PERMISSIONS.gitOperations],
         handler: handleAbortMerge,
         promptGenerator: 'abort the current merge operation.',
-        validator: gitValidator,
+        validator: [gitValidator],
     },
 } satisfies Record<string, ActionWithHandler>;
 
@@ -665,43 +697,43 @@ function getAbsoluteFilePath(filePath: string | undefined): string {
 
 export function handleAddFileToGit(actionData: ActionData): string | undefined {
     assert(repo);
-    const filePath: string = actionData.params.filePath;
-    const absolutePath = getAbsoluteFilePath(filePath);
+    const filePath: string[] = actionData.params.filePath;
+    const absolutePaths: string[] = [];
 
-    if (!isPathNeuroSafe(absolutePath)) {
-        NEURO.client?.sendContext('The provided file path is not allowed.');
-        return;
+    for (const path of filePath) {
+        absolutePaths.push(getAbsoluteFilePath(path));
     }
-    repo.add([absolutePath]).then(() => {
-        NEURO.client?.sendContext(`Added ${filePath || '*'} to staging area.`);
+
+    repo.add(absolutePaths).then(() => {
+        NEURO.client?.sendContext(`Added files "${filePath.join(', ')}" to staging area.`);
     }, (erm: string) => {
         NEURO.client?.sendContext('Adding files to staging area failed');
-        logOutput('ERROR', `Failed to git add: ${erm}\nTried to add ${absolutePath}`);
+        logOutput('ERROR', `Failed to git add: ${erm}\nTried to add ${absolutePaths}`);
     });
     return;
 }
 
 export function handleRemoveFileFromGit(actionData: ActionData): string | undefined {
     assert(repo);
-    const filePath: string = actionData.params.filePath;
-    const absolutePath = getAbsoluteFilePath(filePath);
+    const filePath: string[] = actionData.params.filePath;
+    const absolutePaths: string[] = [];
 
-    if (!isPathNeuroSafe(absolutePath)) {
-        NEURO.client?.sendContext('The provided file path is not allowed.');
-        return;
+    for (const path of filePath) {
+        absolutePaths.push(getAbsoluteFilePath(path));
     }
-    repo.revert([absolutePath]).then(() => {
+
+    repo.revert(absolutePaths).then(() => {
         NEURO.client?.sendContext(`Removed ${filePath || '*'} from the index.`);
     }, (erm: string) => {
         NEURO.client?.sendContext('Removing files from the index failed');
-        logOutput('ERROR', `Git remove failed: ${erm}\nTried to remove ${absolutePath}`);
+        logOutput('ERROR', `Git remove failed: ${erm}\nTried to remove ${absolutePaths}`);
     });
     return;
 }
 
 export function handleMakeGitCommit(actionData: ActionData): string | undefined {
     assert(repo);
-    const message = `Neuro commit: ${actionData.params?.message}`;
+    const message = `${NEURO.currentController} committed: ${actionData.params?.message}`;
     const commitOptions: string[] | undefined = actionData.params?.options;
     let ExtraCommitOptions: CommitOptions | undefined = {};
 
@@ -785,10 +817,6 @@ export function handleDiffFiles(actionData: ActionData): string | undefined {
     const filePath: string = actionData.params.filePath ?? '.';
     const diffThisFile = getAbsoluteFilePath(filePath);
 
-    if (!isPathNeuroSafe(diffThisFile)) {
-        NEURO.client?.sendContext('The provided file path is not allowed.');
-        return;
-    }
     const diffType: string = actionData.params.diffType ?? 'diffWithHEAD'; // Default to diffWithHEAD
 
     switch (diffType) {

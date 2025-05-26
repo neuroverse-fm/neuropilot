@@ -4,7 +4,25 @@ import { NEURO } from './constants';
 import { assert, filterFileContents, logOutput, simpleFileName } from './utils';
 import { CONFIG } from './config';
 
-const NEURO_PARTICIPANT_ID = 'neuropilot.neuro';
+interface Participant {
+    id: string;
+    relativeIconPath: string;
+}
+
+const NEURO_PARTICIPANTS: Participant[] = [
+    {
+        id: 'neuropilot.neuro',
+        relativeIconPath: 'neuropilot.png',
+    },
+    {
+        id: 'neuropilot.evil',
+        relativeIconPath: 'evilpilot.png',
+    },
+    {
+        id: 'neuropilot.api',
+        relativeIconPath: 'icon.png',
+    },
+];
 
 interface NeuroChatResult extends vscode.ChatResult {
     metadata: {
@@ -56,6 +74,7 @@ export function registerChatResponseHandler() {
 export function registerChatParticipant(context: vscode.ExtensionContext) {
     const handler: vscode.ChatRequestHandler = async (request: vscode.ChatRequest, context: vscode.ChatContext, stream: vscode.ChatResponseStream, token: vscode.CancellationToken): Promise<NeuroChatResult> => {
         let prefix = '';
+        const currentAPI = CONFIG.currentlyAsNeuroAPI;
 
         if(request.command === 'fix') {
             prefix = 'Vedal wants you to fix the following error(s):\n';
@@ -74,7 +93,7 @@ export function registerChatParticipant(context: vscode.ExtensionContext) {
             return { metadata: { command: '' } };
         }
         if(NEURO.waiting) {
-            stream.markdown('Already waiting for a response from Neuro.');
+            stream.markdown(`Already waiting for a response from ${currentAPI}.`);
 
             stream.button({
                 command: 'neuropilot.reconnect',
@@ -122,7 +141,7 @@ export function registerChatParticipant(context: vscode.ExtensionContext) {
         }
 
         // Query Neuro API
-        stream.progress('Waiting for Neuro to respond...');
+        stream.progress(`Waiting for ${currentAPI} to respond...`);
 
         const answer = await requestChatResponse(prefix + request.prompt, JSON.stringify({ references: references }), token);
 
@@ -131,22 +150,22 @@ export function registerChatParticipant(context: vscode.ExtensionContext) {
         return { metadata: { command: '' } };
     };
 
-    const neuro = vscode.chat.createChatParticipant(NEURO_PARTICIPANT_ID, handler);
-    neuro.iconPath = vscode.Uri.joinPath(context.extensionUri, 'neuropilot.png');
+    for (const participant of NEURO_PARTICIPANTS) {
+        const chatter = vscode.chat.createChatParticipant(participant.id, handler);
+        chatter.iconPath = vscode.Uri.joinPath(context.extensionUri, participant.relativeIconPath);
 
-    // TODO: Add followup provider?
-
-    context.subscriptions.push(neuro.onDidReceiveFeedback((feedback: vscode.ChatResultFeedback) => {
-        if(feedback.kind === vscode.ChatResultFeedbackKind.Helpful) {
-            logOutput('INFO', 'Answer was deemed helpful');
-            NEURO.client?.sendContext('Vedal found your answer helpful.');
-        }
-        else {
-            logOutput('INFO', 'Answer was deemed unhelpful');
-            logOutput('DEBUG', JSON.stringify(feedback));
-            NEURO.client?.sendContext('Vedal found your answer unhelpful.');
-        }
-    }));
+        context.subscriptions.push(chatter.onDidReceiveFeedback((feedback: vscode.ChatResultFeedback) => {
+            if(feedback.kind === vscode.ChatResultFeedbackKind.Helpful) {
+                logOutput('INFO', 'Answer was deemed helpful');
+                NEURO.client?.sendContext('Vedal found your answer helpful.');
+            }
+            else {
+                logOutput('INFO', 'Answer was deemed unhelpful');
+                logOutput('DEBUG', JSON.stringify(feedback));
+                NEURO.client?.sendContext('Vedal found your answer unhelpful.');
+            }
+        }));
+    }
 }
 
 async function requestChatResponse(prompt: string, state: string, token: vscode.CancellationToken): Promise<string> {

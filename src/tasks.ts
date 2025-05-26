@@ -13,9 +13,9 @@ export const taskHandlers = {
         permissions: [PERMISSIONS.runTasks],
         handler: handleTerminateTask,
         promptGenerator: () => 'terminate the currently running task.',
-        validator: () => NEURO.currentTaskExecution !== null
+        validator: [() => NEURO.currentTaskExecution !== null
             ? actionValidationAccept()
-            : actionValidationFailure('No task to terminate.'),
+            : actionValidationFailure('No task to terminate.')],
     },
 } satisfies Record<string, ActionWithHandler>;
 
@@ -87,10 +87,14 @@ export function reloadTasks() {
     vscode.tasks.fetchTasks().then((tasks) => {
         for(const task of tasks) {
             if (CONFIG.allowRunningAllTasks === true) {
+                let taskdesc: string = task.detail ?? '';
+                if (taskdesc.toLowerCase().startsWith('[neuro]')) {
+                    taskdesc = taskdesc.substring(7).trim();
+                }
                 logOutput('INFO', `Adding task: ${task.name}`);
                 NEURO.tasks.push({
                     id: formatActionID(task.name),
-                    description: (task.detail?.length ?? 0) > 0 ? task.detail! : task.name,
+                    description: (task.detail?.length ?? 0) > 0 ? taskdesc : task.name,
                     task,
                 });
             } else if (task.detail?.toLowerCase().startsWith('[neuro]')) {

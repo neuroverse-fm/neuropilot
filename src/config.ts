@@ -92,6 +92,7 @@ class Config {
     get requestExpiryTimeout(): number { return get('requestExpiryTimeout')!; }
     get hideCopilotRequests(): boolean { return get('hideCopilotRequests')!; }
     get cursorFollowsNeuro(): boolean { return get('cursorFollowsNeuro')!; }
+    get currentlyAsNeuroAPI(): string { return get('currentlyAsNeuroAPI')!; }
 
     get terminals(): { name: string; path: string; args?: string[]; }[] { return get('terminals')!; }
 }

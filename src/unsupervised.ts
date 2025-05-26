@@ -60,7 +60,7 @@ export function registerUnsupervisedHandlers() {
                     description: task.description,
                     permissions: [PERMISSIONS.runTasks],
                     handler: handleRunTask,
-                    promptGenerator: () => `Neuro wants to run the task "${task.id}".`,
+                    promptGenerator: () => `run the task "${task.id}".`,
                 };
             }
 
@@ -83,10 +83,12 @@ export function registerUnsupervisedHandlers() {
 
             // Validate custom
             if (action.validator) {
-                const actionResult = action.validator!(actionData);
-                if(!actionResult.success) {
-                    NEURO.client?.sendActionResult(actionData.id, !(actionResult.retry ?? false), actionResult.message);
-                    return;
+                for (const validate of action.validator) {
+                    const actionResult = validate(actionData);
+                    if (!actionResult.success) {
+                        NEURO.client?.sendActionResult(actionData.id, !(actionResult.retry ?? false), actionResult.message);
+                        return;
+                    }
                 }
             }
 
@@ -100,9 +102,10 @@ export function registerUnsupervisedHandlers() {
                     return;
                 }
 
+                // literally why can't we use " 'x wants to' + typeof action.promptGenerator === 'string' "
                 const prompt = typeof action.promptGenerator === 'string'
-                    ? 'Neuro wants to ' + (action.promptGenerator as string).trim()
-                    : 'Neuro wants to ' + (action.promptGenerator as (actionData: ActionData) => string)(actionData).trim();
+                    ? NEURO.currentController + ' wants to ' + (action.promptGenerator as string).trim()
+                    : NEURO.currentController + ' wants to ' + (action.promptGenerator as (actionData: ActionData) => string)(actionData).trim();
 
                 createRceRequest(
                     prompt,

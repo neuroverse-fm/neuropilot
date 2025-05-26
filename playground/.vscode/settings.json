@@ -1,19 +1,19 @@
 {
     // NeuroPilot settings
-    "neuropilot.permission.editActiveDocument": "Autopilot",
-    "neuropilot.permission.openFiles": "Autopilot",
-    "neuropilot.permission.runTasks": "Autopilot",
-    "neuropilot.permission.create": "Autopilot",
-    "neuropilot.permission.delete": "Autopilot",
-    "neuropilot.permission.rename": "Autopilot",
-    "neuropilot.permission.gitRemotes": "Autopilot",
-    "neuropilot.permission.gitTags": "Autopilot",
-    "neuropilot.permission.gitOperations": "Autopilot",
-    "neuropilot.permission.gitConfigs": "Autopilot",
+    "neuropilot.permission.editActiveDocument": "Copilot",
+    "neuropilot.permission.openFiles": "Copilot",
+    "neuropilot.permission.runTasks": "Copilot",
+    "neuropilot.permission.create": "Copilot",
+    "neuropilot.permission.delete": "Copilot",
+    "neuropilot.permission.rename": "Copilot",
+    "neuropilot.permission.gitRemotes": "Copilot",
+    "neuropilot.permission.gitTags": "Copilot",
+    "neuropilot.permission.gitOperations": "Copilot",
+    "neuropilot.permission.gitConfigs": "Copilot",
     "neuropilot.allowUnsafePaths": false,
     "neuropilot.showTimeOnTerminalStart": true,
-    "neuropilot.permission.terminalAccess": "Autopilot",
-    "neuropilot.permission.accessLintingAnalysis": "Autopilot",
+    "neuropilot.permission.terminalAccess": "Copilot",
+    "neuropilot.permission.accessLintingAnalysis": "Copilot",
     "neuropilot.terminals": [
         {
             "name": "PowerShell",
@@ -38,11 +38,12 @@
     "neuropilot.sendNewLintingProblemsOn": "inCurrentFile",
     "neuropilot.requestExpiryTimeout": 10000,
     "neuropilot.hideCopilotRequests": false,
+    "neuropilot.currentlyAsNeuroAPI": "Tony",
     // Debug engine override for GitHub Copilot
     "github.copilot.advanced": {
         "debug.overrideEngine": "someRandomString"
     },
     // VS Code settings
     "files.autoSaveDelay": 1000,
-    "neuropilot.cursorFollowsNeuro": false
+    "neuropilot.cursorFollowsNeuro": true,
 }
