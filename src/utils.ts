@@ -372,8 +372,8 @@ export function setVirtualCursor(position?: vscode.Position | null) {
 
     editor.setDecorations(NEURO.cursorDecorationType!, [
         {
-            range: new vscode.Range(cursorPosition, cursorPosition),
-            hoverMessage: 'Neuro',
+            range: new vscode.Range(cursorPosition, cursorPosition.translate(0, 1)),
+            hoverMessage: NEURO.currentController!,
         },
     ] satisfies vscode.DecorationOptions[]);
 

@@ -64,6 +64,10 @@ You can also set it to trigger a completion every time you stop typing (this is 
 You can also use Copilot Chat to ask Neuro to generate code by specifying `@neuro` in the prompt.
 This will bypass Copilot and instead send the prompt to Neuro, along with any selected references.
 
+> [!Note]
+> You can choose the name of the currently connected AI in the [Currently As Neuro API](vscode://settings/neuropilot.currentlyAsNeuroAPI) setting. This can change the @ you need to specify (Evil gets her own `@evil`, and any other name, including the simulator names such as Randy, uses `@neuroapi`.)
+> However, if you, for example, type `@neuroapi`, then change the setting to either `Neuro` or `Evil`, then it will not automatically change the @, and will send the prompt to GitHub Copilot (who will be confused).
+
 Unfortunately, "Trigger Inline Suggestion" will trigger all completion providers, and since Copilot is required for the Copilot Chat window, you cannot simply disable it.
 There is a workaround however, by editing your User/Workspace Settings to make Copilot unable to talk to the API.
 Simply paste this into your `settings.json` file:
@@ -113,6 +117,11 @@ Shows a notification when it succeeds or fails.
 Moves Neuro's cursor to the current cursor position.
 Only works if there is an active text editor, and only in files Neuro has access to.
 
+### Switch Neuro API user name
+
+Allows you to change the name of the connected AI (e.g. Neuro -> Evil, etc...) for visual purposes.
+This acts as a shortcut for the [Currently As Neuro API](vscode://settings/neuropilot.currentlyAsNeuroAPI) setting.
+
 ### Reload Permissions
 
 Reregisters all actions according to the permissions.
@@ -135,6 +144,7 @@ The following are all actions that Neuro has access to.
 Note that Neuro can only use an action if the relevant permission is enabled.
 If a permission level is set to Copilot, commands associated with that permission level first send a request to VS Code, which you can review, then allow/deny, using the NeuroPilot icon in the bottom bar.
 The icon will be highlighted if a request is pending.
+If you choose to disable the [Hide Copilot Requests](vscode://settings/neuropilot.hideCopilotRequests) setting, the notification will be displayed as soon as a request comes in.
 If an action requires multiple permissions, the minimum permission level is used (Autopilot > Copilot > Off).
 
 ### Miscellaneous
@@ -269,7 +279,7 @@ This cannot delete anything starting with a dot, or inside a folder starting wit
 
 Actions that allow Neuro to use Git for version control.
 
-In addition to requiring their respective permissions, the extension will also check for a repo before registering actions other than `init_git_repo`.
+In addition to requiring their respective permissions, the extension will also check for an existing repo before registering actions other than `init_git_repo`.
 
 Because this relies on the built-in Git extension, this extension will first check for the Git extension before attempting to execute each handler.
 
@@ -471,7 +481,15 @@ Note that this only returns diagnostics of files that are loaded in the current 
 
 ## Further Info
 
+### Credits
+
 This extension uses the [TypeScript/JavaScript SDK](https://github.com/AriesAlex/typescript-neuro-game-sdk) by [AriesAlex](https://github.com/AriesAlex).
+
+### Neuro's cursor
+
+Assuming the [Edit Active Document](vscode://settings/neuropilot.permission.editActiveDocument) permission isn't set to `Off`, Neuro gains her own cursor, indicated by the pink cursor in text documents. This cursor will only appear in files she has access to (which is affected by the `Allow Unsafe Paths` and `Include`/`Exclude` Patterns settings.) and you can also move the cursor yourself using the aforementioned `Move Neuro's Cursor Here` command. This allows her to work on the same file as the programmer but without having to rely on the normal cursor, which solves some problems relating to their respective actions.
+
+If you enable the [Cursor Follows Neuro](vscode://settings/neuropilot.cursorFollowsNeuro) setting, the normal cursor will automatically be moved to Neuro's cursor if she moves it.
 
 ### "Why is there a file named rce.ts in it??? Is there an intentional RCE inside this extension???" <!-- had to add this just in case -->
 
@@ -489,5 +507,5 @@ The short answer is no, there isn't an intentional Remote Code Execution vulnera
 
 ## Contributing
 
-If you have an idea or want to contribute a feature, please first create an issue or send a message to `@Pasu4` in the project's [post on the Neuro Discord](https://discord.com/channels/574720535888396288/1350968830230396938).
+If you have an idea or want to contribute a feature, please first [create an issue](https://github.com/Pasu4/neuropilot/issues) or send a message to `@Pasu4` in the project's [post on the Neuro Discord](https://discord.com/channels/574720535888396288/1350968830230396938).
 If you make a pull request that contributes code, please run `npm run lint src` and resolve any errors that did not get auto-fixed, preferrably before each commit.

@@ -131,6 +131,11 @@
 				"command": "neuropilot.explainWithNeuro",
 				"title": "Ask Neuro to explain",
 				"category": "NeuroPilot"
+			},
+			{
+				"command": "neuropilot.switchNeuroAPIUser",
+				"title": "Switch Neuro API user name",
+				"category": "NeuroPilot"
 			}
 		],
 		"configuration": [
