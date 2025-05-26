@@ -41,8 +41,5 @@ jobs:
         npm version ${{ github.event.inputs.version }} -m "Bump version to %s"
         git push --tags https://Pasu4:${{secrets.GITHUB_TOKEN}}:@github.com/Pasu4/neuropilot
     
-    - name: Install vsce
-      run: npm install -g @vscode/vsce
-        
     - name: Publish extension
-      run: vsce publish -p ${{secrets.MARKETPLACE_TOKEN}} --allow-star-activation
+      run: npx @vscode/vsce publish -p ${{secrets.MARKETPLACE_TOKEN}} --allow-star-activation
