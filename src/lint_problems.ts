@@ -359,25 +359,25 @@ export class NeuroCodeActionsProvider implements vscode.CodeActionProvider {
         const actions: vscode.CodeAction[] = [];
 
         const fix = new vscode.CodeAction(
-            'Ask Neuro to fix',
+            `Ask ${NEURO.currentController} to fix`,
             vscode.CodeActionKind.QuickFix,
         );
         fix.command = {
             command: 'neuropilot.fixWithNeuro',
-            title: 'Ask Neuro to fix',
+            title: `Ask ${NEURO.currentController} to fix`,
             arguments: [document, context.diagnostics],
         };
         fix.diagnostics = context.diagnostics.map(d => d);
         actions.push(fix);
 
         const explain = new vscode.CodeAction(
-            'Ask Neuro to explain',
+            `Ask ${NEURO.currentController} to explain`,
             vscode.CodeActionKind.QuickFix,
         );
 
         explain.command = {
             command: 'neuropilot.explainWithNeuro',
-            title: 'Ask Neuro to explain',
+            title: `Ask ${NEURO.currentController} to explain`,
             arguments: [document, context.diagnostics],
         };
 
