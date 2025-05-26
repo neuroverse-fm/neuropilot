@@ -209,7 +209,7 @@ function switchCurrentNeuroAPIUser() {
         { label: 'Gary' },
     ];
     quickPick.placeholder = 'Switch to who?';
-    quickPick.value = NEURO.currentController!;
+    quickPick.activeItems = quickPick.items.filter(item => item.label === NEURO.currentController);
     quickPick.onDidAccept(() => {
         const selected = quickPick.activeItems[0].label ?? quickPick.value;
         if (!selected) {
