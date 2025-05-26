@@ -318,7 +318,7 @@ export async function fixWithNeuro(document?: vscode.TextDocument, diagnostics?:
     }
 
     vscode.commands.executeCommand('workbench.action.chat.open', {
-        query: `@${NEURO.currentController !== 'Evil' && NEURO.currentController !== 'Neuro' ? 'neuropilot' : NEURO.currentController.toLowerCase()} /fix ${diagnostics.map(d => d.message).join('\n')}`,
+        query: `@${NEURO.currentController !== 'Evil' && NEURO.currentController !== 'Neuro' ? 'neuroapi' : NEURO.currentController.toLowerCase()} /fix ${diagnostics.map(d => d.message).join('\n')}`,
     });
 }
 
