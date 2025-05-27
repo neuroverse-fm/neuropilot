@@ -40,7 +40,7 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.languages.registerCodeActionsProvider(
         { scheme: 'file' },
         new NeuroCodeActionsProvider(),
-        { providedCodeActionKinds: NeuroCodeActionsProvider.providedCodeActionKinds},
+        { providedCodeActionKinds: NeuroCodeActionsProvider.providedCodeActionKinds },
     );
 
     registerChatParticipant(context);
@@ -101,7 +101,7 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.workspace.onDidChangeTextDocument(workspaceEditHandler);
 
     // Set virtual cursor for the initial file on startup
-    if(vscode.window.activeTextEditor && isPathNeuroSafe(vscode.window.activeTextEditor.document.fileName))
+    if (vscode.window.activeTextEditor && isPathNeuroSafe(vscode.window.activeTextEditor.document.fileName))
         setVirtualCursor(vscode.window.activeTextEditor.selection.active);
 
     vscode.workspace.onDidChangeConfiguration(event => {
@@ -142,7 +142,7 @@ function registerPreActionHandler() {
 
 function registerPostActionHandler() {
     NEURO.client?.onAction((actionData) => {
-        if(NEURO.actionHandled) return;
+        if (NEURO.actionHandled) return;
 
         NEURO.client?.sendActionResult(actionData.id, true, 'Unknown action');
     });
