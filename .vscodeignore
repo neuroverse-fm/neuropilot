@@ -4,3 +4,4 @@ playground/**
 eslint.config.mjs
 tsconfig.json
 src/
+*.vsix
