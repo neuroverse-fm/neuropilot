@@ -151,54 +151,87 @@ export function getFormattedDiagnosticsForFile(filePath: string, diagnostics: vs
 // Handle diagnostics for a single file
 export function handleGetFileLintProblems(actionData: ActionData): string | undefined {
     const relativePath = actionData.params.file;
-    const workspacePath = getWorkspacePath();
-    assert(workspacePath);
+    const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+    if (!workspaceFolder) {
+        throw new Error('No workspace opened');
+    }
+    const fileUri = vscode.Uri.joinPath(workspaceFolder.uri, relativePath);
+    const fullPath = fileUri.fsPath;
 
-    try {
-        const absolutePath = path.join(workspacePath, relativePath);
-        const normalizedPath = normalizePath(absolutePath);
+    checkAndGetFileLintErrors(fullPath);
+    return undefined;
 
-        const rawDiagnostics = vscode.languages.getDiagnostics(vscode.Uri.file(normalizedPath));
-        if (rawDiagnostics.length === 0) {
-            return `No linting problems found for file ${relativePath}.`;
+    async function checkAndGetFileLintErrors(absolutePath: string): Promise<string | undefined> {
+        const uri = vscode.Uri.file(absolutePath);
+        try {
+        // Ensure that the file exists.
+            await vscode.workspace.fs.stat(uri);
+        } catch {
+            NEURO.client?.sendContext(`Could not retrieve lint errors: File "${relativePath}" does not exist.`);
+            return;
         }
-        const formattedDiagnostics = getFormattedDiagnosticsForFile(relativePath, rawDiagnostics); // use relativePath
-        return `Linting problems for file ${relativePath}:${formattedDiagnostics}`;
-    } catch (erm) {
-        logOutput('ERROR', `Getting diagnostics for ${relativePath} failed: ${erm}`);
-        return contextFailure(`Failed to get linting diagnostics for "${relativePath}".`);
+
+        // Retrieve diagnostics for the file.
+        const diagnostics = vscode.languages.getDiagnostics(uri);
+        if (diagnostics.length === 0) {
+            NEURO.client?.sendContext(`No linting problems found for file ${relativePath}.`);
+            return;
+        }
+
+        const formattedDiagnostics = getFormattedDiagnosticsForFile(relativePath, diagnostics);
+        NEURO.client?.sendContext(`Linting problems for file ${relativePath}:${formattedDiagnostics}`);
+        return;
     }
 }
 
-// Handle diagnostics for a folder
 export function handleGetFolderLintProblems(actionData: ActionData): string | undefined {
-    const relativeFolder = actionData?.params.folder;
+    const relativeFolder = actionData.params.folder;
+    const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+    if (!workspaceFolder) {
+        throw new Error('No workspace opened');
+    }
+    const folderUri = vscode.Uri.joinPath(workspaceFolder.uri, relativeFolder);
+    const fullFolderPath = folderUri.fsPath;
 
-    const workspacePath = getWorkspacePath();
-    assert(workspacePath);
+    checkAndGetFolderLintErrors(fullFolderPath);
+    return undefined;
 
-    try {
-        const absoluteFolderPath = path.join(workspacePath, relativeFolder);
-        const normalizedFolderPath = normalizePath(absoluteFolderPath);
+    async function checkAndGetFolderLintErrors(folderAbsolutePath: string): Promise<string | undefined> {
+        const uri = vscode.Uri.file(folderAbsolutePath);
+        try {
+            // Ensure that the folder exists.
+            await vscode.workspace.fs.stat(uri);
+        } catch {
+            NEURO.client?.sendContext(`Could not retrieve lint errors: Folder "${relativeFolder}" does not exist.`);
+            return;
+        }
 
+        // Retrieve diagnostics for all files in the workspace.
         const diagnostics = vscode.languages.getDiagnostics();
-        const folderDiagnostics = diagnostics.filter(([uri, diags]) => {
-            return normalizePath(uri.fsPath).startsWith(normalizedFolderPath) && isPathNeuroSafe(uri.fsPath) && diags.length > 0;
+
+        // Normalize the absolute folder path.
+        const normalizedFolderPath = normalizePath(folderAbsolutePath);
+
+        // Filter diagnostics to those that belong to files in this folder.
+        const folderDiagnostics = diagnostics.filter(([diagUri, diags]) => {
+            return normalizePath(diagUri.fsPath).startsWith(normalizedFolderPath) &&
+                   isPathNeuroSafe(diagUri.fsPath) && diags.length > 0;
         });
 
         if (folderDiagnostics.length === 0) {
-            return 'No linting problems found.';
+            NEURO.client?.sendContext(`No linting problems found for folder "${relativeFolder}".`);
+            return;
         }
 
-        const formattedDiagnostics = folderDiagnostics.map(([uri, diags]) => {
-            const relative = path.relative(workspacePath, uri.fsPath);
-            return getFormattedDiagnosticsForFile(relative, diags);
+        // Format diagnostics from all files within the folder.
+        const formattedDiagnostics = folderDiagnostics.map(([diagUri, diags]) => {
+            // Get a file path relative to the workspace for ease of reading.
+            const fileRelative = path.relative(workspaceFolder!.uri.fsPath, diagUri.fsPath);
+            return getFormattedDiagnosticsForFile(fileRelative, diags);
         }).join('\n');
 
-        return `Linting problems for folder ${relativeFolder}: ${formattedDiagnostics}`;
-    } catch (erm) {
-        logOutput('ERROR', `Getting diagnostics for folder ${relativeFolder} failed: ${erm}`);
-        return contextFailure(`Failed to get linting diagnostics for folder "${relativeFolder}".`);
+        NEURO.client?.sendContext(`Linting problems for folder "${relativeFolder}":\n${formattedDiagnostics}`);
+        return;
     }
 }
 

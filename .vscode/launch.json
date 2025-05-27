@@ -16,9 +16,24 @@
 				// "--disable-extensions"
 			],
 			"outFiles": [
-				"${workspaceFolder}/out/**/*.js"
+				"${workspaceFolder}/out/**/*.js",
+				"!${workspaceFolder}/out/web/**"
 			],
 			"preLaunchTask": "npm: watch"
+		},
+		{
+			"name": "Run Web Extension",
+			"type": "extensionHost",
+			"request": "launch",
+			"debugWebWorkerHost": true,
+			"args": [
+				"--extensionDevelopmentPath=${workspaceFolder}",
+				"--extensionDevelopmentKind=web"
+			],
+			"outFiles": [
+				"${workspaceFolder}/out/web/**/*.js"
+			],
+			"preLaunchTask": "npm: watch-web"
 		}
 	]
 }

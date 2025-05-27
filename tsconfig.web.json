@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    // For a Webpack build we usually want ESM (for treeshaking),
+    // or at least not CommonJS. But ts‑loader in webpack.web.config.js
+    // will override module->ESNext automatically if you prefer.
+    "target": "webpack",
+    "lib": ["WebWorker"],
+    "module": "ESNext",
+    "outDir": "./dist/webTmp",   // ephemeral—Webpack will bundle anyway
+    "rootDir": "src/web"
+  },
+  "include": ["src/web/**/*"],
+  "exclude": ["node_modules"]
+}

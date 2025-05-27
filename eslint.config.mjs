@@ -16,6 +16,7 @@ export default tseslint.config(
             'out',
             'playground/**',
             '**/vscode*.d.ts',
+            'webpack.web.config.js',
         ],
     },
     js.configs.recommended,

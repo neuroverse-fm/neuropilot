@@ -12,9 +12,15 @@
 				"reveal": "never"
 			},
 			"group": {
-				"kind": "build",
-				"isDefault": true
+				"kind": "build"
 			}
+		},
+		{
+			"type": "npm",
+			"script": "watch-web",
+			"group": "build",
+			"isBackground": true,
+			"problemMatcher": ["$ts-webpack-watch"]
 		},
 		{
 			"label": "Publish extension",
