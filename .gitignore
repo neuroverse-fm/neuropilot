@@ -12,3 +12,6 @@ node_modules
 
 # Inkscape
 *.svg
+
+# Python venv for Tony
+.venv
