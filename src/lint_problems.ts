@@ -1,5 +1,4 @@
 import * as vscode from 'vscode';
-import * as path from 'path';
 import { NEURO } from './constants';
 import { normalizePath, getWorkspacePath, logOutput, isPathNeuroSafe } from './utils';
 import { PERMISSIONS, getPermissionLevel, CONFIG } from './config';
@@ -13,20 +12,20 @@ function validatePath(path: string, directoryType: string): ActionValidationResu
 };
 
 function validateDirectoryAccess(actionData: ActionData): ActionValidationResult {
-    const workspacePath = getWorkspacePath();
+    const workspacePath = vscode.workspace.workspaceFolders?.[0];
     if (!workspacePath) {
         return actionValidationFailure('Unable to get current workspace.');
     }
 
     if (actionData.params?.file) {
         const relativePath = actionData.params.file;
-        const normalizedPath = normalizePath(path.join(workspacePath, relativePath));
+        const normalizedPath = normalizePath(vscode.Uri.joinPath(workspacePath.uri, relativePath).fsPath);
         const check = validatePath(normalizedPath, 'file');
         if (!check.success) return check;
     }
     if (actionData.params?.folder) {
         const relativePath = actionData.params.folder;
-        const normalizedPath = normalizePath(path.join(workspacePath, relativePath));
+        const normalizedPath = normalizePath(vscode.Uri.joinPath(workspacePath.uri, relativePath).fsPath);
         const check = validatePath(normalizedPath, 'folder');
         if (!check.success) return check;
     }
@@ -218,7 +217,7 @@ export function handleGetFolderLintProblems(actionData: ActionData): string | un
         // Format diagnostics from all files within the folder.
         const formattedDiagnostics = folderDiagnostics.map(([diagUri, diags]) => {
             // Get a file path relative to the workspace for ease of reading.
-            const fileRelative = path.relative(workspaceFolder!.uri.fsPath, diagUri.fsPath);
+            const fileRelative = vscode.workspace.asRelativePath(workspaceFolder!.uri.fsPath + diagUri.fsPath);
             return getFormattedDiagnosticsForFile(fileRelative, diags);
         }).join('\n');
 
@@ -252,7 +251,7 @@ export function handleGetWorkspaceLintProblems(_actionData: ActionData): string 
             }
 
             const formattedDiagnostics = safeDiagnostics.map(([uri, diags]) => {
-                const relative = path.relative(workspacePath, uri.fsPath);
+                const relative = vscode.workspace.asRelativePath(workspacePath + uri.fsPath);
                 return getFormattedDiagnosticsForFile(relative, diags);
             }).join('\n\n');
 
@@ -330,7 +329,7 @@ export function sendDiagnosticsDiff(e: vscode.DiagnosticChangeEvent): void {
 
     const output = Array.from(addedDiagnostics.entries())
         .map(([filePath, diags]) => {
-            const relative = path.relative(workspacePath, filePath);
+            const relative = vscode.workspace.asRelativePath(workspacePath + filePath);
             return getFormattedDiagnosticsForFile(relative, diags);
         })
         .join('\n\n');

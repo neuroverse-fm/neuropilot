@@ -1,5 +1,4 @@
 import * as vscode from 'vscode';
-import * as path from 'path';
 import { NEURO } from './constants';
 import { GitExtension, Change, ForcePushMode, CommitOptions, Commit, Repository } from './types/git';
 import { StatusStrings, RefTypeStrings } from './types/git_status';
@@ -687,12 +686,12 @@ export function handleGitStatus(__actionData: ActionData): string | undefined {
 function getAbsoluteFilePath(filePath: string | undefined): string {
     // Normalize the file path if provided; otherwise, use wildcard.
     const normalizedPath: string = filePath ? getNormalizedRepoPathForGit(filePath) : '*';
-    // Get the workspace folder; if not available, fall back to repo root.
-    const workspaceFolder = vscode.workspace.workspaceFolders?.[0].uri.fsPath || repo!.rootUri.fsPath;
     // Compute absolute path by joining the workspace folder with the normalized path.
-    return path.isAbsolute(normalizedPath)
-        ? normalizedPath
-        : path.join(workspaceFolder, normalizedPath);
+    const workspaceFolderUri = vscode.workspace.workspaceFolders![0].uri || repo?.rootUri.fsPath;
+    const fileUri = normalizedPath[0] === '/'  // a simple check for absolute content
+        ? vscode.Uri.file(normalizedPath)
+        : vscode.Uri.joinPath(workspaceFolderUri, normalizedPath);
+    return fileUri.fsPath;
 }
 
 export function handleAddFileToGit(actionData: ActionData): string | undefined {
