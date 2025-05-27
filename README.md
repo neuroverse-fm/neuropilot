@@ -1,6 +1,6 @@
 # NeuroPilot
 
-![Demo GIF](demo.gif)
+![Demo GIF](demo-autopilot.gif)
 
 **Disclaimer: For simplicity, all mentions of Neuro also apply to Evil unless otherwise stated.**
 
