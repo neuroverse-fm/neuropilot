@@ -543,6 +543,13 @@
 			}
 		],
 		"icons": {
+			"neuropilot-logo": {
+				"description": "NeuroPilot logo",
+				"default": {
+					"fontPath": "icons.woff",
+					"fontCharacter": "\\E900"
+				}
+			},
 			"neuropilot-heart": {
 				"description": "NeuroPilot heart",
 				"default": {
