@@ -91,7 +91,7 @@ Neuro will be updated on certain events not directly triggered by the user that 
 She will be notified when:
 - a file is saved (only if [Auto Save](vscode://settings/files.autoSave) is not set to `afterDelay`)
 - the Auto Save setting is modified
-- lint problems occur (controlled by the setting Send New Linting Problems On](vscode://settings/neuropilot.sendNewLintProblemsOn))
+- lint problems occur (controlled by the setting [Send New Linting Problems On](vscode://settings/neuropilot.sendNewLintProblemsOn))
 - a terminal that Neuro started produces more output
 - a terminal started by Neuro exits
 - a Copilot mode request times out
