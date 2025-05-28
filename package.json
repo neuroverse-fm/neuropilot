@@ -1,7 +1,7 @@
 {
 	"name": "neuropilot",
 	"displayName": "NeuroPilot",
-	"description": "Lets Neuro-sama provide inline completions in VS Code",
+	"description": "Allows Neuro-sama to either act as a companion/copilot or control Visual Studio Code by herself.",
 	"icon": "icon.png",
 	"version": "1.5.0",
 	"publisher": "Pasu4",
@@ -482,7 +482,7 @@
 							"Require approval before execution.",
 							"Execute without oversight."
 						],
-						"markdownDescription": "Allow Neuro to get access to linting problems within loaded files."
+						"markdownDescription": "Allow Neuro to get access to linting problems within loaded files.\n\nRequires [reloading permissions](command:neuropilot.reloadPermissions) if turned from \"on\" to off, and vice versa."
 					},
 					"neuropilot.showTimeOnTerminalStart": {
 						"type": "boolean",

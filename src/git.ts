@@ -3,7 +3,7 @@ import * as path from 'path';
 import { NEURO } from './constants';
 import { GitExtension, Change, ForcePushMode, CommitOptions, Commit, Repository } from './types/git';
 import { StatusStrings, RefTypeStrings } from './types/git_status';
-import { getNormalizedRepoPathForGit, logOutput, simpleFileName, isPathNeuroSafe } from './utils';
+import { logOutput, simpleFileName, isPathNeuroSafe, normalizePath } from './utils';
 import { ActionData, ActionValidationResult, actionValidationAccept, actionValidationFailure, ActionWithHandler, contextFailure } from './neuro_client_helper';
 import { PERMISSIONS, getPermissionLevel } from './config';
 import assert from 'assert';
@@ -212,7 +212,7 @@ export const gitActions = {
         },
         permissions: [PERMISSIONS.gitOperations],
         handler: handleGitLog,
-        promptGenerator: 'get the Git log.',
+        promptGenerator: (actionData: ActionData) => `get the ${actionData.params?.log_limit ? `${actionData.params.log_limit} most recent commits in the ` : ''}Git log.`,
         validator: [gitValidator],
     },
     git_blame: {
@@ -652,9 +652,9 @@ export function handleGitStatus(__actionData: ActionData): string | undefined {
 
         // Constructing the state string
         const mergeStateString: string =
-            `Index changes: ${mapChanges(state.indexChanges, '- ').join('\n')}\n\n` +
-            `Working tree changes: ${mapChanges(state.workingTreeChanges, '- ').join('\n')}\n\n` +
-            `Merge changes: ${mapChanges(state.mergeChanges, '- ').join('\n')}\n\n`;
+            `Index changes:\n${mapChanges(state.indexChanges, '- ').join('\n')}\n\n` +
+            `Working tree changes:\n${mapChanges(state.workingTreeChanges, '- ').join('\n')}\n\n` +
+            `Merge changes:\n${mapChanges(state.mergeChanges, '- ').join('\n')}\n\n`;
 
 
         const HEADUpstreamState: string =
@@ -686,7 +686,7 @@ export function handleGitStatus(__actionData: ActionData): string | undefined {
 // Helper to convert a provided file path (or wildcard) to an absolute path using the workspace folder (or repo root if not available)
 function getAbsoluteFilePath(filePath: string | undefined): string {
     // Normalize the file path if provided; otherwise, use wildcard.
-    const normalizedPath: string = filePath ? getNormalizedRepoPathForGit(filePath) : '*';
+    const normalizedPath: string = filePath ? normalizePath(filePath) : '*';
     // Get the workspace folder; if not available, fall back to repo root.
     const workspaceFolder = vscode.workspace.workspaceFolders?.[0].uri.fsPath || repo!.rootUri.fsPath;
     // Compute absolute path by joining the workspace folder with the normalized path.
@@ -723,7 +723,7 @@ export function handleRemoveFileFromGit(actionData: ActionData): string | undefi
     }
 
     repo.revert(absolutePaths).then(() => {
-        NEURO.client?.sendContext(`Removed ${filePath || '*'} from the index.`);
+        NEURO.client?.sendContext(`Removed "${filePath.join(', ')}" from the index.`);
     }, (erm: string) => {
         NEURO.client?.sendContext('Removing files from the index failed');
         logOutput('ERROR', `Git remove failed: ${erm}\nTried to remove ${absolutePaths}`);

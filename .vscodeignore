@@ -1,0 +1,7 @@
+.*/**
+playground/**
+.gitignore
+eslint.config.mjs
+tsconfig.json
+src/
+*.vsix

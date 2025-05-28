@@ -1,5 +1,4 @@
 import * as vscode from 'vscode';
-import * as path from 'path';
 import { NeuroClient } from 'neuro-game-sdk';
 import globToRegExp from 'glob-to-regexp';
 
@@ -214,17 +213,6 @@ export function isPathNeuroSafe(path: string, checkPatterns = true): boolean {
         && !normalizedPath.includes('$')            // Prevent access to environment variables
         && includeRegExp.test(normalizedPath)       // Check against include pattern
         && !excludeRegExp.test(normalizedPath);     // Check against exclude pattern
-}
-
-// Helper function to normalize repository paths
-export function getNormalizedRepoPathForGit(repoPath: string): string {
-    // Remove trailing backslashes
-    let normalized = repoPath.replace(/\\+$/, '');
-    // Normalize the path to remove redundant separators etc.
-    normalized = path.normalize(normalized);
-    // Convert backslashes to forward slashes if needed by your Git library
-    normalized = normalized.replace(/\\/g, '/');
-    return normalized;
 }
 
 /*
