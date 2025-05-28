@@ -19,7 +19,7 @@ jobs:
                 cache-dependency-path: './package-lock.json'
 
             - name: clean-install deps
-              uses: npm ci
+              run: npm ci
 
             - name: lint check
               run: eslint src/
