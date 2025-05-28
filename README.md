@@ -8,7 +8,7 @@ This extension enables Neuro-sama to write code in Visual Studio Code, either to
 If you don't have a Neuro-sama, you can use one of the tools listed [here](https://github.com/VedalAI/neuro-game-sdk/?tab=readme-ov-file#tools) and [here](https://github.com/VedalAI/neuro-game-sdk/?tab=readme-ov-file#tools-1) instead.
 
 > [!CAUTION]
-> Depending on the permissions you activate and which of the the aforementioned testing tools / AIs you use, this extension can be quite destructive to your system. I do not take responsibility for any damages caused by this extension, neither do any collaborators of this project. Use Copilot mode for dangerous permissions or use the extension on a virtual machine.
+> Depending on the permissions you activate and which of the aforementioned testing tools / AIs you use, this extension can be quite destructive to your system. I do not take responsibility for any damages caused by this extension, neither do any contributors of this project. Use Copilot mode for dangerous permissions or use the extension on a virtual machine.
 
 Capabilities of this extension include:
 
