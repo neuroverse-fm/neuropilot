@@ -3,16 +3,14 @@ import * as path from 'path';
 import { NeuroClient } from 'neuro-game-sdk';
 import globToRegExp from 'glob-to-regexp';
 
-import { ChildProcessWithoutNullStreams } from 'child_process';
-
 import { NEURO } from './constants';
 import { CONFIG, getPermissionLevel, PERMISSIONS } from './config';
 
 export const REGEXP_ALWAYS = /^/;
 export const REGEXP_NEVER = /^\b$/;
 
-export function assert(obj: unknown): asserts obj {
-    if(!obj) throw new Error('Assertion failed');
+export function assert(obj: unknown, message?: string): asserts obj {
+    if (obj === undefined || obj === null) throw new Error(message ? `Assertion failed: ${message}` : 'Assertion failed.');
 }
 
 export function logOutput(tag: string, message: string) {
@@ -225,21 +223,6 @@ export function getNormalizedRepoPathForGit(repoPath: string): string {
     // Convert backslashes to forward slashes if needed by your Git library
     normalized = normalized.replace(/\\/g, '/');
     return normalized;
-}
-
-/*
- * Extended interface for terminal sessions.
- * We now explicitly store the event emitter along with the pseudoterminal.
- */
-export interface TerminalSession {
-    terminal: vscode.Terminal;
-    pty: vscode.Pseudoterminal;
-    emitter: vscode.EventEmitter<string>;
-    outputStdout?: string;
-    outputStderr?: string;
-    processStarted: boolean;
-    shellProcess?: ChildProcessWithoutNullStreams;
-    shellType: string;
 }
 
 export const delayAsync = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
