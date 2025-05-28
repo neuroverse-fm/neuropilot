@@ -1,6 +1,6 @@
 # NeuroPilot
 
-![Demo GIF](demo.gif)
+![Demo GIF](demo-autopilot.gif)
 
 **Disclaimer: For simplicity, all mentions of Neuro also apply to Evil unless otherwise stated.**
 
@@ -82,6 +82,20 @@ Simply paste this into your `settings.json` file:
 
 Autopilot and Copilot mode can be configured separately for each permission.
 For example, you can configure it so Neuro can edit files by herself, but has to ask permission to run the code she wrote.
+
+### Continuous Context Updates
+
+![Example of lint update](tony-lint.png)
+
+Neuro will be updated on certain events not directly triggered by the user that happen in the workspace.
+She will be notified when:
+- a file is saved (only if [Auto Save](vscode://settings/files.autoSave) is not set to `afterDelay`)
+- the Auto Save setting is modified
+- lint problems occur (controlled by the setting [Send New Linting Problems On](vscode://settings/neuropilot.sendNewLintProblemsOn))
+- a terminal that Neuro started produces more output
+- a terminal started by Neuro exits
+- a Copilot mode request times out
+- a task that Neuro started finishes
 
 ## Security
 
