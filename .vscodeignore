@@ -5,3 +5,13 @@ eslint.config.mjs
 tsconfig.json
 src/
 *.vsix
+
+# Krita
+*.kra
+*.*~
+
+# Inkscape
+*.svg
+
+# Python venv for Tony
+.venv
