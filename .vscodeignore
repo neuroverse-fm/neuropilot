@@ -13,5 +13,6 @@ src/
 # Inkscape
 *.svg
 
-# Python venv for Tony
+# Tony
 .venv
+tony/
