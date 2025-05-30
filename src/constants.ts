@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { NeuroClient } from 'neuro-game-sdk';
-import { TerminalSession } from './utils';
+import { TerminalSession } from './pseudoterminal';
 import { RceRequest } from './rce';
 
 export interface NeuroTask {
