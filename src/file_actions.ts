@@ -123,7 +123,7 @@ export const fileActions = {
                 path: { type: 'string' },
                 recursive: { type: 'boolean' },
             },
-            required: ['pathToDelete'],
+            required: ['path'],
         },
         permissions: [PERMISSIONS.delete],
         handler: handleDeleteFileOrFolder,
