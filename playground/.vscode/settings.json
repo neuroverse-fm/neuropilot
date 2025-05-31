@@ -1,18 +1,19 @@
 {
-    "neuropilot.permission.editActiveDocument": true,
-    "neuropilot.permission.openFiles": true,
-    "neuropilot.permission.runTasks": true,
-    "neuropilot.permission.create": true,
-    "neuropilot.permission.delete": true,
-    "neuropilot.permission.rename": true,
-    "neuropilot.permission.gitRemotes": true,
-    "neuropilot.permission.gitTags": true,
-    "neuropilot.permission.gitOperations": true,
-    "neuropilot.permission.gitConfigs": true,
-    "github.copilot.advanced": {
-        "debug.overrideEngine": "someRandomString"
-    },
-    "neuropilot.permission.terminalAccess": true,
+    // NeuroPilot settings
+    "neuropilot.permission.editActiveDocument": "Autopilot",
+    "neuropilot.permission.openFiles": "Autopilot",
+    "neuropilot.permission.runTasks": "Autopilot",
+    "neuropilot.permission.create": "Autopilot",
+    "neuropilot.permission.delete": "Autopilot",
+    "neuropilot.permission.rename": "Autopilot",
+    "neuropilot.permission.gitRemotes": "Autopilot",
+    "neuropilot.permission.gitTags": "Autopilot",
+    "neuropilot.permission.gitOperations": "Autopilot",
+    "neuropilot.permission.gitConfigs": "Autopilot",
+    "neuropilot.allowUnsafePaths": false,
+    "neuropilot.showTimeOnTerminalStart": true,
+    "neuropilot.permission.terminalAccess": "Autopilot",
+    "neuropilot.permission.accessLintingAnalysis": "Autopilot",
     "neuropilot.terminals": [
         {
             "name": "PowerShell",
@@ -22,16 +23,27 @@
         {
             "name": "Command Prompt",
             "path": "C:\\Windows\\System32\\cmd.exe",
-            "args": ["/K"]
+            "args": [
+                "/K"
+            ]
         },
         {
             "name": "Git Bash",
             "path": "C:\\Program Files\\Git\\bin\\bash.exe",
-            "args": ["-i"]
+            "args": [
+                "-i"
+            ]
         }
     ],
-    "neuropilot.showTimeOnTerminalStart": true,
-    "files.autoSave": "afterDelay",
+    "neuropilot.sendNewLintingProblemsOn": "inCurrentFile",
+    "neuropilot.requestExpiryTimeout": 10000,
+    "neuropilot.hideCopilotRequests": false,
+    "neuropilot.currentlyAsNeuroAPI": "Neuro",
+    // Debug engine override for GitHub Copilot
+    "github.copilot.advanced": {
+        "debug.overrideEngine": "someRandomString"
+    },
+    // VS Code settings
     "files.autoSaveDelay": 1000,
-    "neuropilot.allowUnsafePaths": false
+    "neuropilot.cursorFollowsNeuro": true,
 }
