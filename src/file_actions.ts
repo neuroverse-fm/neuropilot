@@ -286,7 +286,7 @@ export function handleRenameFileOrFolder(actionData: ActionData): string | undef
 }
 
 export function handleDeleteFileOrFolder(actionData: ActionData): string | undefined {
-    const relativePathParam = actionData.params.pathToDelete;
+    const relativePathParam = actionData.params.path;
     const recursive = actionData.params.recursive ?? false;
 
     const relativePath = normalizePath(relativePathParam).replace(/^\/|\/$/g, '');
