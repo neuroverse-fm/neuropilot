@@ -38,12 +38,13 @@
     "neuropilot.sendNewLintingProblemsOn": "inCurrentFile",
     "neuropilot.requestExpiryTimeout": 10000,
     "neuropilot.hideCopilotRequests": false,
-    "neuropilot.currentlyAsNeuroAPI": "Tony",
+    "neuropilot.cursorFollowsNeuro": false,
+    "neuropilot.currentlyAsNeuroAPI": "Evil",
     // Debug engine override for GitHub Copilot
     "github.copilot.advanced": {
         "debug.overrideEngine": "someRandomString"
     },
     // VS Code settings
+    "files.autoSave": "afterDelay",
     "files.autoSaveDelay": 1000,
-    "neuropilot.cursorFollowsNeuro": true,
 }
