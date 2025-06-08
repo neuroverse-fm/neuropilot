@@ -21,6 +21,18 @@ async def wait_for_actions_force(api: NeuroAPI):
     while not api.action_forced:
         await asyncio.sleep(0.1)
 
+async def wait_for_context(api: NeuroAPI):
+    prev = api.on_context
+    triggered = False
+    def trigger(_):
+        nonlocal triggered
+        triggered = True
+    api.on_context = trigger
+    while not triggered:
+        await asyncio.sleep(0.1)
+    api.on_context = prev
+    
+
 async def main():
     asyncio_loop = asyncio.get_event_loop()
     api = NeuroAPI(run_sync_soon_threadsafe=asyncio_loop.call_soon_threadsafe)
@@ -31,20 +43,26 @@ async def main():
     # Expecting user to write "I have a file with some code that needs fixing. It's called fixme.js, can you help me with that?"
     await wait_for_actions_force(api)
     await asyncio.sleep(1)
-    api.send_action("id_1", "chat", json.dumps({"answer": "Sure, I'll see what I can do."}))
+    api.send_action("id_1", "chat", json.dumps({"answer": "Sure, I'll see what I can do. Can you accept my requests when I ask to do stuff?"}))
     await wait_for_action_result(api)
     await asyncio.sleep(3)
 
     api.send_action("id_2", "get_files", None)
     await wait_for_action_result(api)
+    await wait_for_context(api)
+    await wait_for_context(api)
     await asyncio.sleep(2)
 
     api.send_action("id_3", "open_file", json.dumps({"filePath": "fixme.js"}))
     await wait_for_action_result(api)
+    await wait_for_context(api)
+    await wait_for_context(api)
     await asyncio.sleep(2)
 
     api.send_action("id_4", "run_current_file", None)
     await wait_for_action_result(api)
+    await wait_for_context(api)
+    await wait_for_context(api)
     await asyncio.sleep(5)
 
     api.send_action("id_5", "replace_text", json.dumps({
@@ -53,10 +71,14 @@ async def main():
         "match": "firstInFile",
     }))
     await wait_for_action_result(api)
+    await wait_for_context(api)
+    await wait_for_context(api)
     await asyncio.sleep(2)
 
     api.send_action("id_6", "run_current_file", None)
     await wait_for_action_result(api)
+    await wait_for_context(api)
+    await wait_for_context(api)
     await asyncio.sleep(5)
 
     api.send_action("id_7", "replace_text", json.dumps({
@@ -65,14 +87,19 @@ async def main():
         "match": "firstAfterCursor",
     }))
     await wait_for_action_result(api)
+    await wait_for_context(api)
+    await wait_for_context(api)
     await asyncio.sleep(2)
 
     api.send_action("id_8", "run_current_file", None)
     await wait_for_action_result(api)
+    await wait_for_context(api)
+    await wait_for_context(api)
     await asyncio.sleep(5)
 
     api.send_action("id_9", "request_cookie", json.dumps({"flavor": "Chocolate Chip"}))
     await wait_for_action_result(api)
+    await wait_for_context(api)
     await asyncio.sleep(2)
     
     api.stop()
