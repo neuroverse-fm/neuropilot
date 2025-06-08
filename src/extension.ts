@@ -38,7 +38,7 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand('neuropilot.showDocsHomepage', () => {
         const panel = vscode.window.createWebviewPanel(
             'docsWebView',
-            'NeuroPilot Docs Homepage',
+            'NeuroPilot Docs (WebView)',
             vscode.ViewColumn.One,
             { enableScripts: true },
         );
@@ -62,7 +62,7 @@ export function activate(context: vscode.ExtensionContext) {
         }
         const panel = vscode.window.createWebviewPanel(
             'docsWebView',
-            `NeuroPilot Docs - ${subpage}`,
+            'NeuroPilot Docs (WebView)',
             vscode.ViewColumn.One,
             { enableScripts: true },
         );
