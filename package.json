@@ -163,6 +163,12 @@
 						"default": "Visual Studio Code",
 						"description": "The name to use for this \"game\""
 					},
+					"neuropilot.initialContext": {
+						"type": "string",
+						"default": "You are using an extension in Visual Studio Code that allows you to code together with Vedal.",
+						"description": "The initial context to sent to Neuro-sama (or whatever is connected to NeuroPilot)",
+						"editPresentation": "multilineText"
+					},
 					"neuropilot.currentlyAsNeuroAPI": {
 						"type": "string",
 						"markdownDescription": "Who is currently acting as the Neuro API server?\nThis only changes the name in certain areas (such as Copilot-mode requests or Git commit messages) due to limitations.\n\nYou can add custom characters using `settings.json` if you ignore the lint error from VS Code.\n\n(Most) names mentioned here are not associated with NeuroPilot.",
@@ -183,6 +189,11 @@
 							"The human operator (Pasu4)",
 							"Literally in your computer walls (Govorunb)"
 						]
+					},
+					"neuropilot.docsURL": {
+						"type": "string",
+						"default": "https://pasu4.github.io/neuropilot",
+						"markdownDescription": "If you're using a mirror of the docs site, put its URL here.\n\nYou will most likely not need to change this, unless you are modifying the docs themselves."
 					},
 					"neuropilot.beforeContext": {
 						"type": "integer",
@@ -213,12 +224,6 @@
 							"Only request completions when the user explicitly invokes the completion provider",
 							"Automatically request completions when the user stops typing"
 						]
-					},
-					"neuropilot.initialContext": {
-						"type": "string",
-						"default": "You are using an extension in Visual Studio Code that allows you to code together with Vedal.",
-						"description": "The initial context to sent to Neuro-sama (or whatever is connected to NeuroPilot)",
-						"editPresentation": "multilineText"
 					},
 					"neuropilot.timeout": {
 						"type": "integer",

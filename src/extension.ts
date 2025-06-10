@@ -257,8 +257,7 @@ function switchCurrentNeuroAPIUser() {
 }
 
 function openDocsPage(subpage = '/'): string {
-    const baseDocsPage = 'https://pasu4.github.io/neuropilot';
-    let constructedDocsPage = baseDocsPage;
+    let constructedDocsPage: string = CONFIG.docsURL;
     if (subpage.startsWith('/')) {
         constructedDocsPage += subpage;
     } else {

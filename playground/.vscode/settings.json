@@ -37,7 +37,7 @@
     ],
     "neuropilot.sendNewLintingProblemsOn": "off",
     "neuropilot.requestExpiryTimeout": 10000,
-    "neuropilot.hideCopilotRequests": false,
+    "neuropilot.hideCopilotRequests": true,
     "neuropilot.currentlyAsNeuroAPI": "Neuro",
     "neuropilot.cursorFollowsNeuro": false,
     // Debug engine override for GitHub Copilot
@@ -46,5 +46,6 @@
     },
     // VS Code settings
     "files.autoSaveDelay": 1000,
-    "files.autoSave": "onFocusChange"
+    "files.autoSave": "onFocusChange",
+    "neuropilot.docsURL": "http://localhost:4321/neuropilot"
 }
