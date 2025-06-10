@@ -269,7 +269,7 @@ function openDocsPage(subpage = '/'): string {
     '<html lang="en">' +
     '<head>' +
     '   <meta charset="UTF-8">' +
-    `   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; frame-src ${constructedDocsPage}; script-src 'none'; style-src 'unsafe-inline';">` + // Content Security Policy for safety reasons
+    `   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; frame-src ${CONFIG.docsURL}; script-src 'none'; style-src 'unsafe-inline';">` + // Content Security Policy for safety reasons
     '   <meta name="viewport" content="width=device-width, initial-scale=1.0">' +
     '   <title>NeuroPilot Docs WebView</title>' +
     '   <style>' +
