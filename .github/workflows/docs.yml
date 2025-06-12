@@ -50,7 +50,7 @@ jobs:
                 npm ci
             
             - name: Run basic checker
-              run: npm run check
+              run: cd docs && npm run check
     build:
         name: Build docs site
         if: ${{ github.event_name == 'push' }}
