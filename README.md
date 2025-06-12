@@ -90,7 +90,7 @@ For example, you can configure it so Neuro can edit files by herself, but has to
 
 ### Continuous Context Updates
 
-![Example of lint update](tony-lint.png)
+![Example of lint update](docs/public/tony-lint.png)
 
 Neuro will be updated on certain events not directly triggered by the user that happen in the workspace.
 She will be notified when:
