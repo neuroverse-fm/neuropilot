@@ -16,7 +16,6 @@ export default tseslint.config(
             'out/**',
             'playground/**',
             '**/vscode*.d.ts',
-            'docs/**',
         ],
     },
     js.configs.recommended,
