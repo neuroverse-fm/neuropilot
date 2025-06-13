@@ -185,7 +185,7 @@ export function handleRunCommand(actionData: ActionData): string | undefined {
     const shellType: string = actionData.params?.shell;
 
     // Get or create the terminal session for this shell.
-    const session = getOrCreateTerminal(shellType, `Neuro: ${shellType}`);
+    const session = getOrCreateTerminal(shellType, `${NEURO.currentController}: ${shellType}`);
     const outputDelay = CONFIG.terminalContextDelay;
 
     // Reset previous outputs.
