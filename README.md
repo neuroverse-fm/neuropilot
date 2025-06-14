@@ -1,6 +1,4 @@
-# NeuroPilot
-
-![Autopilot demo GIF](docs/public/demo-autopilot.gif)
+# <img src="icon.png" width="32" style="vertical-align:middle;horizontal-align:middle;"> NeuroPilot
 
 **Disclaimer: For simplicity, all mentions of Neuro also apply to Evil unless otherwise stated.**
 
@@ -41,6 +39,8 @@ For example, you can set how many lines of code will be provided as context befo
 There are two ways the extension can be used, which will be referred to as "Autopilot mode" and "Copilot mode".
 
 ### Autopilot Mode
+
+![Autopilot demo GIF](docs/public/demo-autopilot.gif)
 
 To make Neuro able to code without human input, go to the extension settings and set the necessary permissions to "Autopilot", then run the command "NeuroPilot: Reload Permissions" from the Command Palette.
 It is recommended to turn on auto-saving in the settings for this in case Neuro doesn't remember to save her files regularly.
