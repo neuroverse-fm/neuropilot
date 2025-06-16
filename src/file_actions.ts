@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 
 import { NEURO } from './constants';
 import { combineGlobLines, filterFileContents, getFence, getVirtualCursor, getWorkspacePath, isPathNeuroSafe, logOutput, normalizePath } from './utils';
-import { ActionData, contextNoAccess, ActionWithHandler, actionValidationFailure, actionValidationAccept, ActionValidationResult } from './neuro_client_helper';
+import { ActionData, contextNoAccess, ActionWithHandler, actionValidationFailure, actionValidationAccept, ActionValidationResult, stripToActions } from './neuro_client_helper';
 import { CONFIG, PERMISSIONS, getPermissionLevel } from './config';
 
 function validatePath(path: string, directoryType: string): ActionValidationResult {
@@ -134,29 +134,29 @@ export const fileActions = {
 
 export function registerFileActions() {
     if(getPermissionLevel(PERMISSIONS.openFiles)) {
-        NEURO.client?.registerActions([
+        NEURO.client?.registerActions(stripToActions([
             fileActions.get_files,
             fileActions.open_file,
-        ]);
+        ]));
     }
 
     if(getPermissionLevel(PERMISSIONS.create)) {
-        NEURO.client?.registerActions([
+        NEURO.client?.registerActions(stripToActions([
             fileActions.create_file,
             fileActions.create_folder,
-        ]);
+        ]));
     }
 
     if(getPermissionLevel(PERMISSIONS.rename)) {
-        NEURO.client?.registerActions([
+        NEURO.client?.registerActions(stripToActions([
             fileActions.rename_file_or_folder,
-        ]);
+        ]));
     }
 
     if(getPermissionLevel(PERMISSIONS.delete)) {
-        NEURO.client?.registerActions([
+        NEURO.client?.registerActions(stripToActions([
             fileActions.delete_file_or_folder,
-        ]);
+        ]));
     }
 }
 

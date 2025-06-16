@@ -4,7 +4,7 @@ import * as path from 'path';
 import { NEURO } from './constants';
 import { normalizePath, getWorkspacePath, logOutput, isPathNeuroSafe } from './utils';
 import { PERMISSIONS, getPermissionLevel, CONFIG } from './config';
-import { ActionData, actionValidationAccept, actionValidationFailure, ActionValidationResult, ActionWithHandler, contextFailure } from './neuro_client_helper';
+import { ActionData, actionValidationAccept, actionValidationFailure, ActionValidationResult, ActionWithHandler, contextFailure, stripToActions } from './neuro_client_helper';
 import assert from 'assert';
 
 function validatePath(path: string, directoryType: string): ActionValidationResult {
@@ -92,11 +92,11 @@ export const lintActions = {
 
 export function registerLintActions() {
     if (getPermissionLevel(PERMISSIONS.accessLintingAnalysis)) {
-        NEURO.client?.registerActions([
+        NEURO.client?.registerActions(stripToActions([
             lintActions.get_file_lint_problems,
             lintActions.get_folder_lint_problems,
             lintActions.get_workspace_lint_problems,
-        ]);
+        ]));
     }
 }
 
