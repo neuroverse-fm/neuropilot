@@ -85,6 +85,7 @@ jobs:
                 npm ci
             
             - name: Build site
+              working-directory: ${{ github.workspace }}/docs
               run: npm run build
             
             - name: Upload GitHub Pages Artifact
