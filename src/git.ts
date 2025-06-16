@@ -4,7 +4,7 @@ import { NEURO } from './constants';
 import { GitExtension, Change, ForcePushMode, CommitOptions, Commit, Repository } from './types/git';
 import { StatusStrings, RefTypeStrings } from './types/git_status';
 import { logOutput, simpleFileName, isPathNeuroSafe, normalizePath } from './utils';
-import { ActionData, ActionValidationResult, actionValidationAccept, actionValidationFailure, ActionWithHandler, contextFailure } from './neuro_client_helper';
+import { ActionData, ActionValidationResult, actionValidationAccept, actionValidationFailure, ActionWithHandler, contextFailure, stripToActions } from './neuro_client_helper';
 import { PERMISSIONS, getPermissionLevel } from './config';
 import assert from 'assert';
 
@@ -466,9 +466,9 @@ let repo: Repository | undefined = git.repositories[0];
 // Register all git commands
 export function registerGitActions() {
     if (getPermissionLevel(PERMISSIONS.gitOperations)) {
-        NEURO.client?.registerActions([
+        NEURO.client?.registerActions(stripToActions([
             gitActions.init_git_repo,
-        ]);
+        ]));
 
         const root = vscode.workspace.workspaceFolders?.[0].uri;
         if (!root) return;
@@ -482,7 +482,7 @@ export function registerGitActions() {
             repo = r;
 
             if (repo) {
-                NEURO.client?.registerActions([
+                NEURO.client?.registerActions(stripToActions([
                     gitActions.add_file_to_git,
                     gitActions.make_git_commit,
                     gitActions.merge_to_current_branch,
@@ -494,35 +494,35 @@ export function registerGitActions() {
                     gitActions.diff_files,
                     gitActions.git_log,
                     gitActions.git_blame,
-                ]);
+                ]));
 
                 if (getPermissionLevel(PERMISSIONS.gitTags)) {
-                    NEURO.client?.registerActions([
+                    NEURO.client?.registerActions(stripToActions([
                         gitActions.tag_head,
                         gitActions.delete_tag,
-                    ]);
+                    ]));
                 }
 
                 if (getPermissionLevel(PERMISSIONS.gitConfigs)) {
-                    NEURO.client?.registerActions([
+                    NEURO.client?.registerActions(stripToActions([
                         gitActions.set_git_config,
                         gitActions.get_git_config,
-                    ]);
+                    ]));
                 }
 
                 if (getPermissionLevel(PERMISSIONS.gitRemotes)) {
-                    NEURO.client?.registerActions([
+                    NEURO.client?.registerActions(stripToActions([
                         gitActions.fetch_git_commits,
                         gitActions.pull_git_commits,
                         gitActions.push_git_commits,
-                    ]);
+                    ]));
 
                     if (getPermissionLevel(PERMISSIONS.editRemoteData)) {
-                        NEURO.client?.registerActions([
+                        NEURO.client?.registerActions(stripToActions([
                             gitActions.add_git_remote,
                             gitActions.remove_git_remote,
                             gitActions.rename_git_remote,
-                        ]);
+                        ]));
                     }
                 }
             }
@@ -829,9 +829,9 @@ export function handleGitMerge(actionData: ActionData): string | undefined {
         NEURO.client?.sendContext(`Cleanly merged ${refToMerge} into the current branch.`);
     }, (erm: string) => {
         if (repo?.state.mergeChanges.some(() => true)) {
-            NEURO.client?.registerActions([
+            NEURO.client?.registerActions(stripToActions([
                 gitActions.abort_merge,
-            ]);
+            ]));
         }
         NEURO.client?.sendContext(`Couldn't merge ${refToMerge}: ${erm}`);
         logOutput('ERROR', `Encountered an error when merging ${refToMerge}: ${erm}`);
