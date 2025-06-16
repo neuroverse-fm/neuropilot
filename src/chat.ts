@@ -12,15 +12,15 @@ interface Participant {
 const NEURO_PARTICIPANTS: Participant[] = [
     {
         id: 'neuropilot.neuro',
-        relativeIconPath: 'neuropilot.png',
+        relativeIconPath: 'assets/neuropilot.png',
     },
     {
         id: 'neuropilot.evil',
-        relativeIconPath: 'evilpilot.png',
+        relativeIconPath: 'assets/evilpilot.png',
     },
     {
         id: 'neuropilot.api',
-        relativeIconPath: 'icon.png',
+        relativeIconPath: 'assets/heart.png',
     },
 ];
 
