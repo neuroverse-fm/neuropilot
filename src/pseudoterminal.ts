@@ -132,7 +132,7 @@ function createPseudoterminal(shellType: string, terminalName: string, vscContex
     };
 
     // 50/50 chance of icon selection no longer
-    const icon = vscode.Uri.joinPath(vscContext.extensionUri, 'console.png');
+    const icon = vscode.Uri.joinPath(vscContext.extensionUri, 'assets/console.png');
 
     // Create the terminal using VS Code's API.
     const terminal = vscode.window.createTerminal({

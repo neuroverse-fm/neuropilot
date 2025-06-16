@@ -6,14 +6,8 @@ node_modules
 .vscode-test/
 *.vsix
 
-# Krita
-*.kra
-*.*~
-
-# Inkscape
-*.svg
-!docs/src/assets/*.svg
-!docs/public/**/*.svg
+# Project files (Krita, Inkscape, etc.)
+/project-files
 
 # Python venv for Tony
 .venv
