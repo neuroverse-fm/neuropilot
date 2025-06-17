@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 
 import { NEURO } from './constants';
 import { escapeRegExp, getFence, getPositionContext, getVirtualCursor, isPathNeuroSafe, logOutput, NeuroPositionContext, setVirtualCursor, substituteMatch } from './utils';
-import { ActionData, actionValidationAccept, actionValidationFailure, ActionValidationResult, ActionWithHandler, contextFailure } from './neuro_client_helper';
+import { ActionData, actionValidationAccept, actionValidationFailure, ActionValidationResult, ActionWithHandler, contextFailure, stripToActions } from './neuro_client_helper';
 import { PERMISSIONS, getPermissionLevel, CONFIG } from './config';
 
 const CONTEXT_NO_ACCESS = 'You do not have permission to access this file.';
@@ -136,7 +136,7 @@ export const editingActions = {
 
 export function registerEditingActions() {
     if (getPermissionLevel(PERMISSIONS.editActiveDocument)) {
-        NEURO.client?.registerActions([
+        NEURO.client?.registerActions(stripToActions([
             editingActions.place_cursor,
             editingActions.get_cursor,
             editingActions.insert_text,
@@ -144,11 +144,11 @@ export function registerEditingActions() {
             editingActions.delete_text,
             editingActions.find_text,
             editingActions.undo,
-        ]);
+        ]));
         if (vscode.workspace.getConfiguration('files').get<string>('autoSave') !== 'afterDelay') {
-            NEURO.client?.registerActions([
+            NEURO.client?.registerActions(stripToActions([
                 editingActions.save,
-            ]);
+            ]));
         };
     }
 }
@@ -158,7 +158,7 @@ export function toggleSaveAction(): void {
     if (autoSave === 'afterDelay') {
         NEURO.client?.unregisterActions(['save']);
     } else {
-        NEURO.client?.registerActions([editingActions.save]);
+        NEURO.client?.registerActions(stripToActions([editingActions.save]));
     }
 }
 

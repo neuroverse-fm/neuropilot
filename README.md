@@ -1,4 +1,4 @@
-# <img src="icon.png" width="32" style="vertical-align:middle;horizontal-align:middle;"> NeuroPilot
+# <img src="assets/heart-xaendril.png" width="32" style="vertical-align:middle;horizontal-align:middle;"> NeuroPilot
 
 **Disclaimer: For simplicity, all mentions of Neuro also apply to Evil unless otherwise stated.**
 
@@ -474,6 +474,10 @@ Note that this only returns diagnostics of files that are loaded in the current 
 ### Credits
 
 This extension uses the [TypeScript/JavaScript SDK](https://github.com/AriesAlex/typescript-neuro-game-sdk) by [AriesAlex](https://github.com/AriesAlex).
+
+Documentation by @KTrain5169.
+
+Extension icon by Xaendril.
 
 ### Neuro's cursor
 
