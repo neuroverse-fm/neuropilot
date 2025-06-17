@@ -1,9 +1,8 @@
 import * as vscode from 'vscode';
-import * as path from 'path';
 import { NEURO } from './constants';
 import { GitExtension, Change, ForcePushMode, CommitOptions, Commit, Repository } from './types/git';
 import { StatusStrings, RefTypeStrings } from './types/git_status';
-import { logOutput, simpleFileName, isPathNeuroSafe, normalizePath } from './utils';
+import { logOutput, simpleFileName, isPathNeuroSafe, normalizePath, getWorkspacePath } from './utils';
 import { ActionData, ActionValidationResult, actionValidationAccept, actionValidationFailure, ActionWithHandler, contextFailure } from './neuro_client_helper';
 import { PERMISSIONS, getPermissionLevel } from './config';
 import { assert } from './utils';
@@ -697,15 +696,11 @@ export function handleGitStatus(__actionData: ActionData): string | undefined {
 }
 
 // Helper to convert a provided file path (or wildcard) to an absolute path using the workspace folder (or repo root if not available)
-function getAbsoluteFilePath(filePath: string | undefined): string {
-    // Normalize the file path if provided; otherwise, use wildcard.
-    const normalizedPath: string = filePath ? normalizePath(filePath) : '*';
+function getAbsoluteFilePath(filePath = '.'): string {
     // Get the workspace folder; if not available, fall back to repo root.
-    const workspaceFolder = vscode.workspace.workspaceFolders?.[0].uri.fsPath || repo!.rootUri.fsPath;
+    const workspaceFolder = getWorkspacePath() || repo!.rootUri.fsPath;
     // Compute absolute path by joining the workspace folder with the normalized path.
-    return path.isAbsolute(normalizedPath)
-        ? normalizedPath
-        : path.join(workspaceFolder, normalizedPath);
+    return normalizePath(workspaceFolder + filePath);
 }
 
 export function handleAddFileToGit(actionData: ActionData): string | undefined {
