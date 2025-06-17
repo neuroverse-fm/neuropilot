@@ -11,6 +11,9 @@ import { ActionData, actionValidationAccept, actionValidationFailure, ActionVali
  * @returns An {@link ActionValidationResult}. {@link actionValidationFailure} if any validation steps fail, {@link actionValidationAccept} otherwise.
  */
 async function validatePath(path: string, directoryType: string): Promise<ActionValidationResult> {
+    if (path === '') {
+        return actionValidationFailure('No file path specified.', true);
+    };
     const absolutePath = getWorkspacePath() + '/' + normalizePath(path).replace(/^\/|\/$/g, '');
     if (!isPathNeuroSafe(absolutePath)) {
         return actionValidationFailure(`You are not allowed to access this ${directoryType}.`);

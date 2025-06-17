@@ -13,6 +13,9 @@ import { CONFIG, PERMISSIONS, getPermissionLevel } from './config';
  * @returns A validation message. {@link actionValidationFailure} if any validation steps fail, {@link actionValidationAccept} otherwise.
  */
 async function validatePath(path: string, checkExist: boolean, directoryType: string): Promise<ActionValidationResult> {
+    if (path === '') {
+        return actionValidationFailure('No file path specified.', true);
+    };
     const absolutePath = getWorkspacePath() + '/' + normalizePath(path).replace(/^\/|\/$/g, '');
     if (!isPathNeuroSafe(absolutePath)) {
         return actionValidationFailure(`You are not allowed to access this ${directoryType}.`);
