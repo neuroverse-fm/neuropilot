@@ -28,6 +28,8 @@ Capabilities of this extension include:
 These can all be turned on or off using the extension's permission settings.
 All permissions are set to "Off" by default, [except one](vscode://settings/neuropilot.permission.requestCookies).
 
+For more detailed documentation, visit [the docs site](https://pasu4.github.io/neuropilot).
+
 ## How to use
 
 On startup, the extension will immediately try to establish a connection to the Neuro API.
@@ -120,43 +122,11 @@ Note that if Neuro has direct terminal access, you should assume all security fe
 
 The same advice applies for ticking the [*Neuropilot: Allow Unsafe Paths*](vscode://settings/neuropilot.allowUnsafePaths) setting if you gave Autopilot-level permissions to Neuro for editing files.
 
+You can find more security advice on the docs site, linked above.
+
 ## Commands
 
-### Give Cookie
-
-Gives a cookie to Neuro (it tells her that Vedal gave her a cookie).
-Allows the user to specify the flavor as well.
-
-### Reconnect
-
-Attempts to reconnect to the API.
-Shows a notification when it succeeds or fails.
-
-### Move Neuro's Cursor Here
-
-Moves Neuro's cursor to the current cursor position.
-Only works if there is an active text editor, and only in files Neuro has access to.
-
-### Switch Neuro API user name
-
-Allows you to change the name of the connected AI (e.g. Neuro -> Evil, etc...) for visual purposes.
-This acts as a shortcut for the [Currently As Neuro API](vscode://settings/neuropilot.currentlyAsNeuroAPI) setting.
-
-### Reload Permissions
-
-Reregisters all actions according to the permissions.
-Running this command is required if you change any of the permissions.
-
-### Disable All Permissions
-
-Set all permissions for Neuro to 'Off' immediately and unregister the actions.
-Also kills currently running tasks and any shells opened by Neuro.
-Any request from Neuro when she used a Copilot-mode command is denied automatically.
-Since it's intended to be a panic button, it is recommended to bind this command to a keyboard shortcut.
-
-### Send File As Context
-
-Sends the entire current file as context to Neuro, along with the file name and configured language.
+We've moved this to the docs site. See above page.
 
 ## Actions
 
