@@ -2,10 +2,9 @@ import * as vscode from 'vscode';
 import { NEURO } from './constants';
 import { GitExtension, Change, ForcePushMode, CommitOptions, Commit, Repository } from './types/git';
 import { StatusStrings, RefTypeStrings } from './types/git_status';
-import { logOutput, simpleFileName, isPathNeuroSafe, normalizePath, getWorkspacePath } from './utils';
-import { ActionData, ActionValidationResult, actionValidationAccept, actionValidationFailure, ActionWithHandler, contextFailure } from './neuro_client_helper';
+import { logOutput, simpleFileName, isPathNeuroSafe, normalizePath, getWorkspacePath, assert } from './utils';
+import { ActionData, ActionValidationResult, actionValidationAccept, actionValidationFailure, ActionWithHandler, contextFailure, stripToActions } from './neuro_client_helper';
 import { PERMISSIONS, getPermissionLevel } from './config';
-import { assert } from './utils';
 
 /* All actions located in here requires neuropilot.permission.gitOperations to be enabled. */
 
@@ -51,6 +50,51 @@ async function filePathGitValidator(actionData: ActionData): Promise<ActionValid
     }
 
     return actionValidationAccept();
+}
+
+function gitDiffValidator(actionData: ActionData): ActionValidationResult {
+    const diffType: string = actionData.params?.diffType ?? 'diffWithHEAD';
+    switch (diffType) {
+        case 'diffWithHEAD':
+            if (actionData.params?.ref1 || actionData.params?.ref2) {
+                return actionValidationAccept('Neither "ref1" nor "ref2" is needed.');
+            }
+            return actionValidationAccept();
+        case 'diffWith':
+            if (actionData.params?.ref1 && actionData.params?.ref2) {
+                return actionValidationAccept('Only "ref1" is needed for the "diffWith" diff type.');
+            } else if (!actionData.params?.ref1) {
+                return actionValidationFailure('"ref1" is required for the diff type of "diffWith"', true);
+            } else {
+                return actionValidationAccept();
+            }
+        case 'diffIndexWithHEAD':
+            if (actionData.params?.ref1 || actionData.params?.ref2) {
+                return actionValidationAccept('Neither "ref1" nor "ref2" is needed.');
+            }
+            return actionValidationAccept();
+        case 'diffIndexWith':
+            if (actionData.params?.ref1 && actionData.params?.ref2) {
+                return actionValidationAccept('Only "ref1" is needed for the "diffIndexWith" diff type.');
+            } else if (!actionData.params?.ref1) {
+                return actionValidationFailure('"ref1" is required for the diff type of "diffIndexWith"', true);
+            } else {
+                return actionValidationAccept();
+            }
+        case 'diffBetween':
+            if (!actionData.params?.ref1 || !actionData.params?.ref2) {
+                return actionValidationFailure('"ref1" AND "ref2" is required for the diff type of "diffWith"', true);
+            } else {
+                return actionValidationAccept();
+            }
+        case 'fullDiff':
+            if (actionData.params?.ref1 || actionData.params?.ref2) {
+                return actionValidationAccept('Neither "ref1" nor "ref2" is needed.');
+            }
+            return actionValidationAccept();
+        default:
+            return actionValidationFailure('Unknown diff type.');
+    }
 }
 
 export const gitActions = {
@@ -207,8 +251,8 @@ export const gitActions = {
         },
         permissions: [PERMISSIONS.gitOperations],
         handler: handleDiffFiles,
-        promptGenerator: (actionData: ActionData) => `obtain ${actionData.params?.filePath ? `${actionData.params.filePath}'s` : 'a'} Git diff${actionData.params?.ref1 && actionData.params?.ref2 ? ` between ${actionData.params.ref1} and ${actionData.params.ref2}` : actionData.params?.ref1 ? ` at ref ${actionData.params.ref1}` : ''}${actionData.params?.diffType ? ` (of type "${actionData.params.diffType}")` : ''}.`,
-        validator: [gitValidator, filePathGitValidator],
+        promptGenerator: (actionData: ActionData) => `obtain ${actionData.params?.filePath ? `"${actionData.params.filePath}"'s` : 'a'} Git diff${actionData.params?.ref1 && actionData.params?.ref2 ? ` between ${actionData.params.ref1} and ${actionData.params.ref2}` : actionData.params?.ref1 ? ` at ref ${actionData.params.ref1}` : ''}${actionData.params?.diffType ? ` (of type "${actionData.params.diffType}")` : ''}.`,
+        validator: [gitValidator, filePathGitValidator, gitDiffValidator],
     },
     git_log: {
         name: 'git_log',
@@ -433,9 +477,9 @@ let repo: Repository | undefined = git.repositories[0];
 // Register all git commands
 export function registerGitActions() {
     if (getPermissionLevel(PERMISSIONS.gitOperations)) {
-        NEURO.client?.registerActions([
+        NEURO.client?.registerActions(stripToActions([
             gitActions.init_git_repo,
-        ]);
+        ]));
 
         const root = vscode.workspace.workspaceFolders?.[0].uri;
         if (!root) return;
@@ -449,7 +493,7 @@ export function registerGitActions() {
             repo = r;
 
             if (repo) {
-                NEURO.client?.registerActions([
+                NEURO.client?.registerActions(stripToActions([
                     gitActions.add_file_to_git,
                     gitActions.make_git_commit,
                     gitActions.merge_to_current_branch,
@@ -461,35 +505,35 @@ export function registerGitActions() {
                     gitActions.diff_files,
                     gitActions.git_log,
                     gitActions.git_blame,
-                ]);
+                ]));
 
                 if (getPermissionLevel(PERMISSIONS.gitTags)) {
-                    NEURO.client?.registerActions([
+                    NEURO.client?.registerActions(stripToActions([
                         gitActions.tag_head,
                         gitActions.delete_tag,
-                    ]);
+                    ]));
                 }
 
                 if (getPermissionLevel(PERMISSIONS.gitConfigs)) {
-                    NEURO.client?.registerActions([
+                    NEURO.client?.registerActions(stripToActions([
                         gitActions.set_git_config,
                         gitActions.get_git_config,
-                    ]);
+                    ]));
                 }
 
                 if (getPermissionLevel(PERMISSIONS.gitRemotes)) {
-                    NEURO.client?.registerActions([
+                    NEURO.client?.registerActions(stripToActions([
                         gitActions.fetch_git_commits,
                         gitActions.pull_git_commits,
                         gitActions.push_git_commits,
-                    ]);
+                    ]));
 
                     if (getPermissionLevel(PERMISSIONS.editRemoteData)) {
-                        NEURO.client?.registerActions([
+                        NEURO.client?.registerActions(stripToActions([
                             gitActions.add_git_remote,
                             gitActions.remove_git_remote,
                             gitActions.rename_git_remote,
-                        ]);
+                        ]));
                     }
                 }
             }
@@ -792,9 +836,9 @@ export function handleGitMerge(actionData: ActionData): string | undefined {
         NEURO.client?.sendContext(`Cleanly merged ${refToMerge} into the current branch.`);
     }, (erm: string) => {
         if (repo?.state.mergeChanges.some(() => true)) {
-            NEURO.client?.registerActions([
+            NEURO.client?.registerActions(stripToActions([
                 gitActions.abort_merge,
-            ]);
+            ]));
         }
         NEURO.client?.sendContext(`Couldn't merge ${refToMerge}: ${erm}`);
         logOutput('ERROR', `Encountered an error when merging ${refToMerge}: ${erm}`);

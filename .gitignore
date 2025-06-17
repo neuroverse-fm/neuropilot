@@ -6,12 +6,27 @@ node_modules
 .vscode-test/
 *.vsix
 
-# Krita
-*.kra
-*.*~
-
-# Inkscape
-*.svg
+# Project files (Krita, Inkscape, etc.)
+/project-files
 
 # Python venv for Tony
 .venv
+
+# build output
+dist/
+# generated astro types
+.astro/
+
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+
+# environment variables
+.env
+.env.production
+
+# macOS-specific files
+.DS_Store

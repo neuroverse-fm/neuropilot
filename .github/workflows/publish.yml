@@ -34,12 +34,13 @@ jobs:
         npm install
         npm run compile
       
-    - name: Bump version, commit and tag
+    - name: Configure Git
       run: |
-        git config --global user.name "Github Actions"
+        git config --global user.name "GitHub Actions"
         git config --global user.email "actions@github.com"
-        npm version ${{ github.event.inputs.version }} -m "Bump version to %s"
-        git push --tags https://Pasu4:${{secrets.GITHUB_TOKEN}}:@github.com/Pasu4/neuropilot
     
     - name: Publish extension
-      run: npx @vscode/vsce publish -p ${{secrets.MARKETPLACE_TOKEN}} --allow-star-activation
+      run: npx @vscode/vsce publish ${{inputs.version}} -p ${{secrets.MARKETPLACE_TOKEN}} --allow-star-activation
+
+    - name: Push version change
+      run: git push --follow-tags https://Pasu4:${{secrets.GITHUB_TOKEN}}:@github.com/Pasu4/neuropilot

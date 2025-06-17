@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { spawn } from 'child_process';
 import { NEURO } from './constants';
 import { TerminalSession, logOutput, delayAsync, getFence } from './utils';
-import { ActionData, actionValidationAccept, actionValidationFailure, ActionValidationResult, ActionWithHandler, contextFailure } from './neuro_client_helper';
+import { ActionData, actionValidationAccept, actionValidationFailure, ActionValidationResult, ActionWithHandler, contextFailure, stripToActions } from './neuro_client_helper';
 import { CONFIG, PERMISSIONS, getPermissionLevel } from './config';
 
 function checkLiveTerminals(actionData: ActionData): ActionValidationResult {
@@ -55,11 +55,11 @@ export const terminalAccessHandlers = {
 
 export function registerTerminalActions() {
     if (getPermissionLevel(PERMISSIONS.terminalAccess)) {
-        NEURO.client?.registerActions([
+        NEURO.client?.registerActions(stripToActions([
             terminalAccessHandlers.execute_in_terminal,
             terminalAccessHandlers.kill_terminal_process,
             terminalAccessHandlers.get_currently_running_shells,
-        ]);
+        ]));
     }
 }
 
@@ -132,7 +132,7 @@ function createPseudoterminal(shellType: string, terminalName: string, vscContex
     };
 
     // 50/50 chance of icon selection no longer
-    const icon = vscode.Uri.joinPath(vscContext.extensionUri, 'console.png');
+    const icon = vscode.Uri.joinPath(vscContext.extensionUri, 'assets/console.png');
 
     // Create the terminal using VS Code's API.
     const terminal = vscode.window.createTerminal({

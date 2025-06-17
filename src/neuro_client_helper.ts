@@ -51,6 +51,29 @@ export interface ActionWithHandler extends Action {
 }
 
 /**
+ * Strips an action to the form expected by the API.
+ * @param action The action to strip to its basic form.
+ * @returns The action stripped to its basic form, without the handler and permissions.
+ */
+export function stripToAction(action: ActionWithHandler): Action {
+    return {
+        name: action.name,
+        description: action.description,
+        schema: action.schema,
+    };
+}
+
+/**
+ * Strips an array of actions to the form expected by the API.
+ * (Calls {@link stripToAction} for each action in the array.)
+ * @param actions The actions to strip to their basic form.
+ * @returns An array of actions stripped to their basic form, without the handler and permissions.
+ */
+export function stripToActions(actions: ActionWithHandler[]): Action[] {
+    return actions.map(stripToAction);
+}
+
+/**
  * Create a successful action result.
  * This should be used if all parameters have been parsed correctly.
  * @param message An optional message to send to Neuro.
