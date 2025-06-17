@@ -37,6 +37,10 @@ async function neuroSafeValidationHelper(filePath: string): Promise<ActionValida
 }
 
 async function filePathGitValidator(actionData: ActionData): Promise<ActionValidationResult> {
+    if (actionData.params.filePath === '') {
+        return actionValidationFailure('No file path specified.', true);
+    };
+
     const filePath: string | string[] = actionData.params?.filePath;
     if (typeof filePath === 'string') {
         const result = await neuroSafeValidationHelper(filePath);
