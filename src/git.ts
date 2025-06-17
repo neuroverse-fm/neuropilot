@@ -6,7 +6,7 @@ import { StatusStrings, RefTypeStrings } from './types/git_status';
 import { logOutput, simpleFileName, isPathNeuroSafe, normalizePath } from './utils';
 import { ActionData, ActionValidationResult, actionValidationAccept, actionValidationFailure, ActionWithHandler, contextFailure } from './neuro_client_helper';
 import { PERMISSIONS, getPermissionLevel } from './config';
-import assert from 'assert';
+import { assert } from './utils';
 
 /* All actions located in here requires neuropilot.permission.gitOperations to be enabled. */
 
