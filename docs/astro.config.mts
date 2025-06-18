@@ -51,6 +51,10 @@ export default defineConfig({
                             label: 'Pilot modes',
                             slug: 'guides/pilot',
                         },
+                        {
+                            label: 'Sandboxing',
+                            slug: 'guides/sandboxing'
+                        }
                     ],
                 },
                 {
@@ -73,6 +77,7 @@ export default defineConfig({
                         { label: 'Dependencies', slug: 'reference/dependencies' },
                     ],
                 },
+                "assets",
             ],
         }),
     ],
