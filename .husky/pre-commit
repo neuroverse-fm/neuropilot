@@ -1,2 +1,2 @@
-npm run lint src
+npx eslint
 cd docs && npm run check
