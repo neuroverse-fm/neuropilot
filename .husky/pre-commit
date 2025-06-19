@@ -1,0 +1,2 @@
+npm run lint src
+cd docs && npm run check
