@@ -1,0 +1,23 @@
+.*/**
+playground/**
+.gitignore
+eslint.config.mjs
+tsconfig.json
+src/
+*.vsix
+
+# Krita
+*.kra
+*.*~
+
+# Inkscape
+*.svg
+
+# Tony
+.venv
+tony/
+
+# Docs
+docs/**
+!docs/public/*.gif
+!docs/public/*.png

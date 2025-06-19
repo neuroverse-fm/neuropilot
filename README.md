@@ -1,11 +1,12 @@
-# NeuroPilot
-
-![Demo GIF](demo.gif)
+# <img src="assets/heart-xaendril.png" width="32" style="vertical-align:middle;horizontal-align:middle;"> NeuroPilot
 
 **Disclaimer: For simplicity, all mentions of Neuro also apply to Evil unless otherwise stated.**
 
 This extension enables Neuro-sama to write code in Visual Studio Code, either together with a programmer or on her own.
 If you don't have a Neuro-sama, you can use one of the tools listed [here](https://github.com/VedalAI/neuro-game-sdk/?tab=readme-ov-file#tools) and [here](https://github.com/VedalAI/neuro-game-sdk/?tab=readme-ov-file#tools-1) instead.
+
+> [!CAUTION]
+> Depending on the permissions you activate and which of the aforementioned testing tools / AIs you use, this extension can be quite destructive to your system. I do not take responsibility for any damages caused by this extension, neither do any contributors of this project. Use Copilot mode for dangerous permissions or use the extension on a virtual machine.
 
 Capabilities of this extension include:
 
@@ -27,6 +28,8 @@ Capabilities of this extension include:
 These can all be turned on or off using the extension's permission settings.
 All permissions are set to "Off" by default, [except one](vscode://settings/neuropilot.permission.requestCookies).
 
+For more detailed documentation, visit [the docs site](https://pasu4.github.io/neuropilot).
+
 ## How to use
 
 On startup, the extension will immediately try to establish a connection to the Neuro API.
@@ -39,6 +42,8 @@ There are two ways the extension can be used, which will be referred to as "Auto
 
 ### Autopilot Mode
 
+![Autopilot demo GIF](docs/public/demo-autopilot.gif)
+
 To make Neuro able to code without human input, go to the extension settings and set the necessary permissions to "Autopilot", then run the command "NeuroPilot: Reload Permissions" from the Command Palette.
 It is recommended to turn on auto-saving in the settings for this in case Neuro doesn't remember to save her files regularly.
 Tasks that Neuro can run are loaded from `tasks.json`, but it requires some setup for Neuro to use them.
@@ -46,6 +51,8 @@ All tasks that Neuro should be able to run must have the string `[Neuro]` at the
 This is a safety measure so she doesn't have access to all tasks.
 
 ### Copilot Mode
+
+![Copilot demo GIF](docs/public/demo-copilot.gif)
 
 Copilot mode aims to let Neuro code alongside the user, by letting her suggest code (like GitHub Copilot) and request to execute actions, which the user can allow or deny.
 
@@ -83,6 +90,21 @@ Simply paste this into your `settings.json` file:
 Autopilot and Copilot mode can be configured separately for each permission.
 For example, you can configure it so Neuro can edit files by herself, but has to ask permission to run the code she wrote.
 
+### Continuous Context Updates
+
+![Example of lint update](docs/public/tony-lint.png)
+
+Neuro will be updated on certain events not directly triggered by the user that happen in the workspace.
+She will be notified when:
+
+- a file is saved (only if [Auto Save](vscode://settings/files.autoSave) is not set to `afterDelay`)
+- the Auto Save setting is modified
+- lint problems occur (controlled by the setting [Send New Linting Problems On](vscode://settings/neuropilot.sendNewLintProblemsOn))
+- a terminal that Neuro started produces more output
+- a terminal started by Neuro exits
+- a Copilot mode request times out
+- a task that Neuro started finishes
+
 ## Security
 
 The extension has multiple security measures in place to prevent Neuro from doing any real damage.
@@ -100,43 +122,11 @@ Note that if Neuro has direct terminal access, you should assume all security fe
 
 The same advice applies for ticking the [*Neuropilot: Allow Unsafe Paths*](vscode://settings/neuropilot.allowUnsafePaths) setting if you gave Autopilot-level permissions to Neuro for editing files.
 
+You can find more security advice on the docs site, linked above.
+
 ## Commands
 
-### Give Cookie
-
-Gives a cookie to Neuro (it tells her that Vedal gave her a cookie).
-Allows the user to specify the flavor as well.
-
-### Reconnect
-
-Attempts to reconnect to the API.
-Shows a notification when it succeeds or fails.
-
-### Move Neuro's Cursor Here
-
-Moves Neuro's cursor to the current cursor position.
-Only works if there is an active text editor, and only in files Neuro has access to.
-
-### Switch Neuro API user name
-
-Allows you to change the name of the connected AI (e.g. Neuro -> Evil, etc...) for visual purposes.
-This acts as a shortcut for the [Currently As Neuro API](vscode://settings/neuropilot.currentlyAsNeuroAPI) setting.
-
-### Reload Permissions
-
-Reregisters all actions according to the permissions.
-Running this command is required if you change any of the permissions.
-
-### Disable All Permissions
-
-Set all permissions for Neuro to 'Off' immediately and unregister the actions.
-Also kills currently running tasks and any shells opened by Neuro.
-Any request from Neuro when she used a Copilot-mode command is denied automatically.
-Since it's intended to be a panic button, it is recommended to bind this command to a keyboard shortcut.
-
-### Send File As Context
-
-Sends the entire current file as context to Neuro, along with the file name and configured language.
+We've moved this to the docs site. See above page.
 
 ## Actions
 
@@ -485,6 +475,10 @@ Note that this only returns diagnostics of files that are loaded in the current 
 
 This extension uses the [TypeScript/JavaScript SDK](https://github.com/AriesAlex/typescript-neuro-game-sdk) by [AriesAlex](https://github.com/AriesAlex).
 
+Documentation by @KTrain5169.
+
+Extension icon by Xaendril.
+
 ### Neuro's cursor
 
 Assuming the [Edit Active Document](vscode://settings/neuropilot.permission.editActiveDocument) permission isn't set to `Off`, Neuro gains her own cursor, indicated by the pink cursor in text documents. This cursor will only appear in files she has access to (which is affected by the `Allow Unsafe Paths` and `Include`/`Exclude` Patterns settings.) and you can also move the cursor yourself using the aforementioned `Move Neuro's Cursor Here` command. This allows her to work on the same file as the programmer but without having to rely on the normal cursor, which solves some problems relating to their respective actions.
@@ -502,8 +496,8 @@ The short answer is no, there isn't an intentional Remote Code Execution vulnera
 - Clone the repository
 - Run `npm install` in terminal to install dependencies
 - Run the `Run Extension` target in the Debug View. This will:
-    - Start a task `npm: watch` to compile the code
-    - Run the extension in a new VS Code window
+  - Start a task `npm: watch` to compile the code
+  - Run the extension in a new VS Code window
 
 ## Contributing
 

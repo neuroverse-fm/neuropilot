@@ -8,7 +8,7 @@ import * as vscode from 'vscode';
 
 import { NEURO } from './constants';
 import { logOutput, formatActionID, getFence } from './utils';
-import { ActionData, ActionWithHandler, actionValidationAccept, actionValidationFailure } from './neuro_client_helper';
+import { ActionData, ActionWithHandler, actionValidationAccept, actionValidationFailure, stripToActions } from './neuro_client_helper';
 import { CONFIG, PERMISSIONS, getPermissionLevel } from './config';
 
 export const taskHandlers = {
@@ -27,9 +27,9 @@ export const taskHandlers = {
 
 export function registerTaskActions() {
     if(getPermissionLevel(PERMISSIONS.runTasks)) {
-        NEURO.client?.registerActions([
+        NEURO.client?.registerActions(stripToActions([
             taskHandlers.terminate_task,
-        ]);
+        ]));
         // Tasks are registered asynchronously in reloadTasks()
     }
 }

@@ -13,10 +13,11 @@ export default tseslint.config(
     {
         files: ['**/*.{js,mjs,cjs,ts}'],
         ignores: [
-            'out',
+            'out/**',
             'playground/**',
             '**/vscode*.d.ts',
             'webpack.web.config.js',
+            'docs',
         ],
     },
     js.configs.recommended,
