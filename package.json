@@ -580,7 +580,8 @@
 		"compile": "tsc -p ./",
 		"lint": "eslint --fix",
 		"watch": "tsc -watch -p ./",
-		"test": "vscode-test"
+		"test": "vscode-test",
+		"prepare": "husky"
 	},
 	"extensionDependencies": [
 		"vscode.git"
@@ -595,6 +596,7 @@
 		"@types/ws": "^8.18.0",
 		"eslint": "^9.13.0",
 		"eslint-plugin-unicorn": "^59.0.1",
+		"husky": "^9.1.7",
 		"typescript": "^5.8.2",
 		"typescript-eslint": "^8.26.0"
 	},
