@@ -16,9 +16,9 @@
 				// "--disable-extensions"
 			],
 			"outFiles": [
-				"${workspaceFolder}/out/**/*.js"
+				"${workspaceFolder}/dist/**/*.js"
 			],
-			"preLaunchTask": "npm: watch"
+			"preLaunchTask": "watch"
 		},
 		{
       		"command": "./docs/node_modules/.bin/astro dev",
