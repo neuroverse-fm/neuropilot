@@ -748,7 +748,7 @@ function getAbsoluteFilePath(filePath = '.'): string {
     // Get the workspace folder; if not available, fall back to repo root.
     const workspaceFolder = getWorkspacePath() || repo!.rootUri.fsPath;
     // Compute absolute path by joining the workspace folder with the normalized path.
-    return normalizePath(workspaceFolder + filePath);
+    return normalizePath(workspaceFolder + '/' + filePath);
 }
 
 export function handleAddFileToGit(actionData: ActionData): string | undefined {
