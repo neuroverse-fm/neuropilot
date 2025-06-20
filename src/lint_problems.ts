@@ -1,20 +1,43 @@
 import * as vscode from 'vscode';
-import * as fs from 'fs';
-import * as path from 'path';
 import { NEURO } from './constants';
-import { normalizePath, getWorkspacePath, logOutput, isPathNeuroSafe } from './utils';
+import { normalizePath, getWorkspacePath, logOutput, isPathNeuroSafe, assert } from './utils';
 import { PERMISSIONS, getPermissionLevel, CONFIG } from './config';
 import { ActionData, actionValidationAccept, actionValidationFailure, ActionValidationResult, ActionWithHandler, contextFailure, stripToActions } from './neuro_client_helper';
-import assert from 'assert';
 
-function validatePath(path: string, directoryType: string): ActionValidationResult {
-    if (!isPathNeuroSafe(getWorkspacePath() + '/' + normalizePath(path).replace(/^\/|\/$/g, ''))) {
+/**
+ * The path validator.
+ * @param path The relative path to the file/folder.
+ * @param directoryType What type of directory it is. 
+ * @returns An {@link ActionValidationResult}. {@link actionValidationFailure} if any validation steps fail, {@link actionValidationAccept} otherwise.
+ */
+async function validatePath(path: string, directoryType: string): Promise<ActionValidationResult> {
+    if (path === '') {
+        return actionValidationFailure('No file path specified.', true);
+    };
+    const absolutePath = getWorkspacePath() + '/' + normalizePath(path).replace(/^\/|\/$/g, '');
+    if (!isPathNeuroSafe(absolutePath)) {
         return actionValidationFailure(`You are not allowed to access this ${directoryType}.`);
     }
+
+    const existence = await getPathExistence(absolutePath);
+    if (existence === false) {
+        return actionValidationFailure(`${directoryType} "${path}" does not exist.`);
+    }
+
     return actionValidationAccept();
 };
 
-function validateDirectoryAccess(actionData: ActionData): ActionValidationResult {
+async function getPathExistence(absolutePath: string): Promise<boolean> {
+    const pathAsUri = vscode.Uri.file(absolutePath);
+    try {
+        await vscode.workspace.fs.stat(pathAsUri);
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+async function validateDirectoryAccess(actionData: ActionData): Promise<ActionValidationResult> {
     const workspacePath = getWorkspacePath();
     if (!workspacePath) {
         return actionValidationFailure('Unable to get current workspace.');
@@ -22,21 +45,13 @@ function validateDirectoryAccess(actionData: ActionData): ActionValidationResult
 
     if (actionData.params?.file) {
         const relativePath = actionData.params.file;
-        const normalizedPath = normalizePath(path.join(workspacePath, relativePath));
-        const check = validatePath(normalizedPath, 'file');
+        const check = await validatePath(relativePath, 'file');
         if (!check.success) return check;
-        if (!fs.existsSync(normalizedPath)) {
-            return actionValidationFailure(`File "${relativePath}" does not exist.`);
-        }
     }
     if (actionData.params?.folder) {
         const relativePath = actionData.params.folder;
-        const normalizedPath = normalizePath(path.join(workspacePath, relativePath));
-        const check = validatePath(normalizedPath, 'folder');
+        const check = await validatePath(relativePath, 'folder');
         if (!check.success) return check;
-        if (!fs.existsSync(normalizedPath)) {
-            return actionValidationFailure(`Folder "${relativePath}" does not exist.`);
-        }
     }
 
     return actionValidationAccept();
@@ -155,8 +170,7 @@ export function handleGetFileLintProblems(actionData: ActionData): string | unde
     assert(workspacePath);
 
     try {
-        const absolutePath = path.join(workspacePath, relativePath);
-        const normalizedPath = normalizePath(absolutePath);
+        const normalizedPath = normalizePath(workspacePath + '/' + relativePath);
 
         const rawDiagnostics = vscode.languages.getDiagnostics(vscode.Uri.file(normalizedPath));
         if (rawDiagnostics.length === 0) {
@@ -178,8 +192,7 @@ export function handleGetFolderLintProblems(actionData: ActionData): string | un
     assert(workspacePath);
 
     try {
-        const absoluteFolderPath = path.join(workspacePath, relativeFolder);
-        const normalizedFolderPath = normalizePath(absoluteFolderPath);
+        const normalizedFolderPath = normalizePath(workspacePath + '/' + relativeFolder);
 
         const diagnostics = vscode.languages.getDiagnostics();
         const folderDiagnostics = diagnostics.filter(([uri, diags]) => {
@@ -191,7 +204,7 @@ export function handleGetFolderLintProblems(actionData: ActionData): string | un
         }
 
         const formattedDiagnostics = folderDiagnostics.map(([uri, diags]) => {
-            const relative = path.relative(workspacePath, uri.fsPath);
+            const relative = vscode.workspace.asRelativePath(uri.fsPath);
             return getFormattedDiagnosticsForFile(relative, diags);
         }).join('\n');
 
@@ -216,7 +229,7 @@ export function handleGetWorkspaceLintProblems(_actionData: ActionData): string 
         }
 
         const formattedDiagnostics = safeDiagnostics.map(([uri, diags]) => {
-            const relative = path.relative(workspacePath, uri.fsPath);
+            const relative = vscode.workspace.asRelativePath(uri.fsPath);
             return getFormattedDiagnosticsForFile(relative, diags);
         }).join('\n\n');
 
@@ -291,7 +304,7 @@ export function sendDiagnosticsDiff(e: vscode.DiagnosticChangeEvent): void {
 
     const output = Array.from(addedDiagnostics.entries())
         .map(([filePath, diags]) => {
-            const relative = path.relative(workspacePath, filePath);
+            const relative = vscode.workspace.asRelativePath(workspacePath + filePath);
             return getFormattedDiagnosticsForFile(relative, diags);
         })
         .join('\n\n');
