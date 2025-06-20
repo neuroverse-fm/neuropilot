@@ -5,7 +5,7 @@ import { logOutput, createClient, onClientConnected, isPathNeuroSafe, setVirtual
 import { completionsProvider, registerCompletionResultHandler } from '../completions';
 import { giveCookie, registerRequestCookieAction, registerRequestCookieHandler, sendCurrentFile } from '../context';
 import { registerChatParticipant, registerChatResponseHandler } from '../chat';
-import { registerUnsupervisedActions, registerUnsupervisedHandlers } from '../unsupervised';
+import { registerUnsupervisedWebActions, registerUnsupervisedHandlers } from './unsupervised';
 import { CONFIG } from '../config';
 import { explainWithNeuro, fixWithNeuro, NeuroCodeActionsProvider, sendDiagnosticsDiff } from '../lint_problems';
 import { editorChangeHandler, fileSaveListener, moveNeuroCursorHere, toggleSaveAction, workspaceEditHandler } from '../editing';
@@ -48,7 +48,7 @@ export function activate(context: vscode.ExtensionContext) {
     onClientConnected(registerChatResponseHandler);
     onClientConnected(registerRequestCookieAction);
     onClientConnected(registerRequestCookieHandler);
-    onClientConnected(registerUnsupervisedActions);
+    onClientConnected(registerUnsupervisedWebActions);
     onClientConnected(registerUnsupervisedHandlers);
     onClientConnected(registerPostActionHandler);
 
@@ -123,7 +123,7 @@ function reconnect() {
 
 function reloadPermissions() {
     registerRequestCookieAction();
-    registerUnsupervisedActions();
+    registerUnsupervisedWebActions();
 }
 
 function registerPreActionHandler() {

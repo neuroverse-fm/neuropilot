@@ -7,14 +7,14 @@ const watch = process.argv.includes('--watch');
 
 async function main() {
     const ctx = await esbuild.context({
-        entryPoints: ['src/web/extension.ts', 'src/web/test/suite/extensionTests.ts'],
+        entryPoints: ['src/web/extension.ts'],
         bundle: true,
         format: 'cjs',
         minify: production,
         sourcemap: !production,
         sourcesContent: false,
         platform: 'browser',
-        outdir: 'dist/web',
+        outdir: 'out/web',
         external: ['vscode'],
         logLevel: 'warning',
         // Node.js global to browser globalThis
