@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 
-import { NEURO } from './constants';
+import { EXTENSIONS, NEURO } from './constants';
 import { logOutput, createClient, onClientConnected, isPathNeuroSafe, setVirtualCursor } from './utils';
 import { completionsProvider, registerCompletionResultHandler } from './completions';
 import { giveCookie, registerRequestCookieAction, registerRequestCookieHandler, sendCurrentFile } from './context';
@@ -12,6 +12,8 @@ import { CONFIG } from './config';
 import { explainWithNeuro, fixWithNeuro, NeuroCodeActionsProvider, sendDiagnosticsDiff } from './lint_problems';
 import { editorChangeHandler, fileSaveListener, moveNeuroCursorHere, toggleSaveAction, workspaceEditHandler } from './editing';
 import { emergencyDenyRequests, acceptRceRequest, denyRceRequest, revealRceNotification } from './rce';
+import { GitExtension } from './types/git';
+import { getGitExtension } from './git';
 
 export function activate(context: vscode.ExtensionContext) {
     NEURO.url = CONFIG.websocketUrl;
@@ -35,6 +37,7 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand('neuropilot.fixWithNeuro', fixWithNeuro);
     vscode.commands.registerCommand('neuropilot.explainWithNeuro', explainWithNeuro);
     vscode.commands.registerCommand('neuropilot.switchNeuroAPIUser', switchCurrentNeuroAPIUser);
+    vscode.commands.registerCommand('neuropilot.refreshExtensionDependencyState', obtainExtensionState);
     vscode.commands.registerCommand('neuropilot.showDocsHomepage', () => {
         const panel = vscode.window.createWebviewPanel(
             'docsWebView',
@@ -88,6 +91,9 @@ export function activate(context: vscode.ExtensionContext) {
     onClientConnected(registerUnsupervisedActions);
     onClientConnected(registerUnsupervisedHandlers);
     onClientConnected(registerPostActionHandler);
+
+    obtainExtensionState();
+    vscode.extensions.onDidChange(obtainExtensionState);
 
     vscode.languages.onDidChangeDiagnostics(sendDiagnosticsDiff);
 
@@ -288,4 +294,27 @@ function openDocsPage(subpage = '/'): string {
     '</html>';
 
     return htmlpage;
+}
+
+function obtainExtensionState(): void {
+    /** Copilot Chat */
+    const copilotChat = vscode.extensions.getExtension('github.copilot-chat')?.isActive;
+    if (copilotChat === true) {
+        EXTENSIONS.copilotChat = true;
+    } else {
+        EXTENSIONS.copilotChat = false;
+    }
+
+    /** Git */
+    const git = vscode.extensions.getExtension<GitExtension>('vscode.git');
+    if (git?.isActive !== undefined) {
+        if (git.isActive === true) {
+            EXTENSIONS.git = git.exports;
+        } else {
+            EXTENSIONS.git = null;
+        }
+    } else {
+        EXTENSIONS.git = null;
+    }
+    getGitExtension();
 }

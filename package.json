@@ -140,6 +140,11 @@
 				"category": "NeuroPilot"
 			},
 			{
+				"command": "neuropilot.refreshExtensionDependencyState",
+				"title": "Get dependency extension states",
+				"category": "NeuroPilot"
+			},
+			{
 				"command": "neuropilot.showDocsHomepage",
 				"title": "Open the docs site",
 				"category": "NeuroPilot"
@@ -583,13 +588,10 @@
 		"build:web": "webpack --config webpack.web.config.js --mode production",
 		"lint": "eslint --fix",
 		"watch:web": "webpack --config webpack.web.config.js --mode development --watch",
-		"watch:desktop": "tsc -watch -p ./",
+		"watch:desktop": "tsc -w -p ./",
 		"watch": "npm-run-all --parallel watch:desktop watch:web",
 		"test": "vscode-test"
 	},
-	"extensionDependencies": [
-		"vscode.git"
-	],
 	"devDependencies": {
 		"@eslint/js": "^9.13.0",
 		"@stylistic/eslint-plugin": "^2.9.0",

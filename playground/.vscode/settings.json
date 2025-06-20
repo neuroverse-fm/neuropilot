@@ -37,7 +37,7 @@
     ],
     "neuropilot.sendNewLintingProblemsOn": "off",
     "neuropilot.requestExpiryTimeout": 10000,
-    "neuropilot.hideCopilotRequests": true,
+    "neuropilot.hideCopilotRequests": false,
     "neuropilot.currentlyAsNeuroAPI": "Neuro",
     "neuropilot.cursorFollowsNeuro": false,
     // Debug engine override for GitHub Copilot
