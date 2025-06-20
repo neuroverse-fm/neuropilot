@@ -231,7 +231,7 @@ export function handleGetWorkspaceLintProblems(_actionData: ActionData): string 
         }
 
         const formattedDiagnostics = safeDiagnostics.map(([uri, diags]) => {
-            const relative = vscode.workspace.asRelativePath(workspacePath + uri.fsPath);
+            const relative = vscode.workspace.asRelativePath(uri.fsPath);
             return getFormattedDiagnosticsForFile(relative, diags);
         }).join('\n\n');
 
