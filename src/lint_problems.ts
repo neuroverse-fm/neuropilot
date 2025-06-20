@@ -45,14 +45,12 @@ async function validateDirectoryAccess(actionData: ActionData): Promise<ActionVa
 
     if (actionData.params?.file) {
         const relativePath = actionData.params.file;
-        const normalizedPath = normalizePath(workspacePath + '/' + relativePath);
-        const check = await validatePath(normalizedPath, 'file');
+        const check = await validatePath(relativePath, 'file');
         if (!check.success) return check;
     }
     if (actionData.params?.folder) {
         const relativePath = actionData.params.folder;
-        const normalizedPath = normalizePath(workspacePath + '/' + relativePath);
-        const check = await validatePath(normalizedPath, 'folder');
+        const check = await validatePath(relativePath, 'folder');
         if (!check.success) return check;
     }
 
