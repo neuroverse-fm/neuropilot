@@ -5,6 +5,7 @@
  */
 // @ts-check
 import js from '@eslint/js';
+import { globalIgnores } from 'eslint/config';
 import tseslint from 'typescript-eslint';
 import stylistic from '@stylistic/eslint-plugin';
 import eslintPluginUnicorn from 'eslint-plugin-unicorn';
@@ -12,13 +13,16 @@ import eslintPluginUnicorn from 'eslint-plugin-unicorn';
 export default tseslint.config(
     {
         files: ['**/*.{js,mjs,cjs,ts}'],
-        ignores: [
-            'out/**',
-            'playground/**',
-            '**/vscode*.d.ts',
-            'docs',
-        ],
     },
+    globalIgnores([
+        'out/**',
+        'playground/**',
+        '**/vscode*.d.ts',
+        'docs',
+        '**/.venv/**',
+        '**/venv/**',
+        '**/.vscode-test/**',
+    ]),
     js.configs.recommended,
     ...tseslint.configs.recommended,
     ...tseslint.configs.stylistic,
