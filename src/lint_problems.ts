@@ -206,7 +206,7 @@ export function handleGetFolderLintProblems(actionData: ActionData): string | un
         }
 
         const formattedDiagnostics = folderDiagnostics.map(([uri, diags]) => {
-            const relative = vscode.workspace.asRelativePath(workspacePath + uri.fsPath);
+            const relative = vscode.workspace.asRelativePath(uri.fsPath);
             return getFormattedDiagnosticsForFile(relative, diags);
         }).join('\n');
 
