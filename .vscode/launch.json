@@ -28,6 +28,7 @@
 			"debugWebWorkerHost": true,
 			"args": [
 				"--extensionDevelopmentPath=${workspaceFolder}",
+				"${workspaceFolder}/playground",
 				"--extensionDevelopmentKind=web"
 			],
 			"outFiles": [

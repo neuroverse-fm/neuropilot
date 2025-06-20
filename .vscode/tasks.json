@@ -24,9 +24,6 @@
       		"group": {
         		"kind": "build",
         		"isDefault": true
-      		},
-      		"runOptions": {
-        		"runOn": "folderOpen"
       		}
     	},
     	{
@@ -38,7 +35,7 @@
       		"label": "npm: watch:web:esbuild",
       		"presentation": {
         		"group": "watch",
-        		"reveal": "never"
+        		"reveal": "always"
       		}
     	},
     	{
@@ -50,7 +47,7 @@
       		"label": "npm: watch:web:tsc",
       		"presentation": {
         		"group": "watch",
-        		"reveal": "never"
+        		"reveal": "always"
       		}
     	},
 		{
