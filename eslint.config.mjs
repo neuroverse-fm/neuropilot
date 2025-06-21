@@ -9,6 +9,7 @@ import { globalIgnores } from 'eslint/config';
 import tseslint from 'typescript-eslint';
 import stylistic from '@stylistic/eslint-plugin';
 import eslintPluginUnicorn from 'eslint-plugin-unicorn';
+import globals from 'globals';
 
 export default tseslint.config(
     {
@@ -23,6 +24,7 @@ export default tseslint.config(
     },
     globalIgnores([
         'out/**',
+        'dist/**',
         'playground/**',
         '**/vscode*.d.ts',
         'docs',
@@ -69,6 +71,15 @@ export default tseslint.config(
                     'name': 'erm',
                 },
             ],
+        },
+    },
+    {
+        files: ['esbuild.js'],
+        languageOptions: {
+            globals: {
+                ...globals.node,
+                ...globals.browser,
+            },
         },
     },
 );
