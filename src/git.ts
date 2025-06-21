@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { EXTENSIONS, NEURO } from './constants';
-import { Change, ForcePushMode, CommitOptions, Commit, Repository, API } from './types/git';
+import { Change, ForcePushMode, CommitOptions, Commit, Repository, API } from './types/git.d';
 import { StatusStrings, RefTypeStrings } from './types/git_status';
 import { logOutput, simpleFileName, isPathNeuroSafe, normalizePath, getWorkspacePath, assert } from './utils';
 import { ActionData, ActionValidationResult, actionValidationAccept, actionValidationFailure, ActionWithHandler, contextFailure, stripToActions } from './neuro_client_helper';
