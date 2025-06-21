@@ -9,7 +9,7 @@ export async function web(prodFlag, watchFlag) {
         minify: prodFlag,
         sourcemap: !prodFlag,
         sourcesContent: false,
-        platform: 'node',
+        platform: 'browser',
         outfile: 'out/web/extension.js',
         external: ['vscode'],
         logLevel: 'warning',
