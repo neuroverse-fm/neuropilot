@@ -584,14 +584,23 @@
 	"scripts": {
 		"vscode:prepublish": "npm run package",
 		"compile": "npm run check-types && node esbuild.js",
+		"package": "npm run check-types && node esbuild.js --production",
 		"lint": "eslint --fix",
-		"watch": "npm-run-all -p watch:*",
 		"test": "vscode-test",
 		"prepare": "husky",
 		"check-types": "tsc --noEmit",
-		"watch:esbuild": "node esbuild.js --watch",
-		"watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
-		"package": "npm run check-types && node esbuild.js --production"
+		"build:web": "npm-run-all -p build:web:*",
+		"build:desktop": "npm-run-all -p build:desktop:*",
+		"build:web:esbuild": "node esbuild.js --mode web",
+		"build:web:tsc": "tsc --noEmit --project tsconfig.web.json",
+		"buils:desktop:esbuild": "node esbuild.js --mode desktop",
+		"build:desktop:tsc": "tsc --noEmit --project tsconfig.json",
+		"watch:web": "npm-run-all -p watch:web:*",
+		"watch:desktop": "npm-run-all -p watch:desktop:*",
+		"watch:web:esbuild": "node esbuild.js --watch --mode web",
+		"watch:web:tsc": "tsc --noEmit --watch --project tsconfig.web.json",
+		"watch:desktop:esbuild": "node esbuild.js --watch --mode desktop",
+		"watch:desktop:tsc": "tsc --noEmit --watch --project tsconfig.json"
 	},
 	"devDependencies": {
 		"@eslint/js": "^9.13.0",
