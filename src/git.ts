@@ -2,10 +2,9 @@ import * as vscode from 'vscode';
 import { EXTENSIONS, NEURO } from './constants';
 import { Change, ForcePushMode, CommitOptions, Commit, Repository, API } from './types/git';
 import { StatusStrings, RefTypeStrings } from './types/git_status';
-import { logOutput, simpleFileName, isPathNeuroSafe, normalizePath } from './utils';
+import { logOutput, simpleFileName, isPathNeuroSafe, normalizePath, getWorkspacePath, assert } from './utils';
 import { ActionData, ActionValidationResult, actionValidationAccept, actionValidationFailure, ActionWithHandler, contextFailure, stripToActions } from './neuro_client_helper';
 import { PERMISSIONS, getPermissionLevel } from './config';
-import { assert } from './utils';
 
 /* All actions located in here requires neuropilot.permission.gitOperations to be enabled. */
 
@@ -34,18 +33,35 @@ function gitValidator(_actionData: ActionData): ActionValidationResult {
     return actionValidationAccept();
 }
 
-function neuroSafeGitValidator(actionData: ActionData): ActionValidationResult {
+async function neuroSafeValidationHelper(filePath: string): Promise<ActionValidationResult> {
+    const absolutePath = getAbsoluteFilePath(filePath);
+    if (!isPathNeuroSafe(absolutePath)) {
+        return actionValidationFailure('You are not allowed to access this file path.');
+    }
+
+    const fileUri = vscode.Uri.file(absolutePath);
+    try {
+        await vscode.workspace.fs.stat(fileUri);
+        return actionValidationAccept();
+    } catch {
+        return actionValidationFailure(`File ${filePath} does not exist.`);
+    }
+}
+
+async function filePathGitValidator(actionData: ActionData): Promise<ActionValidationResult> {
+    if (actionData.params.filePath === '') {
+        return actionValidationFailure('No file path specified.', true);
+    };
+
     const filePath: string | string[] = actionData.params?.filePath;
     if (typeof filePath === 'string') {
-        if (!isPathNeuroSafe(getAbsoluteFilePath(filePath))) {
-            return actionValidationFailure('You are not allowed to access this file path.');
-        }
+        const result = await neuroSafeValidationHelper(filePath);
+        if (!result.success) return result;
     }
     else if (Array.isArray(filePath)) {
         for (const file of filePath) {
-            if (!isPathNeuroSafe(getAbsoluteFilePath(file))) {
-                return actionValidationFailure('You are not allowed to access this file path.');
-            }
+            const result = await neuroSafeValidationHelper(file);
+            if (!result.success) return result;
         }
     }
 
@@ -127,7 +143,7 @@ export const gitActions = {
         permissions: [PERMISSIONS.gitOperations],
         handler: handleAddFileToGit,
         promptGenerator: (actionData: ActionData) => `add the file "${actionData.params.filePath}" to the staging area.`,
-        validator: [gitValidator, neuroSafeGitValidator],
+        validator: [gitValidator, filePathGitValidator],
     },
     make_git_commit: {
         name: 'make_git_commit',
@@ -168,7 +184,7 @@ export const gitActions = {
         description: 'Get the current status of the Git repository',
         permissions: [PERMISSIONS.gitOperations],
         handler: handleGitStatus,
-        promptGenerator: 'get the Git status.',
+        promptGenerator: 'get the repository\'s Git status.',
         validator: [gitValidator],
     },
     remove_file_from_git: {
@@ -189,7 +205,7 @@ export const gitActions = {
         permissions: [PERMISSIONS.gitOperations],
         handler: handleRemoveFileFromGit,
         promptGenerator: (actionData: ActionData) => `remove the file "${actionData.params.filePath}" from the staging area.`,
-        validator: [gitValidator, neuroSafeGitValidator],
+        validator: [gitValidator, filePathGitValidator],
     },
     delete_git_branch: {
         name: 'delete_git_branch',
@@ -252,7 +268,7 @@ export const gitActions = {
         permissions: [PERMISSIONS.gitOperations],
         handler: handleDiffFiles,
         promptGenerator: (actionData: ActionData) => `obtain ${actionData.params?.filePath ? `"${actionData.params.filePath}"'s` : 'a'} Git diff${actionData.params?.ref1 && actionData.params?.ref2 ? ` between ${actionData.params.ref1} and ${actionData.params.ref2}` : actionData.params?.ref1 ? ` at ref ${actionData.params.ref1}` : ''}${actionData.params?.diffType ? ` (of type "${actionData.params.diffType}")` : ''}.`,
-        validator: [gitValidator, neuroSafeGitValidator, gitDiffValidator],
+        validator: [gitValidator, filePathGitValidator, gitDiffValidator],
     },
     git_log: {
         name: 'git_log',
@@ -284,7 +300,7 @@ export const gitActions = {
         permissions: [PERMISSIONS.gitOperations],
         handler: handleGitBlame,
         promptGenerator: (actionData: ActionData) => `get the Git blame for the file "${actionData.params.filePath}".`,
-        validator: [gitValidator, neuroSafeGitValidator],
+        validator: [gitValidator, filePathGitValidator],
     },
 
     // Requires gitTags
@@ -742,15 +758,11 @@ export function handleGitStatus(__actionData: ActionData): string | undefined {
 }
 
 // Helper to convert a provided file path (or wildcard) to an absolute path using the workspace folder (or repo root if not available)
-function getAbsoluteFilePath(filePath: string | undefined): string {
-    // Normalize the file path if provided; otherwise, use wildcard.
-    const normalizedPath: string = filePath ? normalizePath(filePath) : '*';
+function getAbsoluteFilePath(filePath = '.'): string {
+    // Get the workspace folder; if not available, fall back to repo root.
+    const workspaceFolder = getWorkspacePath() || repo!.rootUri.fsPath;
     // Compute absolute path by joining the workspace folder with the normalized path.
-    const workspaceFolderUri = vscode.workspace.workspaceFolders![0].uri || repo?.rootUri;
-    const fileUri = normalizedPath[0] === '/'  // a simple check for absolute content
-        ? vscode.Uri.file(normalizedPath)
-        : vscode.Uri.joinPath(workspaceFolderUri, normalizedPath);
-    return fileUri.fsPath;
+    return normalizePath(workspaceFolder + '/' + filePath);
 }
 
 export function handleAddFileToGit(actionData: ActionData): string | undefined {

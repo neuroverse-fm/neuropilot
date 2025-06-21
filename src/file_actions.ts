@@ -5,36 +5,66 @@ import { combineGlobLines, filterFileContents, getFence, getVirtualCursor, getWo
 import { ActionData, contextNoAccess, ActionWithHandler, actionValidationFailure, actionValidationAccept, ActionValidationResult, stripToActions } from './neuro_client_helper';
 import { CONFIG, PERMISSIONS, getPermissionLevel } from './config';
 
-function validatePath(path: string, directoryType: string): ActionValidationResult {
-    if (!isPathNeuroSafe(getWorkspacePath() + '/' + normalizePath(path).replace(/^\/|\/$/g, ''))) {
+/**
+ * The path validator.
+ * @param path The relative path to the file/folder.
+ * @param checkExist Whether to check if the directory exists or doesn't exist. `true` returns a failure if it does exist, `false` returns a failure if it doesn't.
+ * @param directoryType What type of directory it is. 
+ * @returns A validation message. {@link actionValidationFailure} if any validation steps fail, {@link actionValidationAccept} otherwise.
+ */
+async function validatePath(path: string, checkExist: boolean, directoryType: string): Promise<ActionValidationResult> {
+    if (path === '') {
+        return actionValidationFailure('No file path specified.', true);
+    };
+    const absolutePath = getWorkspacePath() + '/' + normalizePath(path).replace(/^\/|\/$/g, '');
+    if (!isPathNeuroSafe(absolutePath)) {
         return actionValidationFailure(`You are not allowed to access this ${directoryType}.`);
     }
+
+    const existence = await getPathExistence(absolutePath);
+    if (checkExist === true && existence === true) {
+        return actionValidationFailure(`${directoryType} "${path}" already exists.`);
+    } else if (checkExist === false && existence === false) {
+        return actionValidationFailure(`${directoryType} "${path}" doesn't exist.`);
+    }
+
     return actionValidationAccept();
 };
 
-function neuroSafeValidation(actionData: ActionData): ActionValidationResult {
+async function getPathExistence(absolutePath: string): Promise<boolean> {
+    const pathAsUri = vscode.Uri.file(absolutePath);
+    try {
+        await vscode.workspace.fs.stat(pathAsUri);
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+async function neuroSafeValidation(actionData: ActionData): Promise<ActionValidationResult> {
     let result: ActionValidationResult = actionValidationAccept();
+    const checkExists = actionData.name === 'open_file' ? false : true;
     if (actionData.params?.filePath) {
-        result = validatePath(actionData.params.filePath, 'file');
+        result = await validatePath(actionData.params.filePath, checkExists, 'file');
     }
     if (!result.success) return result;
     if (actionData.params?.folderPath) {
-        result = validatePath(actionData.params.folderPath, 'folder');
+        result = await validatePath(actionData.params.folderPath, checkExists, 'folder');
     }
     return result;
 }
 
-function neuroSafeDeleteValidation(actionData: ActionData): ActionValidationResult {
-    const check = validatePath(actionData.params.path, actionData.params.recursive ? 'folder' : 'file');
-    if (!check.success) return check;
+async function neuroSafeDeleteValidation(actionData: ActionData): Promise<ActionValidationResult> {
+    const check = validatePath(actionData.params.path, false, actionData.params.recursive ? 'folder' : 'file');
+    if (!(await check).success) return check;
     return actionValidationAccept();
 }
 
-function neuroSafeRenameValidation(actionData: ActionData): ActionValidationResult {
-    let check = validatePath(actionData.params.oldPath, 'directory');
-    if (!check.success) return check;
-    check = validatePath(actionData.params.newPath, 'directory');
-    if (!check.success) return check;
+async function neuroSafeRenameValidation(actionData: ActionData): Promise<ActionValidationResult> {
+    let check = validatePath(actionData.params.oldPath, false, 'directory');
+    if (!(await check).success) return check;
+    check = validatePath(actionData.params.newPath, true, 'directory');
+    if (!(await check).success) return check;
 
     return actionValidationAccept();
 }

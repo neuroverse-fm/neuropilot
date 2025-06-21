@@ -45,7 +45,7 @@ export function registerUnsupervisedActions() {
  * The handlers will only handle actions that the user has given permission to use.
  */
 export function registerUnsupervisedHandlers() {
-    NEURO.client?.onAction((actionData: ActionData) => {
+    NEURO.client?.onAction(async (actionData: ActionData) => {
         if (actionKeys.includes(actionData.name) || NEURO.tasks.find(task => task.id === actionData.name)) {
             NEURO.actionHandled = true;
 
@@ -84,7 +84,7 @@ export function registerUnsupervisedHandlers() {
             // Validate custom
             if (action.validator) {
                 for (const validate of action.validator) {
-                    const actionResult = validate(actionData);
+                    const actionResult = await validate(actionData);
                     if (!actionResult.success) {
                         NEURO.client?.sendActionResult(actionData.id, !(actionResult.retry ?? false), actionResult.message);
                         return;
