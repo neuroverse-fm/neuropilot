@@ -1,3 +1,4 @@
+/* eslint-disable no-undef */
 import { web } from './esbuild-configs/web.esbuild.js';
 import { desktop } from './esbuild-configs/desktop.esbuild.js';
 
