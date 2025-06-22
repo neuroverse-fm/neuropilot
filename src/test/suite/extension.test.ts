@@ -12,4 +12,10 @@ suite('Extension Tests', () => {
         await extension.activate();
         assert.ok(extension.isActive, 'Extension pasu4.neuropilot should be active');
     });
+
+    test('Workspace folder is correct', function() {
+        const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+        assert.ok(workspaceFolder, 'Workspace folder should be defined');
+        assert.strictEqual(workspaceFolder.name, 'test-playground', 'Workspace folder name should be test-playground');
+    });
 });
