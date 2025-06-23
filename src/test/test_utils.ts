@@ -37,3 +37,39 @@ export async function createTestDirectory(name: string): Promise<vscode.Uri> {
     await vscode.workspace.fs.createDirectory(uri);
     return uri;
 }
+
+/**
+ * Wait for the given given function to return true, or reject after a timeout.
+ * @param check The function to check.
+ * @param timeoutMs The maximum time to wait for the function to return true.
+ * @param interval The interval to check the function.
+ * @returns 
+ */
+export function checkWithTimeout(check: () => boolean, timeoutMs = 1000, interval = 100): Promise<void> {
+    return new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => {
+            clearTimeout(timeout);
+            clearInterval(checkInterval);
+            reject(new Error(`Function did not complete within ${timeoutMs} ms`));
+        }, timeoutMs);
+
+        const checkInterval = setInterval(() => {
+            if (check()) {
+                clearTimeout(timeout);
+                clearInterval(checkInterval);
+                resolve();
+            }
+        }, interval);
+    });
+}
+
+export function checkNoErrorWithTimeout(check: () => void, timeoutMs = 1000, interval = 100): Promise<void> {
+    return checkWithTimeout(() => {
+        try {
+            check();
+            return true;
+        } catch {
+            return false;
+        }
+    }, timeoutMs, interval);
+}
