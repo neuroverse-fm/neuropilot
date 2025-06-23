@@ -544,7 +544,7 @@
 					"neuropilot.sendSaveNotifications": {
 						"type": "boolean",
 						"default": true,
-						"markdownDescription": "Automatically send save notifications to Neuro, as long as the auto-save setting is set to a value other than `off`."
+						"markdownDescription": "Automatically send save notifications to Neuro."
 					},
 					"neuropilot.requestExpiryTimeout": {
 						"type": "number",
