@@ -8,24 +8,24 @@ import { CONFIG, PERMISSIONS, getPermissionLevel } from './config';
 /**
  * The path validator.
  * @param path The relative path to the file/folder.
- * @param shouldExist Whether the directory should exist for validation to succeed. `true` returns a failure if it doesn't exist, `false` returns a failure if it does.
- * @param directoryType What type of directory it is. 
+ * @param shouldExist Whether the file/folder should exist for validation to succeed. `true` returns a failure if it doesn't exist, `false` returns a failure if it does.
+ * @param pathType What type of path it is.
  * @returns A validation message. {@link actionValidationFailure} if any validation steps fail, {@link actionValidationAccept} otherwise.
  */
-async function validatePath(path: string, shouldExist: boolean, directoryType: string): Promise<ActionValidationResult> {
+async function validatePath(path: string, shouldExist: boolean, pathType: string): Promise<ActionValidationResult> {
     if (path === '') {
         return actionValidationFailure('No file path specified.', true);
     };
     const absolutePath = getWorkspacePath() + '/' + normalizePath(path).replace(/^\/|\/$/g, '');
     if (!isPathNeuroSafe(absolutePath)) {
-        return actionValidationFailure(`You are not allowed to access this ${directoryType}.`);
+        return actionValidationFailure(`You are not allowed to access this ${pathType}.`);
     }
 
     const doesExist = await getPathExistence(absolutePath);
     if (!shouldExist && doesExist) {
-        return actionValidationFailure(`${directoryType} "${path}" already exists.`);
+        return actionValidationFailure(`${pathType} "${path}" already exists.`);
     } else if (shouldExist && !doesExist) {
-        return actionValidationFailure(`${directoryType} "${path}" doesn't exist.`);
+        return actionValidationFailure(`${pathType} "${path}" doesn't exist.`);
     }
 
     return actionValidationAccept();
@@ -55,16 +55,24 @@ async function neuroSafeValidation(actionData: ActionData): Promise<ActionValida
 }
 
 async function neuroSafeDeleteValidation(actionData: ActionData): Promise<ActionValidationResult> {
-    const check = validatePath(actionData.params.path, true, actionData.params.recursive ? 'folder' : 'file');
-    if (!(await check).success) return check;
+    const check = await validatePath(actionData.params.path, true, actionData.params.recursive ? 'folder' : 'file');
+    if (!check.success) return check;
+
+    const absolutePath = getWorkspacePath() + '/' + normalizePath(actionData.params.path).replace(/^\/|\/$/g, '');
+    const stat = await vscode.workspace.fs.stat(vscode.Uri.file(absolutePath));
+    if (stat.type === vscode.FileType.File && actionData.params.recursive)
+        return actionValidationFailure(`Cannot delete file ${actionData.params.path} with recursive.`);
+    else if (stat.type === vscode.FileType.Directory && !actionData.params.recursive)
+        return actionValidationFailure(`Cannot delete directory ${actionData.params.path} without recursive.`);
+
     return actionValidationAccept();
 }
 
 async function neuroSafeRenameValidation(actionData: ActionData): Promise<ActionValidationResult> {
-    let check = validatePath(actionData.params.oldPath, true, 'directory');
-    if (!(await check).success) return check;
-    check = validatePath(actionData.params.newPath, false, 'directory');
-    if (!(await check).success) return check;
+    let check = await validatePath(actionData.params.oldPath, true, 'directory');
+    if (!check.success) return check;
+    check = await validatePath(actionData.params.newPath, false, 'directory');
+    if (!check.success) return check;
 
     return actionValidationAccept();
 }

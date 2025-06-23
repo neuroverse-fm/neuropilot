@@ -30,8 +30,9 @@
 				"--extensionTestsPath=${workspaceFolder}/out/test/suite/index",
 				"${workspaceFolder}/test-playground"
 			],
-			"outFiles": ["${workspaceFolder}/out/test/**/*.js"]
-			},
+			"outFiles": ["${workspaceFolder}/out/test/**/*.js"],
+			"preLaunchTask": "npm: watch"
+		},
 		{
       		"command": "./docs/node_modules/.bin/astro dev",
       		"name": "Docs development server (Astro)",

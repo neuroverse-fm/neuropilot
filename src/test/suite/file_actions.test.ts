@@ -2,15 +2,10 @@ import * as assert from 'assert';
 import * as vscode from 'vscode';
 import rewire from 'rewire';
 import * as fileActions from '../../file_actions';
-import { assertProperties } from '../test_utils';
+import { assertProperties, createTestDirectory, createTestFile } from '../test_utils';
+import { ActionData, ActionValidationResult } from '../../neuro_client_helper';
 
 const rewireFileActions = rewire('../../file_actions');
-
-async function createTestFile(name: string): Promise<vscode.Uri> {
-    const uri = vscode.Uri.joinPath(vscode.workspace.workspaceFolders![0].uri, 'test_files', name);
-    await vscode.workspace.fs.writeFile(uri, new Uint8Array(0));
-    return uri;
-}
 
 suite('File Actions Tests', () => {
     teardown(async function() {
@@ -31,23 +26,176 @@ suite('File Actions Tests', () => {
         assert.strictEqual(stat.type, vscode.FileType.File, 'testFile.js should be a file');
     });
 
-    test('Test path validation', async () => {
-        const validatePath = rewireFileActions.__get__('validatePath');
+    test('Test path validation', async function() {
+        const validatePath: (path: string, shouldExist: boolean, pathType: string) => Promise<ActionValidationResult>
+            = rewireFileActions.__get__('validatePath');
 
         // Arrange
-        const validUri = await createTestFile('validFile.js');
-        const validPath = vscode.workspace.asRelativePath(validUri, false);
-        const invalidPath = '.invalid/file.js'; // Neuro-unsafe because it starts with a dot
+        const existingFileUri = await createTestFile('validFile.js');
+        const unsafeFileUri = await createTestFile('.unsafeFile.js'); // Neuro-unsafe because it starts with a dot
+        const existingFilePath = vscode.workspace.asRelativePath(existingFileUri, false);
+        const unsafeFilePath = vscode.workspace.asRelativePath(unsafeFileUri, false);
         const nonexistentPath = 'nonexistent/file.js';
 
         // Act & Assert
-        assertProperties(await validatePath('', true, 'file'), { success: false, retry: true });
+        assertProperties(await validatePath('', true, 'file'), { success: false, retry: true }, 'Empty path should be invalid');
 
-        assertProperties(await validatePath(validPath, true, 'file'), { success: true });
-        assertProperties(await validatePath(validPath, false, 'file'), { success: false, retry: false });
-        assertProperties(await validatePath(invalidPath, true, 'file'), { success: false, retry: false });
-        assertProperties(await validatePath(invalidPath, false, 'file'), { success: false, retry: false });
-        assertProperties(await validatePath(nonexistentPath, true, 'file'), { success: false, retry: false });
-        assertProperties(await validatePath(nonexistentPath, false, 'file'), { success: true });
+        assertProperties(await validatePath(existingFilePath, true, 'file'), { success: true }, 'Existing path should be valid if shouldExist is true');
+        assertProperties(await validatePath(existingFilePath, false, 'file'), { success: false, retry: false }, 'Existing path should not be valid if shouldExist is false');
+        assertProperties(await validatePath(unsafeFilePath, true, 'file'), { success: false, retry: false }, 'Unsafe path should be invalid if shouldExist is true');
+        assertProperties(await validatePath(unsafeFilePath, false, 'file'), { success: false, retry: false }, 'Unsafe path should not be valid if shouldExist is false');
+        assertProperties(await validatePath(nonexistentPath, true, 'file'), { success: false, retry: false }, 'Nonexistent path should be invalid if shouldExist is true');
+        assertProperties(await validatePath(nonexistentPath, false, 'file'), { success: true }, 'Nonexistent path should be valid if shouldExist is false');
+    });
+
+    test('Test Neuro-safe rename validation', async function() {
+        const neuroSafeRenameValidation: (actionData: ActionData) => Promise<ActionValidationResult>
+            = rewireFileActions.__get__('neuroSafeRenameValidation');
+
+        // Arrange
+        const fileUri1 = await createTestFile('file1.js');
+        const fileUri2 = await createTestFile('file2.js');
+        const unsafeUri = await createTestFile('.unsafe/file.js'); // Neuro-unsafe because it starts with a dot
+        const filePath1 = vscode.workspace.asRelativePath(fileUri1, false);
+        const filePath2 = vscode.workspace.asRelativePath(fileUri2, false);
+        const unsafePath = vscode.workspace.asRelativePath(unsafeUri, false);
+        const nonexistentPath = 'nonexistent/file.js';
+        const nonexistentPath2 = 'nonexistent/file2.js';
+        const unsafeNonexistentPath = '.unsafe/nonexistent/file.js';
+
+        // Act & Assert
+
+        assertProperties(await neuroSafeRenameValidation({
+            id: 'abc',
+            name: 'rename_file_or_folder',
+            params: {
+                oldPath: filePath1,
+                newPath: nonexistentPath,
+            },
+        }), { success: true }, 'Rename should succeed if there is no file with the new name');
+
+        assertProperties(await neuroSafeRenameValidation({
+            id: 'abc',
+            name: 'rename_file_or_folder',
+            params: {
+                oldPath: filePath1,
+                newPath: filePath2,
+            },
+        }), { success: false, retry: false }, 'Rename should fail if a file with the new name already exists');
+
+        assertProperties(await neuroSafeRenameValidation({
+            id: 'abc',
+            name: 'rename_file_or_folder',
+            params: {
+                oldPath: filePath1,
+                newPath: unsafeNonexistentPath,
+            },
+        }), { success: false, retry: false }, 'Rename should fail if the new path is unsafe');
+
+        assertProperties(await neuroSafeRenameValidation({
+            id: 'abc',
+            name: 'rename_file_or_folder',
+            params: {
+                oldPath: unsafePath,
+                newPath: nonexistentPath,
+            },
+        }), { success: false, retry: false }, 'Rename should fail if the old path is unsafe');
+
+        assertProperties(await neuroSafeRenameValidation({
+            id: 'abc',
+            name: 'rename_file_or_folder',
+            params: {
+                oldPath: nonexistentPath,
+                newPath: nonexistentPath2,
+            },
+        }), { success: false, retry: false }, 'Rename should fail if the old path does not exist');
+
+        assertProperties(await neuroSafeRenameValidation({
+            id: 'abc',
+            name: 'rename_file_or_folder',
+            params: {
+                oldPath: filePath1,
+                newPath: filePath1,
+            },
+        }), { success: false, retry: false }, 'Rename should fail if the old and new paths are the same');
+    });
+
+    test('Test Neuro-safe delete validation', async function() {
+        const neuroSafeDeleteValidation: (actionData: ActionData) => Promise<ActionValidationResult>
+            = rewireFileActions.__get__('neuroSafeDeleteValidation');
+
+        // Arrange
+        const fileUri = await createTestFile('fileToDelete.js');
+        const unsafeUri = await createTestFile('.unsafe/file.js'); // Neuro-unsafe because it starts with a dot
+        const dirUri = await createTestDirectory('dirToDelete');
+        const filePath = vscode.workspace.asRelativePath(fileUri, false);
+        const dirPath = vscode.workspace.asRelativePath(dirUri, false);
+        const unsafePath = vscode.workspace.asRelativePath(unsafeUri, false);
+        const nonexistentFilePath = 'nonexistent/file.js';
+        const nonexistentDirPath = 'nonexistent/dir';
+
+        // Act & Assert
+        assertProperties(await neuroSafeDeleteValidation({
+            id: 'abc',
+            name: 'delete_file_or_folder',
+            params: {
+                path: filePath,
+                recursive: false,
+            },
+        }), { success: true }, 'Non-recursive delete should succeed for an existing file');
+
+        assertProperties(await neuroSafeDeleteValidation({
+            id: 'abc',
+            name: 'delete_file_or_folder',
+            params: {
+                path: filePath,
+                recursive: true,
+            },
+        }), { success: false, retry: false }, 'Recursive delete should fail for an existing file');
+
+        assertProperties(await neuroSafeDeleteValidation({
+            id: 'abc',
+            name: 'delete_file_or_folder',
+            params: {
+                path: dirPath,
+                recursive: false,
+            },
+        }), { success: false, retry: false }, 'Non-recursive delete should fail for an existing directory');
+
+        assertProperties(await neuroSafeDeleteValidation({
+            id: 'abc',
+            name: 'delete_file_or_folder',
+            params: {
+                path: dirPath,
+                recursive: true,
+            },
+        }), { success: true }, 'Recursive delete should succeed for an existing directory');
+
+        assertProperties(await neuroSafeDeleteValidation({
+            id: 'abc',
+            name: 'delete_file_or_folder',
+            params: {
+                path: unsafePath,
+                recursive: false,
+            },
+        }), { success: false, retry: false }, 'Delete should fail for an unsafe file');
+
+        assertProperties(await neuroSafeDeleteValidation({
+            id: 'abc',
+            name: 'delete_file_or_folder',
+            params: {
+                path: nonexistentFilePath,
+                recursive: false,
+            },
+        }), { success: false, retry: false }, 'Non-recursive delete should fail for a nonexistent file');
+
+        assertProperties(await neuroSafeDeleteValidation({
+            id: 'abc',
+            name: 'delete_file_or_folder',
+            params: {
+                path: nonexistentDirPath,
+                recursive: true,
+            },
+        }), { success: false, retry: false }, 'Recursive delete should fail for a nonexistent directory');
     });
 });
