@@ -601,6 +601,7 @@
 		"eslint-plugin-unicorn": "^59.0.1",
 		"glob": "^11.0.3",
 		"husky": "^9.1.7",
+		"rewire": "^8.0.0",
 		"ts-mockito": "^2.6.1",
 		"typescript": "^5.8.2",
 		"typescript-eslint": "^8.26.0"
@@ -608,7 +609,6 @@
 	"dependencies": {
 		"glob-to-regexp": "^0.4.1",
 		"jsonschema": "^1.5.0",
-		"neuro-game-sdk": "^1.0.5",
-		"rewire": "^8.0.0"
+		"neuro-game-sdk": "^1.0.5"
 	}
 }
