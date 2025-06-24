@@ -5,6 +5,8 @@ import globToRegExp from 'glob-to-regexp';
 import { NEURO } from './constants';
 import { CONFIG, getPermissionLevel, PERMISSIONS } from './config';
 
+import { ActionValidationResult, ActionData, actionValidationAccept, actionValidationFailure } from './neuro_client_helper';
+
 export const REGEXP_ALWAYS = /^/;
 export const REGEXP_NEVER = /^\b$/;
 
@@ -197,7 +199,7 @@ export function isPathNeuroSafe(path: string, checkPatterns = true): boolean {
     const includeRegExp: RegExp = checkPatterns ? combineGlobLinesToRegExp(includePattern) : REGEXP_ALWAYS;
     const excludeRegExp: RegExp = checkPatterns && excludePattern ? combineGlobLinesToRegExp(excludePattern) : REGEXP_NEVER;
 
-    if (CONFIG.allowUnsafePaths === true) {
+    if (CONFIG.allowUnsafePaths === true && vscode.workspace.isTrusted === true) {
         return includeRegExp.test(normalizedPath)       // Check against include pattern
             && !excludeRegExp.test(normalizedPath);     // Check against exclude pattern
     }
@@ -380,4 +382,14 @@ export function getVirtualCursor(): vscode.Position | null | undefined {
     else {
         return editor.document.positionAt(result);
     }
+}
+
+/**
+ * Checks workspace trust settings and returns an ActionValidationResult accordingly.
+ */
+export function checkWorkspaceTrust(_actionData: ActionData): ActionValidationResult {
+    if (vscode.workspace.isTrusted) {
+        return actionValidationAccept();
+    }
+    return actionValidationFailure('You are in an untrusted workspace.');
 }

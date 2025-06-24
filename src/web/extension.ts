@@ -1,6 +1,8 @@
 import * as vscode from 'vscode';
 
-import { NEURO } from '../constants';
+import { NEURO, EXTENSIONS } from '../constants';
+import type { GitExtension } from '../types/git';
+import { getGitExtension } from '../git';
 import { logOutput, createClient, onClientConnected, isPathNeuroSafe, setVirtualCursor } from '../utils';
 import { completionsProvider, registerCompletionResultHandler } from '../completions';
 import { giveCookie, registerRequestCookieAction, registerRequestCookieHandler, sendCurrentFile } from '../context';
@@ -33,6 +35,40 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand('neuropilot.fixWithNeuro', fixWithNeuro);
     vscode.commands.registerCommand('neuropilot.explainWithNeuro', explainWithNeuro);
     vscode.commands.registerCommand('neuropilot.switchNeuroAPIUser', switchCurrentNeuroAPIUser);
+    vscode.commands.registerCommand('neuropilot.refreshExtensionDependencyState', obtainExtensionState);
+    vscode.commands.registerCommand('neuropilot.showDocsHomepage', () => {
+        const panel = vscode.window.createWebviewPanel(
+            'docsWebView',
+            'NeuroPilot Docs (WebView)',
+            vscode.ViewColumn.Active,
+            { enableScripts: true },
+        );
+        // Pass the homepage subpage ("/") to openDocsPage
+        panel.webview.html = openDocsPage('/');
+    });
+
+    vscode.commands.registerCommand('neuropilot.openSpecificDocsPage', async (args?: { subpage?: string }) => {
+        let subpage: string | undefined;
+        if (args && typeof args.subpage === 'string') {
+            subpage = args.subpage;
+        } else {
+            subpage = await vscode.window.showInputBox({
+                prompt: 'Enter the docs subpath (e.g., /guide, /api, etc.)',
+                placeHolder: '/',
+            });
+        }
+        if (!subpage) {
+            vscode.window.showErrorMessage('No subpage specified.');
+            return;
+        }
+        const panel = vscode.window.createWebviewPanel(
+            'docsWebView',
+            'NeuroPilot Docs (WebView)',
+            vscode.ViewColumn.One,
+            { enableScripts: true },
+        );
+        panel.webview.html = openDocsPage(subpage);
+    });
 
     // Update the CodeActionProvider to pass the document and diagnostics.
     vscode.languages.registerCodeActionsProvider(
@@ -51,6 +87,9 @@ export function activate(context: vscode.ExtensionContext) {
     onClientConnected(registerUnsupervisedWebActions);
     onClientConnected(registerUnsupervisedHandlers);
     onClientConnected(registerPostActionHandler);
+
+    obtainExtensionState();
+    vscode.extensions.onDidChange(obtainExtensionState);
 
     vscode.languages.onDidChangeDiagnostics(sendDiagnosticsDiff);
     vscode.workspace.onDidSaveTextDocument(fileSaveListener);
@@ -114,6 +153,11 @@ export function activate(context: vscode.ExtensionContext) {
             setVirtualCursor();
         }
     });
+}
+
+export function deactivate() {
+    // Execute other extensions' goodbye messages first
+    NEURO.client?.sendContext(`NeuroPilot is being deactivated, or ${CONFIG.gameName} is closing. See you next time, ${NEURO.currentController}!`);
 }
 
 function reconnect() {
@@ -208,8 +252,65 @@ function switchCurrentNeuroAPIUser() {
             quickPick.hide();
             return;
         }
-        vscode.workspace.getConfiguration('neuropilot').update('currentlyAsNeuroAPI', selected, vscode.ConfigurationTarget.Workspace);
+        vscode.workspace.getConfiguration('neuropilot').update('currentlyAsNeuroAPI', selected, vscode.ConfigurationTarget.Global);
         quickPick.hide();
     });
     quickPick.show();
+}
+
+function openDocsPage(subpage = '/'): string {
+    let constructedDocsPage: string = CONFIG.docsURL;
+    if (subpage.startsWith('/')) {
+        constructedDocsPage += subpage;
+    } else {
+        constructedDocsPage += '/' + subpage;
+    }
+
+    const htmlpage =
+    '<!DOCTYPE html>' +
+    '<html lang="en">' +
+    '<head>' +
+    '   <meta charset="UTF-8">' +
+    `   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; frame-src ${CONFIG.docsURL}; script-src 'none'; style-src 'unsafe-inline';">` + // Content Security Policy for safety reasons
+    '   <meta name="viewport" content="width=device-width, initial-scale=1.0">' +
+    '   <title>NeuroPilot Docs WebView</title>' +
+    '   <style>' +
+    '       html, body, iframe {' +
+    '           width: 100%;' +
+    '           height: 100%;' +
+    '           margin: 0;' +
+    '           padding: 0;' +
+    '           border: none;' +
+    '       }' +
+    '   </style>' +
+    '</head>' +
+    '<body>' +
+    `   <iframe src="${constructedDocsPage}" frameborder="0"></iframe>` +
+    '</body>' +
+    '</html>';
+
+    return htmlpage;
+}
+
+function obtainExtensionState(): void {
+    /** Copilot Chat */
+    const copilotChat = vscode.extensions.getExtension('github.copilot-chat')?.isActive;
+    if (copilotChat === true) {
+        EXTENSIONS.copilotChat = true;
+    } else {
+        EXTENSIONS.copilotChat = false;
+    }
+
+    /** Git */
+    const git = vscode.extensions.getExtension<GitExtension>('vscode.git');
+    if (git?.isActive !== undefined) {
+        if (git.isActive === true) {
+            EXTENSIONS.git = git.exports;
+        } else {
+            EXTENSIONS.git = null;
+        }
+    } else {
+        EXTENSIONS.git = null;
+    }
+    getGitExtension();
 }

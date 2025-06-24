@@ -18,7 +18,10 @@
 		},
 		{
 			"label": "watch:desktop",
-			"dependsOn": ["npm: watch:desktop:tsc", "npm: watch:desktop:esbuild"],
+			"dependsOn": [
+				"npm: watch:desktop:tsc",
+				"npm: watch:desktop:esbuild"
+			],
 			"presentation": {
 				"reveal": "never"
 			},
@@ -53,7 +56,10 @@
 		},
 		{
 			"label": "watch:web",
-			"dependsOn": ["npm: watch:web:tsc", "npm: watch:web:esbuild"],
+			"dependsOn": [
+				"npm: watch:web:tsc",
+				"npm: watch:web:esbuild"
+			],
 			"presentation": {
 				"reveal": "never"
 			},
@@ -99,7 +105,11 @@
 			"description": "Bump which version?",
 			"type": "pickString",
 			"default": "patch",
-			"options": [ "patch", "minor", "major" ]
+			"options": [
+				"patch",
+				"minor",
+				"major"
+			]
 		}
 	]
 }

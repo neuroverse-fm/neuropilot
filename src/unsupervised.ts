@@ -10,6 +10,7 @@ import { lintActions, registerLintActions } from './lint_problems';
 import { cancelRequestAction, createRceRequest, revealRceNotification } from './rce';
 import { validate } from 'jsonschema';
 import { CONFIG, getPermissionLevel, PermissionLevel, PERMISSIONS } from './config';
+import { checkWorkspaceTrust } from './utils';
 
 /**
  * Register unsupervised actions with the Neuro API.
@@ -60,6 +61,7 @@ export function registerUnsupervisedHandlers() {
                     description: task.description,
                     permissions: [PERMISSIONS.runTasks],
                     handler: handleRunTask,
+                    validator: [checkWorkspaceTrust],
                     promptGenerator: () => `run the task "${task.id}".`,
                 };
             }

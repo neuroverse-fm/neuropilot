@@ -7,6 +7,7 @@
 import * as vscode from 'vscode';
 import { spawn } from 'child_process';
 import { NEURO } from './constants';
+import { checkWorkspaceTrust } from './utils';
 import { logOutput, delayAsync, getFence } from './utils';
 import { ActionData, actionValidationAccept, actionValidationFailure, ActionValidationResult, ActionWithHandler, contextFailure, stripToActions } from './neuro_client_helper';
 import { CONFIG, PERMISSIONS, getPermissionLevel } from './config';
@@ -49,6 +50,7 @@ export const terminalAccessHandlers = {
         },
         permissions: [PERMISSIONS.terminalAccess],
         handler: handleRunCommand,
+        validator: [checkWorkspaceTrust],
         promptGenerator: (actionData: ActionData) => `run "${actionData.params?.command}" in the "${actionData.params?.shell}" shell.`,
     },
     'kill_terminal_process': {
@@ -63,7 +65,7 @@ export const terminalAccessHandlers = {
         },
         permissions: [PERMISSIONS.terminalAccess],
         handler: handleKillTerminal,
-        validator: [checkLiveTerminals],
+        validator: [checkLiveTerminals, checkWorkspaceTrust],
         promptGenerator: (actionData: ActionData) => `kill the "${actionData.params?.shell}" shell.`,
     },
     'get_currently_running_shells': {
@@ -71,6 +73,7 @@ export const terminalAccessHandlers = {
         description: 'Get the list of terminal processes that are spawned.',
         permissions: [PERMISSIONS.terminalAccess],
         handler: handleGetCurrentlyRunningShells,
+        validator: [checkWorkspaceTrust],
         promptGenerator: 'get the list of currently running shells.',
     },
 } satisfies Record<string, ActionWithHandler>;

@@ -581,6 +581,23 @@
 			}
 		}
 	},
+	"capabilities": {
+		"virtualWorkspaces": {
+			"supported": "limited",
+			"description": "In certain virtual workspace scenarios (namely Web), Terminal, Tasks, Git support and Copilot Chat mode is not available."
+		},
+		"untrustedWorkspaces": {
+			"supported": "limited",
+			"description": "Terminals and Tasks access will be forcefully disabled for Neuro. She will also be unable to access Neuro-unsafe paths and won't have all tasks registered.",
+			"restrictedConfigurations": [
+				"neuropilot.permission.directTerminalAccess",
+				"neuropilot.permission.runTasks",
+				"neuropilot.terminals",
+				"neuropilot.allowRunningAllTasks",
+				"neuropilot.allowUnsafePaths"
+			]
+		}
+	},
 	"scripts": {
 		"vscode:prepublish": "npm run package",
 		"build": "npm run compile",
@@ -611,12 +628,13 @@
 		"@types/node": "^20",
 		"@types/vscode": "^1.95.0",
 		"@types/ws": "^8.18.0",
+		"@vscode/vsce": "^3.5.0",
 		"esbuild": "^0.25.5",
 		"eslint": "^9.13.0",
 		"eslint-plugin-unicorn": "^59.0.1",
+		"husky": "^9.1.7",
 		"npm-run-all": "^4.1.5",
 		"ts-loader": "^9.5.2",
-		"husky": "^9.1.7",
 		"typescript": "^5.8.2",
 		"typescript-eslint": "^8.26.0"
 	},

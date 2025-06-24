@@ -7,7 +7,7 @@
 import * as vscode from 'vscode';
 
 import { NEURO } from './constants';
-import { logOutput, formatActionID, getFence } from './utils';
+import { logOutput, formatActionID, getFence, checkWorkspaceTrust } from './utils';
 import { ActionData, ActionWithHandler, actionValidationAccept, actionValidationFailure, stripToActions } from './neuro_client_helper';
 import { CONFIG, PERMISSIONS, getPermissionLevel } from './config';
 
@@ -19,7 +19,7 @@ export const taskHandlers = {
         permissions: [PERMISSIONS.runTasks],
         handler: handleTerminateTask,
         promptGenerator: () => 'terminate the currently running task.',
-        validator: [() => NEURO.currentTaskExecution !== null
+        validator: [checkWorkspaceTrust, () => NEURO.currentTaskExecution !== null
             ? actionValidationAccept()
             : actionValidationFailure('No task to terminate.')],
     },

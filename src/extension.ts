@@ -42,7 +42,7 @@ export function activate(context: vscode.ExtensionContext) {
         const panel = vscode.window.createWebviewPanel(
             'docsWebView',
             'NeuroPilot Docs (WebView)',
-            vscode.ViewColumn.One,
+            vscode.ViewColumn.Active,
             { enableScripts: true },
         );
         // Pass the homepage subpage ("/") to openDocsPage
@@ -162,6 +162,11 @@ export function activate(context: vscode.ExtensionContext) {
     });
 }
 
+export function deactivate() {
+    // Execute other extensions' goodbye messages first
+    NEURO.client?.sendContext(`NeuroPilot is being deactivated, or ${CONFIG.gameName} is closing. See you next time, ${NEURO.currentController}!`);
+}
+
 function reconnect() {
     logOutput('INFO', 'Attempting to reconnect to Neuro API');
     createClient();
@@ -256,7 +261,7 @@ function switchCurrentNeuroAPIUser() {
             quickPick.hide();
             return;
         }
-        vscode.workspace.getConfiguration('neuropilot').update('currentlyAsNeuroAPI', selected, vscode.ConfigurationTarget.Workspace);
+        vscode.workspace.getConfiguration('neuropilot').update('currentlyAsNeuroAPI', selected, vscode.ConfigurationTarget.Global);
         quickPick.hide();
     });
     quickPick.show();

@@ -13,13 +13,14 @@ import globals from 'globals';
 
 export default tseslint.config(
     {
-        files: ['**/*.{js,mjs,cjs,ts}'],
+        files: ['**/*.{js,mjs,cjs,ts,mts,cts}'],
         ignores: [
             'out/**',
             'playground/**',
             '**/vscode*.d.ts',
-            'esbuild.config.js',
+            'esbuild.{m,c,}js',
             'docs',
+            'src/types/**/*.d.ts',
         ],
     },
     globalIgnores([
