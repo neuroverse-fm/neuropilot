@@ -29,10 +29,12 @@ const mode = modeArgIndex !== -1 && process.argv[modeArgIndex + 1] ? process.arg
                 if (watch) {
                     console.error('Cannot use flag --watch while building both desktop and web');
                 }
+                console.log('Running desktop build...');
                 await desktop(production, false).catch(erm => {
                     console.error(erm);
                     process.exit(1);
                 });
+                console.log('Running web build...');
                 await web(production, false).catch(erm => {
                     console.error(erm);
                     process.exit(1);
