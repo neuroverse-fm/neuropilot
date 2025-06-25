@@ -26,9 +26,9 @@ export function assertProperties(actual: unknown, expected: unknown, message?: s
     }
 }
 
-export async function createTestFile(name: string): Promise<vscode.Uri> {
+export async function createTestFile(name: string, content?: string): Promise<vscode.Uri> {
     const uri = vscode.Uri.joinPath(vscode.workspace.workspaceFolders![0].uri, 'test_files', name);
-    await vscode.workspace.fs.writeFile(uri, new Uint8Array(0));
+    await vscode.workspace.fs.writeFile(uri, content ? Buffer.from(content) : new Uint8Array(0));
     return uri;
 }
 

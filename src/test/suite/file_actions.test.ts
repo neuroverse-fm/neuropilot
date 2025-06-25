@@ -19,6 +19,9 @@ suite('File Actions Tests', () => {
         originalClient = NEURO.client;
         mockedClient = mock(NeuroClient);
         NEURO.client = instance(mockedClient);
+
+        // Close all open editors
+        await vscode.commands.executeCommand('workbench.action.closeAllEditors');
     });
 
 
@@ -236,14 +239,208 @@ suite('File Actions Tests', () => {
         // Wait for context to be sent
         await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); });
 
-        const [files] = capture(mockedClient.sendContext).last();
-        const lines = files.split(/\r?\n/);
+        const [context] = capture(mockedClient.sendContext).last();
+        const lines = context.split(/\r?\n/);
         lines.shift(); // Remove header line
+        lines.shift(); // Remove empty line
 
         // === Assert ===
         assert.strictEqual(lines.includes(filePath1), true, 'File file1.js should be in the list of files');
         assert.strictEqual(lines.includes(filePath2), true, 'File sub/file2.js should be in the list of files');
         assert.strictEqual(lines.includes(unsafeFilePath), false, 'Unsafe file .unsafe/file.js should not be in the list of files');
         assert.strictEqual(lines.includes(emptyDirPath), false, 'Empty directory testDir should not be in the list of files');
+    });
+
+    test('Test opening a file', async function() {
+        // === Arrange ===
+        const fileContent = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.\n68043cf7-01af-43cb-a9ac-6feeec7cdcc1\n';
+        const fileUri = await createTestFile('file.js', fileContent);
+        const filePath = vscode.workspace.asRelativePath(fileUri, false);
+
+        // === Act ===
+        fileActions.handleOpenFile({ id: 'abc', name: 'open_file', params: { filePath: filePath } });
+        await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); });
+        const [context] = capture(mockedClient.sendContext).last();
+
+        // === Assert ===
+        assert.strictEqual(vscode.window.activeTextEditor?.document.uri.path, fileUri.path, 'The correct file should be opened in the active editor');
+        assert.strictEqual(context.includes(fileContent), true, 'The file content should be sent in the context');
+    });
+
+    test('Test creating a file', async function() {
+        // === Arrange ===
+        const relativePath = 'test_files/newFile.js';
+        const uri = vscode.Uri.joinPath(vscode.workspace.workspaceFolders![0].uri, relativePath);
+
+        // === Act ===
+        fileActions.handleCreateFile({ id: 'abc', name: 'create_file', params: { filePath: relativePath } });
+        await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).twice(); });
+
+        // === Assert ===
+        assert.strictEqual(vscode.window.activeTextEditor?.document.uri.path, uri.path, 'The new file should be opened in the active editor');
+
+        const stat = await vscode.workspace.fs.stat(uri);
+        assert.strictEqual(stat.type, vscode.FileType.File, 'The new file should be created successfully');
+    });
+
+    test('Test creating a folder', async function() {
+        // === Arrange ===
+        const relativePath = 'test_files/newFolder';
+        const uri = vscode.Uri.joinPath(vscode.workspace.workspaceFolders![0].uri, relativePath);
+
+        // === Act ===
+        fileActions.handleCreateFolder({ id: 'abc', name: 'create_folder', params: { folderPath: relativePath } });
+        await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); });
+
+        // === Assert ===
+        const stat = await vscode.workspace.fs.stat(uri);
+        assert.strictEqual(stat.type, vscode.FileType.Directory, 'The new folder should be created successfully');
+    });
+
+    test('Test renaming a closed file', async function() {
+        // === Arrange ===
+        const fileUri = await createTestFile('fileToRename.js');
+        const filePath = vscode.workspace.asRelativePath(fileUri, false);
+        const newFilePath = 'test_files/renamedFile.js';
+        const newFileUri = vscode.Uri.joinPath(vscode.workspace.workspaceFolders![0].uri, newFilePath);
+
+        // === Act ===
+        fileActions.handleRenameFileOrFolder({ id: 'abc', name: 'rename_file_or_folder', params: { oldPath: filePath, newPath: newFilePath } });
+        await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); });
+
+        // === Assert ===
+        assert.strictEqual(vscode.window.visibleTextEditors.some(editor => editor.document.uri.path === newFileUri.path), false, 'Renaming a file should not open the renamed file in the editor');
+
+        const stat = await vscode.workspace.fs.stat(newFileUri);
+        assert.strictEqual(stat.type, vscode.FileType.File, 'The file should exist at the new path');
+
+        try {
+            await vscode.workspace.fs.stat(fileUri);
+            assert.fail(`File ${filePath} should not exist after renaming, but it does.`);
+        } catch (erm) {
+            if (erm instanceof assert.AssertionError) throw erm;
+            // Expected error, file should not exist
+        }
+    });
+
+    test('Test renaming an open file', async function() {
+        // === Arrange ===
+        const fileUri = await createTestFile('fileToRename.js');
+        const filePath = vscode.workspace.asRelativePath(fileUri, false);
+        const newFilePath = 'test_files/renamedFile.js';
+        const newFileUri = vscode.Uri.joinPath(vscode.workspace.workspaceFolders![0].uri, newFilePath);
+        const otherFileUri = await createTestFile('otherFile.js');
+
+        // === Act ===
+        await vscode.window.showTextDocument(fileUri, { preview: false });
+        await vscode.window.showTextDocument(otherFileUri, { preview: false });
+
+        fileActions.handleRenameFileOrFolder({ id: 'abc', name: 'rename_file_or_folder', params: { oldPath: filePath, newPath: newFilePath } });
+        await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); });
+
+        const uris = vscode.window.tabGroups.all.flatMap(group => group.tabs.map(tab => {
+            if (tab.input instanceof vscode.TabInputText) {
+                return tab.input.uri;
+            }
+            assert.fail(`Tab input is not a Text Document: ${tab.input}`);
+        }));
+
+        // === Assert ===
+        assert.strictEqual(vscode.window.activeTextEditor?.document.uri.path, otherFileUri.path, 'The other file should still be active');
+        assert.strictEqual(uris.some(uri => uri.path === newFileUri.path), true, 'The renamed file should be open');
+        assert.strictEqual(uris.some(uri => uri.path === fileUri.path), false, 'The old file should not be open');
+    });
+
+    test('Test renaming a folder', async function() {
+        // === Arrange ===
+        const folderUri = await createTestDirectory('folderToRename');
+        const fileUri = await createTestFile('folderToRename/file.js');
+        const folderPath = vscode.workspace.asRelativePath(folderUri, false);
+        const newFolderPath = 'test_files/renamedFolder';
+        const newFilePath = 'test_files/renamedFolder/file.js';
+        const newFolderUri = vscode.Uri.joinPath(vscode.workspace.workspaceFolders![0].uri, newFolderPath);
+        const newFileUri = vscode.Uri.joinPath(vscode.workspace.workspaceFolders![0].uri, newFilePath);
+
+        // === Act ===
+        await vscode.window.showTextDocument(fileUri, { preview: false });
+
+        fileActions.handleRenameFileOrFolder({ id: 'abc', name: 'rename_file_or_folder', params: { oldPath: folderPath, newPath: newFolderPath } });
+        await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); });
+
+        // Wait for the editor to update
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        const uris = vscode.window.tabGroups.all.flatMap(group => group.tabs.map(tab => {
+            if (tab.input instanceof vscode.TabInputText) {
+                return tab.input.uri;
+            }
+            assert.fail(`Tab input is not a Text Document: ${tab.input}`);
+        }));
+
+        // === Assert ===
+        assert.strictEqual(vscode.window.activeTextEditor?.document.uri.path, newFileUri.path, 'The renamed file should be open');
+        assert.strictEqual(uris.some(uri => uri.path === fileUri.path), false, 'The old file should not be visible in the editor');
+
+        const stat = await vscode.workspace.fs.stat(newFolderUri);
+        assert.strictEqual(stat.type, vscode.FileType.Directory, 'The folder should exist at the new path');
+    });
+
+    test('Test deleting a file', async function() {
+        // === Arrange ===
+        const fileUri = await createTestFile('fileToDelete.js');
+        const filePath = vscode.workspace.asRelativePath(fileUri, false);
+
+        // === Act ===
+        vscode.window.showTextDocument(fileUri, { preview: false });
+
+        fileActions.handleDeleteFileOrFolder({ id: 'abc', name: 'delete_file_or_folder', params: { path: filePath, recursive: false } });
+        await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); });
+
+        // === Assert ===
+        try {
+            await vscode.workspace.fs.stat(fileUri);
+            assert.fail(`File ${filePath} should not exist after deletion, but it does.`);
+        } catch (erm) {
+            if (erm instanceof assert.AssertionError) throw erm;
+            // Expected error, file should not exist
+        }
+
+        assert.strictEqual(vscode.window.visibleTextEditors.some(editor => editor.document.uri.path === fileUri.path), false, 'The deleted file should not be visible in the editor');
+    });
+
+    test('Test deleting a folder', async function() {
+        // === Arrange ===
+        const folderUri = await createTestDirectory('folderToDelete');
+        const fileUri = await createTestFile('folderToDelete/file.js');
+        const folderPath = vscode.workspace.asRelativePath(folderUri, false);
+
+        // === Act ===
+        // If the file is open, it can't be deleted without admin privileges.
+        // This only happens in the test environment for some reason.
+        // await vscode.window.showTextDocument(fileUri, { preview: false });
+
+        fileActions.handleDeleteFileOrFolder({ id: 'abc', name: 'delete_file_or_folder', params: { path: folderPath, recursive: true } });
+        await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); });
+
+        // Wait for the editor to update
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        const uris = vscode.window.tabGroups.all.flatMap(group => group.tabs.map(tab => {
+            if (tab.input instanceof vscode.TabInputText) {
+                return tab.input.uri;
+            }
+            assert.fail(`Tab input is not a Text Document: ${tab.input}`);
+        }));
+
+        // === Assert ===
+        try {
+            await vscode.workspace.fs.stat(folderUri);
+            assert.fail(`Folder ${folderPath} should not exist after deletion, but it does.`);
+        } catch (erm) {
+            if (erm instanceof assert.AssertionError) throw erm;
+            // Expected error, folder should not exist
+        }
+
+        // assert.strictEqual(uris.some(uri => uri.path === fileUri.path), false, 'The deleted file should not be visible in the editor');
     });
 });
