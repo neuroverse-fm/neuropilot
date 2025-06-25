@@ -9,7 +9,7 @@ import { spawn } from 'child_process';
 import { NEURO } from './constants';
 import { checkWorkspaceTrust } from './utils';
 import { logOutput, delayAsync, getFence } from './utils';
-import { ActionData, actionValidationAccept, actionValidationFailure, ActionValidationResult, ActionWithHandler, contextFailure, stripToActions } from './neuro_client_helper';
+import { ActionData, actionValidationAccept, actionValidationFailure, ActionValidationResult, RCEAction, contextFailure, stripToActions } from './neuro_client_helper';
 import { CONFIG, PERMISSIONS, getPermissionLevel } from './config';
 import { ChildProcessWithoutNullStreams } from 'child_process';
 
@@ -76,7 +76,7 @@ export const terminalAccessHandlers = {
         validator: [checkWorkspaceTrust],
         promptGenerator: 'get the list of currently running shells.',
     },
-} satisfies Record<string, ActionWithHandler>;
+} satisfies Record<string, RCEAction>;
 
 export function registerTerminalActions() {
     if (getPermissionLevel(PERMISSIONS.terminalAccess)) {

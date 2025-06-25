@@ -8,7 +8,7 @@ import * as vscode from 'vscode';
 
 import { NEURO } from './constants';
 import { logOutput, formatActionID, getFence, checkWorkspaceTrust } from './utils';
-import { ActionData, ActionWithHandler, actionValidationAccept, actionValidationFailure, stripToActions } from './neuro_client_helper';
+import { ActionData, RCEAction, actionValidationAccept, actionValidationFailure, stripToActions } from './neuro_client_helper';
 import { CONFIG, PERMISSIONS, getPermissionLevel } from './config';
 
 export const taskHandlers = {
@@ -18,15 +18,15 @@ export const taskHandlers = {
         description: 'Terminate the currently running task',
         permissions: [PERMISSIONS.runTasks],
         handler: handleTerminateTask,
-        promptGenerator: () => 'terminate the currently running task.',
+        promptGenerator: 'terminate the currently running task.',
         validator: [checkWorkspaceTrust, () => NEURO.currentTaskExecution !== null
             ? actionValidationAccept()
             : actionValidationFailure('No task to terminate.')],
     },
-} satisfies Record<string, ActionWithHandler>;
+} satisfies Record<string, RCEAction>;
 
 export function registerTaskActions() {
-    if(getPermissionLevel(PERMISSIONS.runTasks)) {
+    if (getPermissionLevel(PERMISSIONS.runTasks)) {
         NEURO.client?.registerActions(stripToActions([
             taskHandlers.terminate_task,
         ]));
@@ -43,11 +43,11 @@ export function handleTerminateTask(_actionData: ActionData): string | undefined
 }
 
 export function handleRunTask(actionData: ActionData): string | undefined {
-    if(NEURO.currentTaskExecution !== null)
+    if (NEURO.currentTaskExecution !== null)
         return 'Action failed: A task is already running.';
 
     const task = NEURO.tasks.find(task => task.id === actionData.name);
-    if(task === undefined)
+    if (task === undefined)
         return `Action failed: Task ${actionData.name} not found.`;
 
     try {
@@ -56,15 +56,15 @@ export function handleRunTask(actionData: ActionData): string | undefined {
             NEURO.currentTaskExecution = value;
         });
         return `Executing task ${task.id}`;
-    } catch(erm) {
+    } catch (erm) {
         logOutput('DEBUG', JSON.stringify(erm));
         return `Failed to execute task ${task.id}.`;
     }
 }
 
 export function taskEndedHandler(event: vscode.TaskEndEvent) {
-    if(NEURO.connected && NEURO.client !== null && NEURO.currentTaskExecution !== null) {
-        if(event.execution === NEURO.currentTaskExecution) {
+    if (NEURO.connected && NEURO.client !== null && NEURO.currentTaskExecution !== null) {
+        if (event.execution === NEURO.currentTaskExecution) {
             logOutput('INFO', 'Neuro task finished');
             NEURO.currentTaskExecution = null;
             vscode.commands.executeCommand('workbench.action.terminal.copyLastCommandOutput')
@@ -81,18 +81,18 @@ export function taskEndedHandler(event: vscode.TaskEndEvent) {
 }
 
 export function reloadTasks() {
-    if(NEURO.tasks.length)
+    if (NEURO.tasks.length)
         NEURO.client?.unregisterActions(NEURO.tasks.map((task) => task.id));
 
     NEURO.tasks = [];
 
-    if(!getPermissionLevel(PERMISSIONS.runTasks)) {
+    if (!getPermissionLevel(PERMISSIONS.runTasks)) {
         return;
     }
 
     vscode.tasks.fetchTasks().then((tasks) => {
-        for(const task of tasks) {
-            if (CONFIG.allowRunningAllTasks === true) {
+        for (const task of tasks) {
+            if (CONFIG.allowRunningAllTasks === true && vscode.workspace.isTrusted) {
                 let taskdesc: string = task.detail ?? '';
                 if (taskdesc.toLowerCase().startsWith('[neuro]')) {
                     taskdesc = taskdesc.substring(7).trim();
@@ -118,7 +118,7 @@ export function reloadTasks() {
             }
         }
 
-        if(!getPermissionLevel(PERMISSIONS.runTasks)) {
+        if (!getPermissionLevel(PERMISSIONS.runTasks)) {
             return;
         }
 

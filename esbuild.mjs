@@ -11,14 +11,14 @@ const mode = modeArgIndex !== -1 && process.argv[modeArgIndex + 1] ? process.arg
     try {
         switch (mode.toLowerCase()) {
             case 'web':
-                console.log('Running web build...');
+                console.log(watch ? 'Watching' : 'Running' + ' web build...');
                 await web(production, watch).catch(erm => {
                     console.error(erm);
                     process.exit(1);
                 });
                 break;
             case 'desktop':
-                console.log('Running desktop build...');
+                console.log(watch ? 'Watching' : 'Running' + ' desktop build...');
                 await desktop(production, watch).catch(erm => {
                     console.error(erm);
                     process.exit(1);

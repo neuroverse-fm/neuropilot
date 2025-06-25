@@ -3,7 +3,7 @@ import { EXTENSIONS, NEURO } from './constants';
 import { Change, ForcePushMode, CommitOptions, Commit, Repository, API } from './types/git.d';
 import { StatusStrings, RefTypeStrings } from './types/git_status';
 import { logOutput, simpleFileName, isPathNeuroSafe, normalizePath, getWorkspacePath, assert } from './utils';
-import { ActionData, ActionValidationResult, actionValidationAccept, actionValidationFailure, ActionWithHandler, contextFailure, stripToActions } from './neuro_client_helper';
+import { ActionData, ActionValidationResult, actionValidationAccept, actionValidationFailure, RCEAction, contextFailure, stripToActions } from './neuro_client_helper';
 import { PERMISSIONS, getPermissionLevel } from './config';
 
 /* All actions located in here requires neuropilot.permission.gitOperations to be enabled. */
@@ -481,7 +481,7 @@ export const gitActions = {
         promptGenerator: 'abort the current merge operation.',
         validator: [gitValidator],
     },
-} satisfies Record<string, ActionWithHandler>;
+} satisfies Record<string, RCEAction>;
 
 // Get the current Git repository
 // let repo: Repository | undefined = git.repositories[0];

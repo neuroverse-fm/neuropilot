@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { NEURO } from './constants';
 import { normalizePath, getWorkspacePath, logOutput, isPathNeuroSafe, assert } from './utils';
 import { PERMISSIONS, getPermissionLevel, CONFIG } from './config';
-import { ActionData, actionValidationAccept, actionValidationFailure, ActionValidationResult, ActionWithHandler, contextFailure, stripToActions } from './neuro_client_helper';
+import { ActionData, actionValidationAccept, actionValidationFailure, ActionValidationResult, RCEAction, contextFailure, stripToActions } from './neuro_client_helper';
 
 /**
  * The path validator.
@@ -103,7 +103,7 @@ export const lintActions = {
         }],
         promptGenerator: () => 'get linting diagnostics for the current workspace.',
     },
-} satisfies Record<string, ActionWithHandler>;
+} satisfies Record<string, RCEAction>;
 
 export function registerLintActions() {
     if (getPermissionLevel(PERMISSIONS.accessLintingAnalysis)) {
@@ -200,7 +200,7 @@ export function handleGetFolderLintProblems(actionData: ActionData): string | un
         // Filter diagnostics to those that belong to files in this folder.
         const folderDiagnostics = diagnostics.filter(([diagUri, diags]) => {
             return normalizePath(diagUri.fsPath).startsWith(normalizedFolderPath) &&
-                   isPathNeuroSafe(diagUri.fsPath) && diags.length > 0;
+                isPathNeuroSafe(diagUri.fsPath) && diags.length > 0;
         });
 
         if (folderDiagnostics.length === 0) {

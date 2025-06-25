@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { NEURO } from '../constants';
 import { fileActions, registerFileActions } from '../file_actions';
 import { editingActions, registerEditingActions } from '../editing';
-import { ActionData, ActionWithHandler } from '../neuro_client_helper';
+import { ActionData, RCEAction } from '../neuro_client_helper';
 import { lintActions, registerLintActions } from '../lint_problems';
 import { cancelRequestAction, createRceRequest, revealRceNotification } from '../rce';
 import { validate } from 'jsonschema';
@@ -17,18 +17,18 @@ import { CONFIG, getPermissionLevel, PermissionLevel } from '../config';
  * Will only register actions that the user has given permission to use.
  */
 
-const webNeuroActions: Record<string, ActionWithHandler> = {
+const neuroActions: Record<string, RCEAction> = {
     'cancel_request': cancelRequestAction,
     ...fileActions,
     ...editingActions,
     ...lintActions,
 };
 
-const webActionKeys: string[] = Object.keys(webNeuroActions);
+const actionKeys: string[] = Object.keys(neuroActions);
 
-export function registerUnsupervisedWebActions() {
+export function registerUnsupervisedactions() {
     // Unregister all actions first to properly refresh everything
-    NEURO.client?.unregisterActions(webActionKeys);
+    NEURO.client?.unregisterActions(actionKeys);
 
     registerFileActions();
     registerEditingActions();
@@ -41,10 +41,10 @@ export function registerUnsupervisedWebActions() {
  */
 export function registerUnsupervisedHandlers() {
     NEURO.client?.onAction(async (actionData: ActionData) => {
-        if (webActionKeys.includes(actionData.name)) {
+        if (actionKeys.includes(actionData.name)) {
             NEURO.actionHandled = true;
 
-            const action: ActionWithHandler = webNeuroActions[actionData.name];
+            const action: RCEAction = neuroActions[actionData.name];
 
             const effectivePermission = action.permissions.length > 0 ? getPermissionLevel(...action.permissions) : action.defaultPermission ?? PermissionLevel.COPILOT;
             if (effectivePermission === PermissionLevel.OFF) {

@@ -4,7 +4,7 @@ import { handleRunTask, registerTaskActions, taskHandlers } from './tasks';
 import { fileActions, registerFileActions } from './file_actions';
 import { gitActions, registerGitActions } from './git';
 import { editingActions, registerEditingActions } from './editing';
-import { ActionData, ActionWithHandler } from './neuro_client_helper';
+import { ActionData, RCEAction } from './neuro_client_helper';
 import { registerTerminalActions, terminalAccessHandlers } from './pseudoterminal';
 import { lintActions, registerLintActions } from './lint_problems';
 import { cancelRequestAction, createRceRequest, revealRceNotification } from './rce';
@@ -17,7 +17,7 @@ import { checkWorkspaceTrust } from './utils';
  * Will only register actions that the user has given permission to use.
  */
 
-const neuroActions: Record<string, ActionWithHandler> = {
+const neuroActions: Record<string, RCEAction> = {
     'cancel_request': cancelRequestAction,
     ...gitActions,
     ...fileActions,
@@ -50,7 +50,7 @@ export function registerUnsupervisedHandlers() {
         if (actionKeys.includes(actionData.name) || NEURO.tasks.find(task => task.id === actionData.name)) {
             NEURO.actionHandled = true;
 
-            let action: ActionWithHandler;
+            let action: RCEAction;
             if (actionKeys.includes(actionData.name)) {
                 action = neuroActions[actionData.name];
             }
