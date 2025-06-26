@@ -411,6 +411,7 @@ suite('File Actions Tests', () => {
     test('Test deleting a folder', async function() {
         // === Arrange ===
         const folderUri = await createTestDirectory('folderToDelete');
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const fileUri = await createTestFile('folderToDelete/file.js');
         const folderPath = vscode.workspace.asRelativePath(folderUri, false);
 
@@ -425,6 +426,7 @@ suite('File Actions Tests', () => {
         // Wait for the editor to update
         await new Promise(resolve => setTimeout(resolve, 100));
 
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const uris = vscode.window.tabGroups.all.flatMap(group => group.tabs.map(tab => {
             if (tab.input instanceof vscode.TabInputText) {
                 return tab.input.uri;
