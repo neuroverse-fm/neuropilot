@@ -26,7 +26,7 @@ const neuroActions: Record<string, RCEAction> = {
 
 const actionKeys: string[] = Object.keys(neuroActions);
 
-export function registerUnsupervisedactions() {
+export function registerUnsupervisedActions() {
     // Unregister all actions first to properly refresh everything
     NEURO.client?.unregisterActions(actionKeys);
 
