@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { NeuroClient } from 'neuro-game-sdk';
 import { TerminalSession } from './pseudoterminal';
 import { RceRequest } from './rce';
-import { GitExtension } from './types/git';
+import type { GitExtension } from './types/git';
 
 export interface NeuroTask {
     id: string;

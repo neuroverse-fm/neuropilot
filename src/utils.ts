@@ -6,13 +6,10 @@ import { NEURO } from './constants';
 import { CONFIG, getPermissionLevel, PERMISSIONS } from './config';
 
 import { ActionValidationResult, ActionData, actionValidationAccept, actionValidationFailure } from './neuro_client_helper';
+import assert from 'node:assert';
 
 export const REGEXP_ALWAYS = /^/;
 export const REGEXP_NEVER = /^\b$/;
-
-export function assert(obj: unknown, message?: string): asserts obj {
-    if (obj === undefined || obj === null) throw new Error(message ? `Assertion failed: ${message}` : 'Assertion failed.');
-}
 
 export function logOutput(tag: string, message: string) {
     if(!NEURO.outputChannel) {
