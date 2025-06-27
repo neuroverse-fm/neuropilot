@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 
 import { NEURO, EXTENSIONS } from '../constants';
-import type { GitExtension } from '../types/git';
+import type { GitExtension } from '../types/git.d';
 import { getGitExtension } from '../git';
 import { logOutput, createClient, onClientConnected, isPathNeuroSafe, setVirtualCursor } from '../utils';
 import { completionsProvider, registerCompletionResultHandler } from '../completions';
