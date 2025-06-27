@@ -580,7 +580,7 @@
 		"compile": "tsc -p ./",
 		"lint": "eslint --fix",
 		"watch": "tsc -watch -p ./",
-		"test": "vscode-test",
+		"test": "vscode-test --coverage",
 		"prepare": "husky"
 	},
 	"extensionDependencies": [

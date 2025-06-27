@@ -250,7 +250,7 @@ suite('File Actions', () => {
         const [context] = capture(mockedClient.sendContext).last();
 
         // === Assert ===
-        assert.strictEqual(vscode.window.activeTextEditor?.document.uri.path, fileUri.path, 'The correct file should be opened in the active editor');
+        assert.strictEqual(vscode.window.activeTextEditor?.document.uri.path.toLowerCase(), fileUri.path.toLowerCase(), 'The correct file should be opened in the active editor');
         assert.strictEqual(context.includes(fileContent), true, 'The file content should be sent in the context');
     });
 
@@ -264,7 +264,7 @@ suite('File Actions', () => {
         await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).twice(); });
 
         // === Assert ===
-        assert.strictEqual(vscode.window.activeTextEditor?.document.uri.path, uri.path, 'The new file should be opened in the active editor');
+        assert.strictEqual(vscode.window.activeTextEditor?.document.uri.path.toLowerCase(), uri.path.toLowerCase(), 'The new file should be opened in the active editor');
 
         const stat = await vscode.workspace.fs.stat(uri);
         assert.strictEqual(stat.type, vscode.FileType.File, 'The new file should be created successfully');
@@ -296,7 +296,7 @@ suite('File Actions', () => {
         await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); });
 
         // === Assert ===
-        assert.strictEqual(vscode.window.visibleTextEditors.some(editor => editor.document.uri.path === newFileUri.path), false, 'Renaming a file should not open the renamed file in the editor');
+        assert.strictEqual(vscode.window.visibleTextEditors.some(editor => editor.document.uri.path.toLowerCase() === newFileUri.path.toLowerCase()), false, 'Renaming a file should not open the renamed file in the editor');
 
         const stat = await vscode.workspace.fs.stat(newFileUri);
         assert.strictEqual(stat.type, vscode.FileType.File, 'The file should exist at the new path');
@@ -333,9 +333,9 @@ suite('File Actions', () => {
         }));
 
         // === Assert ===
-        assert.strictEqual(vscode.window.activeTextEditor?.document.uri.path, otherFileUri.path, 'The other file should still be active');
-        assert.strictEqual(uris.some(uri => uri.path === newFileUri.path), true, 'The renamed file should be open');
-        assert.strictEqual(uris.some(uri => uri.path === fileUri.path), false, 'The old file should not be open');
+        assert.strictEqual(vscode.window.activeTextEditor?.document.uri.path.toLowerCase(), otherFileUri.path.toLowerCase(), 'The other file should still be active');
+        assert.strictEqual(uris.some(uri => uri.path.toLowerCase() === newFileUri.path.toLowerCase()), true, 'The renamed file should be open');
+        assert.strictEqual(uris.some(uri => uri.path.toLowerCase() === fileUri.path.toLowerCase()), false, 'The old file should not be open');
     });
 
     test('handleRenameFileOrFolder: Rename folder with open file', async function() {
@@ -365,7 +365,7 @@ suite('File Actions', () => {
         }));
 
         // === Assert ===
-        assert.strictEqual(vscode.window.activeTextEditor?.document.uri.path, newFileUri.path, 'The renamed file should be open');
+        assert.strictEqual(vscode.window.activeTextEditor?.document.uri.path.toLowerCase(), newFileUri.path.toLowerCase(), 'The renamed file should be open');
         assert.strictEqual(uris.some(uri => uri.path === fileUri.path), false, 'The old file should not be visible in the editor');
 
         const stat = await vscode.workspace.fs.stat(newFolderUri);

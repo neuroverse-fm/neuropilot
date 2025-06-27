@@ -9,16 +9,21 @@ suite('Test Utils', () => {
         const actualGood2 = { a: 1, b: 'test', c: true, d: 'extra' }; // Extra property is allowed
         const actualBad1 = { a: 1, b: 'test', c: false }; // Wrong property
         const actualBad2 = { a: 1, b: 'test' }; // Missing property
+        const actualBad3 = { a: 1, b: 'test', d: 'extra' }; // Extra property but missing one
 
-        testUtils.assertProperties(actualGood1, expected);
-        testUtils.assertProperties(actualGood2, expected);
+        testUtils.assertProperties(expected, expected, 'The same object should pass');
+        testUtils.assertProperties(actualGood1, expected, 'An identical object should pass');
+        testUtils.assertProperties(actualGood2, expected, 'An otherwise correct object with extra properties should pass');
 
         assert.throws(() => {
-            testUtils.assertProperties(actualBad1, expected);
-        });
+            testUtils.assertProperties(actualBad1, expected, 'This should fail');
+        }, 'An object with a wrong property value should fail');
         assert.throws(() => {
-            testUtils.assertProperties(actualBad2, expected);
-        });
+            testUtils.assertProperties(actualBad2, expected, 'This should fail');
+        }, 'An object missing a property should fail');
+        assert.throws(() => {
+            testUtils.assertProperties(actualBad3, expected, 'This should fail');
+        }, 'An object with an extra property but missing one should fail');
     });
 
     test('checkWithTimeout: Check passes within timeout', async function() {
