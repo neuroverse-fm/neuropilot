@@ -10,7 +10,7 @@ import { anything, capture, instance, mock, verify } from 'ts-mockito';
 
 const rewireFileActions = rewire('../../file_actions');
 
-suite('File Actions Tests', () => {
+suite('File Actions', () => {
     let originalClient: NeuroClient | null = null;
     let mockedClient: NeuroClient;
 
@@ -24,7 +24,6 @@ suite('File Actions Tests', () => {
         await vscode.commands.executeCommand('workbench.action.closeAllEditors');
     });
 
-
     teardown(async function() {
         // Delete all test files created during the tests
         const testFilesDir = vscode.Uri.joinPath(vscode.workspace.workspaceFolders![0].uri, 'test_files');
@@ -35,19 +34,7 @@ suite('File Actions Tests', () => {
         originalClient = null;
     });
 
-    test('Test file creation', async function() {
-        const uri = await createTestFile('testFile.js');
-        let stat: vscode.FileStat;
-        try {
-            stat = await vscode.workspace.fs.stat(uri);
-        } catch (erm) {
-            assert.fail(`File testFile.js should exist but does not: ${erm}`);
-        }
-
-        assert.strictEqual(stat.type, vscode.FileType.File, 'testFile.js should be a file');
-    });
-
-    test('Test path validation', async function() {
+    test('validatePath', async function() {
         const validatePath: (path: string, shouldExist: boolean, pathType: string) => Promise<ActionValidationResult>
             = rewireFileActions.__get__('validatePath');
 
@@ -69,7 +56,7 @@ suite('File Actions Tests', () => {
         assertProperties(await validatePath(nonexistentPath, false, 'file'), { success: true }, 'Nonexistent path should be valid if shouldExist is false');
     });
 
-    test('Test Neuro-safe rename validation', async function() {
+    test('neuroSafeRenameValidation', async function() {
         const neuroSafeRenameValidation: (actionData: ActionData) => Promise<ActionValidationResult>
             = rewireFileActions.__get__('neuroSafeRenameValidation');
 
@@ -141,7 +128,7 @@ suite('File Actions Tests', () => {
         }), { success: false, retry: false }, 'Rename should fail if the old and new paths are the same');
     });
 
-    test('Test Neuro-safe delete validation', async function() {
+    test('neuroSafeDeleteValidation', async function() {
         const neuroSafeDeleteValidation: (actionData: ActionData) => Promise<ActionValidationResult>
             = rewireFileActions.__get__('neuroSafeDeleteValidation');
 
@@ -220,7 +207,7 @@ suite('File Actions Tests', () => {
         }), { success: false, retry: false }, 'Recursive delete should fail for a nonexistent directory');
     });
 
-    test('Test getting files', async function() {
+    test('handleGetFiles', async function() {
         // === Arrange ===
         const fileUri1 = await createTestFile('file1.js');
         const fileUri2 = await createTestFile('sub/file2.js');
@@ -251,7 +238,7 @@ suite('File Actions Tests', () => {
         assert.strictEqual(lines.includes(emptyDirPath), false, 'Empty directory testDir should not be in the list of files');
     });
 
-    test('Test opening a file', async function() {
+    test('handleOpenFile', async function() {
         // === Arrange ===
         const fileContent = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.\n68043cf7-01af-43cb-a9ac-6feeec7cdcc1\n';
         const fileUri = await createTestFile('file.js', fileContent);
@@ -267,7 +254,7 @@ suite('File Actions Tests', () => {
         assert.strictEqual(context.includes(fileContent), true, 'The file content should be sent in the context');
     });
 
-    test('Test creating a file', async function() {
+    test('handleCreateFile', async function() {
         // === Arrange ===
         const relativePath = 'test_files/newFile.js';
         const uri = vscode.Uri.joinPath(vscode.workspace.workspaceFolders![0].uri, relativePath);
@@ -283,7 +270,7 @@ suite('File Actions Tests', () => {
         assert.strictEqual(stat.type, vscode.FileType.File, 'The new file should be created successfully');
     });
 
-    test('Test creating a folder', async function() {
+    test('handleCreateFolder', async function() {
         // === Arrange ===
         const relativePath = 'test_files/newFolder';
         const uri = vscode.Uri.joinPath(vscode.workspace.workspaceFolders![0].uri, relativePath);
@@ -297,7 +284,7 @@ suite('File Actions Tests', () => {
         assert.strictEqual(stat.type, vscode.FileType.Directory, 'The new folder should be created successfully');
     });
 
-    test('Test renaming a closed file', async function() {
+    test('handleRenameFileOrFolder: Rename closed file', async function() {
         // === Arrange ===
         const fileUri = await createTestFile('fileToRename.js');
         const filePath = vscode.workspace.asRelativePath(fileUri, false);
@@ -323,7 +310,7 @@ suite('File Actions Tests', () => {
         }
     });
 
-    test('Test renaming an open file', async function() {
+    test('handleRenameFileOrFolder: Rename open file', async function() {
         // === Arrange ===
         const fileUri = await createTestFile('fileToRename.js');
         const filePath = vscode.workspace.asRelativePath(fileUri, false);
@@ -351,7 +338,7 @@ suite('File Actions Tests', () => {
         assert.strictEqual(uris.some(uri => uri.path === fileUri.path), false, 'The old file should not be open');
     });
 
-    test('Test renaming a folder', async function() {
+    test('handleRenameFileOrFolder: Rename folder with open file', async function() {
         // === Arrange ===
         const folderUri = await createTestDirectory('folderToRename');
         const fileUri = await createTestFile('folderToRename/file.js');
@@ -385,7 +372,7 @@ suite('File Actions Tests', () => {
         assert.strictEqual(stat.type, vscode.FileType.Directory, 'The folder should exist at the new path');
     });
 
-    test('Test deleting a file', async function() {
+    test('handleDeleteFileOrFolder: Delete open file', async function() {
         // === Arrange ===
         const fileUri = await createTestFile('fileToDelete.js');
         const filePath = vscode.workspace.asRelativePath(fileUri, false);
@@ -408,7 +395,7 @@ suite('File Actions Tests', () => {
         assert.strictEqual(vscode.window.visibleTextEditors.some(editor => editor.document.uri.path === fileUri.path), false, 'The deleted file should not be visible in the editor');
     });
 
-    test('Test deleting a folder', async function() {
+    test('handleDeleteFileOrFolder: Delete folder', async function() {
         // === Arrange ===
         const folderUri = await createTestDirectory('folderToDelete');
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
