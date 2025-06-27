@@ -1,18 +1,6 @@
 /* eslint-disable no-undef */
 import { context } from 'esbuild';
-import { createRequire } from 'module';
-const require = createRequire(import.meta.url);
-
-const assertPolyfill = {
-    name: 'assert-polyfill',
-    setup(build) {
-    // Redirect both import "assert" and import "node:assert"
-        build.onResolve({ filter: /^(node:)?assert$/ }, () => ({
-            path: require.resolve('assert/'),
-            namespace: 'file',
-        }));
-    },
-};
+import { polyfillNode } from 'esbuild-plugin-polyfill-node';
 
 export async function web(prodFlag, watchFlag) {
     const ctx = await context({
@@ -27,7 +15,18 @@ export async function web(prodFlag, watchFlag) {
         external: ['vscode'],
         logLevel: 'warning',
         plugins: [
-            assertPolyfill,
+            polyfillNode({ // trying to make the build as small as possible
+                child_process: false,
+                module: false,
+                os: false,
+                path: false,
+                punycode: false,
+                stream: false,
+                sys: false,
+                v8: false,
+                vm: false,
+                zlib: false,
+            }),
             /* add to the end of plugins array */
             esbuildProblemMatcherPlugin,
         ],
