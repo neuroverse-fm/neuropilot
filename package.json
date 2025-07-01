@@ -192,7 +192,7 @@
 					},
 					"neuropilot.docsURL": {
 						"type": "string",
-						"default": "https://pasu4.github.io/neuropilot",
+						"default": "https://vsc-neuropilot.github.io/neuropilot",
 						"markdownDescription": "If you're using a mirror of the docs site, put its URL here.\n\nYou will most likely not need to change this, unless you are modifying the docs themselves."
 					},
 					"neuropilot.beforeContext": {
