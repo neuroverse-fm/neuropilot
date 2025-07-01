@@ -16,6 +16,11 @@ on:
           - 'minor'
           - 'patch'
           - 'none'
+      update_docs:
+        type: boolean
+        description: 'Docs are up to date'
+        required: true
+        default: false
 
 jobs:
   publish:
@@ -28,6 +33,13 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: 'latest'
+
+    - name: Bump docs version
+      if: ${{ inputs.update_docs }}
+      run: |
+        cd docs
+        npm version ${{ inputs.version }}
+        git add package.json package-lock.json
 
     - name: Build
       run: |
