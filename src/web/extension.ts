@@ -13,34 +13,18 @@ import { explainWithNeuro, fixWithNeuro, NeuroCodeActionsProvider, sendDiagnosti
 import { editorChangeHandler, fileSaveListener, moveNeuroCursorHere, toggleSaveAction, workspaceEditHandler } from '../editing';
 import { emergencyDenyRequests, acceptRceRequest, denyRceRequest, revealRceNotification } from '../rce';
 
-// Remove initialization from module level - just declare the variables
-let docsOptions: Record<string, string> = {
+const docsOptions: Record<string, string> = {
     'NeuroPilot': CONFIG.docsURL,
-    'NeuroPilot (Local Dev Default)': 'http://127.0.0.1:4321/',
 };
-let docsItems: string[] = [];
+
+let docsItems = Object.keys(docsOptions);
 
 export function registerDocsLink(name: string, link: string) {
-    // No need to check if docsOptions exists since it's initialized in activate()
-    docsOptions = {
-        ...docsOptions,
-        [name]: link,
-    };
-    docsItems = Object.keys(docsOptions);
-}
-
-function initializeDocsOptions() {
-    docsOptions = {
-        'NeuroPilot': CONFIG.docsURL,
-        'NeuroPilot (Local Dev Default)': 'http://127.0.0.1:4321/neuropilot',
-    };
+    docsOptions[name] = link;
     docsItems = Object.keys(docsOptions);
 }
 
 export function activate(context: vscode.ExtensionContext) {
-    // Initialize docs options at the start of activation
-    initializeDocsOptions();
-
     NEURO.url = CONFIG.websocketUrl;
     NEURO.gameName = CONFIG.gameName;
     NEURO.connected = false;
@@ -63,20 +47,6 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand('neuropilot.explainWithNeuro', explainWithNeuro);
     vscode.commands.registerCommand('neuropilot.switchNeuroAPIUser', switchCurrentNeuroAPIUser);
     vscode.commands.registerCommand('neuropilot.refreshExtensionDependencyState', obtainExtensionState);
-
-    NEURO.currentController = CONFIG.currentlyAsNeuroAPI;
-    const changeSub = vscode.workspace.onDidChangeConfiguration(event => {
-        if (event.affectsConfiguration('neuropilot.currentlyAsNeuroAPI')) {
-            NEURO.currentController = CONFIG.currentlyAsNeuroAPI;
-            logOutput('DEBUG', `Changed current controller name to ${NEURO.currentController}.`);
-        }
-        if (event.affectsConfiguration('neuropilot.docsURL')) {
-            logOutput('INFO', 'NeuroPilot Docs URL changed.');
-            registerDocsLink('NeuroPilot', CONFIG.docsURL);
-        }
-    });
-    context.subscriptions.push(changeSub);
-
     vscode.commands.registerCommand('neuropilot.showDocsHomepage', async () => {
         const quickPick = vscode.window.createQuickPick();
         quickPick.items = docsItems.map(key => ({ label: key }));
@@ -185,6 +155,17 @@ export function activate(context: vscode.ExtensionContext) {
     });
 
     createClient();
+    NEURO.currentController = CONFIG.currentlyAsNeuroAPI;
+    vscode.workspace.onDidChangeConfiguration(event => {
+        if (event.affectsConfiguration('neuropilot.currentlyAsNeuroAPI')) {
+            NEURO.currentController = CONFIG.currentlyAsNeuroAPI;
+            logOutput('DEBUG', `Changed current controller name to ${NEURO.currentController}.`);
+        }
+        if (event.affectsConfiguration('neuropilot.docsURL')) {
+            logOutput('INFO', 'NeuroPilot Docs URL changed.');
+            registerDocsLink('NeuroPilot', CONFIG.docsURL);
+        }
+    });
 
     // Create status bar item
     NEURO.statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
