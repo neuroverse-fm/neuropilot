@@ -17,6 +17,7 @@ import { getGitExtension } from './git';
 
 const docsOptions: Record<string, string> = {
     'NeuroPilot': CONFIG.docsURL,
+    //'NeuroPilot (Local Dev Default)': 'http://127.0.0.1:4321',
 };
 
 let docsItems = Object.keys(docsOptions);
