@@ -38,7 +38,7 @@ jobs:
       if: ${{ inputs.update_docs }}
       run: |
         cd docs
-        npm version ${{ inputs.version }}
+        npm version --no-git-tag-version ${{ inputs.version }}
         git add package.json package-lock.json
 
     - name: Build
