@@ -43,4 +43,4 @@ jobs:
       run: npx @vscode/vsce publish ${{inputs.version}} -p ${{secrets.MARKETPLACE_TOKEN}} --allow-star-activation
 
     - name: Push version change
-      run: git push --follow-tags https://Pasu4:${{secrets.GITHUB_TOKEN}}:@github.com/Pasu4/neuropilot
+      run: git push --follow-tags https://VSC-NeuroPilot:${{secrets.GITHUB_TOKEN}}:@github.com/VSC-NeuroPilot/neuropilot
