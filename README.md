@@ -28,7 +28,7 @@ Capabilities of this extension include:
 These can all be turned on or off using the extension's permission settings.
 All permissions are set to "Off" by default, [except one](vscode://settings/neuropilot.permission.requestCookies).
 
-For more detailed documentation, visit [the docs site](https://pasu4.github.io/neuropilot).
+For more detailed documentation, visit [the docs site](https://vsc-neuropilot.github.io/neuropilot).
 
 ## How to use
 
@@ -501,5 +501,5 @@ The short answer is no, there isn't an intentional Remote Code Execution vulnera
 
 ## Contributing
 
-If you have an idea or want to contribute a feature, please first [create an issue](https://github.com/Pasu4/neuropilot/issues) or send a message to `@Pasu4` in the project's [post on the Neuro Discord](https://discord.com/channels/574720535888396288/1350968830230396938).
+If you have an idea or want to contribute a feature, please first [create an issue](https://github.com/VSC-NeuroPilot/neuropilot/issues) or send a message to `@Pasu4` in the project's [post on the Neuro Discord](https://discord.com/channels/574720535888396288/1350968830230396938).
 If you make a pull request that contributes code, please run `npm run lint src` and resolve any errors that did not get auto-fixed, preferrably before each commit.
