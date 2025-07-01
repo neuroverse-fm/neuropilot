@@ -46,6 +46,5 @@
     },
     // VS Code settings
     "files.autoSave": "afterDelay",
-    "files.autoSaveDelay": 1000,
-    "neuropilot.docsURL": "http://localhost:4321/neuropilot"
+    "files.autoSaveDelay": 1000
 }
