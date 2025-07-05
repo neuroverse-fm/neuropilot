@@ -226,38 +226,29 @@ export function handleGetFolderLintProblems(actionData: ActionData): string | un
 export function handleGetWorkspaceLintProblems(_actionData: ActionData): string | undefined {
     const workspacePath = getWorkspacePath();
     if (!workspacePath) {
-        NEURO.client?.sendContext('No workspace opened.');
-        return;
+        return contextFailure('No workspace opened.');
     }
 
-    checkAndGetWorkspaceLintErrors(workspacePath);
-    return undefined;
+    try {
+        const diagnostics = vscode.languages.getDiagnostics();
+        // Filter for diagnostics on safe files with errors.
+        const safeDiagnostics = diagnostics.filter(
+            ([uri, diags]) => isPathNeuroSafe(uri.fsPath) && diags.length > 0,
+        );
 
-    async function checkAndGetWorkspaceLintErrors(_workspacePath: string): Promise<void> {
-        try {
-            const diagnostics = vscode.languages.getDiagnostics();
-            // Filter for diagnostics on safe files with errors.
-            const safeDiagnostics = diagnostics.filter(
-                ([uri, diags]) => isPathNeuroSafe(uri.fsPath) && diags.length > 0,
-            );
-
-            if (safeDiagnostics.length === 0) {
-                NEURO.client?.sendContext('No linting problems found for the current workspace.');
-                return;
-            }
-
-            const formattedDiagnostics = safeDiagnostics.map(([uri, diags]) => {
-                const relative = vscode.workspace.asRelativePath(uri.fsPath);
-                return getFormattedDiagnosticsForFile(relative, diags);
-            }).join('\n\n');
-
-            NEURO.client?.sendContext(`Linting problems for the current workspace:\n${formattedDiagnostics}`);
-            return;
-        } catch (erm) {
-            logOutput('ERROR', `Failed to get diagnostics for workspace: ${erm}`);
-            NEURO.client?.sendContext("Couldn't get diagnostics for the workspace.");
-            return;
+        if (safeDiagnostics.length === 0) {
+            return contextFailure('No linting problems found for the current workspace.');
         }
+
+        const formattedDiagnostics = safeDiagnostics.map(([uri, diags]) => {
+            const relative = vscode.workspace.asRelativePath(uri.fsPath);
+            return getFormattedDiagnosticsForFile(relative, diags);
+        }).join('\n\n');
+
+        return `Linting problems for the current workspace:\n${formattedDiagnostics}`;
+    } catch (erm) {
+        logOutput('ERROR', `Failed to get diagnostics for workspace: ${erm}`);
+        return contextFailure("Couldn't get diagnostics for the workspace.");
     }
 }
 
