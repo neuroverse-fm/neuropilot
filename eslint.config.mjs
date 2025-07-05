@@ -21,6 +21,7 @@ export default tseslint.config(
             'esbuild.{m,c,}js',
             'docs',
             'src/types/**/*.d.ts',
+            'project-files/**/*',
         ],
     },
     globalIgnores([
@@ -32,6 +33,8 @@ export default tseslint.config(
         '**/.venv/**',
         '**/venv/**',
         '**/.vscode-test/**',
+        'src/types/**/*.d.ts',
+        'project-files/**/*',
     ]),
     js.configs.recommended,
     ...tseslint.configs.recommended,
