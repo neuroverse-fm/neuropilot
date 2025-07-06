@@ -12,13 +12,17 @@ import {
     registerDocsLink,
     obtainExtensionState,
     getDecorationRenderOptions,
+    reloadPermissions,
 } from '../shared/extension-common';
+import { registerUnsupervisedActions, registerUnsupervisedHandlers } from './unsupervised';
 
 export { registerDocsLink };
 
 export function activate(context: vscode.ExtensionContext) {
     // Initialize common state
     initializeCommonState();
+
+    vscode.commands.registerCommand('neuropilot.reloadPermissions', reloadWebPermissions);
 
     // Setup providers
     context.subscriptions.push(...setupCommonProviders());
@@ -30,7 +34,7 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(...setupCommonEventHandlers());
 
     // Setup client connected handlers
-    setupClientConnectedHandlers();
+    setupClientConnectedHandlers(registerUnsupervisedActions, registerUnsupervisedHandlers);
 
     // Create status bar item
     createStatusBarItem(context);
@@ -52,4 +56,8 @@ export function activate(context: vscode.ExtensionContext) {
 
 export function deactivate() {
     commonDeactivate();
+}
+
+function reloadWebPermissions() {
+    reloadPermissions(registerUnsupervisedActions);
 }

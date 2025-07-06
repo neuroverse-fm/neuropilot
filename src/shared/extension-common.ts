@@ -114,7 +114,6 @@ export function registerCommonCommands() {
         vscode.commands.registerCommand('neuropilot.moveNeuroCursorHere', moveNeuroCursorHere),
         vscode.commands.registerCommand('neuropilot.sendCurrentFile', sendCurrentFile),
         vscode.commands.registerCommand('neuropilot.giveCookie', giveCookie),
-        vscode.commands.registerCommand('neuropilot.reloadPermissions', reloadPermissions),
         vscode.commands.registerCommand('neuropilot.disableAllPermissions', disableAllPermissions),
         vscode.commands.registerCommand('neuropilot.acceptRceRequest', acceptRceRequest),
         vscode.commands.registerCommand('neuropilot.denyRceRequest', denyRceRequest),
@@ -230,7 +229,7 @@ function reconnect() {
     createClient();
 }
 
-function reloadPermissions(...extraFunctions: (() => void)[]) {
+export function reloadPermissions(...extraFunctions: (() => void)[]) {
     registerRequestCookieAction();
     for (const reloads of extraFunctions) {
         reloads();
@@ -257,7 +256,7 @@ function disableAllPermissions() {
 
     if (permissionKeys) {
         for (const key of Object.keys(permissionKeys)) {
-            promises.push(config.update(`permission.${key}`, 'off', vscode.ConfigurationTarget.Workspace));
+            promises.push(config.update(`permission.${key}`, 'Off', vscode.ConfigurationTarget.Workspace));
         }
     }
 

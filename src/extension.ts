@@ -14,14 +14,18 @@ import {
     registerDocsLink,
     getDecorationRenderOptions,
     obtainExtensionState,
+    reloadPermissions,
 } from './shared/extension-common';
 import { registerChatParticipant } from './chat';
+import { registerUnsupervisedActions, registerUnsupervisedHandlers } from './unsupervised';
 
 export { registerDocsLink };
 
 export function activate(context: vscode.ExtensionContext) {
     // Initialize common state
     initializeCommonState();
+
+    vscode.commands.registerCommand('neuropilot.reloadPermissions', reloadDesktopPermissions);
 
     // Setup providers
     context.subscriptions.push(...setupCommonProviders());
@@ -40,7 +44,7 @@ export function activate(context: vscode.ExtensionContext) {
     saveContextForTerminal(context);
 
     // Setup client connected handlers
-    setupClientConnectedHandlers(reloadTasks); // reloadTasks added to set it up at the same time
+    setupClientConnectedHandlers(reloadTasks, registerUnsupervisedActions, registerUnsupervisedHandlers); // reloadTasks added to set it up at the same time
 
     // Create status bar item
     createStatusBarItem(context);
@@ -63,4 +67,8 @@ export function activate(context: vscode.ExtensionContext) {
 export function deactivate() {
     emergencyTerminalShutdown();
     commonDeactivate();
+}
+
+function reloadDesktopPermissions() {
+    reloadPermissions(reloadTasks, registerUnsupervisedActions);
 }
