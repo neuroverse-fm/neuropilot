@@ -42,5 +42,5 @@ export function registerUnsupervisedActions() {
  * The handlers will only handle actions that the user has given permission to use.
  */
 export function registerUnsupervisedHandlers() {
-    NEURO.client?.onAction(async (actionData: ActionData) => RCEActionHandler(actionData, neuroActions, true));
+    NEURO.client?.onAction(async (actionData: ActionData) => await RCEActionHandler(actionData, neuroActions, true));
 }
