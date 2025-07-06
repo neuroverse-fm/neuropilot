@@ -141,7 +141,7 @@
 			},
 			{
 				"command": "neuropilot.refreshExtensionDependencyState",
-				"title": "Get dependency extension states",
+				"title": "Refresh extension dependencies (workaround, will be deprecated soon)",
 				"category": "NeuroPilot"
 			},
 			{
