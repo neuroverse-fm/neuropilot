@@ -3,14 +3,14 @@ import { context } from 'esbuild';
 
 export async function desktop(prodFlag, watchFlag) {
     const ctx = await context({
-        entryPoints: ['src/extension.ts'],
+        entryPoints: ['src/desktop/extension.ts'],
         bundle: true,
         format: 'cjs',
         minify: prodFlag,
         sourcemap: !prodFlag,
         sourcesContent: false,
         platform: 'node',
-        outfile: 'out/extension.js',
+        outfile: 'out/desktop/extension.js',
         external: ['vscode'],
         logLevel: 'warning',
         plugins: [
