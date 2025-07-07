@@ -47,6 +47,8 @@ jobs:
               run: npm install
             
             - name: Package extension
+              env:
+                NODE_ENV: 0
               run: npx @vscode/vsce package --allow-star-activation # how do I make this build non-prod too :(
             
             - name: Upload builds
