@@ -19,7 +19,7 @@
 	"activationEvents": [
 		"*"
 	],
-	"main": "./out/extension.js",
+	"main": "./out/desktop/extension.js",
 	"browser": "./out/web/extension.js",
 	"contributes": {
 		"chatParticipants": [

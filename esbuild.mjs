@@ -52,7 +52,7 @@ switch (mode.toLowerCase()) {
 }
 if (fs.existsSync(outDir)) {
     console.log(`Output directory ${outDir} already exists, removing dir...`);
-    fs.rmdirSync(outDir);
+    fs.rmSync(outDir, {recursive: true});
 } else {
     console.log(`Output directory ${outDir} doesn't exist, skipping removal step.`);
 }
