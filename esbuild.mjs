@@ -48,7 +48,7 @@ const modeArgIndex = process.argv.indexOf('--mode');
 const mode = modeArgIndex !== -1 && process.argv[modeArgIndex + 1] ? process.argv[modeArgIndex + 1] : 'default';
 
 // Log the build configuration
-console.log(chalk.bold(`🧰 Build mode: ${production ? chalk.green('🏭 Production') : chalk.yellow('🛠️ Development')}`));
+console.log(chalk.bold(`🏗️  Build mode: ${production ? chalk.green('🏭 Production') : chalk.yellow('🛠️ Development')}`));
 if (process.env.NODE_ENV) {
     console.log(chalk.cyan(`🌍 NODE_ENV: ${process.env.NODE_ENV}`));
 }
@@ -68,7 +68,7 @@ if (fs.existsSync(outDir)) {
     console.log(chalk.yellow(`🗑️  Output directory ${outDir} already exists, removing dir...`));
     fs.rmSync(outDir, {recursive: true});
 } else {
-    console.log(chalk.dim(`📁 Output directory ${outDir} doesn't exist, skipping removal step.`));
+    console.log(chalk.dim(`📁  Output directory ${outDir} doesn't exist, skipping removal step.`));
 }
 
 (async () => {
@@ -77,43 +77,43 @@ if (fs.existsSync(outDir)) {
             case 'web':
                 console.log(chalk.blue(`🌐 ${watch ? 'Watching' : 'Running'} web build...`));
                 await web(production, watch).catch(erm => {
-                    console.error(chalk.red.bold(`❌ Web build failed: ${erm}`));
+                    console.error(chalk.red.bold(`💥  Web build failed: ${erm}`));
                     process.exit(1);
                 });
-                console.log(chalk.green.bold('✅ Web build completed successfully!'));
+                console.log(chalk.green.bold.underline('🧰  Web build completed successfully!'));
                 break;
             case 'desktop':
                 console.log(chalk.blue(`🖥️  ${watch ? 'Watching' : 'Running'} desktop build...`));
                 await desktop(production, watch).catch(erm => {
-                    console.error(chalk.red.bold(`❌ Desktop build failed: ${erm}`));
+                    console.error(chalk.red.bold(`💥 Desktop build failed: ${erm}`));
                     process.exit(1);
                 });
-                console.log(chalk.green.bold('✅ Desktop build completed successfully!'));
+                console.log(chalk.green.bold.underline('🧰  Desktop build completed successfully!'));
                 break;
             case 'default':
                 // Can't use watch while building both.
                 if (watch) {
-                    console.error(chalk.red.bold('❌ Cannot use flag --watch while building both desktop and web'));
-                    process.exit(1);
+                    console.error(chalk.yellow.bold('⚠️  Cannot use flag --watch while building both desktop and web'));
+                    //process.exit(1); we'll just continue building it normally ig
                 }
                 console.log(chalk.blue('🖥️  Running desktop build...'));
                 await desktop(production, false).catch(erm => {
-                    console.error(chalk.red.bold(`❌ Desktop build failed: ${erm}`));
+                    console.error(chalk.red.bold(`💥  Desktop build failed: ${erm}`));
                     process.exit(1);
                 });
                 console.log(chalk.blue('🌐 Running web build...'));
                 await web(production, false).catch(erm => {
-                    console.error(chalk.red.bold(`❌ Web build failed: ${erm}`));
+                    console.error(chalk.red.bold(`💥  Web build failed: ${erm}`));
                     process.exit(1);
                 });
                 console.log(chalk.green.bold.underline('🎉 Builds completed successfully!'));
                 break;
             default:
-                console.error(chalk.red.bold(`❌ Unknown mode: ${mode}`));
+                console.error(chalk.red.bold(`❌  Unknown mode: ${mode}`));
                 process.exit(1);
         }
     } catch (erm) {
-        console.error(chalk.bgRed.white.bold(`💥 Build failed: ${erm}`));
+        console.error(chalk.bgRed.white.bold(`💥  Build failed: ${erm}`));
         process.exit(1);
     }
 })();
