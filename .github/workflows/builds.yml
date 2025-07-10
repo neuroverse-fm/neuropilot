@@ -19,6 +19,14 @@ on:
             - "playground/"
             - "docs/"
             - "tony/"
+    workflow_dispatch:
+        inputs:
+            prod:
+                type: choice
+                description: Whether to override to build in production mode. Use 0 for dev and 1 for prod.
+                required: false
+                default: "0"
+                options: ["0", "1"]
 
 jobs:
     build:
@@ -48,8 +56,8 @@ jobs:
             
             - name: Package extension
               env:
-                NODE_ENV: 0
-              run: npx @vscode/vsce package --allow-star-activation # how do I make this build non-prod too :(
+                NODE_ENV: ${{ inputs.prod || '0' }}
+              run: npx @vscode/vsce package --allow-star-activation
             
             - name: Upload builds
               uses: actions/upload-artifact@v4
