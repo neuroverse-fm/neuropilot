@@ -6,8 +6,8 @@ import chalk from 'chalk';
 
 // Checks production mode
 function determineProductionMode() {
-    const prodFlag = process.argv.includes('--production');
-    const devFlag = process.argv.includes('--development');
+    const prodFlag = process.argv.includes('--production') || process.argv.includes('--prod');
+    const devFlag = process.argv.includes('--development') || process.argv.includes('--dev');
 
     if (prodFlag && devFlag) {
         console.error(chalk.red.bold("❌ Can't build for both prod and dev at the same time."));
@@ -33,13 +33,13 @@ function determineProductionMode() {
             return false;
         }
         // Fallback to string comparison for backward compatibility
-        if (nodeEnv.toLowerCase() === 'development') {
-            return false;
+        if (nodeEnv.toLowerCase() === 'production') {
+            return true;
         }
     }
 
     // Default to development
-    return true;
+    return false;
 }
 
 const production = determineProductionMode();
