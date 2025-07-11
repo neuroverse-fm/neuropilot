@@ -13,9 +13,6 @@
     "src/web/**/*"
   ],
   "exclude": [
-    "node_modules",
-    "project-files",
-    "out",
-    "**/dist"
+    "src/desktop/**/*",
   ]
 }
