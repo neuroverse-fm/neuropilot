@@ -15,6 +15,7 @@
   "exclude": [
     "node_modules",
     "project-files",
-    "out"
+    "out",
+    "**/dist"
   ]
 }

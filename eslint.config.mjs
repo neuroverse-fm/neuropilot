@@ -22,11 +22,12 @@ export default tseslint.config(
             'docs',
             'src/types/**/*.d.ts',
             'project-files/**/*',
+            '**/dist/**',
         ],
     },
     globalIgnores([
         'out/**',
-        'dist/**',
+        '**/dist/**',
         'playground/**',
         '**/vscode*.d.ts',
         'docs',
