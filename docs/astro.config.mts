@@ -2,6 +2,8 @@
 import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
 
+const BASE_GITHUB_URL = 'https://github.com/VSC-NeuroPilot/neuropilot'
+
 // https://astro.build/config
 export default defineConfig({
     site: 'https://vsc-neuropilot.github.io/neuropilot',
@@ -22,6 +24,10 @@ export default defineConfig({
                 }
             ],
             title: 'NeuroPilot Docs',
+            editLink: {
+                baseUrl: BASE_GITHUB_URL + '/edit/master/docs'
+            },
+            lastUpdated: true,
             logo: {
                 dark: './src/assets/evilpilot.svg',
                 light: './src/assets/neuropilot.svg',
@@ -36,7 +42,7 @@ export default defineConfig({
                 {
                     icon: 'github',
                     label: 'NeuroPilot GitHub',
-                    href: 'https://github.com/VSC-NeuroPilot/neuropilot',
+                    href: BASE_GITHUB_URL,
                 },
             ],
             sidebar: [
@@ -71,14 +77,25 @@ export default defineConfig({
                         { label: 'Commands', slug: 'reference/commands' },
                         { label: 'Context', slug: 'reference/auto-context' },
                         { label: 'Cookies', slug: 'reference/cookies' },
-                        { label: 'Permissions', slug: 'reference/permissions' },
-                        { label: 'RCE', slug: 'reference/rce' },
+                        { label: 'Cursor', slug: 'reference/cursor' },
+                        { label: 'Permissions', slug: 'reference/permissions', badge: { text: 'Important', variant: 'tip' } },
+                        { label: 'RCE', slug: 'reference/rce', badge: { text: 'Core', variant: 'note' } },
                         { label: 'Settings', slug: 'reference/settings' },
                         { label: 'Dependencies', slug: 'reference/dependencies' },
                     ],
                 },
                 "assets",
+                {
+                    label: 'Contributors',
+                    autogenerate: {
+                        directory: 'contributors',
+                        collapsed: true
+                    }
+                }
             ],
+            components: {
+                Footer: './src/components/Footer.astro'
+            }
         }),
     ],
 });
