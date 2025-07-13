@@ -88,12 +88,6 @@ export function registerTerminalActions() {
     }
 }
 
-let extContext: vscode.ExtensionContext;
-
-export function saveContextForTerminal(context: vscode.ExtensionContext) {
-    extContext = context;
-}
-
 /**
 * Fetches the list of terminal configurations from the `neuropilot.terminals` setting.
 */
@@ -135,7 +129,7 @@ function getShellProfileForType(shellType: string): { shellPath: string; shellAr
 * Creates a new pseudoterminal-based session.
 * This version captures output in separate STDOUT and STDERR properties.
 */
-function createPseudoterminal(shellType: string, terminalName: string, vscContext: vscode.ExtensionContext = extContext): TerminalSession {
+function createPseudoterminal(shellType: string, terminalName: string): TerminalSession {
     const emitter = new vscode.EventEmitter<string>();
 
     const startTime: string = new Date().toLocaleString();
@@ -157,7 +151,7 @@ function createPseudoterminal(shellType: string, terminalName: string, vscContex
     };
 
     // 50/50 chance of icon selection no longer
-    const icon = vscode.Uri.joinPath(vscContext.extensionUri, 'assets/console.png');
+    const icon = vscode.Uri.joinPath(NEURO.context!.extensionUri, 'assets/console.png');
 
     // Create the terminal using VS Code's API.
     const terminal = vscode.window.createTerminal({
@@ -367,6 +361,6 @@ export function emergencyTerminalShutdown() {
         logOutput('INFO', 'Emergency shutdown complete. All terminals have been terminated.');
     } else {
         logOutput('WARN', `Failed to terminate ${failedShutdownCount} shells, including: ${failedShutdownTerminals}.`);
-        vscode.window.showWarningMessage(`Failed to terminate ${failedShutdownCount} terminal(s), which include these terminals: ${failedShutdownTerminals}.\nPlease check on them.`);
+        vscode.window.showWarningMessage(`Failed to terminate ${failedShutdownCount} terminal(s), which include these terminals: ${failedShutdownTerminals.join(', ')}.\nPlease check on them.`);
     }
 }

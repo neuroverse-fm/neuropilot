@@ -171,9 +171,10 @@ export function setupCommonEventHandlers() {
     return handlers;
 }
 
-export function initializeCommonState() {
+export function initializeCommonState(context: vscode.ExtensionContext) {
     initializeDocsOptions();
 
+    NEURO.context = context;
     NEURO.url = CONFIG.websocketUrl;
     NEURO.gameName = CONFIG.gameName;
     NEURO.connected = false;
@@ -208,9 +209,9 @@ export function setupClientConnectedHandlers(...extraHandlers: (() => void)[]) {
     }
 }
 
-export function createStatusBarItem(context: vscode.ExtensionContext) {
+export function createStatusBarItem() {
     NEURO.statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
-    context.subscriptions.push(NEURO.statusBarItem);
+    NEURO.context!.subscriptions.push(NEURO.statusBarItem);
     NEURO.statusBarItem.name = 'NeuroPilot';
     NEURO.statusBarItem.command = 'neuropilot.revealRceNotification';
     NEURO.statusBarItem.text = '$(neuropilot-heart)';
@@ -364,14 +365,14 @@ export function deactivate() {
     NEURO.client?.sendContext(`NeuroPilot is being deactivated, or ${CONFIG.gameName} is closing. See you next time, ${NEURO.currentController}!`);
 }
 
-export function getDecorationRenderOptions(context: vscode.ExtensionContext) {
+export function getDecorationRenderOptions() {
     return {
         backgroundColor: 'rgba(0, 0, 0, 0)',
         border: '1px solid rgba(0, 0, 0, 0)',
         borderRadius: '1px',
         overviewRulerColor: 'rgba(255, 85, 229, 0.5)',
         overviewRulerLane: vscode.OverviewRulerLane.Right,
-        gutterIconPath: vscode.Uri.joinPath(context.extensionUri, 'icon.png'),
+        gutterIconPath: vscode.Uri.joinPath(NEURO.context!.extensionUri, 'icon.png'),
         gutterIconSize: 'contain',
         rangeBehavior: vscode.DecorationRangeBehavior.ClosedClosed,
         before: {

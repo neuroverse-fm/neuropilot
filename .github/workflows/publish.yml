@@ -34,13 +34,6 @@ jobs:
       with:
         node-version: 'latest'
 
-    - name: Bump docs version
-      if: ${{ inputs.update_docs }}
-      run: |
-        cd docs
-        npm version --no-git-tag-version ${{ inputs.version }}
-        git add package.json package-lock.json
-
     - name: Install deps
       run: npm install
       
@@ -48,6 +41,13 @@ jobs:
       run: |
         git config --global user.name "GitHub Actions"
         git config --global user.email "actions@github.com"
+    
+    - name: Bump docs version
+      if: ${{ inputs.update_docs }}
+      working-directory: ${{ github.workspace }}/docs
+      run: |
+        npm version --no-git-tag-version ${{ inputs.version }}
+        git add package.json package-lock.json
     
     - name: Publish extension
       env:
@@ -60,3 +60,8 @@ jobs:
         git commit -am "$new_version"
         git tag -a "v$new_version" -m "$new_version"
         git push --follow-tags https://VSC-NeuroPilot:${{secrets.GITHUB_TOKEN}}:@github.com/VSC-NeuroPilot/neuropilot
+    
+    - name: Rebuild docs site
+      if: ${{ inputs.update_docs }}
+      uses: ./.github/workflows/docs.yml
+

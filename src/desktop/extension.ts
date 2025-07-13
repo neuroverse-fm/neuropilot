@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { reloadTasks, taskEndedHandler } from '../tasks';
-import { emergencyTerminalShutdown, saveContextForTerminal } from '../pseudoterminal';
+import { emergencyTerminalShutdown } from '../pseudoterminal';
 import { createClient, isPathNeuroSafe, setVirtualCursor } from '../utils';
 import { NEURO } from '../constants';
 import {
@@ -22,32 +22,32 @@ import { registerUnsupervisedActions, registerUnsupervisedHandlers } from './uns
 export { registerDocsLink };
 
 export function activate(context: vscode.ExtensionContext) {
+
     // Initialize common state
-    initializeCommonState();
+    initializeCommonState(context);
 
     vscode.commands.registerCommand('neuropilot.reloadPermissions', reloadDesktopPermissions);
 
     // Setup providers
-    context.subscriptions.push(...setupCommonProviders());
+    NEURO.context!.subscriptions.push(...setupCommonProviders());
 
     // Register commands
-    context.subscriptions.push(...registerCommonCommands());
+    NEURO.context!.subscriptions.push(...registerCommonCommands());
 
     // Setup event handlers
-    context.subscriptions.push(...setupCommonEventHandlers());
+    NEURO.context!.subscriptions.push(...setupCommonEventHandlers());
 
     // Desktop-specific handlers
-    context.subscriptions.push(vscode.tasks.onDidEndTask(taskEndedHandler));
+    NEURO.context!.subscriptions.push(vscode.tasks.onDidEndTask(taskEndedHandler));
 
     // Chat participant (desktop-specific setup)
-    registerChatParticipant(context);
-    saveContextForTerminal(context);
+    registerChatParticipant();
 
     // Setup client connected handlers
     setupClientConnectedHandlers(reloadTasks, registerUnsupervisedActions, registerUnsupervisedHandlers); // reloadTasks added to set it up at the same time
 
     // Create status bar item
-    createStatusBarItem(context);
+    createStatusBarItem();
 
     // Extension state
     obtainExtensionState();
@@ -56,7 +56,7 @@ export function activate(context: vscode.ExtensionContext) {
     createClient();
 
     // Create cursor decoration (desktop-specific)
-    NEURO.cursorDecorationType = vscode.window.createTextEditorDecorationType(getDecorationRenderOptions(context));
+    NEURO.cursorDecorationType = vscode.window.createTextEditorDecorationType(getDecorationRenderOptions());
 
     // Set initial virtual cursor
     if (vscode.window.activeTextEditor && isPathNeuroSafe(vscode.window.activeTextEditor.document.fileName)) {

@@ -20,24 +20,24 @@ export { registerDocsLink };
 
 export function activate(context: vscode.ExtensionContext) {
     // Initialize common state
-    initializeCommonState();
+    initializeCommonState(context);
 
     vscode.commands.registerCommand('neuropilot.reloadPermissions', reloadWebPermissions);
 
     // Setup providers
-    context.subscriptions.push(...setupCommonProviders());
+    NEURO.context!.subscriptions.push(...setupCommonProviders());
 
     // Register commands
-    context.subscriptions.push(...registerCommonCommands());
+    NEURO.context!.subscriptions.push(...registerCommonCommands());
 
     // Setup event handlers
-    context.subscriptions.push(...setupCommonEventHandlers());
+    NEURO.context!.subscriptions.push(...setupCommonEventHandlers());
 
     // Setup client connected handlers
     setupClientConnectedHandlers(registerUnsupervisedActions, registerUnsupervisedHandlers);
 
     // Create status bar item
-    createStatusBarItem(context);
+    createStatusBarItem();
 
     // Extension state
     obtainExtensionState();
@@ -46,7 +46,7 @@ export function activate(context: vscode.ExtensionContext) {
     createClient();
 
     // Create cursor decoration (web-specific)
-    NEURO.cursorDecorationType = vscode.window.createTextEditorDecorationType(getDecorationRenderOptions(context));
+    NEURO.cursorDecorationType = vscode.window.createTextEditorDecorationType(getDecorationRenderOptions());
 
     // Set initial virtual cursor
     if (vscode.window.activeTextEditor && isPathNeuroSafe(vscode.window.activeTextEditor.document.fileName)) {
