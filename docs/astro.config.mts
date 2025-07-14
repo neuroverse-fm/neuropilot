@@ -1,8 +1,10 @@
 // @ts-check
 import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
+import starlightHeadingBadgesPlugin from 'starlight-heading-badges';
+import { BASE_GITHUB_URL, MARKETPLACE_URL } from './src/consts/links';
 
-const BASE_GITHUB_URL = 'https://github.com/VSC-NeuroPilot/neuropilot'
+/** @todo https://starlight.astro.build/resources/plugins/#plugins */
 
 // https://astro.build/config
 export default defineConfig({
@@ -10,6 +12,7 @@ export default defineConfig({
     base: '/neuropilot',
     integrations: [
         starlight({
+            plugins: [starlightHeadingBadgesPlugin()],
             favicon: '/heart-pink.svg',
             customCss: [
                 './src/styles/icons.css'
@@ -37,7 +40,7 @@ export default defineConfig({
                 {
                     icon: 'vscode',
                     label: 'NeuroPilot listing on Visual Studio Marketplace',
-                    href: 'https://marketplace.visualstudio.com/items?itemName=Pasu4.neuropilot',
+                    href: MARKETPLACE_URL("page"),
                 },
                 {
                     icon: 'github',
@@ -51,6 +54,7 @@ export default defineConfig({
                     items: [
                         {
                             label: 'Setup NeuroPilot',
+                            badge: { text: 'Start here!', variant: 'tip' },
                             slug: 'guides/setup',
                         },
                         {
@@ -59,6 +63,7 @@ export default defineConfig({
                         },
                         {
                             label: 'Sandboxing',
+                            badge: { text: 'WIP', variant: 'caution' },
                             slug: 'guides/sandboxing'
                         }
                     ],
@@ -73,20 +78,25 @@ export default defineConfig({
                                 collapsed: true
                             }
                         },
-                        { label: 'Safety', slug: 'reference/safety' },
+                        { label: 'Safety', slug: 'reference/safety', badge: { text: 'Important', variant: 'danger' } },
                         { label: 'Commands', slug: 'reference/commands' },
-                        { label: 'Context', slug: 'reference/auto-context' },
-                        { label: 'Cookies', slug: 'reference/cookies' },
-                        { label: 'Cursor', slug: 'reference/cursor' },
-                        { label: 'Permissions', slug: 'reference/permissions', badge: { text: 'Important', variant: 'tip' } },
+                        { label: 'Context', slug: 'reference/auto-context', badge: { text: 'Stub', variant: 'caution' } },
+                        { label: 'Cookies', slug: 'reference/cookies', badge: { text: 'Stub', variant: 'caution' } },
+                        { label: 'Cursor', slug: 'reference/cursor', badge: { text: 'Conditional', variant: 'success' } },
+                        { label: 'Permissions', slug: 'reference/permissions', badge: { text: 'Important', variant: 'danger' } },
                         { label: 'RCE', slug: 'reference/rce', badge: { text: 'Core', variant: 'note' } },
                         { label: 'Settings', slug: 'reference/settings' },
                         { label: 'Dependencies', slug: 'reference/dependencies' },
                     ],
                 },
-                "assets",
+                {
+                    label: 'NeuroPilot Assets',
+                    badge: { text: 'Meta', variant: 'note' },
+                    slug: 'assets'
+                },
                 {
                     label: 'Contributors',
+                    badge: { text: 'Meta', variant: 'note' },
                     autogenerate: {
                         directory: 'contributors',
                         collapsed: true

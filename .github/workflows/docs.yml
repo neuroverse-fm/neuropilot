@@ -65,6 +65,7 @@ jobs:
                 key: neuropilot-docs-${{ github.repository }}
                 path: |
                     docs/.astro
+                    docs/.cache
                     docs/dist
                     docs/node_modules
             
