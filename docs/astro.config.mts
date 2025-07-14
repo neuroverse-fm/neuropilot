@@ -2,7 +2,7 @@
 import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
 import starlightHeadingBadgesPlugin from 'starlight-heading-badges';
-import { BASE_GITHUB_URL, MARKETPLACE_URL } from './src/consts/links';
+import { BASE_GITHUB_URL, MARKETPLACE_URL } from './consts/links';
 
 /** @todo https://starlight.astro.build/resources/plugins/#plugins */
 
