@@ -424,3 +424,13 @@ export function handleOpenFile(actionData: ActionData): string | undefined {
         }
     }
 }
+
+if(process.env.NEUROPILOT_TEST === 'true') {
+    module.exports._private = {
+        validatePath,
+        getPathExistence,
+        neuroSafeValidation,
+        neuroSafeDeleteValidation,
+        neuroSafeRenameValidation,
+    };
+}

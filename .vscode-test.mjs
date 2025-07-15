@@ -9,4 +9,7 @@ export default defineConfig({
         exclude: ['src/test/**/*.test.ts', 'src/test/suite/index.ts'],
         output: './coverage',
     },
+    env: {
+        NEUROPILOT_TEST: 'true',
+    },
 });

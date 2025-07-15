@@ -1,14 +1,14 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
 import * as fileActions from '../../file_actions';
-import rewire from 'rewire';
 import { assertProperties, checkNoErrorWithTimeout, createTestDirectory, createTestFile } from '../test_utils';
 import { ActionData, ActionValidationResult } from '../../neuro_client_helper';
 import { NeuroClient } from 'neuro-game-sdk';
 import { NEURO } from '../../constants';
 import { anything, capture, instance, mock, verify } from 'ts-mockito';
 
-const rewireFileActions = rewire('../../file_actions');
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const privateFileActions = require('../../file_actions')._private;
 
 suite('File Actions', () => {
     let originalClient: NeuroClient | null = null;
@@ -36,7 +36,7 @@ suite('File Actions', () => {
 
     test('validatePath', async function() {
         const validatePath: (path: string, shouldExist: boolean, pathType: string) => Promise<ActionValidationResult>
-            = rewireFileActions.__get__('validatePath');
+            = privateFileActions.validatePath;
 
         // === Arrange ===
         const existingFileUri = await createTestFile('validFile.js');
@@ -58,7 +58,7 @@ suite('File Actions', () => {
 
     test('neuroSafeRenameValidation', async function() {
         const neuroSafeRenameValidation: (actionData: ActionData) => Promise<ActionValidationResult>
-            = rewireFileActions.__get__('neuroSafeRenameValidation');
+            = privateFileActions.neuroSafeRenameValidation;
 
         // === Arrange ===
         const fileUri1 = await createTestFile('file1.js');
@@ -130,7 +130,7 @@ suite('File Actions', () => {
 
     test('neuroSafeDeleteValidation', async function() {
         const neuroSafeDeleteValidation: (actionData: ActionData) => Promise<ActionValidationResult>
-            = rewireFileActions.__get__('neuroSafeDeleteValidation');
+            = privateFileActions.neuroSafeDeleteValidation;
 
         // === Arrange ===
         const fileUri = await createTestFile('fileToDelete.js');
