@@ -54,7 +54,7 @@ If you type the wrong name's @, the prompt will be sent to GitHub Copilot, even 
 
 </Aside>
 
-## Docs URL
+## Docs URL :badge[Contributor]{variant=caution}
 
 **Default: `https://vsc-neuropilot.github.io/neuropilot` (this site)**
 
@@ -67,7 +67,7 @@ Changing this setting to an untrusted website could potentially be dangerous.
 
 </Aside>
 
-## Before/After Context :badge[Multiple settings]
+## Before/After Context :badge[Multiple settings]{variant=success}
 
 **Default: `10`/`10`**
 
@@ -102,7 +102,7 @@ This is due to NeuroPilot performing many action registers, action forces, actio
 
 The time (in milliseconds) to wait for chats and completions, before considering them cancelled.
 
-## Include/Exclude Patterns :badge[Multiple settings]
+## Include/Exclude Patterns :badge[Multiple settings]{variant=success}
 
 **Default: `**/*`/`**/node_modules/**\n**/venv/**`**
 
@@ -115,7 +115,7 @@ Files and folders starting with a dot will still be ignored regardless of Includ
 
 </Aside>
 
-## Terminals :badge[JSON-only]
+## Terminals :badge[JSON-only] :badge[Permission-dependent]{variant=danger}
 
 **Default: See object array below.**
 
@@ -147,7 +147,7 @@ Files and folders starting with a dot will still be ignored regardless of Includ
 
 An array of objects that specify the shell's name, path to the shell, and args (if any) to pass in when starting them up.
 
-## Show Time On Terminal Start
+## Show Time On Terminal Start :badge[Permission-dependent]{variant=danger}
 
 **Default: `false`**
 
@@ -155,7 +155,7 @@ An array of objects that specify the shell's name, path to the shell, and args (
 
 Displays the current time (according to system clock) when starting a new terminal session.
 
-## Terminal Context Delay
+## Terminal Context Delay :badge[Permission-dependent]{variant=danger}
 
 **Default: `400`**
 
