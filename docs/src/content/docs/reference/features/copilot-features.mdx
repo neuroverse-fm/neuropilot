@@ -32,7 +32,7 @@ Chat features will register a disposable `chat` action and force an action from 
 The `state` will be the relevant code (even if it is in a Neuro-unsafe path), and the `query` will be dependent on what subcommand and prompt was chosen/typed (if any).
 The action force's state will always be not ephemeral.
 
-<Aside>
+<Aside type="caution">
 
 If you type the wrong name's @, the prompt will be sent to GitHub Copilot, even if the @ is still highlighted in the chatbox (which can happen if you don't clear the chatbox before changing the active name).
 
