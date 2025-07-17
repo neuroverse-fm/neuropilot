@@ -24,3 +24,7 @@ docs/**
 
 # Coverage
 /coverage
+
+# Integration testing
+test-playground/
+.vscode-test.mjs
