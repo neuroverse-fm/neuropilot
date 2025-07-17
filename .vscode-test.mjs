@@ -1,15 +1,20 @@
 import { defineConfig } from '@vscode/test-cli';
 
-export default defineConfig({
-    label: 'desktopUnitTest',
-    files: 'out/test/**/*.test.js',
-    workspaceFolder: './test-playground',
-    coverage: {
-        include: ['src/**/*.ts'],
-        exclude: ['src/test/**/*.test.ts', 'src/test/suite/index.ts'],
-        output: './coverage',
+export default defineConfig([
+    {
+        label: 'desktopUnitTest',
+        platform: 'desktop',
+        files: 'out/test/**/*.test.js',
+        workspaceFolder: './test-playground',
+        browser: '',
+        coverage: {
+            include: ['src/**/*.ts'],
+            exclude: ['src/test/**/*.test.ts', 'src/test/suite/index.ts'],
+            output: './coverage',
+        },
+        env: {
+            NEUROPILOT_TEST: 'true',
+        },
     },
-    env: {
-        NEUROPILOT_TEST: 'true',
-    },
-});
+    // Web tests go here...
+]);
