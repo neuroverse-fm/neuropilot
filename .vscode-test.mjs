@@ -1,6 +1,6 @@
 import { defineConfig } from '@vscode/test-cli';
 
-export default defineConfig({
+export default defineConfig([{
     label: 'desktopUnitTest',
     files: 'out/test/**/*.test.js',
     workspaceFolder: './test-playground',
@@ -12,4 +12,4 @@ export default defineConfig({
     env: {
         NEUROPILOT_TEST: 'true',
     },
-});
+}]);
