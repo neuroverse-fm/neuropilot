@@ -18,6 +18,7 @@ dist/
 !.github/actions/get-package-json-version/dist/
 # generated astro types
 .astro/
+.cache/
 
 # logs
 npm-debug.log*

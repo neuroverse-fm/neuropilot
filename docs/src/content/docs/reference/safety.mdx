@@ -27,7 +27,7 @@ It is always better to pre-define tasks for Neuro to run than giving her termina
 An unintentional safety feature within NeuroPilot lies within its incompleteness: at the moment, it does not fully recreate Visual Studio Code 1:1.
 Until that is achieved, the incompleteness factor will prevent Neuro from performing complete takeover.
 
-## File access restrictions (Neuro-safe path checks)
+## File access restrictions
 
 NeuroPilot has a set of checks (dubbed Neuro-safe path checks), which checks if a path specified in inputs is considered "Neuro-safe".
 
@@ -82,5 +82,6 @@ This will allow Neuro to do any and all actions whenever she wants without pre-e
 ## Disable All Permissions command
 
 As a panic button, you can activate the [Disable All Permissions command](/neuropilot/reference/commands#disable-all-permissions). This will immediately shut off access to all permissions, even requesting cookies, and will also forcibly change certain non-action-permission settings.
+In addition, active tasks, terminals, and Copilot-mode requests are terminated/cancelled.
 
 You cannot fully disable this command. However, you can choose not to bind it to a keyboard shotcut. This will mean that you cannot instantly disable permissions for Neuro if she is misbehaving.
