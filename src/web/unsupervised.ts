@@ -6,10 +6,6 @@ import { lintActions, registerLintActions } from '../lint_problems';
 import { cancelRequestAction, RCEActionHandler } from '../rce';
 
 /**
- * Web portion
- */
-
-/**
  * Register unsupervised actions with the Neuro API.
  * Will only register actions that the user has given permission to use.
  */

@@ -9,11 +9,11 @@ import {
     setupClientConnectedHandlers,
     createStatusBarItem,
     deactivate as commonDeactivate,
-    registerDocsLink,
     obtainExtensionState,
     getDecorationRenderOptions,
     reloadPermissions,
 } from '../shared/extension';
+import { registerDocsLink } from '../shared/docs';
 import { registerUnsupervisedActions, registerUnsupervisedHandlers } from './unsupervised';
 
 export { registerDocsLink };

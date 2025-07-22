@@ -560,6 +560,26 @@
 						"type": "boolean",
 						"default": false,
 						"markdownDescription": "Make the real cursor follow Neuro's cursor."
+					},
+					"neuropilot.defaultOpenDocsWindow": {
+						"type": "string",
+						"default": "ask",
+						"enum": [
+							"ask",
+							"alwaysBrowser",
+							"alwaysWebView"
+						],
+						"enumItemLabels": [
+							"Ask where to open",
+							"Always open in browser",
+							"Always open in a WebView"
+						],
+						"enumDescriptions": [
+							"Always ask where to open the docs",
+							"Always open docs in your browser",
+							"Always open docs in a new WebView window"
+						],
+						"markdownDescription": "Choose where to open docs links.\n\nThis applies to both docs commands."
 					}
 				}
 			}

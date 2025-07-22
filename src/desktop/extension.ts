@@ -11,11 +11,11 @@ import {
     setupClientConnectedHandlers,
     createStatusBarItem,
     deactivate as commonDeactivate,
-    registerDocsLink,
     getDecorationRenderOptions,
     obtainExtensionState,
     reloadPermissions,
 } from '../shared/extension';
+import { registerDocsLink } from '../shared/docs';
 import { registerChatParticipant } from '../chat';
 import { registerUnsupervisedActions, registerUnsupervisedHandlers } from './unsupervised';
 

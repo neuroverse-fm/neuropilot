@@ -10,104 +10,9 @@ import { editorChangeHandler, fileSaveListener, moveNeuroCursorHere, toggleSaveA
 import { emergencyDenyRequests, acceptRceRequest, denyRceRequest, revealRceNotification } from '../rce';
 import type { GitExtension } from '../types/git';
 import { getGitExtension } from '../git';
-
-// Shared docs management
-let docsOptions: Record<string, string>;
-let docsItems: string[];
-
-export function registerDocsLink(name: string, link: string) {
-    docsOptions[name] = link;
-    docsItems = Object.keys(docsOptions);
-}
-
-function initializeDocsOptions() {
-    docsOptions = {
-        'NeuroPilot': CONFIG.docsURL,
-        'NeuroPilot (Local Dev Default)': 'http://127.0.0.1:4321/neuropilot',
-    };
-    docsItems = Object.keys(docsOptions);
-}
+import { registerDocsCommands, registerDocsLink } from './docs';
 
 // Shared commands
-export function registerDocsCommands() {
-    const showDocsCommand = vscode.commands.registerCommand('neuropilot.showDocsHomepage', async () => {
-        const quickPick = vscode.window.createQuickPick();
-        quickPick.items = docsItems.map(key => ({ label: key }));
-        quickPick.placeholder = 'Select a documentation base URL';
-
-        quickPick.onDidAccept(async () => {
-            const selectedOption = quickPick.selectedItems[0]?.label;
-            if (!selectedOption) {
-                vscode.window.showErrorMessage('No documentation option selected.');
-                quickPick.hide();
-                return;
-            }
-
-            const baseUrl = docsOptions[selectedOption];
-            logOutput('DEBUG', `Opening ${selectedOption}'s docs at URL ${baseUrl}`);
-
-            const panel = vscode.window.createWebviewPanel(
-                'docsWebView',
-                `${selectedOption} Docs (WebView)`,
-                vscode.ViewColumn.Active,
-                { enableScripts: true },
-            );
-            panel.webview.html = openDocsPage(baseUrl);
-            quickPick.hide();
-        });
-
-        quickPick.show();
-    });
-
-    const openSpecificDocsCommand = vscode.commands.registerCommand('neuropilot.openSpecificDocsPage', async (args?: { subpage?: string }) => {
-        const quickPick = vscode.window.createQuickPick();
-        quickPick.items = docsItems.map(key => ({ label: key }));
-        quickPick.placeholder = 'Select a documentation base URL';
-
-        quickPick.onDidAccept(async () => {
-            const selectedOption = quickPick.selectedItems[0]?.label;
-            if (!selectedOption) {
-                vscode.window.showErrorMessage('No documentation option selected.');
-                quickPick.hide();
-                return;
-            }
-
-            const baseUrl = docsOptions[selectedOption];
-
-            let subpage: string | undefined;
-            if (args && typeof args.subpage === 'string') {
-                subpage = args.subpage;
-            } else {
-                subpage = await vscode.window.showInputBox({
-                    prompt: 'Enter the docs subpath (e.g., /guide, /api, etc.)',
-                    placeHolder: '/',
-                });
-            }
-
-            if (!subpage) {
-                vscode.window.showErrorMessage('No subpage specified.');
-                quickPick.hide();
-                return;
-            }
-
-            logOutput('DEBUG', `Opening ${selectedOption}'s docs at URL ${baseUrl}${subpage}`);
-
-            const panel = vscode.window.createWebviewPanel(
-                'docsWebView',
-                `${selectedOption} Docs (WebView)`,
-                vscode.ViewColumn.Active,
-                { enableScripts: true },
-            );
-            panel.webview.html = openDocsPage(baseUrl, subpage);
-            quickPick.hide();
-        });
-
-        quickPick.show();
-    });
-
-    return [showDocsCommand, openSpecificDocsCommand];
-}
-
 export function registerCommonCommands() {
     return [
         vscode.commands.registerCommand('neuropilot.reconnect', reconnect),
@@ -172,8 +77,6 @@ export function setupCommonEventHandlers() {
 }
 
 export function initializeCommonState(context: vscode.ExtensionContext) {
-    initializeDocsOptions();
-
     NEURO.context = context;
     NEURO.url = CONFIG.websocketUrl;
     NEURO.gameName = CONFIG.gameName;
@@ -305,47 +208,6 @@ function switchCurrentNeuroAPIUser() {
         quickPick.hide();
     });
     quickPick.show();
-}
-
-function openDocsPage(docsSite: string, subpage = '/'): string {
-    let constructedDocsPage: string = docsSite;
-    if (subpage.startsWith('/')) {
-        constructedDocsPage += subpage;
-    } else {
-        constructedDocsPage += '/' + subpage;
-    }
-
-    logOutput('DEBUG', `Constructed docs page is ${constructedDocsPage}`);
-
-    const docsOrigin = new URL(docsSite).origin;
-
-    const htmlpage =
-        '<!DOCTYPE html>' +
-        '<html lang="en">' +
-        '<head>' +
-        '   <meta charset="UTF-8">' +
-        `   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; frame-src ${docsOrigin}; script-src 'none'; style-src 'unsafe-inline';">` +
-        '   <meta name="viewport" content="width=device-width, initial-scale=1.0">' +
-        '   <title>NeuroPilot Docs WebView</title>' +
-        '   <style>' +
-        '       html, body, iframe {' +
-        '           width: 100%;' +
-        '           height: 100%;' +
-        '           margin: 0;' +
-        '           padding: 0;' +
-        '           overflow: hidden;' +
-        '       }' +
-        '       iframe {' +
-        '           display: block;' +
-        '       }' +
-        '   </style>' +
-        '</head>' +
-        '<body>' +
-        `   <iframe src="${constructedDocsPage}" frameborder="0"></iframe>` +
-        '</body>' +
-        '</html>';
-
-    return htmlpage;
 }
 
 export function obtainExtensionState(): void {
