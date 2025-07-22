@@ -15,7 +15,7 @@ import {
     getDecorationRenderOptions,
     obtainExtensionState,
     reloadPermissions,
-} from '../shared/extension-common';
+} from '../shared/extension';
 import { registerChatParticipant } from '../chat';
 import { registerUnsupervisedActions, registerUnsupervisedHandlers } from './unsupervised';
 

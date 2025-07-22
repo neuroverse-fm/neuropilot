@@ -13,7 +13,7 @@ import {
     obtainExtensionState,
     getDecorationRenderOptions,
     reloadPermissions,
-} from '../shared/extension-common';
+} from '../shared/extension';
 import { registerUnsupervisedActions, registerUnsupervisedHandlers } from './unsupervised';
 
 export { registerDocsLink };
