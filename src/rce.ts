@@ -295,10 +295,11 @@ export async function RCEActionHandler(actionData: ActionData, actionList: Recor
                 return;
             }
 
-            // literally why can't we use " 'x wants to' + typeof action.promptGenerator === 'string' "
-            const prompt = typeof action.promptGenerator === 'string'
-                ? NEURO.currentController + ' wants to ' + (action.promptGenerator as string).trim()
-                : NEURO.currentController + ' wants to ' + (action.promptGenerator as (actionData: ActionData) => string)(actionData).trim();
+            const prompt = (NEURO.currentController
+                ? NEURO.currentController
+                : 'The Neuro API server') +
+                ' wants to ' +
+                (typeof action.promptGenerator === 'string' ? action.promptGenerator.trim() : action.promptGenerator(actionData).trim());
 
             createRceRequest(
                 prompt,
