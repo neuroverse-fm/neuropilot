@@ -3,10 +3,10 @@
 	"displayName": "NeuroPilot",
 	"description": "Allows Neuro-sama to either act as a companion/copilot or control Visual Studio Code by herself.",
 	"icon": "assets/heart-xaendril.png",
-	"version": "2.0.2",
+	"version": "2.0.3",
 	"publisher": "Pasu4",
-	"repository": "https://github.com/Pasu4/neuropilot",
-	"homepage": "https://pasu4.github.io/neuropilot",
+	"repository": "https://github.com/VSC-NeuroPilot/neuropilot",
+	"homepage": "https://vsc-neuropilot.github.io/neuropilot",
 	"license": "MIT",
 	"engines": {
 		"vscode": "^1.95.0"
@@ -192,7 +192,7 @@
 					},
 					"neuropilot.docsURL": {
 						"type": "string",
-						"default": "https://pasu4.github.io/neuropilot",
+						"default": "https://vsc-neuropilot.github.io/neuropilot",
 						"markdownDescription": "If you're using a mirror of the docs site, put its URL here.\n\nYou will most likely not need to change this, unless you are modifying the docs themselves."
 					},
 					"neuropilot.beforeContext": {

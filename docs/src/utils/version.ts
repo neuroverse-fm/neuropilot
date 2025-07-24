@@ -1,0 +1,1 @@
+export const docsVersion: string | undefined = import.meta.env.PUBLIC_VERSION
