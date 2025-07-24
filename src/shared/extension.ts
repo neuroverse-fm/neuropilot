@@ -104,12 +104,12 @@ export function setupClientConnectedHandlers(...extraHandlers: (() => void)[]) {
     onClientConnected(registerPreActionHandler);
     onClientConnected(registerCompletionResultHandler);
     onClientConnected(registerChatResponseHandler);
-    onClientConnected(registerRequestCookieAction);
-    onClientConnected(registerRequestCookieHandler);
-    onClientConnected(registerPostActionHandler);
     for (const handlers of extraHandlers) {
         onClientConnected(handlers);
     }
+    onClientConnected(registerRequestCookieAction);
+    onClientConnected(registerRequestCookieHandler);
+    onClientConnected(registerPostActionHandler);
 }
 
 export function createStatusBarItem() {
