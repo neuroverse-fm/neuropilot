@@ -50,7 +50,7 @@ export function createClient() {
         NEURO.client.onClose = () => {
             NEURO.connected = false;
             logOutput('INFO', 'Disconnected from Neuro API');
-            vscode.window.showInformationMessage('Disconnected from Neuro API.');
+            vscode.window.showWarningMessage('Disconnected from Neuro API.');
         };
 
         NEURO.client.onError = (error) => {
