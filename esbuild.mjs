@@ -71,49 +71,47 @@ if (fs.existsSync(outDir)) {
     console.log(chalk.dim(`📁  Output directory ${outDir} doesn't exist, skipping removal step.`));
 }
 
-(async () => {
-    try {
-        switch (mode.toLowerCase()) {
-            case 'web':
-                console.log(chalk.blue(`🌐 ${watch ? 'Watching' : 'Running'} web build...`));
-                await web(production, watch).catch(erm => {
-                    console.error(chalk.red.bold(`💥  Web build failed: ${erm}`));
-                    process.exit(1);
-                });
-                console.log(chalk.green.bold.underline('🧰  Web build completed successfully!'));
-                break;
-            case 'desktop':
-                console.log(chalk.blue(`🖥️  ${watch ? 'Watching' : 'Running'} desktop build...`));
-                await desktop(production, watch).catch(erm => {
-                    console.error(chalk.red.bold(`💥 Desktop build failed: ${erm}`));
-                    process.exit(1);
-                });
-                console.log(chalk.green.bold.underline('🧰  Desktop build completed successfully!'));
-                break;
-            case 'default':
-                // Can't use watch while building both.
-                if (watch) {
-                    console.error(chalk.yellow.bold('⚠️  Cannot use flag --watch while building both desktop and web'));
-                    //process.exit(1); we'll just continue building it normally ig
-                }
-                console.log(chalk.blue('🖥️  Running desktop build...'));
-                await desktop(production, false).catch(erm => {
-                    console.error(chalk.red.bold(`💥  Desktop build failed: ${erm}`));
-                    process.exit(1);
-                });
-                console.log(chalk.blue('🌐 Running web build...'));
-                await web(production, false).catch(erm => {
-                    console.error(chalk.red.bold(`💥  Web build failed: ${erm}`));
-                    process.exit(1);
-                });
-                console.log(chalk.green.bold.underline('🎉 Builds completed successfully!'));
-                break;
-            default:
-                console.error(chalk.red.bold(`❌  Unknown mode: ${mode}`));
+try {
+    switch (mode.toLowerCase()) {
+        case 'web':
+            console.log(chalk.blue(`🌐 ${watch ? 'Watching' : 'Running'} web build...`));
+            await web(production, watch).catch(erm => {
+                console.error(chalk.red.bold(`💥  Web build failed: ${erm}`));
                 process.exit(1);
-        }
-    } catch (erm) {
-        console.error(chalk.bgRed.white.bold(`💥  Build failed: ${erm}`));
-        process.exit(1);
+            });
+            console.log(chalk.green.bold.underline('🧰  Web build completed successfully!'));
+            break;
+        case 'desktop':
+            console.log(chalk.blue(`🖥️  ${watch ? 'Watching' : 'Running'} desktop build...`));
+            await desktop(production, watch).catch(erm => {
+                console.error(chalk.red.bold(`💥 Desktop build failed: ${erm}`));
+                process.exit(1);
+            });
+            console.log(chalk.green.bold.underline('🧰  Desktop build completed successfully!'));
+            break;
+        case 'default':
+            // Can't use watch while building both.
+            if (watch) {
+                console.error(chalk.yellow.bold('⚠️  Cannot use flag --watch while building both desktop and web'));
+                //process.exit(1); we'll just continue building it normally ig
+            }
+            console.log(chalk.blue('🖥️  Running desktop build...'));
+            await desktop(production, false).catch(erm => {
+                console.error(chalk.red.bold(`💥  Desktop build failed: ${erm}`));
+                process.exit(1);
+            });
+            console.log(chalk.blue('🌐 Running web build...'));
+            await web(production, false).catch(erm => {
+                console.error(chalk.red.bold(`💥  Web build failed: ${erm}`));
+                process.exit(1);
+            });
+            console.log(chalk.green.bold.underline('🎉 Builds completed successfully!'));
+            break;
+        default:
+            console.error(chalk.red.bold(`❌  Unknown mode: ${mode}`));
+            process.exit(1);
     }
-})();
+} catch (erm) {
+    console.error(chalk.bgRed.white.bold(`💥  Build failed: ${erm}`));
+    process.exit(1);
+}
