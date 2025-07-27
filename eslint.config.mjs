@@ -79,7 +79,7 @@ export default tseslint.config(
         },
     },
     {
-        files: ['esbuild.js'],
+        files: ['esbuild.mjs'],
         languageOptions: {
             globals: {
                 ...globals.node,

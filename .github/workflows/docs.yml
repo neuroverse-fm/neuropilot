@@ -80,20 +80,12 @@ jobs:
               id: pages
               uses: actions/configure-pages@v5
             
-            - name: Get version
-              id: docs-ver
-              uses: ./.github/actions/get-package-json-version
-              with:
-                path: ./docs
-            
             - name: Install deps
               run: |
                 cd docs
                 npm install
-            
+
             - name: Build site
-              env:
-                PUBLIC_VERSION: ${{ steps.docs-ver.outputs.version }}
               working-directory: ${{ github.workspace }}/docs
               run: PUBLIC_VERSION=$(npm show ./ version) npm run build
             
