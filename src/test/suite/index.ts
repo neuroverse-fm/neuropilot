@@ -34,5 +34,4 @@ export function run(): Promise<void> {
                 return e(erm);
             });
     });
-    return new Promise((_resolve, _reject) => {});
 }
