@@ -9,7 +9,6 @@ on:
             - ".vscode/"
             - ".husky/"
             - "playground/"
-            - "docs/"
             - "tony/"
     pull_request:
         paths-ignore:
@@ -17,7 +16,6 @@ on:
             - ".vscode/"
             - ".husky/"
             - "playground/"
-            - "docs/"
             - "tony/"
     workflow_dispatch:
         inputs:

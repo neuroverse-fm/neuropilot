@@ -25,8 +25,3 @@ esbuild-configs/
 # Tony
 .venv
 tony/
-
-# Docs
-docs/**
-!docs/public/*.gif
-!docs/public/*.png
