@@ -648,7 +648,6 @@
 		"@types/eslint__js": "^8.42.3",
 		"@types/glob-to-regexp": "^0.4.4",
 		"@types/node": "^20",
-		"@types/rewire": "^2.5.30",
 		"@types/vscode": "^1.95.0",
 		"@types/ws": "^8.18.0",
 		"@vscode/test-cli": "^0.0.11",

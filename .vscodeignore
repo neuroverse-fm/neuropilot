@@ -26,14 +26,10 @@ esbuild-configs/
 .venv
 tony/
 
-# Docs
-docs/**
-!docs/public/*.gif
-!docs/public/*.png
-
 # Coverage
 /coverage
 
 # Integration testing
 test-playground/
 .vscode-test.mjs
+out/test/**
