@@ -37,3 +37,4 @@ docs/**
 # Integration testing
 test-playground/
 .vscode-test.mjs
+out/test/**
