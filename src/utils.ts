@@ -228,7 +228,7 @@ export function escapeRegExp(string: string): string {
  * @throws Error if the substitution is invalid or if the capture group does not exist.
  */
 export function substituteMatch(match: RegExpExecArray, replacement: string): string {
-    const rx = /\$<.+?>|\${.+?}|\$\d+|\$~/g;
+    const rx = /\$<.+?>|\${.+?}|\$\d+|\$./g;
     const substitutions = Array.from(replacement.matchAll(rx));
     const literals = replacement.split(rx);
     let result = '';
