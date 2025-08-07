@@ -38,8 +38,8 @@ If the extension was started before the API was ready, or you lose connection to
 
 ### Autopilot/Copilot Mode
 
-![Autopilot demo GIF](docs/public/demo-autopilot.gif)
-![Copilot demo GIF](docs/public/demo-copilot.gif)
+![Autopilot demo GIF](https://vsc-neuropilot.github.io/docs/demo-autopilot.gif)
+![Copilot demo GIF](https://vsc-neuropilot.github.io/docs/demo-copilot.gif)
 
 We refer to permission modes in NeuroPilot as either Autopilot mode (top GIF) or Copilot mode (bottom GIF) which can be configured alongside disabling it completely.
 These refer to different levels of permission Neuro can be given over certain groups of actions.
@@ -106,4 +106,4 @@ The short answer is no, there isn't an intentional Remote Code Execution vulnera
 If you have an idea or want to contribute a feature, please first [create an issue](https://github.com/VSC-NeuroPilot/neuropilot/issues) or send a message to `@Pasu4` in the project's [post on the Neuro Discord](https://discord.com/channels/574720535888396288/1350968830230396938).
 If you make a pull request that contributes code, please run `npm run lint src` and resolve any errors that did not get auto-fixed, preferrably before each commit.
 
-Please also refer to our [contributor docs](https://vsc-neuropilot.github.io/neuropilot/contributors).
+Please also refer to our [contributor docs](https://vsc-neuropilot.github.io/docs/contributors).
