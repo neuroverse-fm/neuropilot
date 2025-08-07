@@ -2,10 +2,10 @@ import * as vscode from 'vscode';
 import { NeuroClient } from 'neuro-game-sdk';
 import globToRegExp from 'glob-to-regexp';
 
-import { NEURO } from './constants';
-import { CONFIG, getPermissionLevel, PERMISSIONS } from './config';
+import { NEURO } from '~/constants';
+import { CONFIG, getPermissionLevel, PERMISSIONS } from '~/config';
 
-import { ActionValidationResult, ActionData, actionValidationAccept, actionValidationFailure } from './neuro_client_helper';
+import { ActionValidationResult, ActionData, actionValidationAccept, actionValidationFailure } from '~/neuro_client_helper';
 import assert from 'node:assert';
 
 export const REGEXP_ALWAYS = /^/;
@@ -228,7 +228,7 @@ export function escapeRegExp(string: string): string {
  * @throws Error if the substitution is invalid or if the capture group does not exist.
  */
 export function substituteMatch(match: RegExpExecArray, replacement: string): string {
-    const rx = /\$<.+?>|\${.+?}|\$\d+|\$./g;
+    const rx = /\$<.+?>|\${.+?}|\$\d+|\$~/g;
     const substitutions = Array.from(replacement.matchAll(rx));
     const literals = replacement.split(rx);
     let result = '';
