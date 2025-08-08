@@ -27,6 +27,39 @@ export async function desktop(prodFlag, watchFlag) {
     }
 }
 
+export async function desktopTest(_prodFlag, watchFlag) {
+    const ctx = await context({
+        entryPoints: ['src/test/suite/index.ts'],
+        bundle: true,
+        format: 'cjs',
+        minify: false, // Don't minify tests for better debugging
+        sourcemap: true, // Always generate sourcemaps for tests
+        sourcesContent: true, // Include source content for better debugging
+        platform: 'node',
+        outdir: 'out/test/web',
+        outbase: 'src',
+        external: [
+            'vscode',
+            '@vscode/test-electron',
+        ],
+        logLevel: 'warning',
+        define: {
+            // Define test environment variables
+            'process.env.NODE_ENV': '"test"',
+        },
+        plugins: [
+            esbuildProblemMatcherPlugin,
+        ],
+    });
+
+    if (watchFlag) {
+        await ctx.watch();
+    } else {
+        await ctx.rebuild();
+        await ctx.dispose();
+    }
+}
+
 /**
  * @type {import('esbuild').Plugin}
  */

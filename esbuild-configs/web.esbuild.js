@@ -40,6 +40,51 @@ export async function web(prodFlag, watchFlag) {
     }
 }
 
+export async function webTest(_prodFlag, watchFlag) {
+    const ctx = await context({
+        entryPoints: ['src/test/suite/index.ts'],
+        bundle: true,
+        format: 'cjs',
+        minify: false, // Don't minify tests for better debugging
+        sourcemap: true, // Always generate sourcemaps for tests
+        sourcesContent: true, // Include source content for better debugging
+        platform: 'node',
+        outdir: 'out/test/web',
+        outbase: 'src',
+        external: [
+            'vscode',
+            '@vscode/test-web',
+        ],
+        logLevel: 'warning',
+        define: {
+            // Define test environment variables
+            'process.env.NODE_ENV': '"test"',
+        },
+        plugins: [
+            polyfillNode({ polyfills: { // trying to make the build as small as possible
+                child_process: false,
+                module: false,
+                os: false,
+                path: false,
+                punycode: false,
+                stream: false,
+                sys: false,
+                v8: false,
+                vm: false,
+                zlib: false,
+            }}),
+            esbuildProblemMatcherPlugin,
+        ],
+    });
+
+    if (watchFlag) {
+        await ctx.watch();
+    } else {
+        await ctx.rebuild();
+        await ctx.dispose();
+    }
+}
+
 /**
  * @type {import('esbuild').Plugin}
  */
