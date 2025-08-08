@@ -9,7 +9,8 @@
 		"paths": {
 			"~/*": ["./src/*"],
 			"@shared/*": ["./src/shared/*"],
-			"@typing/*": ["./src/types/*"]
+			"@typing/*": ["./src/types/*"],
+			"@test/*": ["./src/test/suite/*", "./src/test/*"]
 		}
 	},
 	"exclude": ["node_modules", ".vscode-test", "playground", "docs", "project-files"]
