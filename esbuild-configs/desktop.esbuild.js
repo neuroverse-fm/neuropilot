@@ -14,6 +14,7 @@ export async function desktop(prodFlag, watchFlag) {
         outfile: 'out/desktop/extension.js',
         external: ['vscode'],
         logLevel: 'warning',
+        tsconfig: './tsconfig.app.json',
         plugins: [
             /* add to the end of plugins array */
             esbuildProblemMatcherPlugin,
@@ -37,7 +38,6 @@ export async function desktopTest(_prodFlag, watchFlag) {
         sourcesContent: true, // Include source content for better debugging
         platform: 'node',
         outdir: 'out/test/web',
-        outbase: 'src',
         external: [
             'vscode',
             '@vscode/test-electron',

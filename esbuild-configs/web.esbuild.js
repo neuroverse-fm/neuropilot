@@ -15,6 +15,7 @@ export async function web(prodFlag, watchFlag) {
         outfile: 'out/web/extension.js',
         external: ['vscode'],
         logLevel: 'warning',
+        tsconfig: './tsconfig.web.json',
         plugins: [
             polyfillNode({ polyfills: { // trying to make the build as small as possible
                 child_process: false,
@@ -48,9 +49,8 @@ export async function webTest(_prodFlag, watchFlag) {
         minify: false, // Don't minify tests for better debugging
         sourcemap: true, // Always generate sourcemaps for tests
         sourcesContent: true, // Include source content for better debugging
-        platform: 'node',
+        platform: 'browser',
         outdir: 'out/test/web',
-        outbase: 'src',
         external: [
             'vscode',
             '@vscode/test-web',
