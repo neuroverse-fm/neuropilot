@@ -12,7 +12,7 @@ export async function web(prodFlag, watchFlag) {
         sourcemap: !prodFlag,
         sourcesContent: false,
         platform: 'browser',
-        outfile: 'out/web/extension.js',
+        outfile: 'out/extension/web/extension.js',
         external: ['vscode'],
         logLevel: 'warning',
         tsconfig: './tsconfig.web.json',
@@ -43,7 +43,7 @@ export async function web(prodFlag, watchFlag) {
 
 export async function webTest(_prodFlag, watchFlag) {
     const ctx = await context({
-        entryPoints: ['src/test/suite/index.ts'],
+        entryPoints: ['src/test/suite/web/index.ts'],
         bundle: true,
         format: 'cjs',
         minify: false, // Don't minify tests for better debugging

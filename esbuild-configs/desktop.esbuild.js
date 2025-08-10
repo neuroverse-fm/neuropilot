@@ -11,7 +11,7 @@ export async function desktop(prodFlag, watchFlag) {
         sourcemap: !prodFlag,
         sourcesContent: false,
         platform: 'node',
-        outfile: 'out/desktop/extension.js',
+        outfile: 'out/extension/desktop/extension.js',
         external: ['vscode'],
         logLevel: 'warning',
         tsconfig: './tsconfig.app.json',
@@ -30,7 +30,7 @@ export async function desktop(prodFlag, watchFlag) {
 
 export async function desktopTest(_prodFlag, watchFlag) {
     const ctx = await context({
-        entryPoints: ['src/test/suite/index.ts'],
+        entryPoints: ['src/test/suite/desktop/index.ts'],
         bundle: true,
         format: 'cjs',
         minify: false, // Don't minify tests for better debugging

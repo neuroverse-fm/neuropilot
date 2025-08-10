@@ -1,5 +1,5 @@
-import { web } from './esbuild-configs/web.esbuild.js';
-import { desktop } from './esbuild-configs/desktop.esbuild.js';
+import { web, webTest } from './esbuild-configs/web.esbuild.js';
+import { desktop, desktopTest } from './esbuild-configs/desktop.esbuild.js';
 import * as fs from 'fs';
 import chalk from 'chalk';
 
@@ -44,6 +44,7 @@ function determineProductionMode() {
 const production = determineProductionMode();
 const watch = process.argv.includes('--watch');
 const modeArgIndex = process.argv.indexOf('--mode');
+const test = process.argv.includes('--test');
 const mode = modeArgIndex !== -1 && process.argv[modeArgIndex + 1] ? process.argv[modeArgIndex + 1] : 'default';
 
 // Log the build configuration
@@ -53,15 +54,29 @@ if (process.env.NODE_ENV) {
 }
 
 let outDir;
-switch (mode.toLowerCase()) {
-    case 'web':
-        outDir = './out/web';
-        break;
-    case 'desktop':
-        outDir = './out/desktop';
-        break;
-    default:
-        outDir = './out';
+if (test) {
+    switch (mode.toLowerCase()) {
+        case 'web':
+            outDir = './out/test/web';
+            break;
+        case 'desktop':
+            outDir = './out/test/desktop';
+            break;
+        default:
+            outDir = './out/test';
+            break;
+    }
+} else {
+    switch (mode.toLowerCase()) {
+        case 'web':
+            outDir = './out/extension/web';
+            break;
+        case 'desktop':
+            outDir = './out/extension/desktop';
+            break;
+        default:
+            outDir = './out/extension';
+    }
 }
 if (fs.existsSync(outDir)) {
     console.log(chalk.yellow(`🗑️  Output directory ${outDir} already exists, removing dir...`));
@@ -73,20 +88,38 @@ if (fs.existsSync(outDir)) {
 try {
     switch (mode.toLowerCase()) {
         case 'web':
-            console.log(chalk.blue(`🌐 ${watch ? 'Watching' : 'Running'} web build...`));
-            await web(production, watch).catch(erm => {
-                console.error(chalk.red.bold(`💥  Web build failed: ${erm}`));
-                process.exit(1);
-            });
-            console.log(chalk.green.bold.underline('🧰  Web build completed successfully!'));
+            if (test) {
+                console.log(chalk.blue(`🌐 ${watch ? 'Watching' : 'Running'} web test build...`));
+                await webTest(production, watch).catch(erm => {
+                    console.error(chalk.red.bold(`💥  Web test build failed: ${erm}`));
+                    process.exit(1);
+                });
+                console.log(chalk.green.bold.underline('🧪  Web tests compiled successfully!'));
+            } else {
+                console.log(chalk.blue(`🌐 ${watch ? 'Watching' : 'Running'} web build...`));
+                await web(production, watch).catch(erm => {
+                    console.error(chalk.red.bold(`💥  Web build failed: ${erm}`));
+                    process.exit(1);
+                });
+                console.log(chalk.green.bold.underline('🧰  Web build completed successfully!'));
+            }
             break;
         case 'desktop':
-            console.log(chalk.blue(`🖥️  ${watch ? 'Watching' : 'Running'} desktop build...`));
-            await desktop(production, watch).catch(erm => {
-                console.error(chalk.red.bold(`💥 Desktop build failed: ${erm}`));
-                process.exit(1);
-            });
-            console.log(chalk.green.bold.underline('🧰  Desktop build completed successfully!'));
+            if (test) {
+                console.log(chalk.blue(`🖥️  ${watch ? 'Watching' : 'Running'} desktop test build...`));
+                await desktopTest(production, watch).catch(erm => {
+                    console.error(chalk.red.bold(`💥 Desktop test build failed: ${erm}`));
+                    process.exit(1);
+                });
+                console.log(chalk.green.bold.underline('🧪  Desktop tests compiled successfully!'));
+            } else {
+                console.log(chalk.blue(`🖥️  ${watch ? 'Watching' : 'Running'} desktop build...`));
+                await desktop(production, watch).catch(erm => {
+                    console.error(chalk.red.bold(`💥 Desktop build failed: ${erm}`));
+                    process.exit(1);
+                });
+                console.log(chalk.green.bold.underline('🧰  Desktop build completed successfully!'));
+            }
             break;
         case 'default':
             // Can't use watch while building both.
@@ -94,17 +127,31 @@ try {
                 console.error(chalk.yellow.bold('⚠️  Cannot use flag --watch while building both desktop and web'));
                 //process.exit(1); we'll just continue building it normally ig
             }
-            console.log(chalk.blue('🖥️  Running desktop build...'));
-            await desktop(production, false).catch(erm => {
-                console.error(chalk.red.bold(`💥  Desktop build failed: ${erm}`));
-                process.exit(1);
-            });
-            console.log(chalk.blue('🌐 Running web build...'));
-            await web(production, false).catch(erm => {
-                console.error(chalk.red.bold(`💥  Web build failed: ${erm}`));
-                process.exit(1);
-            });
-            console.log(chalk.green.bold.underline('🎉 Builds completed successfully!'));
+            if (test) {
+                console.log(chalk.blue('🖥️🧪  Running desktop test build...'));
+                await desktop(production, false).catch(erm => {
+                    console.error(chalk.red.bold(`💥  Desktop build failed: ${erm}`));
+                    process.exit(1);
+                });
+                console.log(chalk.blue('🌐🧪 Running web test build...'));
+                await web(production, false).catch(erm => {
+                    console.error(chalk.red.bold(`💥  Web build failed: ${erm}`));
+                    process.exit(1);
+                });
+                console.log(chalk.green.bold.underline('🎉🧪 Tests compiled successfully!'));
+            } else {
+                console.log(chalk.blue('🖥️  Running desktop build...'));
+                await desktop(production, false).catch(erm => {
+                    console.error(chalk.red.bold(`💥  Desktop build failed: ${erm}`));
+                    process.exit(1);
+                });
+                console.log(chalk.blue('🌐 Running web build...'));
+                await web(production, false).catch(erm => {
+                    console.error(chalk.red.bold(`💥  Web build failed: ${erm}`));
+                    process.exit(1);
+                });
+                console.log(chalk.green.bold.underline('🎉 Builds completed successfully!'));
+            }
             break;
         default:
             console.error(chalk.red.bold(`❌  Unknown mode: ${mode}`));
