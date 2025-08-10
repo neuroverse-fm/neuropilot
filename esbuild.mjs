@@ -57,25 +57,25 @@ let outDir;
 if (test) {
     switch (mode.toLowerCase()) {
         case 'web':
-            outDir = './out/test/web';
+            outDir = ['./out/web/test.js'];
             break;
         case 'desktop':
-            outDir = './out/test/desktop';
+            outDir = ['./out/desktop/test.js'];
             break;
         default:
-            outDir = './out/test';
+            outDir = ['./out/desktop/test.js', './out/web/test.js'];
             break;
     }
 } else {
     switch (mode.toLowerCase()) {
         case 'web':
-            outDir = './out/extension/web';
+            outDir = ['./out/web/extension.js'];
             break;
         case 'desktop':
-            outDir = './out/extension/desktop';
+            outDir = ['./out/desktop/extension.js'];
             break;
         default:
-            outDir = './out/extension';
+            outDir = ['./out/desktop/extension.js', './out/web/extension.js'];
     }
 }
 if (fs.existsSync(outDir)) {

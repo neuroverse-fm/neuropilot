@@ -5,8 +5,8 @@
     "target": "ES2020",
     "lib": ["ES2020", "DOM"],
     "sourceMap": true,
-    "outDir": "out/test/web",
-    "rootDir": "src/test",
+    "outDir": "../out/test/web",
+    "rootDir": "../src/",
     "strict": true,
     "esModuleInterop": true,
     "types": [
@@ -15,12 +15,13 @@
     ]
   },
   "include": [
-    "src/test/suite/web/**/*.ts"
+    "../src/test/suite/web/**/*.ts",
+    "../src/test/**/*.ts"
   ],
   "exclude": [
-    "node_modules",
-    "out",
-    "dist",
-    "src/test/suite/desktop/**/*.ts"
+    "../node_modules",
+    "../out",
+    "../dist",
+    "../src/test/suite/desktop/**/*.ts"
   ]
 }

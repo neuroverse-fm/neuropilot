@@ -12,7 +12,7 @@ export async function web(prodFlag, watchFlag) {
         sourcemap: !prodFlag,
         sourcesContent: false,
         platform: 'browser',
-        outfile: 'out/extension/web/extension.js',
+        outfile: 'out/web/extension.js',
         external: ['vscode'],
         logLevel: 'warning',
         tsconfig: './tsconfig.web.json',
@@ -50,7 +50,8 @@ export async function webTest(_prodFlag, watchFlag) {
         sourcemap: true, // Always generate sourcemaps for tests
         sourcesContent: true, // Include source content for better debugging
         platform: 'browser',
-        outdir: 'out/test/web',
+        outfile: 'out/web/test.js',
+        tsconfig: './test-tsconfigs/tsconfig.web.json',
         external: [
             'vscode',
             '@vscode/test-web',
