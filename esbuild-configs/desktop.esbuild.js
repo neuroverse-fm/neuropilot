@@ -37,7 +37,7 @@ export async function desktopTest(_prodFlag, watchFlag) {
         sourcemap: true, // Always generate sourcemaps for tests
         sourcesContent: true, // Include source content for better debugging
         platform: 'node',
-        outdir: 'out/test/web',
+        outdir: 'out/test/desktop',
         external: [
             'vscode',
             '@vscode/test-electron',
