@@ -136,7 +136,8 @@ try {
                 });
                 console.log(chalk.blue('🌐🧪 Running web test build...'));
                 await web(production, false).catch(erm => {
-                    console.error(chalk.red.bold(`💥  Web build failed: ${erm}`));
+                await webTest(production, false).catch(erm => {
+                    console.error(chalk.red.bold(`💥  Web test build failed: ${erm}`));
                     process.exit(1);
                 });
                 console.log(chalk.green.bold.underline('🎉🧪 Tests compiled successfully!'));
