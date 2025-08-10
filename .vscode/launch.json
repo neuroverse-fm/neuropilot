@@ -43,10 +43,10 @@
 			"runtimeExecutable": "${execPath}",
 			"args": [
 				"--extensionDevelopmentPath=${workspaceFolder}",
-				"--extensionTestsPath=${workspaceFolder}/out/test/suite/index",
+				"--extensionTestsPath=${workspaceFolder}/out/desktop/test.js",
 				"${workspaceFolder}/test-playground"
 			],
-			"outFiles": ["${workspaceFolder}/out/test/**/*.js"],
+			"outFiles": ["${workspaceFolder}/out/desktop/test.js"],
 			"preLaunchTask": "watch:desktop"
 		},
 		{
