@@ -20,8 +20,8 @@
 		"*"
 	],
 	"qna": false,
-	"main": "./out/desktop/extension.js",
-	"browser": "./out/web/extension.js",
+	"main": "./out/extension/desktop/extension.js",
+	"browser": "./out/extension/web/extension.js",
 	"contributes": {
 		"chatParticipants": [
 			{
