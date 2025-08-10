@@ -625,7 +625,7 @@
 		"compile": "cross-env NODE_ENV=0 npm run build",
 		"package": "cross-env NODE_ENV=1 npm run build",
 		"lint": "eslint --fix",
-		"test": "npm-run-all -p test:* && vscode-test --coverage",
+		"test": "npm-run-all -p test:*",
 		"prepare": "husky",
 		"types": "npm-run-all -p build:*:tsc",
 		"types:watch": "npm-run-all -p watch:*:tsc",
@@ -641,12 +641,14 @@
 		"watch:web:tsc": "tsc --noEmit --watch --project tsconfig.web.json",
 		"watch:desktop:esbuild": "node esbuild.mjs --watch --mode desktop",
 		"watch:desktop:tsc": "tsc --noEmit --watch --project tsconfig.app.json",
-		"test:web": "npm-run-all -p build:web:* && npm-run-all -p test:web:* && vscode-test --coverage --label webUnitTest",
-		"test:desktop": "npm-run-all -p build:desktop:* && npm-run-all -p test:desktop:* && vscode-test --coverage --label desktopUnitTest",
+		"test:web": "npm-run-all -p build:web:* && npm-run-all -p test:web:*",
+		"test:desktop": "npm-run-all -p build:desktop:* && npm-run-all -p test:desktop:*",
 		"test:web:esbuild": "node esbuild.mjs --mode web --test",
 		"test:web:tsc": "tsc --noEmit --project test-tsconfigs/tsconfig.web.json",
+		"test:web:vscode": "vscode-test --coverage --label webUnitTest",
 		"test:desktop:esbuild": "node esbuild.mjs --mode desktop --test",
-		"test:desktop:tsc": "tsc --noEmit --project test-tsconfigs/tsconfig.app.json"
+		"test:desktop:tsc": "tsc --noEmit --project test-tsconfigs/tsconfig.app.json",
+		"test:desktop:vscode": "vscode-test --coverage --label desktopUnitTest"
 	},
 	"devDependencies": {
 		"@eslint/js": "^9.13.0",
