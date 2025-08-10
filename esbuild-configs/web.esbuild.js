@@ -54,6 +54,7 @@ export async function webTest(_prodFlag, watchFlag) {
         tsconfig: './test-tsconfigs/tsconfig.web.json',
         external: [
             'vscode',
+            'mocha',
             '@vscode/test-web',
         ],
         logLevel: 'warning',

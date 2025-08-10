@@ -41,6 +41,7 @@ export async function desktopTest(_prodFlag, watchFlag) {
         tsconfig: './test-tsconfigs/tsconfig.app.json',
         external: [
             'vscode',
+            'mocha',
             '@vscode/test-electron',
         ],
         logLevel: 'warning',
