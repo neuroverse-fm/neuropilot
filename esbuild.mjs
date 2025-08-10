@@ -129,13 +129,11 @@ try {
             }
             if (test) {
                 console.log(chalk.blue('🖥️🧪  Running desktop test build...'));
-                await desktop(production, false).catch(erm => {
                 await desktopTest(production, false).catch(erm => {
                     console.error(chalk.red.bold(`💥  Desktop test build failed: ${erm}`));
                     process.exit(1);
                 });
                 console.log(chalk.blue('🌐🧪 Running web test build...'));
-                await web(production, false).catch(erm => {
                 await webTest(production, false).catch(erm => {
                     console.error(chalk.red.bold(`💥  Web test build failed: ${erm}`));
                     process.exit(1);
