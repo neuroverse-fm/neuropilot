@@ -1,0 +1,63 @@
+name: Test extension
+
+on:
+    push:
+        branches:
+            - master
+            - dev
+    pull_request:
+        branches:
+            - master
+            - dev
+    workflow_dispatch: # in case we need to regenerate test coverage
+
+jobs:
+    test-desktop:
+        name: Electron tests
+        strategy:
+            fail-fast: false
+            matrix:
+                include:
+                  - os: macos-latest
+                    name: macOS
+                  - os: windows-latest
+                    name: Windows
+                  - os: ubuntu-latest
+                    name: Linux
+        runs-on: ${{ matrix.os }}
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+            - name: Cache configs + modules
+              uses: actions/cache@v4
+              with:
+                key: neuropilot-tests-${{ github.repository }}-${{ matrix.os }}
+                path: |
+                  node_modules/
+                  .vscode-test/
+            - name: Install Node.js
+              uses: actions/setup-node@v4
+              with:
+                node-version: 22.x
+                cache: 'npm'
+                cache-dependency-path: './package-lock.json'
+            - run: npm install
+            - run: xvfb-run -a npm test
+              if: runner.os == 'Linux'
+            - run: npm test
+              if: runner.os != 'Linux'
+            # for now we'll stop with this
+            # VSC-NeuroPilot/actions/send-test-repo-action will be added later
+    #test-web:
+    #    name: Web tests
+    #    strategy:
+    #      fail-fast: false
+    #      matrix:
+    #        include:
+    #            - engine: webkit
+    #              browser: Safari
+    #            - engine: firefox
+    #              browser: Firefox
+    #            - engine: chromium
+    #              browser: Chrome
+    #    runs-on: ubuntu-latest
