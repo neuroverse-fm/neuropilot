@@ -29,13 +29,20 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v4
+      with:
+        version: 10.14.0
+
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
         node-version: 'latest'
+        cache: 'pnpm'
+        cache-dependency-path: './pnpm-lock.yaml'
 
     - name: Install deps
-      run: npm install
+      run: pnpm install --frozen-lockfile
       
     - name: Configure Git
       run: |
@@ -45,7 +52,7 @@ jobs:
     - name: Publish extension
       env:
         NODE_ENV: 1
-      run: npx @vscode/vsce publish ${{inputs.version}} -p ${{secrets.MARKETPLACE_TOKEN}} --allow-star-activation
+      run: pnpx @vscode/vsce publish ${{inputs.version}} -p ${{secrets.MARKETPLACE_TOKEN}} --allow-star-activation
 
     - name: Commit and push version change
       run: |
