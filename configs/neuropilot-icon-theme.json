@@ -1,0 +1,30 @@
+{
+  "iconDefinitions": {
+    "folderMyExtClosed": {
+      "iconPath": "../assets/neuropilot.png"
+    }, // placeholder
+    "folderMyExtOpen": {
+      "iconPath": "../assets/evilpilot.png"
+    }, // placeholder
+    "myJsonFile": {
+      "iconPath": "../icons/heart-xaendril-transparent.png"
+    },
+    "defaultFolder": {
+      "iconPath": "../icons/folder-default.svg"
+    } // placeholder
+  },
+  "folder": "defaultFolder",
+  "folderExpanded": "folderMyExtOpen",
+  "folderNames": {
+    ".my-extension": "folderMyExtClosed"
+  },
+  "folderNamesExpanded": {
+    ".my-extension": "folderMyExtOpen"
+  },
+  "fileExtensions": {
+    "json": "myJsonFile"
+  },
+  "languageIds": {
+    "myjsonlang": "myJsonFile"
+  }
+}

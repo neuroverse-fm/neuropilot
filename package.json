@@ -23,6 +23,16 @@
 	"main": "./out/desktop/extension.js",
 	"browser": "./out/web/extension.js",
 	"contributes": {
+		"jsonValidation": [
+			{
+				"fileMatch": ".neuropilot/config.json",
+				"url": "./schemas/base.settings.schema.json"
+			},
+			{
+				"fileMatch": ".neuropilot/config.json",
+				"url": "./schemas/neuropilot.settings.schema.json"
+			}
+		],
 		"chatParticipants": [
 			{
 				"id": "neuropilot.api",

@@ -1,0 +1,10 @@
+{
+    "Pasu4.neuropilot": {
+        "terminals": [
+            {
+                "name": "Git Bash",
+                "path": ""
+            }
+        ]
+    }
+}

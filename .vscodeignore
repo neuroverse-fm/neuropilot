@@ -8,6 +8,9 @@ src/
 node_modules/
 *.vsix
 
+# Source maps (even if we distribute test versions for whatever reason we don't need them)
+**/*.js.map
+
 # Project files
 project-files/
 

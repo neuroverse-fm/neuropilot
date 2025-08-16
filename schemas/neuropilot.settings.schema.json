@@ -1,0 +1,89 @@
+{
+	"$schema": "https://json-schema.org/draft-07/schema#",
+	"type": "object",
+	"properties": {
+		"Pasu4.neuropilot": {
+			"type": "object",
+			"description": "Base NeuroPilot extension's low-level configs.",
+			"properties": {
+				"terminals": {
+					"type": "array",
+					"items": {
+						"type": "object",
+						"description": "A terminal object",
+						"properties": {
+							"name": {
+								"type": "string",
+								"description": "The name of the shell, which will be shown to Neuro and displayed in the terminal UI."
+							},
+							"path": {
+								"type": "string",
+								"description": "The absolute path to the shell executable. This will not be shown to Neuro."
+							},
+							"args": {
+								"type": "array",
+								"description": "Arguments to use when launching the shell. This will not be shown to Neuro.",
+								"items": {
+									"type": "string"
+								}
+							}
+						},
+						"required": [
+							"name",
+							"path"
+						]
+					},
+					"description": "An array of terminal names Neuro is allowed to use."
+				},
+				"linting": {
+					"type": "object",
+					"description": "Configs related to linting features.",
+					"properties": {
+						"servers": {
+							"type": "object",
+							"description": "NeuroPilot-side configs for language servers.",
+							"patternProperties": {
+								"^[a-zA-Z0-9]+$.^[a-zA-Z0-9]+$": {
+									"type": "object",
+									"properties": {
+										"onLanguage": {
+											"type": "array",
+											"description": "A list of languages this server's lint analysis will be sent."
+										},
+										"sendOn": {
+											"type": "string",
+											"enum": ["off", "incurrentFile", "inWorkspace"],
+											"description": "When to send linting problems from this workspace on. Overrides the global setting inside NeuroPilot settings."
+										},
+										"fileList": {
+											"type": "object",
+											"properties": {
+												"allowed": {
+													"type": "array",
+													"description": "A list of files Neuro is allowed to request/receive linting analysis on. Overrides the global Include/Exclude Patterns setting.",
+													"items": {
+														"type": "string"
+													}
+												},
+												"disallowed": {
+													"type": "array",
+													"description": "A list of files Neuro is not allowed to request/receive linting analysis on. Overrides the global Include/Exclude Patterns setting.",
+													"items": {
+														"type": "string"
+													}
+												}
+											}
+										}
+									},
+									"additionalProperties": false
+								}
+							},
+							"additionalProperties": false
+						}
+					}
+				}
+			}
+		}
+	},
+	"additionalProperties": true
+}

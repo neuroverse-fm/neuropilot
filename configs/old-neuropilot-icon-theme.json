@@ -1,0 +1,26 @@
+{
+  "iconDefinitions": {
+    "folderMyExtClosedOld": { "iconPath": "../icons/old-folder-closed.svg" }, // placeholder
+    "folderMyExtOpenOld":   { "iconPath": "../icons/old-folder-open.svg" }, // placeholder
+    "myJsonFileOld":        { "iconPath": "../assets/heart.png" },
+    "defaultFolderOld":     { "iconPath": "../icons/old-folder-default.svg" } // placeholder
+  },
+
+  "folder": "defaultFolderOld",
+  "folderExpanded": "folderMyExtOpenOld",
+
+  "folderNames": {
+    ".my-extension": "folderMyExtClosedOld"
+  },
+  "folderNamesExpanded": {
+    ".my-extension": "folderMyExtOpenOld"
+  },
+
+  "fileExtensions": {
+    "json": "myJsonFileOld"
+  },
+
+  "languageIds": {
+    "myjsonlang": "myJsonFileOld"
+  }
+}

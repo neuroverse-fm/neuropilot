@@ -1,0 +1,11 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "description": "The NeuroPilot extension allows for more complex configurations through the .neuropilot/ folder as opposed to dealing with editing .vscode/settings.json directly.\nExtensions can also use the .neuropilot/ folder and give a schema for it via the `jsonValidation` contribution point.\nThe standard for doing that is either adding a new schema to config.json following the base.settings.schema.json file in NeuroPilot, or using a subfolder within .neuropilot/ for more complex configurations.",
+    "patternProperties": {
+        "^([A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?)\\.([A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?)$": {
+            "type": "object"
+        }
+    },
+    "additionalProperties": false
+}
