@@ -52,7 +52,7 @@ jobs:
     - name: Publish extension
       env:
         NODE_ENV: 1
-      run: pnpx @vscode/vsce publish ${{inputs.version}} -p ${{secrets.MARKETPLACE_TOKEN}} --allow-star-activation
+      run: pnpx @vscode/vsce publish ${{inputs.version}} -p ${{secrets.MARKETPLACE_TOKEN}} --allow-star-activation --no-dependencies
 
     - name: Commit and push version change
       run: |
