@@ -390,3 +390,13 @@ export function checkWorkspaceTrust(_actionData: ActionData): ActionValidationRe
     }
     return actionValidationFailure('You are in an untrusted workspace.');
 }
+
+/**
+ * Checks if the extension is currently on a virtual file system.
+ */
+export function checkVirtualWorkspace(_actionData: ActionData): ActionValidationResult {
+    if (vscode.workspace.workspaceFolders?.every(f => f.uri.scheme !== 'file')) {
+        return actionValidationFailure('You are currently in a virtual workspace.');
+    }
+    return actionValidationAccept();
+}
