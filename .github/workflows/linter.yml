@@ -11,15 +11,20 @@ jobs:
         steps:
             - uses: actions/checkout@v4
             
+            - name: Setup pnpm
+              uses: pnpm/action-setup@v4
+              with:
+                version: 10.14.0
+            
             - name: Setup Node.js
               uses: actions/setup-node@v4
               with:
                 node-version: 22.14.0
-                cache: 'npm'
-                cache-dependency-path: './package-lock.json'
+                cache: 'pnpm'
+                cache-dependency-path: './pnpm-lock.yaml'
 
             - name: clean-install deps
-              run: npm ci
+              run: pnpm install --frozen-lockfile
 
             - name: lint check
-              run: npx eslint src/
+              run: pnpx eslint src/
