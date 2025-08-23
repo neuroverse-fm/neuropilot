@@ -41,6 +41,7 @@ export default tseslint.config(
     ...tseslint.configs.recommended,
     ...tseslint.configs.stylistic,
     {
+        ignores: ['eslint.config.mjs'],
         plugins: {
             '@stylistic': stylistic,
             'unicorn': eslintPluginUnicorn,
@@ -77,13 +78,22 @@ export default tseslint.config(
                 },
             ],
         },
+        languageOptions: {
+            parserOptions: {
+                tsconfigRootDir: import.meta.dirname,
+                project: './tsconfig.json',
+            },
+        },
     },
     {
-        files: ['esbuild.mjs'],
+        files: ['esbuild.mjs', '**/*.esbuild.{m,c,}js'],
         languageOptions: {
             globals: {
                 ...globals.node,
                 ...globals.browser,
+            },
+            parserOptions: {
+                project: null,
             },
         },
     },
