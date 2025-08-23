@@ -30,6 +30,9 @@ importers:
       '@types/glob-to-regexp':
         specifier: ^0.4.4
         version: 0.4.4
+      '@types/mocha':
+        specifier: ^10.0.10
+        version: 10.0.10
       '@types/node':
         specifier: ^20
         version: 20.19.11
