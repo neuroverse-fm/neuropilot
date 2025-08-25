@@ -426,12 +426,15 @@ export function handleOpenFile(actionData: ActionData): string | undefined {
     }
 }
 
-if(process.env.NEUROPILOT_TEST === 'true') {
-    module.exports._private = {
-        validatePath,
-        getPathExistence,
-        neuroSafeValidation,
-        neuroSafeDeleteValidation,
-        neuroSafeRenameValidation,
-    };
-}
+/**
+ * Only for unit tests, DO NOT USE THESE EXPORTS IN PRODUCTION CODE.
+ * @private
+ */
+export const _internals = {
+    validatePath,
+    getPathExistence,
+    neuroSafeValidation,
+    neuroSafeDeleteValidation,
+    neuroSafeRenameValidation,
+};
+

@@ -7,9 +7,6 @@ import { NeuroClient } from 'neuro-game-sdk';
 import { NEURO } from '../../constants';
 import { anything, capture, instance, mock, verify } from 'ts-mockito';
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const privateFileActions = require('../../file_actions')._private;
-
 suite('File Actions', () => {
     let originalClient: NeuroClient | null = null;
     let mockedClient: NeuroClient;
@@ -35,8 +32,7 @@ suite('File Actions', () => {
     });
 
     test('validatePath', async function() {
-        const validatePath: (path: string, shouldExist: boolean, pathType: string) => Promise<ActionValidationResult>
-            = privateFileActions.validatePath;
+        const validatePath = fileActions._internals.validatePath;
 
         // === Arrange ===
         const existingFileUri = await createTestFile('validFile.js');
@@ -57,8 +53,7 @@ suite('File Actions', () => {
     });
 
     test('neuroSafeRenameValidation', async function() {
-        const neuroSafeRenameValidation: (actionData: ActionData) => Promise<ActionValidationResult>
-            = privateFileActions.neuroSafeRenameValidation;
+        const neuroSafeRenameValidation = fileActions._internals.neuroSafeRenameValidation;
 
         // === Arrange ===
         const fileUri1 = await createTestFile('file1.js');
@@ -129,8 +124,7 @@ suite('File Actions', () => {
     });
 
     test('neuroSafeDeleteValidation', async function() {
-        const neuroSafeDeleteValidation: (actionData: ActionData) => Promise<ActionValidationResult>
-            = privateFileActions.neuroSafeDeleteValidation;
+            const neuroSafeDeleteValidation = fileActions._internals.neuroSafeDeleteValidation;
 
         // === Arrange ===
         const fileUri = await createTestFile('fileToDelete.js');
