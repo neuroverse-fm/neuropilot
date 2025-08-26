@@ -1,9 +1,9 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
 
-suite('Desktop Extension Tests', () => {
+suite('Web Extension Tests', () => {
     test('Sanity Check', () => {
-        assert.strictEqual(1 + 1, 2, '1 + 1 should equal 2'); // can we do the sanity test using 9 + 10
+        assert.strictEqual(9 + 10, 19, '9 + 10 shouldn\'t be 21, it should be 19!');
     });
 
     test('Extension exists', async () => {
@@ -13,9 +13,11 @@ suite('Desktop Extension Tests', () => {
         assert.ok(extension.isActive, 'Extension Pasu4.neuropilot should be active!');
     });
 
-    test('Workspace folder is correct', function() {
+    test('Workspace folder is correct', () => {
         const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
         assert.ok(workspaceFolder, 'Workspace folder should be defined!');
-        assert.strictEqual(workspaceFolder.name, 'test-playground', 'Workspace folder name should be test-playground!');
+        assert.strictEqual(workspaceFolder.name, 'test-playground', 'test-playground should be the selected workspace folder!');
     });
+
+    // We also need a test to ensure that polyfilled modules (i.e. assert) are successfully bundled.
 });
