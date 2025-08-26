@@ -27,4 +27,4 @@ jobs:
               run: pnpm install --frozen-lockfile
 
             - name: lint check
-              run: pnpx eslint src/
+              run: pnpm eslint src/
