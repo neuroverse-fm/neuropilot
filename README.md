@@ -28,7 +28,7 @@ Capabilities of this extension include:
 These can all be turned on or off using the extension's permission settings.
 All permissions are set to "Off" by default, [except one](vscode://settings/neuropilot.permission.requestCookies).
 
-For more detailed documentation, visit [the docs site](https://vsc-neuropilot.github.io/neuropilot).
+For more detailed documentation, visit [the docs site](https://vsc-neuropilot.github.io/docs).
 We've recently migrated a lot of information there, so you're more likely to find the information you're looking for there.
 
 ## How to use
