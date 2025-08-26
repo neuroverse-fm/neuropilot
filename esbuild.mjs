@@ -64,7 +64,7 @@ switch (mode.toLowerCase()) {
         outDir = './out';
 }
 
-const directoryPlural = outDir.length() === 1 || outDir.length() === -1 ? 'directory' : 'directories';
+const directoryPlural = outDir.length === 1 || outDir.length === -1 ? 'directory' : 'directories';
 if (fs.existsSync(outDir)) {
     console.log(chalk.yellow(`🗑️  Output ${directoryPlural} ${outDir} already exists, removing dir...`));
     fs.rmSync(outDir, {recursive: true});
