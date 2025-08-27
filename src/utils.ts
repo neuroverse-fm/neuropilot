@@ -206,7 +206,7 @@ export function isPathNeuroSafe(path: string, checkPatterns = true): boolean {
         && normalizedPath.startsWith(rootFolder)    // Prevent access to paths outside the workspace
         && !normalizedPath.includes('/.')           // Prevent access to special files and folders (e.g. .vscode)
         && !normalizedPath.includes('..')           // Prevent access to parent folders
-        && !normalizedPath.includes('@')            // Prevent access to home directory
+        && !normalizedPath.includes('~')            // Prevent access to home directory
         && !normalizedPath.includes('$')            // Prevent access to environment variables
         && includeRegExp.test(normalizedPath)       // Check against include pattern
         && !excludeRegExp.test(normalizedPath);     // Check against exclude pattern
