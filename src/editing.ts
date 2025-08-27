@@ -9,6 +9,66 @@ const CONTEXT_NO_ACCESS = 'You do not have permission to access this file.';
 const CONTEXT_NO_ACTIVE_DOCUMENT = 'No active document to edit.';
 
 const MATCH_OPTIONS: string[] = ['firstInFile', 'lastInFile', 'firstAfterCursor', 'lastBeforeCursor', 'allInFile'] as const;
+const POSITION_PROPERTIES = {
+    type: 'object',
+    properties: {
+        line: {
+            type: 'integer',
+        },
+        column: {
+            type: 'integer',
+        },
+        type: {
+            type: 'string',
+            enum: ['relative', 'absolute'],
+        },
+    },
+    additionalProperties: false,
+    required: ['line', 'column', 'type'],
+};
+
+function positionValidator(actionData: ActionData): ActionValidationResult {
+    let line, column, type;
+
+    if (actionData.name === 'place_cursor') {
+        line = actionData.params.line;
+        column = actionData.params.column;
+        type = actionData.params.type;
+    } else if (actionData.name === 'insert_text') {
+        line = actionData.params.position.line;
+        column = actionData.params.position.column;
+        type = actionData.params.position.type;
+    };
+
+    const document = vscode.window.activeTextEditor?.document;
+    if (document === undefined)
+        return actionValidationFailure(CONTEXT_NO_ACTIVE_DOCUMENT);
+    if (!isPathNeuroSafe(document.fileName))
+        return actionValidationFailure(CONTEXT_NO_ACCESS);
+
+    let basedLine: number;
+
+    if (type === 'relative') {
+        const cursor = getVirtualCursor()!;
+        line += cursor.line;
+        column += cursor.character;
+
+        basedLine = line + 1;
+    }
+    else {
+        basedLine = line;
+
+        line -= 1;
+        column -= 1;
+    }
+
+    if (line >= document.lineCount || line < 0) {
+        return actionValidationFailure(`Line is out of bounds, the last line of the document is ${document.lineCount}.`);
+    }
+    if (column > document.lineAt(line).text.length || column < 0)
+        return actionValidationFailure(`Column is out of bounds, the last column of line ${basedLine} is ${document.lineAt(line).text.length + 1}.`);
+    return actionValidationAccept();
+}
 
 function checkCurrentFile(_actionData: ActionData): ActionValidationResult {
     const document = vscode.window.activeTextEditor?.document;
@@ -24,18 +84,10 @@ export const editingActions = {
     place_cursor: {
         name: 'place_cursor',
         description: 'Place the cursor in the current file. Absolute line and column numbers are one-based.',
-        schema: {
-            type: 'object',
-            properties: {
-                line: { type: 'integer' },
-                column: { type: 'integer' },
-                type: { type: 'string', enum: ['relative', 'absolute'] },
-            },
-            required: ['line', 'column', 'type'],
-        },
+        schema: POSITION_PROPERTIES,
         permissions: [PERMISSIONS.editActiveDocument],
         handler: handlePlaceCursor,
-        validator: [checkCurrentFile],
+        validator: [checkCurrentFile, positionValidator],
         promptGenerator: (actionData: ActionData) => `place the cursor at (${actionData.params.line}:${actionData.params.column}).`,
     },
     get_cursor: {
@@ -48,17 +100,18 @@ export const editingActions = {
     },
     insert_text: {
         name: 'insert_text',
-        description: 'Insert code at the current cursor position',
+        description: 'Insert code at the specified position. If left blank, your cursor\'s current position will be used.',
         schema: {
             type: 'object',
             properties: {
                 text: { type: 'string' },
+                position: POSITION_PROPERTIES,
             },
             required: ['text'],
         },
         permissions: [PERMISSIONS.editActiveDocument],
         handler: handleInsertText,
-        validator: [checkCurrentFile],
+        validator: [checkCurrentFile, positionValidator],
         promptGenerator: (actionData: ActionData) => {
             const lineCount = actionData.params.text.trim().split('\n').length;
             return `insert ${lineCount} line${lineCount === 1 ? '' : 's'} of code.`;
@@ -108,6 +161,7 @@ export const editingActions = {
                 find: { type: 'string' },
                 useRegex: { type: 'boolean' },
                 match: { type: 'string', enum: MATCH_OPTIONS },
+                moveCursor: { type: 'string', enum: ['start', 'end'] },
             },
             required: ['find', 'match'],
         },
@@ -223,6 +277,13 @@ export function handleGetCursor(_actionData: ActionData): string | undefined {
 
 export function handleInsertText(actionData: ActionData): string | undefined {
     const text: string = actionData.params.text;
+    const cursor = getVirtualCursor()!;
+    let position = actionData.params.position;
+    if (!position) position = {
+        line: cursor.line,
+        column: cursor.character,
+        type: 'absolute',
+    };
 
     const document = vscode.window.activeTextEditor?.document;
     if (document === undefined)
@@ -230,7 +291,13 @@ export function handleInsertText(actionData: ActionData): string | undefined {
     if (!isPathNeuroSafe(document.fileName))
         return contextFailure(CONTEXT_NO_ACCESS);
 
-    const insertStart = getVirtualCursor()!;
+    if (position.type === 'relative') {
+        position.line += cursor.line;
+        position.column += cursor.character;
+    }
+
+    const insertStart = new vscode.Position(position.line, position.column);
+
     const edit = new vscode.WorkspaceEdit();
     edit.insert(document.uri, insertStart, text);
 
@@ -240,7 +307,8 @@ export function handleInsertText(actionData: ActionData): string | undefined {
             const document = vscode.window.activeTextEditor!.document;
             const insertEnd = document.positionAt(document.offsetAt(insertStart) + text.length);
             const cursorContext = getPositionContext(document, insertStart, insertEnd);
-            NEURO.client?.sendContext(`Inserted text into document\n\n${formatContext(cursorContext)}`);
+            setVirtualCursor(insertStart);
+            NEURO.client?.sendContext(`Inserted text into document and moved cursor\n\n${formatContext(cursorContext)}`);
         }
         else {
             NEURO.client?.sendContext(contextFailure('Failed to insert text'));
@@ -506,7 +574,7 @@ function findAndFilter(regex: RegExp, text: string, cursorOffset: number, match:
 
 function formatContext(context: NeuroPositionContext): string {
     const fence = getFence(context.contextBefore + context.contextBetween + context.contextAfter);
-    return `Context (lines ${context.startLine + 1}-${context.endLine + 1}, cursor position denoted by \`<<<|>>>\`):\n\n${fence}\n${context.contextBefore}${context.contextBetween}<<<|>>>${context.contextAfter}\n${fence}`;
+    return `File context (lines ${context.startLine + 1}-${context.endLine + 1}, cursor position denoted by \`<<<|>>>\`):\n\n${fence}\n${context.contextBefore}${context.contextBetween}<<<|>>>${context.contextAfter}\n${fence}`;
 }
 
 /**
