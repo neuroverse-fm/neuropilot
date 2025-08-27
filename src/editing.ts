@@ -105,8 +105,9 @@ export const editingActions = {
     insert_text: {
         name: 'insert_text',
         description: 'Insert code at the specified position.'
-        + ' If no position is specified, your cursor\'s current position will be used.'
-        + ' Your cursor will be moved to the end of the inserted text.',
+            + ' Absolute line and column numbers are one-based.'
+            + ' If no position is specified, your cursor\'s current position will be used.'
+            + ' After inserting, your cursor will be placed at the end of the inserted text.',
         schema: {
             type: 'object',
             properties: {
@@ -126,7 +127,9 @@ export const editingActions = {
     },
     replace_text: {
         name: 'replace_text',
-        description: 'Replace text in the active document. If you set "useRegex" to true, you can use a Regex in the "find" parameter and a subtitution pattern in the "replaceWith" parameter.',
+        description: 'Replace text in the active document.'
+            + ' If you set "useRegex" to true, you can use a Regex in the "find" parameter and a substitution pattern in the "replaceWith" parameter.'
+            + ' This will place your cursor at the end of the replaced text, unless you replaced multiple instances.',
         schema: {
             type: 'object',
             properties: {
@@ -145,7 +148,9 @@ export const editingActions = {
     },
     delete_text: {
         name: 'delete_text',
-        description: 'Delete text in the active document. If you set "useRegex" to true, you can use a Regex in the "find" parameter.',
+        description: 'Delete text in the active document.'
+            + ' If you set "useRegex" to true, you can use a Regex in the "find" parameter.'
+            + ' This will place your cursor where the deleted text was, unless you deleted multiple instances.',
         schema: {
             type: 'object',
             properties: {
@@ -163,7 +168,9 @@ export const editingActions = {
     },
     find_text: {
         name: 'find_text',
-        description: 'Find text in the active document. If you set "useRegex" to true, you can use a Regex in the "find" parameter.',
+        description: 'Find text in the active document.'
+            + ' If you set "useRegex" to true, you can use a Regex in the "find" parameter.'
+            + ' This will place your cursor directly after the found text, unless you searched for multiple instances.',
         schema: {
             type: 'object',
             properties: {
@@ -182,7 +189,9 @@ export const editingActions = {
     },
     undo: {
         name: 'undo',
-        description: 'Undo the last action in the active document. If this doesn\'t work, tell Vedal to focus your VS Code window.',
+        description: 'Undo the last change made to the active document.'
+            + ' Your cursor will be moved depending on the action that was undone.'
+            + ' If this doesn\'t work, tell Vedal to focus your VS Code window.',
         permissions: [PERMISSIONS.editActiveDocument],
         handler: handleUndo,
         validator: [checkCurrentFile],
