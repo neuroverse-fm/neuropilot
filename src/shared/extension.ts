@@ -234,7 +234,7 @@ export function getDecorationRenderOptions() {
         borderRadius: '1px',
         overviewRulerColor: 'rgba(255, 85, 229, 0.5)',
         overviewRulerLane: vscode.OverviewRulerLane.Right,
-        gutterIconPath: vscode.Uri.joinPath(NEURO.context!.extensionUri, 'icon.png'),
+        gutterIconPath: vscode.Uri.joinPath(NEURO.context!.extensionUri, 'assets/heart.png'),
         gutterIconSize: 'contain',
         rangeBehavior: vscode.DecorationRangeBehavior.ClosedClosed,
         before: {
