@@ -628,7 +628,7 @@
 		"package": "cross-env NODE_ENV=1 pnpm build",
 		"lint": "eslint --fix",
 		"test": "vscode-test",
-		"prepare": "husky",
+		"postinstall": "husky",
 		"types": "npm-run-all -p build:*:tsc",
 		"types:watch": "npm-run-all -p watch:*:tsc",
 		"build:web": "npm-run-all -p build:web:*",
