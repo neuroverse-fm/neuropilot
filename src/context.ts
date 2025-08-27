@@ -24,7 +24,7 @@ export function sendCurrentFile() {
 
     logOutput('INFO', 'Sending current file to Neuro API');
     const fence = getFence(text);
-    NEURO.client?.sendContext(`Current file: ${fileName}\n\nContent:\n\n${fence}${language}\n${text}\n${fence}`);
+    NEURO.client?.sendContext(`Vedal sent you the contents of the file ${fileName}.\n\nContent:\n\n${fence}${language}\n${text}\n${fence}`);
 }
 
 export function registerRequestCookieAction() {
