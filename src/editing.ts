@@ -107,7 +107,8 @@ export const editingActions = {
         description: 'Insert code at the specified position.'
             + ' Absolute line and column numbers are one-based.'
             + ' If no position is specified, your cursor\'s current position will be used.'
-            + ' After inserting, your cursor will be placed at the end of the inserted text.',
+            + ' After inserting, your cursor will be placed at the end of the inserted text.'
+            + ' Also make sure you use new lines and indentation appropriately.',
         schema: {
             type: 'object',
             properties: {
