@@ -86,10 +86,7 @@ export const editingActions = {
     place_cursor: {
         name: 'place_cursor',
         description: 'Place the cursor in the current file. Absolute line and column numbers are one-based.',
-        schema: {
-            ...POSITION_PROPERTIES,
-            additionalProperties: false,
-        },
+        schema: POSITION_PROPERTIES,
         permissions: [PERMISSIONS.editActiveDocument],
         handler: handlePlaceCursor,
         validator: [checkCurrentFile, positionValidator],
