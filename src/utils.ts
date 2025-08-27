@@ -390,3 +390,26 @@ export function checkWorkspaceTrust(_actionData: ActionData): ActionValidationRe
     }
     return actionValidationFailure('You are in an untrusted workspace.');
 }
+
+/**
+ * Gets a property from an object using a dot-separated path.
+ * @param obj The object to get the property from.
+ * @param path The dot-separated path to the property. Pass an empty string to get the root object itself.
+ * @returns The value of the property, or undefined if it doesn't exist.
+ */
+export function getProperty(obj: unknown, path: string): unknown {
+    const keys = path.split('.');
+    let current: unknown = obj;
+    if (path === '')
+        return current;
+
+    for (const key of keys) {
+        if (typeof current === 'object' && current !== null && key in current) {
+            current = (current as Record<string, unknown>)[key];
+        } else {
+            return undefined;
+        }
+    }
+
+    return current;
+}

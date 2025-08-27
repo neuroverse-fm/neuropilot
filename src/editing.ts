@@ -1,25 +1,19 @@
 import * as vscode from 'vscode';
 
 import { NEURO } from '@/constants';
-import { escapeRegExp, getFence, getPositionContext, getVirtualCursor, isPathNeuroSafe, logOutput, NeuroPositionContext, setVirtualCursor, substituteMatch } from '@/utils';
-import { ActionData, actionValidationAccept, actionValidationFailure, ActionValidationResult, RCEAction, contextFailure, stripToActions } from '@/neuro_client_helper';
+import { escapeRegExp, getFence, getPositionContext, getProperty, getVirtualCursor, isPathNeuroSafe, logOutput, NeuroPositionContext, setVirtualCursor, substituteMatch } from '@/utils';
+import { ActionData, actionValidationAccept, actionValidationFailure, ActionValidationResult, RCEAction, contextFailure, stripToActions, actionValidationRetry } from '@/neuro_client_helper';
 import { PERMISSIONS, getPermissionLevel, CONFIG } from '@/config';
 
 const CONTEXT_NO_ACCESS = 'You do not have permission to access this file.';
 const CONTEXT_NO_ACTIVE_DOCUMENT = 'No active document to edit.';
 
 const MATCH_OPTIONS: string[] = ['firstInFile', 'lastInFile', 'firstAfterCursor', 'lastBeforeCursor', 'allInFile'] as const;
-const POSITION_PROPERTIES = {
+const POSITION_SCHEMA = {
     type: 'object',
     properties: {
-        line: {
-            type: 'integer',
-            minimum: 1,
-        },
-        column: {
-            type: 'integer',
-            minimum: 1,
-        },
+        line: { type: 'integer' },
+        column: { type: 'integer' },
         type: {
             type: 'string',
             enum: ['relative', 'absolute'],
@@ -29,47 +23,55 @@ const POSITION_PROPERTIES = {
     required: ['line', 'column', 'type'],
 };
 
-function positionValidator(actionData: ActionData): ActionValidationResult {
-    let line, column, type;
+/**
+ * Create a position validator for the specified path.
+ * The validator checks if the position is within the bounds of the document.
+ * @param path The path to the position object. For the root pass an empty string.
+ * @returns A function that validates the position in the action data.
+ */
+function createPositionValidator(path = '') {
+    return (actionData: ActionData): ActionValidationResult => {
+        const position = getProperty(actionData.params, path) as { line: number; column: number; type: 'absolute' | 'relative' } | undefined;
 
-    if (actionData.name === 'place_cursor') {
-        line = actionData.params.line;
-        column = actionData.params.column;
-        type = actionData.params.type;
-    } else if (actionData.name === 'insert_text') {
-        line = actionData.params.position.line;
-        column = actionData.params.position.column;
-        type = actionData.params.position.type;
+        // If position is undefined, it is not required by the schema (otherwise the schema check would fail first)
+        if (position === undefined)
+            return actionValidationAccept();
+
+        const document = vscode.window.activeTextEditor?.document;
+        if (document === undefined)
+            return actionValidationFailure(CONTEXT_NO_ACTIVE_DOCUMENT);
+        if (!isPathNeuroSafe(document.fileName))
+            return actionValidationFailure(CONTEXT_NO_ACCESS);
+
+        let { line, column } = position;
+        const type = position.type;
+
+        let basedLine: number; // The one-based line number
+
+        if (type === 'relative') {
+            const cursor = getVirtualCursor()!;
+            line += cursor.line;
+            column += cursor.character;
+
+            basedLine = line + 1;
+        } else { // type === 'absolute'
+            basedLine = line;
+            line -= 1;
+            column -= 1;
+        }
+
+        // Additional checks for better feedback
+        if (type === 'absolute' && (position.line === 0 || position.column === 0))
+            return actionValidationRetry('Line and column numbers are one-based, so the first line and column are 1, not 0.');
+
+        // Check if the line and column are in-bounds
+        if (line >= document.lineCount || line < 0)
+            return actionValidationRetry(`Line ${basedLine} is out of bounds, the last line of the document is ${document.lineCount}.`);
+        if (column > document.lineAt(line).text.length || column < 0)
+            return actionValidationRetry(`Column ${column + 1} is out of bounds, the last column of line ${basedLine} is ${document.lineAt(line).text.length + 1}.`);
+
+        return actionValidationAccept();
     };
-
-    const document = vscode.window.activeTextEditor?.document;
-    if (document === undefined)
-        return actionValidationFailure(CONTEXT_NO_ACTIVE_DOCUMENT);
-    if (!isPathNeuroSafe(document.fileName))
-        return actionValidationFailure(CONTEXT_NO_ACCESS);
-
-    let basedLine: number;
-
-    if (type === 'relative') {
-        const cursor = getVirtualCursor()!;
-        line += cursor.line;
-        column += cursor.character;
-
-        basedLine = line + 1;
-    }
-    else {
-        basedLine = line;
-
-        line -= 1;
-        column -= 1;
-    }
-
-    if (line >= document.lineCount || line < 0) {
-        return actionValidationFailure(`Line is out of bounds, the last line of the document is ${document.lineCount}.`);
-    }
-    if (column > document.lineAt(line).text.length || column < 0)
-        return actionValidationFailure(`Column is out of bounds, the last column of line ${basedLine} is ${document.lineAt(line).text.length + 1}.`);
-    return actionValidationAccept();
 }
 
 function checkCurrentFile(_actionData: ActionData): ActionValidationResult {
@@ -86,11 +88,11 @@ export const editingActions = {
     place_cursor: {
         name: 'place_cursor',
         description: 'Place the cursor in the current file. Absolute line and column numbers are one-based.',
-        schema: POSITION_PROPERTIES,
+        schema: POSITION_SCHEMA,
         permissions: [PERMISSIONS.editActiveDocument],
         handler: handlePlaceCursor,
-        validator: [checkCurrentFile, positionValidator],
-        promptGenerator: (actionData: ActionData) => `place the cursor at (${actionData.params.line}:${actionData.params.column}).`,
+        validator: [checkCurrentFile, createPositionValidator()],
+        promptGenerator: (actionData: ActionData) => `${actionData.params.type === 'absolute' ? 'place the cursor at' : 'move the cursor by'} (${actionData.params.line}:${actionData.params.column}).`,
     },
     get_cursor: {
         name: 'get_cursor',
@@ -102,19 +104,21 @@ export const editingActions = {
     },
     insert_text: {
         name: 'insert_text',
-        description: 'Insert code at the specified position. If left blank, your cursor\'s current position will be used.',
+        description: 'Insert code at the specified position.'
+        + ' If no position is specified, your cursor\'s current position will be used.'
+        + ' Your cursor will be moved to the end of the inserted text.',
         schema: {
             type: 'object',
             properties: {
                 text: { type: 'string' },
-                position: POSITION_PROPERTIES,
+                position: POSITION_SCHEMA,
             },
             required: ['text'],
             additionalProperties: false,
         },
         permissions: [PERMISSIONS.editActiveDocument],
         handler: handleInsertText,
-        validator: [checkCurrentFile, positionValidator],
+        validator: [checkCurrentFile, createPositionValidator('position')],
         promptGenerator: (actionData: ActionData) => {
             const lineCount = actionData.params.text.trim().split('\n').length;
             return `insert ${lineCount} line${lineCount === 1 ? '' : 's'} of code.`;
@@ -252,12 +256,6 @@ export function handlePlaceCursor(actionData: ActionData): string | undefined {
         column -= 1;
     }
 
-    if (line >= document.lineCount || line < 0) {
-        return contextFailure(`Line is out of bounds, the last line of the document is ${document.lineCount}.`);
-    }
-    if (column > document.lineAt(line).text.length || column < 0)
-        return contextFailure(`Column is out of bounds, the last column of line ${basedLine} is ${document.lineAt(line).text.length + 1}.`);
-
     const cursorPosition = new vscode.Position(line, column);
     setVirtualCursor(cursorPosition);
     const cursorContext = getPositionContext(document, cursorPosition);
@@ -313,7 +311,7 @@ export function handleInsertText(actionData: ActionData): string | undefined {
             const document = vscode.window.activeTextEditor!.document;
             const insertEnd = document.positionAt(document.offsetAt(insertStart) + text.length);
             const cursorContext = getPositionContext(document, insertStart, insertEnd);
-            setVirtualCursor(insertStart);
+            setVirtualCursor(insertEnd);
             NEURO.client?.sendContext(`Inserted text into document and moved cursor\n\n${formatContext(cursorContext)}`);
         }
         else {
