@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import { createClient, isPathNeuroSafe, setVirtualCursor } from '~/utils';
-import { NEURO } from '~/constants';
+import { createClient, isPathNeuroSafe, setVirtualCursor } from '@/utils';
+import { NEURO } from '@/constants';
 import {
     initializeCommonState,
     setupCommonProviders,

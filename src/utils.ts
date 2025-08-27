@@ -2,31 +2,31 @@ import * as vscode from 'vscode';
 import { NeuroClient } from 'neuro-game-sdk';
 import globToRegExp from 'glob-to-regexp';
 
-import { NEURO } from '~/constants';
-import { CONFIG, getPermissionLevel, PERMISSIONS } from '~/config';
+import { NEURO } from '@/constants';
+import { CONFIG, getPermissionLevel, PERMISSIONS } from '@/config';
 
-import { ActionValidationResult, ActionData, actionValidationAccept, actionValidationFailure } from '~/neuro_client_helper';
+import { ActionValidationResult, ActionData, actionValidationAccept, actionValidationFailure } from '@/neuro_client_helper';
 import assert from 'node:assert';
 
 export const REGEXP_ALWAYS = /^/;
 export const REGEXP_NEVER = /^\b$/;
 
 export function logOutput(tag: string, message: string) {
-    if(!NEURO.outputChannel) {
+    if (!NEURO.outputChannel) {
         console.error('Output channel not initialized');
         return;
     }
     const ms = Date.now() % 1000;
-    const time = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit'}) + '.' + ms.toString().padStart(3, '0');
+    const time = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' }) + '.' + ms.toString().padStart(3, '0');
     const prefix = `${time} [${tag}] `;
-    for(const line of message.split('\n')) {
+    for (const line of message.split('\n')) {
         NEURO.outputChannel.appendLine(prefix + line);
     }
 }
 
 export function createClient() {
     logOutput('INFO', 'Creating Neuro API client');
-    if(NEURO.client)
+    if (NEURO.client)
         NEURO.client.disconnect();
 
     NEURO.connected = false;
@@ -58,7 +58,7 @@ export function createClient() {
             vscode.window.showErrorMessage(`Neuro client error: ${error}`);
         };
 
-        for(const handler of clientConnectedHandlers) {
+        for (const handler of clientConnectedHandlers) {
             handler();
         }
     });
@@ -78,7 +78,7 @@ export function onClientConnected(handler: () => void) {
 export function simpleFileName(fileName: string): string {
     const rootFolder = vscode.workspace.workspaceFolders?.[0].uri.fsPath.replace(/\\/, '/');
     const result = fileName.replace(/\\/g, '/');
-    if(rootFolder && result.startsWith(rootFolder))
+    if (rootFolder && result.startsWith(rootFolder))
         return result.substring(rootFolder.length);
     else
         return result.substring(result.lastIndexOf('/') + 1);
@@ -117,10 +117,10 @@ export function getPositionContext(document: vscode.TextDocument, position: vsco
     const beforeContextLength = CONFIG.beforeContext;
     const afterContextLength = CONFIG.afterContext;
 
-    if(position2 === undefined) {
+    if (position2 === undefined) {
         position2 = position;
     }
-    if(position2.isBefore(position)) {
+    if (position2.isBefore(position)) {
         // Swap the positions if position2 is before position
         const temp = position;
         position = position2;
@@ -206,7 +206,7 @@ export function isPathNeuroSafe(path: string, checkPatterns = true): boolean {
         && normalizedPath.startsWith(rootFolder)    // Prevent access to paths outside the workspace
         && !normalizedPath.includes('/.')           // Prevent access to special files and folders (e.g. .vscode)
         && !normalizedPath.includes('..')           // Prevent access to parent folders
-        && !normalizedPath.includes('~')            // Prevent access to home directory
+        && !normalizedPath.includes('@')            // Prevent access to home directory
         && !normalizedPath.includes('$')            // Prevent access to environment variables
         && includeRegExp.test(normalizedPath)       // Check against include pattern
         && !excludeRegExp.test(normalizedPath);     // Check against exclude pattern
@@ -232,49 +232,49 @@ export function substituteMatch(match: RegExpExecArray, replacement: string): st
     const substitutions = Array.from(replacement.matchAll(rx));
     const literals = replacement.split(rx);
     let result = '';
-    for(let i = 0; i < substitutions.length; i++) {
+    for (let i = 0; i < substitutions.length; i++) {
         // Append literal
         result += literals[i];
         // Append substitution
-        if(substitutions[i][0] === '$&') {
+        if (substitutions[i][0] === '$&') {
             // Full match
             result += match[0];
         }
-        else if(substitutions[i][0] === '$`' || substitutions[i][0] === '$\'' || substitutions[i][0] === '$_') {
+        else if (substitutions[i][0] === '$`' || substitutions[i][0] === '$\'' || substitutions[i][0] === '$_') {
             // Text before or after the match
             throw new Error('Substitution with text outside the match is not supported.');
         }
-        else if(substitutions[i][0] === '$+') {
+        else if (substitutions[i][0] === '$+') {
             // Last capture group
-            if(match.length === 0)
+            if (match.length === 0)
                 throw new Error('No capture groups in the match');
             result += match[match.length - 1];
         }
-        else if(substitutions[i][0] === '$$') {
+        else if (substitutions[i][0] === '$$') {
             // Escaped dollar sign
             result += '$';
         }
-        else if(substitutions[i][0].startsWith('$<') || substitutions[i][0].startsWith('${')) {
+        else if (substitutions[i][0].startsWith('$<') || substitutions[i][0].startsWith('${')) {
             const name = substitutions[i][0].slice(2, -1);
-            if(/^\d+$/.test(name)) {
+            if (/^\d+$/.test(name)) {
                 // Numbered group
                 const index = parseInt(name);
-                if(index >= match.length)
+                if (index >= match.length)
                     throw new Error(`Capture group ${index} does not exist in the match`);
                 result += match[index];
             }
             else {
                 // Named group
                 const content = match.groups?.[name];
-                if(content === undefined)
+                if (content === undefined)
                     throw new Error(`Capture group "${name}" does not exist in the match`);
                 result += content;
             }
         }
-        else if(/^\$\d+$/.test(substitutions[i][0])) {
+        else if (/^\$\d+$/.test(substitutions[i][0])) {
             // Numbered group
             const index = parseInt(substitutions[i][0].slice(1));
-            if(index >= match.length)
+            if (index >= match.length)
                 throw new Error(`Capture group ${index} does not exist in the match`);
             result += match[index];
         }
@@ -316,9 +316,9 @@ export function getFence(text: string): string {
  */
 export function setVirtualCursor(position?: vscode.Position | null) {
     const editor = vscode.window.activeTextEditor;
-    if(!editor) return;
+    if (!editor) return;
 
-    if(position === null || !getPermissionLevel(PERMISSIONS.editActiveDocument) || !isPathNeuroSafe(editor.document.fileName)) {
+    if (position === null || !getPermissionLevel(PERMISSIONS.editActiveDocument) || !isPathNeuroSafe(editor.document.fileName)) {
         removeVirtualCursor();
         return;
     }
@@ -327,12 +327,12 @@ export function setVirtualCursor(position?: vscode.Position | null) {
         ? editor.document.offsetAt(position)
         : NEURO.cursorOffsets.get(editor.document.uri);
 
-    if(offset === null) {
+    if (offset === null) {
         // Some setting changed that made the file Neuro-safe
         offset = editor.document.offsetAt(editor.selection.active);
     }
 
-    if(offset === undefined) {
+    if (offset === undefined) {
         logOutput('ERROR', 'No last known position available');
         return;
     }
@@ -347,7 +347,7 @@ export function setVirtualCursor(position?: vscode.Position | null) {
         },
     ] satisfies vscode.DecorationOptions[]);
 
-    if(CONFIG.cursorFollowsNeuro)
+    if (CONFIG.cursorFollowsNeuro)
         editor.selection = new vscode.Selection(cursorPosition, cursorPosition);
 
     return;
@@ -366,14 +366,14 @@ export function setVirtualCursor(position?: vscode.Position | null) {
  */
 export function getVirtualCursor(): vscode.Position | null | undefined {
     const editor = vscode.window.activeTextEditor;
-    if(!editor) return undefined;
+    if (!editor) return undefined;
     const result = NEURO.cursorOffsets.get(editor.document.uri);
-    if(result === undefined) {
+    if (result === undefined) {
         // Virtual cursor should always be set by onDidChangeActiveTextEditor
         logOutput('ERROR', 'No last known position available');
         return undefined;
     }
-    else if(result === null) {
+    else if (result === null) {
         return null;
     }
     else {

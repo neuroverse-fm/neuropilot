@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
-import { reloadTasks, taskEndedHandler } from '~/tasks';
-import { emergencyTerminalShutdown } from '~/pseudoterminal';
-import { createClient, isPathNeuroSafe, setVirtualCursor } from '~/utils';
-import { NEURO } from '~/constants';
+import { reloadTasks, taskEndedHandler } from '@/tasks';
+import { emergencyTerminalShutdown } from '@/pseudoterminal';
+import { createClient, isPathNeuroSafe, setVirtualCursor } from '@/utils';
+import { NEURO } from '@/constants';
 import {
     initializeCommonState,
     setupCommonProviders,
@@ -15,11 +15,8 @@ import {
     obtainExtensionState,
     reloadPermissions,
 } from '@shared/extension';
-import { registerDocsLink } from '@shared/docs';
-import { registerChatParticipant } from '~/chat';
+import { registerChatParticipant } from '@/chat';
 import { registerUnsupervisedActions, registerUnsupervisedHandlers } from './unsupervised';
-
-export { registerDocsLink };
 
 export function activate(context: vscode.ExtensionContext) {
 
@@ -49,7 +46,7 @@ export function activate(context: vscode.ExtensionContext) {
     // Create status bar item
     createStatusBarItem();
 
-    // Extension state
+    // Extension state (delaying this so that the git extension has some time to activate)
     obtainExtensionState();
 
     // Create client

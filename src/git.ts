@@ -1,11 +1,11 @@
 import * as vscode from 'vscode';
-import { EXTENSIONS, NEURO } from '~/constants';
+import { EXTENSIONS, NEURO } from '@/constants';
 import type { Change, CommitOptions, Commit, Repository, API } from '@typing/git.d';
 import { ForcePushMode } from '@typing/git.d';
 import { StatusStrings, RefTypeStrings } from '@typing/git_status';
-import { logOutput, simpleFileName, isPathNeuroSafe, normalizePath, getWorkspacePath } from '~/utils';
-import { ActionData, ActionValidationResult, actionValidationAccept, actionValidationFailure, RCEAction, contextFailure, stripToActions } from '~/neuro_client_helper';
-import { PERMISSIONS, getPermissionLevel } from '~/config';
+import { logOutput, simpleFileName, isPathNeuroSafe, normalizePath, getWorkspacePath } from '@/utils';
+import { ActionData, ActionValidationResult, actionValidationAccept, actionValidationFailure, RCEAction, contextFailure, stripToActions } from '@/neuro_client_helper';
+import { PERMISSIONS, getPermissionLevel } from '@/config';
 import assert from 'node:assert';
 
 /* All actions located in here requires neuropilot.permission.gitOperations to be enabled. */
@@ -15,11 +15,13 @@ let git: API | null = null;
 let repo: Repository | null = null;
 
 export function getGitExtension() {
+    NEURO.client?.unregisterActions(Object.keys(gitActions));
     if (EXTENSIONS.git) {
         git = EXTENSIONS.git.getAPI(1);
         logOutput('DEBUG', 'Git extension obtained.');
         repo = git.repositories[0];
-        logOutput('DEBUG', 'Git repo obtained.');
+        logOutput('DEBUG', 'Git repo obtained (if any).');
+        registerGitActions();
     } else {
         git = null;
         repo = null;

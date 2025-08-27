@@ -6,11 +6,11 @@
 
 import * as vscode from 'vscode';
 import { spawn, ChildProcessWithoutNullStreams } from 'node:child_process';
-import { NEURO } from '~/constants';
-import { checkWorkspaceTrust } from '~/utils';
-import { logOutput, delayAsync, getFence } from '~/utils';
-import { ActionData, actionValidationAccept, actionValidationFailure, ActionValidationResult, RCEAction, contextFailure, stripToActions } from '~/neuro_client_helper';
-import { CONFIG, PERMISSIONS, getPermissionLevel } from '~/config';
+import { NEURO } from '@/constants';
+import { checkWorkspaceTrust } from '@/utils';
+import { logOutput, delayAsync, getFence } from '@/utils';
+import { ActionData, actionValidationAccept, actionValidationFailure, ActionValidationResult, RCEAction, contextFailure, stripToActions } from '@/neuro_client_helper';
+import { CONFIG, PERMISSIONS, getPermissionLevel } from '@/config';
 
 /*
  * Extended interface for terminal sessions.
