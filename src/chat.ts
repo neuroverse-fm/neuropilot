@@ -200,6 +200,7 @@ async function requestChatResponse(
                     answer: { type: 'string' },
                 },
                 required: ['answer'],
+                additionalProperties: false,
             },
         },
     ]);

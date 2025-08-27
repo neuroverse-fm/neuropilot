@@ -63,6 +63,7 @@ export function requestCompletion(beforeContext: string, afterContext: string, f
                     },
                 },
                 required: ['suggestions'],
+                additionalProperties: false,
             },
         },
     ]);

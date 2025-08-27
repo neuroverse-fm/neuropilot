@@ -42,6 +42,7 @@ export function registerRequestCookieAction() {
                 properties: {
                     flavor: { type: 'string' },
                 },
+                additionalProperties: false,
             },
         },
     ]);
