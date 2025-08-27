@@ -620,6 +620,7 @@
 		}
 	},
 	"scripts": {
+		"version:changesets": "changeset version --global-changelog",
 		"vscode:prepublish": "pnpm build",
 		"build": "pnpm types && node esbuild.mjs",
 		"compile": "cross-env NODE_ENV=0 pnpm build",

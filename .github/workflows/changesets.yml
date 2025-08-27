@@ -1,0 +1,49 @@
+name: Create Version PR from dev -> master
+
+# run when dev branch changes (or keep workflow_dispatch for manual run)
+on:
+  push:
+    branches:
+      - dev
+  # optional: let you run it manually too
+  workflow_dispatch:
+
+permissions:
+  contents: write        # required for commits
+  pull-requests: write   # required to create PRs
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+
+jobs:
+  create-version-pr:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (full history)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Create release PR (Changesets)
+        uses: changesets/action@v1
+        with:
+          # run the script that executes `changeset version --global-changelog`
+          version: 'pnpm run version:changesets'
+          title: 'release: version + CHANGELOG.md'
+          # **important**: open the version PR onto master even though we run on dev
+          # baseBranch: 'master'
+          createGithubReleases: 'false'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
