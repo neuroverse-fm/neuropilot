@@ -14,9 +14,11 @@ const POSITION_PROPERTIES = {
     properties: {
         line: {
             type: 'integer',
+            minimum: 1,
         },
         column: {
             type: 'integer',
+            minimum: 1,
         },
         type: {
             type: 'string',
