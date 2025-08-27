@@ -283,9 +283,13 @@ export function handleInsertText(actionData: ActionData): string | undefined {
     const text: string = actionData.params.text;
     const cursor = getVirtualCursor()!;
     let position = actionData.params.position;
+
+    let line: number;
+    let column: number;
+
     if (!position) position = {
-        line: cursor.line,
-        column: cursor.character,
+        line: cursor.line + 1,
+        column: cursor.character + 1,
         type: 'absolute',
     };
 
@@ -296,22 +300,26 @@ export function handleInsertText(actionData: ActionData): string | undefined {
         return contextFailure(CONTEXT_NO_ACCESS);
 
     if (position.type === 'relative') {
-        position.line += cursor.line;
-        position.column += cursor.character;
+        line = cursor.line + position.line;
+        column = cursor.character + position.column;
+    } else { // position.type === 'absolute'
+        line = position.line - 1;
+        column = position.column - 1;
     }
 
-    const insertStart = new vscode.Position(position.line, position.column);
+    const insertStart = new vscode.Position(line, column);
 
     const edit = new vscode.WorkspaceEdit();
     edit.insert(document.uri, insertStart, text);
+
+    setVirtualCursor(insertStart);
 
     vscode.workspace.applyEdit(edit).then(success => {
         if (success) {
             logOutput('INFO', 'Inserting text into document');
             const document = vscode.window.activeTextEditor!.document;
-            const insertEnd = document.positionAt(document.offsetAt(insertStart) + text.length);
+            const insertEnd = getVirtualCursor()!;
             const cursorContext = getPositionContext(document, insertStart, insertEnd);
-            setVirtualCursor(insertEnd);
             NEURO.client?.sendContext(`Inserted text into document and moved cursor\n\n${formatContext(cursorContext)}`);
         }
         else {
