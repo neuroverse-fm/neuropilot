@@ -105,7 +105,7 @@ export const editingActions = {
     get_content: {
         name: 'get_content',
         description: 'Get the contents of the current file.',
-        permissions: [PERMISSIONS.openFiles],
+        permissions: [PERMISSIONS.editActiveDocument],
         handler: handleGetContent,
         promptGenerator: 'get the current file\'s contents.',
         validator: [checkCurrentFile],
@@ -309,12 +309,13 @@ export function handleGetContent(): string {
     const language = document.languageId;
     const text = document.getText();
     const fence = getFence(text);
+    const cursor = getVirtualCursor()!;
 
-    if (!isPathNeuroSafe(getWorkspacePath() + '/' + fileName)) {
+    if (!isPathNeuroSafe(document.fileName)) {
         return contextNoAccess(fileName);
     }
 
-    return `Contents of the file ${fileName}:\n\nContent:\n\n${fence}${language}\n${text}\n${fence}`;
+    return `Contents of the file ${fileName} (Cursor at ${cursor.line + 1}:${cursor.character + 1}):\n\n${fence}${language}\n${text}\n${fence}`;
 }
 
 export function handleInsertText(actionData: ActionData): string | undefined {
