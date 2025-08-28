@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 
 import { NEURO } from '@/constants';
-import { combineGlobLines, filterFileContents, getFence, getVirtualCursor, getWorkspacePath, isPathNeuroSafe, logOutput, normalizePath } from '@/utils';
-import { ActionData, contextNoAccess, RCEAction, actionValidationFailure, actionValidationAccept, ActionValidationResult, stripToActions } from '@/neuro_client_helper';
+import { combineGlobLines, filterFileContents, getFence, getVirtualCursor, getWorkspacePath, isPathNeuroSafe, logOutput, normalizePath, simpleFileName } from '@/utils';
+import { ActionData, contextNoAccess, RCEAction, actionValidationFailure, actionValidationAccept, ActionValidationResult, stripToActions, contextFailure } from '@/neuro_client_helper';
 import { CONFIG, PERMISSIONS, getPermissionLevel } from '@/config';
 
 /**
@@ -83,6 +83,27 @@ export const fileActions = {
         },
         ],
         promptGenerator: 'get a list of files in the workspace.',
+    },
+    get_content: {
+        name: 'get_content',
+        description: 'Get the contents of the current file.',
+        permissions: [PERMISSIONS.openFiles],
+        handler: handleGetContent,
+        promptGenerator: 'get the current file\'s contents.',
+        validator: [async () => {
+            const editor = vscode.window.activeTextEditor;
+            let result: ActionValidationResult = actionValidationAccept();
+            if (!editor) {
+                result = actionValidationFailure('No active text editor.');
+            }
+            if (!result.success) return result;
+            const document = editor!.document;
+            const fileName = simpleFileName(document.fileName);
+            if (fileName) {
+                result = await validatePath(fileName, false, 'file');
+            }
+            return result;
+        }],
     },
     open_file: {
         name: 'open_file',
@@ -173,6 +194,7 @@ export function registerFileActions() {
         NEURO.client?.registerActions(stripToActions([
             fileActions.get_files,
             fileActions.open_file,
+            fileActions.get_content,
         ]));
     }
 
@@ -392,6 +414,25 @@ export function handleGetFiles(_actionData: ActionData): string | undefined {
     );
 
     return undefined;
+}
+
+export function handleGetContent(): string {
+    const editor = vscode.window.activeTextEditor;
+    if (!editor) {
+        return contextFailure('No active text editor.');
+    }
+
+    const document = editor.document;
+    const fileName = simpleFileName(document.fileName);
+    const language = document.languageId;
+    const text = document.getText();
+    const fence = getFence(text);
+
+    if (!isPathNeuroSafe(getWorkspacePath() + '/' + fileName)) {
+        return contextNoAccess(fileName);
+    }
+
+    return `Contents of the file ${fileName}:\n\nContent:\n\n${fence}${language}\n${text}\n${fence}`;
 }
 
 export function handleOpenFile(actionData: ActionData): string | undefined {
