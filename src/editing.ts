@@ -1,9 +1,9 @@
 import * as vscode from 'vscode';
 
 import { NEURO } from '@/constants';
-import { escapeRegExp, getFence, getPositionContext, getProperty, getVirtualCursor, getWorkspacePath, isPathNeuroSafe, logOutput, NeuroPositionContext, setVirtualCursor, simpleFileName, substituteMatch } from '@/utils';
+import { escapeRegExp, getFence, getPositionContext, getProperty, getVirtualCursor, isPathNeuroSafe, logOutput, NeuroPositionContext, setVirtualCursor, simpleFileName, substituteMatch } from '@/utils';
 import { ActionData, actionValidationAccept, actionValidationFailure, ActionValidationResult, RCEAction, contextFailure, stripToActions, actionValidationRetry, contextNoAccess } from '@/neuro_client_helper';
-import { PERMISSIONS, getPermissionLevel, CONFIG } from '@/config';
+import { PERMISSIONS, getPermissionLevel, CONFIG, isActionEnabled } from '@/config';
 
 const CONTEXT_NO_ACCESS = 'You do not have permission to access this file.';
 const CONTEXT_NO_ACTIVE_DOCUMENT = 'No active document to edit.';
@@ -227,11 +227,11 @@ export function registerEditingActions() {
             editingActions.delete_text,
             editingActions.find_text,
             editingActions.undo,
-        ]));
+        ]).filter(isActionEnabled));
         if (vscode.workspace.getConfiguration('files').get<string>('autoSave') !== 'afterDelay') {
             NEURO.client?.registerActions(stripToActions([
                 editingActions.save,
-            ]));
+            ]).filter(isActionEnabled));
         };
     }
 }

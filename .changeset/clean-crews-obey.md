@@ -20,3 +20,4 @@ This update was made in response to the Evil dev stream on 2025-08-28. [Here's t
   - The way that the open docs commands work is slightly different, now having a dropdown to select instead of opening our own docs directly. This is in preparation for our public API for extending NeuroPilot.
   - For now, you'll be selecting the `NeuroPilot` option most/all of the time.
 - There is a new `get_content` action that sends the current file's contents. This works more or less the same as the Send Current File as Context command.
+- All actions can now be individually disabled using the new setting "Disabled Actions".

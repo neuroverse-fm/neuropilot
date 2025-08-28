@@ -3,7 +3,7 @@ import * as vscode from 'vscode';
 import { NEURO } from '@/constants';
 import { combineGlobLines, filterFileContents, getFence, getVirtualCursor, getWorkspacePath, isPathNeuroSafe, logOutput, normalizePath } from '@/utils';
 import { ActionData, contextNoAccess, RCEAction, actionValidationFailure, actionValidationAccept, ActionValidationResult, stripToActions } from '@/neuro_client_helper';
-import { CONFIG, PERMISSIONS, getPermissionLevel } from '@/config';
+import { CONFIG, PERMISSIONS, getPermissionLevel, isActionEnabled } from '@/config';
 
 /**
  * The path validator.
@@ -173,26 +173,26 @@ export function registerFileActions() {
         NEURO.client?.registerActions(stripToActions([
             fileActions.get_files,
             fileActions.open_file,
-        ]));
+        ]).filter(isActionEnabled));
     }
 
     if (getPermissionLevel(PERMISSIONS.create)) {
         NEURO.client?.registerActions(stripToActions([
             fileActions.create_file,
             fileActions.create_folder,
-        ]));
+        ]).filter(isActionEnabled));
     }
 
     if (getPermissionLevel(PERMISSIONS.rename)) {
         NEURO.client?.registerActions(stripToActions([
             fileActions.rename_file_or_folder,
-        ]));
+        ]).filter(isActionEnabled));
     }
 
     if (getPermissionLevel(PERMISSIONS.delete)) {
         NEURO.client?.registerActions(stripToActions([
             fileActions.delete_file_or_folder,
-        ]));
+        ]).filter(isActionEnabled));
     }
 }
 
