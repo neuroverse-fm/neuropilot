@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 
 import { NEURO } from '@/constants';
-import { escapeRegExp, getFence, getPositionContext, getProperty, getVirtualCursor, isPathNeuroSafe, logOutput, NeuroPositionContext, setVirtualCursor, substituteMatch } from '@/utils';
-import { ActionData, actionValidationAccept, actionValidationFailure, ActionValidationResult, RCEAction, contextFailure, stripToActions, actionValidationRetry } from '@/neuro_client_helper';
+import { escapeRegExp, getFence, getPositionContext, getProperty, getVirtualCursor, getWorkspacePath, isPathNeuroSafe, logOutput, NeuroPositionContext, setVirtualCursor, simpleFileName, substituteMatch } from '@/utils';
+import { ActionData, actionValidationAccept, actionValidationFailure, ActionValidationResult, RCEAction, contextFailure, stripToActions, actionValidationRetry, contextNoAccess } from '@/neuro_client_helper';
 import { PERMISSIONS, getPermissionLevel, CONFIG } from '@/config';
 
 const CONTEXT_NO_ACCESS = 'You do not have permission to access this file.';
@@ -101,6 +101,14 @@ export const editingActions = {
         handler: handleGetCursor,
         validator: [checkCurrentFile],
         promptGenerator: 'get the current cursor position and the text surrounding it.',
+    },
+    get_content: {
+        name: 'get_content',
+        description: 'Get the contents of the current file.',
+        permissions: [PERMISSIONS.openFiles],
+        handler: handleGetContent,
+        promptGenerator: 'get the current file\'s contents.',
+        validator: [checkCurrentFile],
     },
     insert_text: {
         name: 'insert_text',
@@ -213,6 +221,7 @@ export function registerEditingActions() {
         NEURO.client?.registerActions(stripToActions([
             editingActions.place_cursor,
             editingActions.get_cursor,
+            editingActions.get_content,
             editingActions.insert_text,
             editingActions.replace_text,
             editingActions.delete_text,
@@ -287,6 +296,25 @@ export function handleGetCursor(_actionData: ActionData): string | undefined {
     logOutput('INFO', `Sending cursor position to ${NEURO.currentController}`);
 
     return `In file ${relativePath}\n\nCursor is at (${cursorPosition.line + 1}:${cursorPosition.character + 1})\n\n${formatContext(cursorContext)}`;
+}
+
+export function handleGetContent(): string {
+    const editor = vscode.window.activeTextEditor;
+    if (!editor) {
+        return contextFailure('No active text editor.');
+    }
+
+    const document = editor.document;
+    const fileName = simpleFileName(document.fileName);
+    const language = document.languageId;
+    const text = document.getText();
+    const fence = getFence(text);
+
+    if (!isPathNeuroSafe(getWorkspacePath() + '/' + fileName)) {
+        return contextNoAccess(fileName);
+    }
+
+    return `Contents of the file ${fileName}:\n\nContent:\n\n${fence}${language}\n${text}\n${fence}`;
 }
 
 export function handleInsertText(actionData: ActionData): string | undefined {
