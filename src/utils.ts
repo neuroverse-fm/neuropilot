@@ -419,7 +419,7 @@ export function getProperty(obj: unknown, path: string): unknown {
  */
 export function checkVirtualWorkspace(_actionData: ActionData): ActionValidationResult {
     if (vscode.workspace.workspaceFolders?.every(f => f.uri.scheme !== 'file')) {
-        return actionValidationFailure('You are currently in a virtual workspace.');
+        return actionValidationFailure('You cannot perform this action in a virtual workspace.');
     }
     return actionValidationAccept();
 }
