@@ -606,7 +606,7 @@
 	"capabilities": {
 		"virtualWorkspaces": {
 			"supported": "limited",
-			"description": "In certain virtual workspace scenarios (namely Web), Terminal, Tasks, Git support and Copilot Chat mode is not available."
+			"description": "In virtual workspaces, Terminal, Tasks, Git support (restricted on web) and Copilot Chat mode (restricted on web) is not available."
 		},
 		"untrustedWorkspaces": {
 			"supported": "limited",
@@ -621,6 +621,7 @@
 		}
 	},
 	"scripts": {
+		"version:changesets": "changeset version --global-changelog",
 		"vscode:prepublish": "pnpm build",
 		"build": "pnpm types && node esbuild.mjs",
 		"compile": "cross-env NODE_ENV=0 pnpm build",
