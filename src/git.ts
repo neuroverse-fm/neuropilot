@@ -4,7 +4,7 @@ import type { Change, CommitOptions, Commit, Repository, API } from '@typing/git
 import { ForcePushMode } from '@typing/git.d';
 import { StatusStrings, RefTypeStrings } from '@typing/git_status';
 import { logOutput, simpleFileName, isPathNeuroSafe, normalizePath, getWorkspacePath } from '@/utils';
-import { ActionData, ActionValidationResult, actionValidationAccept, actionValidationFailure, RCEAction, contextFailure, stripToActions } from '@/neuro_client_helper';
+import { ActionData, ActionValidationResult, actionValidationAccept, actionValidationFailure, RCEAction, contextFailure, stripToActions, actionValidationRetry } from '@/neuro_client_helper';
 import { PERMISSIONS, getPermissionLevel } from '@/config';
 import assert from 'node:assert';
 
@@ -84,7 +84,7 @@ function gitDiffValidator(actionData: ActionData): ActionValidationResult {
             if (actionData.params?.ref1 && actionData.params?.ref2) {
                 return actionValidationAccept('Only "ref1" is needed for the "diffWith" diff type.');
             } else if (!actionData.params?.ref1) {
-                return actionValidationFailure('"ref1" is required for the diff type of "diffWith"', true);
+                return actionValidationRetry('"ref1" is required for the diff type of "diffWith"');
             } else {
                 return actionValidationAccept();
             }
@@ -97,13 +97,13 @@ function gitDiffValidator(actionData: ActionData): ActionValidationResult {
             if (actionData.params?.ref1 && actionData.params?.ref2) {
                 return actionValidationAccept('Only "ref1" is needed for the "diffIndexWith" diff type.');
             } else if (!actionData.params?.ref1) {
-                return actionValidationFailure('"ref1" is required for the diff type of "diffIndexWith"', true);
+                return actionValidationRetry('"ref1" is required for the diff type of "diffIndexWith"');
             } else {
                 return actionValidationAccept();
             }
         case 'diffBetween':
             if (!actionData.params?.ref1 || !actionData.params?.ref2) {
-                return actionValidationFailure('"ref1" AND "ref2" is required for the diff type of "diffWith"', true);
+                return actionValidationRetry('"ref1" AND "ref2" is required for the diff type of "diffWith"');
             } else {
                 return actionValidationAccept();
             }

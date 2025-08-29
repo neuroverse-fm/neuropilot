@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 
 import { NEURO } from '@/constants';
-import { escapeRegExp, getFence, getPositionContext, getProperty, getVirtualCursor, getWorkspacePath, isPathNeuroSafe, logOutput, NeuroPositionContext, setVirtualCursor, simpleFileName, substituteMatch } from '@/utils';
+import { escapeRegExp, getFence, getPositionContext, getProperty, getVirtualCursor, isPathNeuroSafe, logOutput, NeuroPositionContext, setVirtualCursor, simpleFileName, substituteMatch } from '@/utils';
 import { ActionData, actionValidationAccept, actionValidationFailure, ActionValidationResult, RCEAction, contextFailure, stripToActions, actionValidationRetry, contextNoAccess } from '@/neuro_client_helper';
 import { PERMISSIONS, getPermissionLevel, CONFIG } from '@/config';
 
@@ -132,6 +132,27 @@ export const editingActions = {
         promptGenerator: (actionData: ActionData) => {
             const lineCount = actionData.params.text.trim().split('\n').length;
             return `insert ${lineCount} line${lineCount === 1 ? '' : 's'} of code.`;
+        },
+    },
+    insert_lines: {
+        name: 'insert_lines',
+        description: 'Insert code below your cursor\'s current line.',
+        schema: {
+            type: 'object',
+            properties: {
+                lines: {
+                    type: 'string',
+                },
+            },
+            additionalProperties: false,
+            required: ['lines'],
+        },
+        permissions: [PERMISSIONS.editActiveDocument],
+        handler: handleInsertLines,
+        validator: [checkCurrentFile],
+        promptGenerator: (actionData: ActionData) => {
+            const lines = actionData.params.lines.trim().split('\n').length;
+            return `insert ${lines} line${lines !== 1 ? 's' : ''} of code.`;
         },
     },
     replace_text: {
@@ -367,6 +388,35 @@ export function handleInsertText(actionData: ActionData): string | undefined {
     });
 
     return undefined;
+}
+
+export function handleInsertLines(actionData: ActionData): string | undefined {
+    const text: string = '\n' + actionData.params.lines;
+    const cursor = getVirtualCursor()!;
+
+    const document = vscode.window.activeTextEditor?.document;
+    if (document === undefined)
+        return contextFailure(CONTEXT_NO_ACTIVE_DOCUMENT);
+    if (!isPathNeuroSafe(document.fileName))
+        return contextFailure(CONTEXT_NO_ACCESS);
+
+    const edit = new vscode.WorkspaceEdit();
+    edit.insert(document.uri, cursor, text);
+
+    vscode.workspace.applyEdit(edit).then(success => {
+        if (success) {
+            logOutput('INFO', 'Inserting text lines into document');
+            const document = vscode.window.activeTextEditor!.document;
+            const insertEnd = getVirtualCursor()!;
+            const cursorContext = getPositionContext(document, cursor, insertEnd);
+            NEURO.client?.sendContext(`Inserted text lines into document\n\n${formatContext(cursorContext)}`);
+        }
+        else {
+            NEURO.client?.sendContext(contextFailure('Failed to insert text lines'));
+        }
+    });
+
+    return;
 }
 
 export function handleReplaceText(actionData: ActionData): string | undefined {

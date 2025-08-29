@@ -95,7 +95,7 @@ export function actionValidationAccept(message?: string): ActionValidationResult
  * @param message The message to send to Neuro.
  * This should explain, if possible, why the action failed.
  * If omitted, will just send "Action failed.".
- * @param {boolean} [retry=false] Whether to retry the action if it was forced. Defaults to `false`.
+ * @param retry It's highly recommended you use {@link actionValidationRetry} instead.
  * @returns A successful action result with the specified message.
  */
 export function actionValidationFailure(message: string, retry = false): ActionValidationResult {
