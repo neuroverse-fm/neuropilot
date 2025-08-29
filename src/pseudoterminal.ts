@@ -10,7 +10,7 @@ import { NEURO } from '@/constants';
 import { checkWorkspaceTrust, checkVirtualWorkspace } from '@/utils';
 import { logOutput, delayAsync, getFence } from '@/utils';
 import { ActionData, actionValidationAccept, actionValidationFailure, ActionValidationResult, RCEAction, contextFailure, stripToActions } from '@/neuro_client_helper';
-import { CONFIG, PERMISSIONS, getPermissionLevel } from '@/config';
+import { CONFIG, PERMISSIONS, getPermissionLevel, isActionEnabled } from '@/config';
 
 /*
  * Extended interface for terminal sessions.
@@ -85,7 +85,7 @@ export function registerTerminalActions() {
             terminalAccessHandlers.execute_in_terminal,
             terminalAccessHandlers.kill_terminal_process,
             terminalAccessHandlers.get_currently_running_shells,
-        ]));
+        ]).filter(isActionEnabled));
     }
 }
 

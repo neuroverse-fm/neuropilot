@@ -5,7 +5,7 @@ import { ForcePushMode } from '@typing/git.d';
 import { StatusStrings, RefTypeStrings } from '@typing/git_status';
 import { logOutput, simpleFileName, isPathNeuroSafe, normalizePath, getWorkspacePath } from '@/utils';
 import { ActionData, ActionValidationResult, actionValidationAccept, actionValidationFailure, RCEAction, contextFailure, stripToActions, actionValidationRetry } from '@/neuro_client_helper';
-import { PERMISSIONS, getPermissionLevel } from '@/config';
+import { PERMISSIONS, getPermissionLevel, isActionEnabled } from '@/config';
 import assert from 'node:assert';
 
 /* All actions located in here requires neuropilot.permission.gitOperations to be enabled. */
@@ -519,7 +519,7 @@ export function registerGitActions() {
         if (getPermissionLevel(PERMISSIONS.gitOperations)) {
             NEURO.client?.registerActions(stripToActions([
                 gitActions.init_git_repo,
-            ]));
+            ]).filter(isActionEnabled));
 
             const root = vscode.workspace.workspaceFolders?.[0].uri;
             if (!root) return;
@@ -545,20 +545,20 @@ export function registerGitActions() {
                         gitActions.diff_files,
                         gitActions.git_log,
                         gitActions.git_blame,
-                    ]));
+                    ]).filter(isActionEnabled));
 
                     if (getPermissionLevel(PERMISSIONS.gitTags)) {
                         NEURO.client?.registerActions(stripToActions([
                             gitActions.tag_head,
                             gitActions.delete_tag,
-                        ]));
+                        ]).filter(isActionEnabled));
                     }
 
                     if (getPermissionLevel(PERMISSIONS.gitConfigs)) {
                         NEURO.client?.registerActions(stripToActions([
                             gitActions.set_git_config,
                             gitActions.get_git_config,
-                        ]));
+                        ]).filter(isActionEnabled));
                     }
 
                     if (getPermissionLevel(PERMISSIONS.gitRemotes)) {
@@ -566,14 +566,14 @@ export function registerGitActions() {
                             gitActions.fetch_git_commits,
                             gitActions.pull_git_commits,
                             gitActions.push_git_commits,
-                        ]));
+                        ]).filter(isActionEnabled));
 
                         if (getPermissionLevel(PERMISSIONS.editRemoteData)) {
                             NEURO.client?.registerActions(stripToActions([
                                 gitActions.add_git_remote,
                                 gitActions.remove_git_remote,
                                 gitActions.rename_git_remote,
-                            ]));
+                            ]).filter(isActionEnabled));
                         }
                     }
                 }

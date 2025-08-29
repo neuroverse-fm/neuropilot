@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { NEURO } from '@/constants';
 import { normalizePath, getWorkspacePath, logOutput, isPathNeuroSafe } from '@/utils';
-import { PERMISSIONS, getPermissionLevel, CONFIG } from '@/config';
+import { PERMISSIONS, getPermissionLevel, CONFIG, isActionEnabled } from '@/config';
 import { ActionData, actionValidationAccept, actionValidationFailure, ActionValidationResult, RCEAction, contextFailure, stripToActions } from '@/neuro_client_helper';
 import assert from 'node:assert';
 
@@ -114,7 +114,7 @@ export function registerLintActions() {
             lintActions.get_file_lint_problems,
             lintActions.get_folder_lint_problems,
             lintActions.get_workspace_lint_problems,
-        ]));
+        ]).filter(isActionEnabled));
     }
 }
 
