@@ -24,6 +24,32 @@ const POSITION_SCHEMA = {
 };
 
 /**
+ * Create a generic string validator that checks type and character limits.
+ * @param paramPaths Array of parameter paths to validate (e.g., ['text', 'content'])
+ * @param maxLength Maximum character length (default: 100,000)
+ * @returns A function that validates the specified string parameters
+ */
+function createStringValidator(paramPaths: string[], maxLength = 100000) {
+    return (actionData: ActionData): ActionValidationResult => {
+        for (const path of paramPaths) {
+            const value = getProperty(actionData.params, path);
+
+            // Check if parameter exists and is a string
+            if (value !== undefined && typeof value !== 'string') {
+                return actionValidationRetry(`${path} must be a string.`);
+            }
+
+            // Check character limit if parameter exists
+            if (value !== undefined && value.length > maxLength) {
+                return actionValidationRetry(`${path} is too large, send less than ${maxLength.toLocaleString()} characters.`);
+            }
+        }
+
+        return actionValidationAccept();
+    };
+}
+
+/**
  * Create a position validator for the specified path.
  * The validator checks if the position is within the bounds of the document.
  * @param path The path to the position object. For the root pass an empty string.
@@ -84,6 +110,29 @@ function checkCurrentFile(_actionData: ActionData): ActionValidationResult {
     return actionValidationAccept();
 }
 
+function validateRewriteLines(actionData: ActionData): ActionValidationResult {
+    const { startLine, endLine } = actionData.params;
+    const document = vscode.window.activeTextEditor?.document;
+
+    // Recheck if there is an active document, because it is later needed to check if the line range is out of bounds. This in case this validator is used on its own.
+    if (!document) return actionValidationFailure(CONTEXT_NO_ACTIVE_DOCUMENT);
+
+    // Check line number validity
+    if (startLine <= 0 || endLine <= 0) {
+        return actionValidationRetry('Line numbers must be positive integers (1-based).');
+    }
+
+    if (startLine > endLine) {
+        return actionValidationRetry(`Start line (${startLine}) cannot be greater than end line (${endLine}).`);
+    }
+
+    if (startLine > document.lineCount || endLine > document.lineCount) {
+        return actionValidationRetry(`Line range ${startLine}-${endLine} is out of bounds. File has ${document.lineCount} lines.`);
+    }
+
+    return actionValidationAccept();
+}
+
 export const editingActions = {
     place_cursor: {
         name: 'place_cursor',
@@ -128,7 +177,7 @@ export const editingActions = {
         },
         permissions: [PERMISSIONS.editActiveDocument],
         handler: handleInsertText,
-        validator: [checkCurrentFile, createPositionValidator('position')],
+        validator: [checkCurrentFile, createPositionValidator('position'), createStringValidator(['text'])],
         promptGenerator: (actionData: ActionData) => {
             const lineCount = actionData.params.text.trim().split('\n').length;
             return `insert ${lineCount} line${lineCount === 1 ? '' : 's'} of code.`;
@@ -149,7 +198,7 @@ export const editingActions = {
         },
         permissions: [PERMISSIONS.editActiveDocument],
         handler: handleInsertLines,
-        validator: [checkCurrentFile],
+        validator: [checkCurrentFile, createStringValidator(['lines'])],
         promptGenerator: (actionData: ActionData) => {
             const lines = actionData.params.lines.trim().split('\n').length;
             return `insert ${lines} line${lines !== 1 ? 's' : ''} of code.`;
@@ -173,7 +222,7 @@ export const editingActions = {
         },
         permissions: [PERMISSIONS.editActiveDocument],
         handler: handleReplaceText,
-        validator: [checkCurrentFile],
+        validator: [checkCurrentFile, createStringValidator(['find', 'replaceWith'])],
         promptGenerator: (actionData: ActionData) => `replace "${actionData.params.useRegex ? escapeRegExp(actionData.params.find) : actionData.params.find}" with "${actionData.params.replaceWith}".`,
     },
     delete_text: {
@@ -193,7 +242,7 @@ export const editingActions = {
         },
         permissions: [PERMISSIONS.editActiveDocument],
         handler: handleDeleteText,
-        validator: [checkCurrentFile],
+        validator: [checkCurrentFile, createStringValidator(['find'])],
         promptGenerator: (actionData: ActionData) => `delete "${actionData.params.useRegex ? escapeRegExp(actionData.params.find) : actionData.params.find}".`,
     },
     find_text: {
@@ -214,7 +263,7 @@ export const editingActions = {
         },
         permissions: [PERMISSIONS.editActiveDocument],
         handler: handleFindText,
-        validator: [checkCurrentFile],
+        validator: [checkCurrentFile, createStringValidator(['find'])],
         promptGenerator: (actionData: ActionData) => `find "${actionData.params.useRegex ? escapeRegExp(actionData.params.find) : actionData.params.find}".`,
     },
     undo: {
@@ -248,10 +297,31 @@ export const editingActions = {
         },
         permissions: [PERMISSIONS.editActiveDocument],
         handler: handleRewriteAll,
-        validator: [checkCurrentFile],
+        validator: [checkCurrentFile, createStringValidator(['content'])],
         promptGenerator: (actionData: ActionData) => {
             const lineCount = actionData.params.content.trim().split('\n').length;
             return `rewrite the entire file with ${lineCount} line${lineCount === 1 ? '' : 's'} of content.`;
+        },
+    },
+    rewrite_lines: {
+        name: 'rewrite_lines',
+        description: 'Rewrite everything in the specified line range.',
+        schema: {
+            type: 'object',
+            properties: {
+                startLine: { type: 'integer' },
+                endLine: { type: 'integer' },
+                content: { type: 'string' },
+            },
+            required: ['startLine', 'endLine', 'content'],
+            additionalProperties: false,
+        },
+        permissions: [PERMISSIONS.editActiveDocument],
+        handler: handleRewriteLines,
+        validator: [checkCurrentFile, validateRewriteLines, createStringValidator(['content'])],
+        promptGenerator: (actionData: ActionData) => {
+            const lineCount = actionData.params.content.trim().split('\n').length;
+            return `rewrite lines ${actionData.params.startLine}-${actionData.params.endLine} with ${lineCount} line${lineCount === 1 ? '' : 's'} of content.`;
         },
     },
 } satisfies Record<string, RCEAction>;
@@ -268,6 +338,7 @@ export function registerEditingActions() {
             editingActions.find_text,
             editingActions.undo,
             editingActions.rewrite_all,
+            editingActions.rewrite_lines,
         ]).filter(isActionEnabled));
         if (vscode.workspace.getConfiguration('files').get<string>('autoSave') !== 'afterDelay') {
             NEURO.client?.registerActions(stripToActions([
@@ -664,6 +735,37 @@ export function handleRewriteAll(actionData: ActionData): string | undefined {
             NEURO.client?.sendContext(`Rewrote entire file ${relativePath} with ${lineCount} line${lineCount === 1 ? '' : 's'} of content\n\nUpdated content:\n\n${fence}\n${content}\n${fence}`);
         } else {
             NEURO.client?.sendContext(contextFailure('Failed to rewrite document content'));
+        }
+    });
+
+    return undefined;
+}
+
+export function handleRewriteLines(actionData: ActionData): string | undefined {
+    const startLine = actionData.params.startLine;
+    const endLine = actionData.params.endLine;
+    const content = actionData.params.content;
+
+    const document = vscode.window.activeTextEditor?.document;
+    if (document === undefined)
+        return contextFailure(CONTEXT_NO_ACTIVE_DOCUMENT);
+    if (!isPathNeuroSafe(document.fileName))
+        return contextFailure(CONTEXT_NO_ACCESS);
+
+    const edit = new vscode.WorkspaceEdit();
+    const startPosition = new vscode.Position(startLine - 1, 0);
+    const endPosition = new vscode.Position(endLine - 1, document.lineAt(endLine - 1).text.length);
+    edit.replace(document.uri, new vscode.Range(startPosition, endPosition), content);
+
+    vscode.workspace.applyEdit(edit).then(success => {
+        if (success) {
+            logOutput('INFO', `Rewrote lines ${startLine}-${endLine} with ${content.trim().split('\n').length} line${content.trim().split('\n').length === 1 ? '' : 's'} of content.`);
+            const document = vscode.window.activeTextEditor!.document;
+            const relativePath = vscode.workspace.asRelativePath(document.uri);
+            const fence = getFence(document.getText());
+            NEURO.client?.sendContext(`Rewrote lines ${startLine}-${endLine} in file ${relativePath}\n\nUpdated content:\n\n${fence}\n${document.getText()}\n${fence}`);
+        } else {
+            NEURO.client?.sendContext(contextFailure('Failed to rewrite lines'));
         }
     });
 
