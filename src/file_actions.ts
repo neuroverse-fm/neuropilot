@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 
 import { NEURO } from '@/constants';
-import { combineGlobLines, filterFileContents, getFence, getVirtualCursor, getWorkspacePath, isPathNeuroSafe, logOutput, normalizePath } from '@/utils';
+import { combineGlobLines, filterFileContents, getFence, getVirtualCursor, getWorkspacePath, isBinary, isPathNeuroSafe, logOutput, normalizePath } from '@/utils';
 import { ActionData, contextNoAccess, RCEAction, actionValidationFailure, actionValidationAccept, ActionValidationResult, stripToActions } from '@/neuro_client_helper';
 import { CONFIG, PERMISSIONS, getPermissionLevel, isActionEnabled } from '@/config';
 
@@ -69,6 +69,16 @@ async function neuroSafeRenameValidation(actionData: ActionData): Promise<Action
     return actionValidationAccept();
 }
 
+async function binaryFileValidation(actionData: ActionData): Promise<ActionValidationResult> {
+    const relativePath = actionData.params.filePath;
+    const absolutePath = getWorkspacePath() + '/' + normalizePath(relativePath).replace(/^\/|\/$/g, '');
+    const file = await vscode.workspace.fs.readFile(vscode.Uri.file(absolutePath));
+    if (await isBinary(file)) {
+        return actionValidationFailure('You cannot open a binary file.');
+    }
+    return actionValidationAccept();
+}
+
 export const fileActions = {
     get_files: {
         name: 'get_files',
@@ -97,7 +107,7 @@ export const fileActions = {
         },
         permissions: [PERMISSIONS.openFiles],
         handler: handleOpenFile,
-        validator: [neuroSafeValidation],
+        validator: [neuroSafeValidation, binaryFileValidation],
         promptGenerator: (actionData: ActionData) => `open the file "${actionData.params?.filePath}".`,
     },
     create_file: {

@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { NeuroClient } from 'neuro-game-sdk';
 import globToRegExp from 'glob-to-regexp';
+import { fileTypeFromBuffer } from 'file-type';
 
 import { NEURO } from '@/constants';
 import { CONFIG, getPermissionLevel, PERMISSIONS } from '@/config';
@@ -422,4 +423,11 @@ export function checkVirtualWorkspace(_actionData: ActionData): ActionValidation
         return actionValidationFailure('You cannot perform this action in a virtual workspace.');
     }
     return actionValidationAccept();
+}
+
+/**
+ * Checks if the Uint8Array buffer is plaintext or binary.
+ */
+export async function isBinary(input: Uint8Array): Promise<boolean> {
+    return await fileTypeFromBuffer(input) ? true : false;
 }
