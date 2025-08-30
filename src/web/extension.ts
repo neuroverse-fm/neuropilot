@@ -9,7 +9,6 @@ import {
     setupClientConnectedHandlers,
     createStatusBarItem,
     deactivate as commonDeactivate,
-    obtainExtensionState,
     getDecorationRenderOptions,
     reloadPermissions,
 } from '@shared/extension';
@@ -39,8 +38,7 @@ export function activate(context: vscode.ExtensionContext) {
     // Create status bar item
     createStatusBarItem();
 
-    // Extension state
-    obtainExtensionState();
+    // We don't obtain extension state here automatically
 
     // Create client
     createClient();
