@@ -136,23 +136,30 @@ export const editingActions = {
     },
     insert_lines: {
         name: 'insert_lines',
-        description: 'Insert code below your cursor\'s current line.',
+        description: 'Insert code below a certain line.'
+            + ' Defaults to your current cursor\'s location'
+            + ' Your cursor will be moved to the start of the line you want to insert.', // TODO: Clarify cursor stuff again
         schema: {
             type: 'object',
             properties: {
-                lines: {
+                text: {
                     type: 'string',
+                },
+                insertUnder: {
+                    type: 'integer',
+                    minimum: 1,
                 },
             },
             additionalProperties: false,
-            required: ['lines'],
+            required: ['text'],
         },
         permissions: [PERMISSIONS.editActiveDocument],
         handler: handleInsertLines,
         validator: [checkCurrentFile],
         promptGenerator: (actionData: ActionData) => {
-            const lines = actionData.params.lines.trim().split('\n').length;
-            return `insert ${lines} line${lines !== 1 ? 's' : ''} of code.`;
+            const lines = actionData.params.text.trim().split('\n').length;
+            const insertUnder = actionData.params.insertUnder;
+            return `insert ${lines} line${lines !== 1 ? 's' : ''} of code below ${insertUnder ? `line ${insertUnder}` : 'her cursor'}.`;
         },
     },
     replace_text: {
@@ -263,6 +270,7 @@ export function registerEditingActions() {
             editingActions.get_cursor,
             editingActions.get_content,
             editingActions.insert_text,
+            editingActions.insert_lines,
             editingActions.replace_text,
             editingActions.delete_text,
             editingActions.find_text,
@@ -411,8 +419,13 @@ export function handleInsertText(actionData: ActionData): string | undefined {
 }
 
 export function handleInsertLines(actionData: ActionData): string | undefined {
-    const text: string = '\n' + actionData.params.lines;
+    /**
+     * The current implementation is a lazy one of just appending a newline and pasting the text in
+     * We want to allow specification of the line to insert under, with the default set to the current cursor location
+     */
     const cursor = getVirtualCursor()!;
+    let text: string = actionData.params.text + '\n';
+    let insertLocation: number = actionData.params.insertUnder ?? cursor.line + 1;
 
     const document = vscode.window.activeTextEditor?.document;
     if (document === undefined)
@@ -420,8 +433,23 @@ export function handleInsertLines(actionData: ActionData): string | undefined {
     if (!isPathNeuroSafe(document.fileName))
         return contextFailure(CONTEXT_NO_ACCESS);
 
+    const EOFL = document.lineCount;
+    if (insertLocation >= EOFL) {
+        const lineDiff = insertLocation - EOFL;
+        let count = 0;
+        let textPrepend = '';
+        insertLocation = EOFL;
+        while (count <= lineDiff) {
+            textPrepend = textPrepend + '\n';
+            count += 1;
+        }
+        text = textPrepend + actionData.params.text + '\n';
+    }
+
+
     const edit = new vscode.WorkspaceEdit();
-    edit.insert(document.uri, cursor, text);
+    const insertStart = new vscode.Position(insertLocation, 0);
+    edit.insert(document.uri, insertStart, text);
 
     vscode.workspace.applyEdit(edit).then(success => {
         if (success) {
@@ -429,6 +457,7 @@ export function handleInsertLines(actionData: ActionData): string | undefined {
             const document = vscode.window.activeTextEditor!.document;
             const insertEnd = getVirtualCursor()!;
             const cursorContext = getPositionContext(document, cursor, insertEnd);
+            setVirtualCursor(new vscode.Position(insertLocation + 1, 0));
             NEURO.client?.sendContext(`Inserted text lines into document\n\n${formatContext(cursorContext)}`);
         }
         else {
