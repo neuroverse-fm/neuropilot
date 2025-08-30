@@ -96,7 +96,7 @@ export const fileActions = {
     },
     open_file: {
         name: 'open_file',
-        description: 'Open a file in the workspace',
+        description: 'Open a file in the workspace. You cannot open a binary file directly.',
         schema: {
             type: 'object',
             properties: {
