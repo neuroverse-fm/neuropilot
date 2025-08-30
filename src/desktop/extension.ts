@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { reloadTasks, taskEndedHandler } from '@/tasks';
+import { handleTerminateTask, reloadTasks, taskEndedHandler } from '@/tasks';
 import { emergencyTerminalShutdown } from '@/pseudoterminal';
 import { createClient, isPathNeuroSafe, setVirtualCursor } from '@/utils';
 import { NEURO } from '@/constants';
@@ -46,8 +46,8 @@ export function activate(context: vscode.ExtensionContext) {
     // Create status bar item
     createStatusBarItem();
 
-    // Extension state (delaying this so that the git extension has some time to activate)
-    obtainExtensionState();
+    // Extension state (delaying this by 5000ms so that the git extension has some time to activate)
+    setTimeout(obtainExtensionState, 5000);
 
     // Create client
     createClient();
@@ -63,6 +63,10 @@ export function activate(context: vscode.ExtensionContext) {
 
 export function deactivate() {
     emergencyTerminalShutdown();
+    handleTerminateTask({
+        id: 'none',
+        name: 'terminate_task',
+    });
     commonDeactivate();
 }
 
