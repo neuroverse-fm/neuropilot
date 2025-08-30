@@ -7,7 +7,7 @@
 import * as vscode from 'vscode';
 import { spawn, ChildProcessWithoutNullStreams } from 'node:child_process';
 import { NEURO } from '~/constants';
-import { checkWorkspaceTrust } from '~/utils';
+import { checkWorkspaceTrust, checkVirtualWorkspace } from '~/utils';
 import { logOutput, delayAsync, getFence } from '~/utils';
 import { ActionData, actionValidationAccept, actionValidationFailure, ActionValidationResult, RCEAction, contextFailure, stripToActions } from '~/neuro_client_helper';
 import { CONFIG, PERMISSIONS, getPermissionLevel } from '~/config';
@@ -49,7 +49,7 @@ export const terminalAccessHandlers = {
         },
         permissions: [PERMISSIONS.terminalAccess],
         handler: handleRunCommand,
-        validator: [checkWorkspaceTrust],
+        validator: [checkVirtualWorkspace, checkWorkspaceTrust],
         promptGenerator: (actionData: ActionData) => `run "${actionData.params?.command}" in the "${actionData.params?.shell}" shell.`,
     },
     'kill_terminal_process': {
@@ -64,7 +64,7 @@ export const terminalAccessHandlers = {
         },
         permissions: [PERMISSIONS.terminalAccess],
         handler: handleKillTerminal,
-        validator: [checkLiveTerminals, checkWorkspaceTrust],
+        validator: [checkLiveTerminals, checkVirtualWorkspace, checkWorkspaceTrust],
         promptGenerator: (actionData: ActionData) => `kill the "${actionData.params?.shell}" shell.`,
     },
     'get_currently_running_shells': {
@@ -72,7 +72,7 @@ export const terminalAccessHandlers = {
         description: 'Get the list of terminal processes that are spawned.',
         permissions: [PERMISSIONS.terminalAccess],
         handler: handleGetCurrentlyRunningShells,
-        validator: [checkWorkspaceTrust],
+        validator: [checkVirtualWorkspace, checkWorkspaceTrust],
         promptGenerator: 'get the list of currently running shells.',
     },
 } satisfies Record<string, RCEAction>;

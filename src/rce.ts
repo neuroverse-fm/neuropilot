@@ -6,7 +6,7 @@
 import * as vscode from 'vscode';
 import { ActionData, RCEAction } from '~/neuro_client_helper';
 import { NEURO } from '~/constants';
-import { checkWorkspaceTrust, logOutput } from '~/utils';
+import { checkVirtualWorkspace, checkWorkspaceTrust, logOutput } from '~/utils';
 import { CONFIG, getPermissionLevel, PermissionLevel, PERMISSIONS } from '~/config';
 import { handleRunTask } from '~/tasks';
 import { validate } from 'jsonschema';
@@ -252,7 +252,7 @@ export async function RCEActionHandler(actionData: ActionData, actionList: Recor
                 description: task.description,
                 permissions: [PERMISSIONS.runTasks],
                 handler: handleRunTask,
-                validator: [checkWorkspaceTrust],
+                validator: [checkVirtualWorkspace, checkWorkspaceTrust],
                 promptGenerator: () => `run the task "${task.id}".`,
             };
         }
