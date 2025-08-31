@@ -338,7 +338,7 @@ export const editingActions = {
             type: 'object',
             properties: {
                 startLine: { type: 'integer' },
-                endLine: { type: 'integer' },                
+                endLine: { type: 'integer' },
             },
             required: ['startLine', 'endLine'],
             additionalProperties: false,
@@ -346,7 +346,7 @@ export const editingActions = {
         permissions: [PERMISSIONS.editActiveDocument],
         handler: handleDeleteLines,
         validator: [checkCurrentFile, validateLineRange],
-        promptGenerator: (actionData: ActionData) => {            
+        promptGenerator: (actionData: ActionData) => {
             return `delete lines ${actionData.params.startLine}-${actionData.params.endLine}.`;
         },
     },
@@ -792,7 +792,7 @@ export function handleRewriteAll(actionData: ActionData): string | undefined {
 
 export function handleDeleteLines(actionData: ActionData): string | undefined {
     const startLine = actionData.params.startLine;
-    const endLine = actionData.params.endLine;    
+    const endLine = actionData.params.endLine;
 
     const document = vscode.window.activeTextEditor?.document;
     if (document === undefined)
@@ -804,7 +804,7 @@ export function handleDeleteLines(actionData: ActionData): string | undefined {
     const startPosition = new vscode.Position(startLine - 1, 0);
     const endLineZero = endLine - 1;
     // Include the trailing newline by ending at the start of the line after endLine when possible
-    const endPosition = (endLineZero + 1 < document.lineCount)
+    const endPosition = endLineZero + 1 < document.lineCount
         ? new vscode.Position(endLineZero + 1, 0)
         : new vscode.Position(endLineZero, document.lineAt(endLineZero).text.length);
     edit.delete(document.uri, new vscode.Range(startPosition, endPosition));
@@ -883,10 +883,10 @@ export function handleRewriteLines(actionData: ActionData): string | undefined {
                 // Move cursor to end of the last inserted line
                 const hasTrailingNewline = content.endsWith('\n');
                 const contentLines = content.split('\n');
-                const logicalLines = hasTrailingNewline ? (contentLines.length - 1) : contentLines.length;
+                const logicalLines = hasTrailingNewline ? contentLines.length - 1 : contentLines.length;
                 const lastInsertedLineZero = Math.min(
                     documentPost.lineCount - 1,
-                    Math.max(0, (startLine - 1) + (logicalLines - 1)),
+                    Math.max(0, startLine - 1 + (logicalLines - 1)),
                 );
                 const cursorPosition = new vscode.Position(lastInsertedLineZero, documentPost.lineAt(lastInsertedLineZero).text.length);
                 setVirtualCursor(cursorPosition);
