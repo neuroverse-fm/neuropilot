@@ -491,7 +491,7 @@
 							"Require approval before execution.",
 							"Execute without oversight."
 						],
-						"markdownDescription": "Allow Neuro __direct terminal access__. Be very careful with this.\nRequires [reloading permissions](command:neuropilot.reloadPermissions) if turned from \"on\" to off, and vice versa."
+						"markdownDescription": "Allow Neuro __direct terminal access__. Be very careful with this.\n\nRequires [reloading permissions](command:neuropilot.reloadPermissions) if turned from \"on\" to off, and vice versa."
 					},
 					"neuropilot.permission.accessLintingAnalysis": {
 						"type": "string",
