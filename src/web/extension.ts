@@ -12,10 +12,7 @@ import {
     getDecorationRenderOptions,
     reloadPermissions,
 } from '@shared/extension';
-import { registerDocsLink } from '@shared/docs';
 import { registerUnsupervisedActions, registerUnsupervisedHandlers } from './unsupervised';
-
-export { registerDocsLink };
 
 export function activate(context: vscode.ExtensionContext) {
     // Initialize common state
