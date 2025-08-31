@@ -1,5 +1,7 @@
 # <img src="assets/heart-xaendril.png" width="32" style="vertical-align:middle;horizontal-align:middle;"> NeuroPilot
 
+As seen on TV (dev stream)!
+
 **Disclaimer: For simplicity, all mentions of Neuro also apply to Evil unless otherwise stated.**
 
 This extension enables Neuro-sama to write code in Visual Studio Code, either together with a programmer or on her own.
