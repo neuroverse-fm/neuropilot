@@ -23,5 +23,6 @@ This update was made in response to the Evil dev stream on 2025-08-28. [Here's t
 - All actions can now be individually disabled using the new setting "Disabled Actions".
 - A new "insert_lines" action was added which inserts text below a certain line. This also makes new lines if necessary.
 - Added "rewrite_all" action which rewrites the entire file immediately.
-- A new action called "rewrite_lines" was added which rewrites text in between a specified line range.
+- A new "rewrite_lines" action was added which rewrites text in between a specified line range and moves the cursor to the end of the last added line.
+- A new "delete_lines" action was added which deletes text in between a specificed range and moves the cursor to the end of the line before the deleted lines.
 - All editing actions now have a 100,000 character limit. If this is exceeded, the action will be rejected.

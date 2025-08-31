@@ -110,7 +110,7 @@ function checkCurrentFile(_actionData: ActionData): ActionValidationResult {
     return actionValidationAccept();
 }
 
-function validateRewriteLines(actionData: ActionData): ActionValidationResult {
+function validateLineRange(actionData: ActionData): ActionValidationResult {
     const { startLine, endLine } = actionData.params;
     const document = vscode.window.activeTextEditor?.document;
 
@@ -312,7 +312,7 @@ export const editingActions = {
     },
     rewrite_lines: {
         name: 'rewrite_lines',
-        description: 'Rewrite everything in the specified line range.',
+        description: 'Rewrite everything in the specified line range. After rewriting, your cursor will be placed at the end of the last inserted line.',
         schema: {
             type: 'object',
             properties: {
@@ -325,10 +325,29 @@ export const editingActions = {
         },
         permissions: [PERMISSIONS.editActiveDocument],
         handler: handleRewriteLines,
-        validator: [checkCurrentFile, validateRewriteLines, createStringValidator(['content'])],
+        validator: [checkCurrentFile, validateLineRange, createStringValidator(['content'])],
         promptGenerator: (actionData: ActionData) => {
             const lineCount = actionData.params.content.trim().split('\n').length;
             return `rewrite lines ${actionData.params.startLine}-${actionData.params.endLine} with ${lineCount} line${lineCount === 1 ? '' : 's'} of content.`;
+        },
+    },
+    delete_lines: {
+        name: 'delete_lines',
+        description: 'Delete everything in the specified line range. After deleting, your cursor will be placed at the end of the line before the deleted lines.',
+        schema: {
+            type: 'object',
+            properties: {
+                startLine: { type: 'integer' },
+                endLine: { type: 'integer' },
+            },
+            required: ['startLine', 'endLine'],
+            additionalProperties: false,
+        },
+        permissions: [PERMISSIONS.editActiveDocument],
+        handler: handleDeleteLines,
+        validator: [checkCurrentFile, validateLineRange],
+        promptGenerator: (actionData: ActionData) => {
+            return `delete lines ${actionData.params.startLine}-${actionData.params.endLine}.`;
         },
     },
 } satisfies Record<string, RCEAction>;
@@ -347,6 +366,7 @@ export function registerEditingActions() {
             editingActions.undo,
             editingActions.rewrite_all,
             editingActions.rewrite_lines,
+            editingActions.delete_lines,
         ]).filter(isActionEnabled));
         if (vscode.workspace.getConfiguration('files').get<string>('autoSave') !== 'afterDelay') {
             NEURO.client?.registerActions(stripToActions([
@@ -770,6 +790,72 @@ export function handleRewriteAll(actionData: ActionData): string | undefined {
     return undefined;
 }
 
+export function handleDeleteLines(actionData: ActionData): string | undefined {
+    const startLine = actionData.params.startLine;
+    const endLine = actionData.params.endLine;
+
+    const document = vscode.window.activeTextEditor?.document;
+    if (document === undefined)
+        return contextFailure(CONTEXT_NO_ACTIVE_DOCUMENT);
+    if (!isPathNeuroSafe(document.fileName))
+        return contextFailure(CONTEXT_NO_ACCESS);
+
+    const edit = new vscode.WorkspaceEdit();
+    const startPosition = new vscode.Position(startLine - 1, 0);
+    const endLineZero = endLine - 1;
+    // Include the trailing newline by ending at the start of the line after endLine when possible
+    const endPosition = endLineZero + 1 < document.lineCount
+        ? new vscode.Position(endLineZero + 1, 0)
+        : new vscode.Position(endLineZero, document.lineAt(endLineZero).text.length);
+    edit.delete(document.uri, new vscode.Range(startPosition, endPosition));
+
+    vscode.workspace.applyEdit(edit).then(success => {
+        if (success) {
+            const relativePath = vscode.workspace.asRelativePath(vscode.window.activeTextEditor!.document.uri);
+            // Defer cursor update until edits have fully settled
+            setTimeout(() => {
+                const documentPost = vscode.window.activeTextEditor!.document;
+                if (startLine <= 1) {
+                    // If deleting from the first line, place cursor at start of new first line
+                    const cursorPosition = new vscode.Position(0, 0);
+                    setVirtualCursor(cursorPosition);
+                    const cursorContext = getPositionContext(documentPost, cursorPosition);
+                    logOutput('INFO', `Deleted lines ${startLine}-${endLine} and moved cursor to start of line 1`);
+                    NEURO.client?.sendContext(`Deleted lines ${startLine}-${endLine} in file ${relativePath}\n\n${formatContext(cursorContext)}`);
+                } else {
+                    // Move cursor to end of line before the deleted lines
+                    const targetLineZero = Math.max(0, startLine - 2); // 0-based line before deleted block
+                    if (targetLineZero < documentPost.lineCount) {
+                        const cursorPosition = new vscode.Position(targetLineZero, documentPost.lineAt(targetLineZero).text.length);
+                        setVirtualCursor(cursorPosition);
+                        const cursorContext = getPositionContext(documentPost, cursorPosition);
+                        logOutput('INFO', `Deleted lines ${startLine}-${endLine} and moved cursor to end of line ${targetLineZero + 1}`);
+                        NEURO.client?.sendContext(`Deleted lines ${startLine}-${endLine} in file ${relativePath}\n\n${formatContext(cursorContext)}`);
+                    } else if (documentPost.lineCount > 0) {
+                        // Fallback: place cursor at the end of the document
+                        const cursorPosition = new vscode.Position(documentPost.lineCount - 1, documentPost.lineAt(documentPost.lineCount - 1).text.length);
+                        setVirtualCursor(cursorPosition);
+                        const cursorContext = getPositionContext(documentPost, cursorPosition);
+                        logOutput('INFO', `Deleted lines ${startLine}-${endLine} and moved cursor to end of document`);
+                        NEURO.client?.sendContext(`Deleted lines ${startLine}-${endLine} in file ${relativePath}\n\n${formatContext(cursorContext)}`);
+                    } else {
+                        // Empty document edge case
+                        const cursorPosition = new vscode.Position(0, 0);
+                        setVirtualCursor(cursorPosition);
+                        const cursorContext = getPositionContext(documentPost, cursorPosition);
+                        logOutput('INFO', `Deleted lines ${startLine}-${endLine} and moved cursor to start of document`);
+                        NEURO.client?.sendContext(`Deleted lines ${startLine}-${endLine} in file ${relativePath}\n\n${formatContext(cursorContext)}`);
+                    }
+                }
+            }, 0);
+        } else {
+            NEURO.client?.sendContext(contextFailure('Failed to delete lines'));
+        }
+    });
+
+    return undefined;
+}
+
 export function handleRewriteLines(actionData: ActionData): string | undefined {
     const startLine = actionData.params.startLine;
     const endLine = actionData.params.endLine;
@@ -783,16 +869,31 @@ export function handleRewriteLines(actionData: ActionData): string | undefined {
 
     const edit = new vscode.WorkspaceEdit();
     const startPosition = new vscode.Position(startLine - 1, 0);
-    const endPosition = new vscode.Position(endLine - 1, document.lineAt(endLine - 1).text.length);
+    const endLineZero = endLine - 1;
+    // Preserve the following line's newline by ending at the end of endLine
+    const endPosition = new vscode.Position(endLineZero, document.lineAt(endLineZero).text.length);
     edit.replace(document.uri, new vscode.Range(startPosition, endPosition), content);
 
     vscode.workspace.applyEdit(edit).then(success => {
         if (success) {
-            logOutput('INFO', `Rewrote lines ${startLine}-${endLine} with ${content.trim().split('\n').length} line${content.trim().split('\n').length === 1 ? '' : 's'} of content.`);
-            const document = vscode.window.activeTextEditor!.document;
-            const relativePath = vscode.workspace.asRelativePath(document.uri);
-            const fence = getFence(document.getText());
-            NEURO.client?.sendContext(`Rewrote lines ${startLine}-${endLine} in file ${relativePath}\n\nUpdated content:\n\n${fence}\n${document.getText()}\n${fence}`);
+            const relativePath = vscode.workspace.asRelativePath(vscode.window.activeTextEditor!.document.uri);
+            // Defer cursor update until edits have fully settled
+            setTimeout(() => {
+                const documentPost = vscode.window.activeTextEditor!.document;
+                // Move cursor to end of the last inserted line
+                const hasTrailingNewline = content.endsWith('\n');
+                const contentLines = content.split('\n');
+                const logicalLines = hasTrailingNewline ? contentLines.length - 1 : contentLines.length;
+                const lastInsertedLineZero = Math.min(
+                    documentPost.lineCount - 1,
+                    Math.max(0, startLine - 1 + (logicalLines - 1)),
+                );
+                const cursorPosition = new vscode.Position(lastInsertedLineZero, documentPost.lineAt(lastInsertedLineZero).text.length);
+                setVirtualCursor(cursorPosition);
+                const cursorContext = getPositionContext(documentPost, cursorPosition);
+                logOutput('INFO', `Rewrote lines ${startLine}-${endLine} with ${logicalLines} line${logicalLines === 1 ? '' : 's'} of content and moved cursor to end of line ${lastInsertedLineZero + 1}`);
+                NEURO.client?.sendContext(`Rewrote lines ${startLine}-${endLine} in file ${relativePath}\n\n${formatContext(cursorContext)}`);
+            }, 0);
         } else {
             NEURO.client?.sendContext(contextFailure('Failed to rewrite lines'));
         }
