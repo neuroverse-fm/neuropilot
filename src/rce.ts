@@ -4,7 +4,7 @@
  */
 
 import * as vscode from 'vscode';
-import { ActionData, RCEAction } from '@/neuro_client_helper';
+import { ActionData, RCEAction, stripToAction } from '@/neuro_client_helper';
 import { NEURO } from '@/constants';
 import { checkVirtualWorkspace, checkWorkspaceTrust, logOutput } from '@/utils';
 import { CONFIG, getPermissionLevel, isActionEnabled, PermissionLevel, PERMISSIONS } from '@/config';
@@ -316,7 +316,7 @@ export async function RCEActionHandler(actionData: ActionData, actionList: Recor
             );
 
             NEURO.statusBarItem!.tooltip = new vscode.MarkdownString(prompt);
-            NEURO.client?.registerActions([cancelRequestAction]);
+            NEURO.client?.registerActions([stripToAction(cancelRequestAction)]);
             NEURO.statusBarItem!.backgroundColor = new vscode.ThemeColor('statusBarItem.warningBackground');
             NEURO.statusBarItem!.color = new vscode.ThemeColor('statusBarItem.warningForeground');
 
