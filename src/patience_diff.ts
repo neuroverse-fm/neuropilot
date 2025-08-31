@@ -1,7 +1,11 @@
+// DO NOT MODIFY
+
 /**
  * program: "patienceDiff" algorithm implemented in javascript.
  * author: Jonathan Trent
  * version: 2.0
+ * 
+ * Converted to TypeScript by Pasu4.
  *
  * use:  patienceDiff( aLines[], bLines[], diffPlusFlag )
  *
@@ -23,7 +27,6 @@
  *      lineCountInserted is the number of lines from bLines[] not appearing in aLines[].
  *      lineCountMoved is 0. (Only set when using patienceDiffPlus.)
  *
- * Converted to TypeScript by Pasu4
  */
 
 interface PatienceDiff {

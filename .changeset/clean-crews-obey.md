@@ -26,3 +26,6 @@ This update was made in response to the Evil dev stream on 2025-08-28. [Here's t
 - A new "rewrite_lines" action was added which rewrites text in between a specified line range and moves the cursor to the end of the last added line.
 - A new "delete_lines" action was added which deletes text in between a specificed range and moves the cursor to the end of the line before the deleted lines.
 - All editing actions now have a 100,000 character limit. If this is exceeded, the action will be rejected.
+- Editing actions now highlight Neuro's latest edit.
+  - Deletions and modifications show the deleted or replaced text as a tooltip. 
+  - The highlights will be cleared when the document is changed or edited.

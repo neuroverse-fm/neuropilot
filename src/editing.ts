@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 
 import { NEURO } from '@/constants';
-import { escapeRegExp, getFence, getPositionContext, getProperty, getVirtualCursor, isPathNeuroSafe, logOutput, NeuroPositionContext, setVirtualCursor, simpleFileName, substituteMatch } from '@/utils';
+import { DiffRangeType, escapeRegExp, getDiffRanges, getFence, getPositionContext, getProperty, getVirtualCursor, showDiffRanges, isPathNeuroSafe, logOutput, NeuroPositionContext, setVirtualCursor, simpleFileName, substituteMatch, clearDiffRanges } from '@/utils';
 import { ActionData, actionValidationAccept, actionValidationFailure, ActionValidationResult, RCEAction, contextFailure, stripToActions, actionValidationRetry, contextNoAccess } from '@/neuro_client_helper';
 import { PERMISSIONS, getPermissionLevel, CONFIG, isActionEnabled } from '@/config';
 
@@ -498,6 +498,10 @@ export function handleInsertText(actionData: ActionData): string | undefined {
             logOutput('INFO', 'Inserting text into document');
             const document = vscode.window.activeTextEditor!.document;
             const insertEnd = getVirtualCursor()!;
+            showDiffRanges(vscode.window.activeTextEditor!, {
+                range: new vscode.Range(insertStart, insertEnd),
+                type: DiffRangeType.Added,
+            });
             const cursorContext = getPositionContext(document, insertStart, insertEnd);
             NEURO.client?.sendContext(`Inserted text into document and moved cursor\n\n${formatContext(cursorContext)}`);
         }
@@ -515,8 +519,8 @@ export function handleInsertLines(actionData: ActionData): string | undefined {
      * We want to allow specification of the line to insert under, with the default set to the current cursor location
      */
     const cursor = getVirtualCursor()!;
-    let text: string = actionData.params.text + '\n';
-    let insertLocation: number = actionData.params.insertUnder ?? cursor.line + 1;
+    let text: string = '\n' + actionData.params.text;
+    let insertLocation: number = actionData.params.insertUnder !== undefined ? actionData.params.insertUnder - 1 : cursor.line;
 
     const document = vscode.window.activeTextEditor?.document;
     if (document === undefined)
@@ -524,22 +528,17 @@ export function handleInsertLines(actionData: ActionData): string | undefined {
     if (!isPathNeuroSafe(document.fileName))
         return contextFailure(CONTEXT_NO_ACCESS);
 
+    // Add newlines for positions past the end of the file
     const EOFL = document.lineCount;
     if (insertLocation >= EOFL) {
-        const lineDiff = insertLocation - EOFL;
-        let count = 0;
-        let textPrepend = '';
-        insertLocation = EOFL;
-        while (count <= lineDiff) {
-            textPrepend = textPrepend + '\n';
-            count += 1;
-        }
-        text = textPrepend + actionData.params.text + '\n';
+        text = '\n'.repeat(insertLocation - EOFL + 1) + text;
+        insertLocation = EOFL - 1;
     }
 
-
     const edit = new vscode.WorkspaceEdit();
-    const insertStart = new vscode.Position(insertLocation, 0);
+    const insertStart = new vscode.Position(insertLocation, document.lineAt(insertLocation).text.length);
+    // Virtual cursor will move with the inserted text
+    setVirtualCursor(insertStart);
     edit.insert(document.uri, insertStart, text);
 
     vscode.workspace.applyEdit(edit).then(success => {
@@ -547,8 +546,11 @@ export function handleInsertLines(actionData: ActionData): string | undefined {
             logOutput('INFO', 'Inserting text lines into document');
             const document = vscode.window.activeTextEditor!.document;
             const insertEnd = getVirtualCursor()!;
+            showDiffRanges(vscode.window.activeTextEditor!, {
+                range: new vscode.Range(insertStart, insertEnd),
+                type: DiffRangeType.Added,
+            });
             const cursorContext = getPositionContext(document, cursor, insertEnd);
-            setVirtualCursor(new vscode.Position(insertLocation + 1, 0));
             NEURO.client?.sendContext(`Inserted text lines into document\n\n${formatContext(cursorContext)}`);
         }
         else {
@@ -571,6 +573,7 @@ export function handleReplaceText(actionData: ActionData): string | undefined {
     if (!isPathNeuroSafe(document.fileName))
         return contextFailure(CONTEXT_NO_ACCESS);
 
+    const originalText = document.getText();
     const regex = new RegExp(useRegex ? find : escapeRegExp(find), 'g');
     const cursorOffset = document.offsetAt(getVirtualCursor()!);
 
@@ -597,12 +600,16 @@ export function handleReplaceText(actionData: ActionData): string | undefined {
                 const startPosition = document.positionAt(matches[0].index);
                 const endPosition = document.positionAt(matches[0].index + substituteMatch(matches[0], replaceWith).length);
                 setVirtualCursor(endPosition);
+                const diffRanges = getDiffRanges(document, startPosition, matches[0][0], document.getText(new vscode.Range(startPosition, endPosition)));
+                showDiffRanges(vscode.window.activeTextEditor!, ...diffRanges);
                 const cursorContext = getPositionContext(document, startPosition, endPosition);
                 NEURO.client?.sendContext(`Replaced text in document\n\n${formatContext(cursorContext)}`);
             }
             else {
                 // Multiple matches
                 const document = vscode.window.activeTextEditor!.document;
+                const diffRanges = getDiffRanges(document, new vscode.Position(0, 0), originalText, document.getText());
+                showDiffRanges(vscode.window.activeTextEditor!, ...diffRanges);
                 const fence = getFence(document.getText());
                 NEURO.client?.sendContext(`Deleted ${matches.length} occurrences from the document\n\nUpdated content:\n\n${fence}\n${document.getText()}\n${fence}`);
             }
@@ -624,6 +631,8 @@ export function handleDeleteText(actionData: ActionData): string | undefined {
     if (!isPathNeuroSafe(document.fileName))
         return contextFailure(CONTEXT_NO_ACCESS);
 
+    const originalText = document.getText();
+
     const regex = new RegExp(useRegex ? find : escapeRegExp(find), 'g');
     const cursorOffset = document.offsetAt(getVirtualCursor()!);
 
@@ -641,13 +650,21 @@ export function handleDeleteText(actionData: ActionData): string | undefined {
             if (matches.length === 1) {
                 // Single match
                 const document = vscode.window.activeTextEditor!.document;
-                setVirtualCursor(document.positionAt(matches[0].index));
-                const cursorContext = getPositionContext(document, document.positionAt(matches[0].index));
+                const position = document.positionAt(matches[0].index);
+                setVirtualCursor(position);
+                showDiffRanges(vscode.window.activeTextEditor!, {
+                    range: new vscode.Range(position, position),
+                    type: DiffRangeType.Removed,
+                    removedText: matches[0][0],
+                });
+                const cursorContext = getPositionContext(document, position);
                 NEURO.client?.sendContext(`Deleted text from document\n\n${formatContext(cursorContext)}`);
             }
             else {
                 // Multiple matches
                 const document = vscode.window.activeTextEditor!.document;
+                const diffRanges = getDiffRanges(document, new vscode.Position(0, 0), originalText, document.getText());
+                showDiffRanges(vscode.window.activeTextEditor!, ...diffRanges);
                 const fence = getFence(document.getText());
                 NEURO.client?.sendContext(`Deleted ${matches.length} occurrences from the document\n\nUpdated content:\n\n${fence}\n${document.getText()}\n${fence}`);
             }
@@ -704,6 +721,8 @@ export function handleUndo(_actionData: ActionData): string | undefined {
         return contextFailure(CONTEXT_NO_ACTIVE_DOCUMENT);
     if (!isPathNeuroSafe(document.fileName))
         return contextFailure(CONTEXT_NO_ACCESS);
+
+    clearDiffRanges(vscode.window.activeTextEditor!);
 
     vscode.commands.executeCommand('undo').then(
         () => {
@@ -762,6 +781,8 @@ export function handleRewriteAll(actionData: ActionData): string | undefined {
     if (!isPathNeuroSafe(document.fileName))
         return contextFailure(CONTEXT_NO_ACCESS);
 
+    const originalText = document.getText();
+
     const edit = new vscode.WorkspaceEdit();
     const fullRange = new vscode.Range(
         document.positionAt(0),
@@ -779,6 +800,9 @@ export function handleRewriteAll(actionData: ActionData): string | undefined {
             // Set cursor to beginning of file
             const startPosition = new vscode.Position(0, 0);
             setVirtualCursor(startPosition);
+
+            const diffRanges = getDiffRanges(document, new vscode.Position(0, 0), originalText, document.getText());
+            showDiffRanges(vscode.window.activeTextEditor!, ...diffRanges);
 
             const fence = getFence(content);
             NEURO.client?.sendContext(`Rewrote entire file ${relativePath} with ${lineCount} line${lineCount === 1 ? '' : 's'} of content\n\nUpdated content:\n\n${fence}\n${content}\n${fence}`);
@@ -807,6 +831,7 @@ export function handleDeleteLines(actionData: ActionData): string | undefined {
     const endPosition = endLineZero + 1 < document.lineCount
         ? new vscode.Position(endLineZero + 1, 0)
         : new vscode.Position(endLineZero, document.lineAt(endLineZero).text.length);
+    const originalText = document.getText(new vscode.Range(startPosition, endPosition));
     edit.delete(document.uri, new vscode.Range(startPosition, endPosition));
 
     vscode.workspace.applyEdit(edit).then(success => {
@@ -847,6 +872,12 @@ export function handleDeleteLines(actionData: ActionData): string | undefined {
                         NEURO.client?.sendContext(`Deleted lines ${startLine}-${endLine} in file ${relativePath}\n\n${formatContext(cursorContext)}`);
                     }
                 }
+
+                showDiffRanges(vscode.window.activeTextEditor!, {
+                    range: new vscode.Range(startPosition, startPosition),
+                    type: DiffRangeType.Removed,
+                    removedText: originalText,
+                });
             }, 0);
         } else {
             NEURO.client?.sendContext(contextFailure('Failed to delete lines'));
@@ -872,6 +903,7 @@ export function handleRewriteLines(actionData: ActionData): string | undefined {
     const endLineZero = endLine - 1;
     // Preserve the following line's newline by ending at the end of endLine
     const endPosition = new vscode.Position(endLineZero, document.lineAt(endLineZero).text.length);
+    const originalText = document.getText(new vscode.Range(startPosition, endPosition));
     edit.replace(document.uri, new vscode.Range(startPosition, endPosition), content);
 
     vscode.workspace.applyEdit(edit).then(success => {
@@ -890,6 +922,8 @@ export function handleRewriteLines(actionData: ActionData): string | undefined {
                 );
                 const cursorPosition = new vscode.Position(lastInsertedLineZero, documentPost.lineAt(lastInsertedLineZero).text.length);
                 setVirtualCursor(cursorPosition);
+                const diffRanges = getDiffRanges(document, startPosition, originalText, document.getText(new vscode.Range(startPosition, cursorPosition)));
+                showDiffRanges(vscode.window.activeTextEditor!, ...diffRanges);
                 const cursorContext = getPositionContext(documentPost, cursorPosition);
                 logOutput('INFO', `Rewrote lines ${startLine}-${endLine} with ${logicalLines} line${logicalLines === 1 ? '' : 's'} of content and moved cursor to end of line ${lastInsertedLineZero + 1}`);
                 NEURO.client?.sendContext(`Rewrote lines ${startLine}-${endLine} in file ${relativePath}\n\n${formatContext(cursorContext)}`);
@@ -996,6 +1030,10 @@ export function workspaceEditHandler(event: vscode.TextDocumentChangeEvent) {
     if (event.document !== vscode.window.activeTextEditor?.document) return;
     if (!getPermissionLevel(PERMISSIONS.editActiveDocument)) return;
 
+    // Diffs
+    clearDiffRanges(vscode.window.activeTextEditor);
+
+    // Cursor stuff
     const initialCursorOffset = NEURO.cursorOffsets.get(event.document.uri);
     if (initialCursorOffset === undefined || initialCursorOffset === null) return;
 

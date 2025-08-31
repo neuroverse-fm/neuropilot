@@ -227,7 +227,7 @@ export function deactivate() {
     NEURO.client?.sendContext(`NeuroPilot is being deactivated, or ${CONFIG.gameName} is closing. See you next time, ${NEURO.currentController}!`);
 }
 
-export function getDecorationRenderOptions() {
+export function getCursorDecorationRenderOptions(): vscode.DecorationRenderOptions {
     return {
         backgroundColor: 'rgba(0, 0, 0, 0)',
         border: '1px solid rgba(0, 0, 0, 0)',
@@ -243,5 +243,44 @@ export function getDecorationRenderOptions() {
             textDecoration: 'none; position: absolute; display: inline-block; top: 0; font-size: 200%; font-weight: bold, z-index: 1',
             color: 'rgba(255, 85, 229)',
         },
+    };
+}
+
+export function getDiffAddedDecorationRenderOptions(): vscode.DecorationRenderOptions {
+    return {
+        backgroundColor: 'rgba(0, 255, 0, 0.25)',
+        border: '1px solid rgba(255, 85, 229, 0.5)',
+        borderRadius: '0px',
+        overviewRulerColor: 'rgba(0, 255, 0, 0.5)',
+        overviewRulerLane: vscode.OverviewRulerLane.Left,
+        rangeBehavior: vscode.DecorationRangeBehavior.ClosedClosed,
+    };
+}
+
+export function getDiffRemovedDecorationRenderOptions(): vscode.DecorationRenderOptions {
+    return {
+        backgroundColor: 'rgba(0, 0, 0, 0)',
+        border: '1px solid rgba(255, 0, 0, 0.5)',
+        borderRadius: '0px',
+        overviewRulerColor: 'rgba(255, 0, 0, 0.5)',
+        overviewRulerLane: vscode.OverviewRulerLane.Left,
+        rangeBehavior: vscode.DecorationRangeBehavior.ClosedClosed,
+        before: {
+            contentText: '▲',
+            margin: '0 0 0 -0.4ch',
+            textDecoration: 'none; position: absolute; display: inline-block; top: 1.25ch; font-size: 75%, z-index: 1; -webkit-text-stroke: 1px rgba(255, 85, 229, 0.5)',
+            color: 'rgba(255, 0, 0, 0.5)',
+        },
+    };
+}
+
+export function getDiffModifiedDecorationRenderOptions(): vscode.DecorationRenderOptions {
+    return {
+        backgroundColor: 'rgba(255, 255, 0, 0.25)',
+        border: '1px solid rgba(255, 85, 229, 0.5)',
+        borderRadius: '0px',
+        overviewRulerColor: 'rgba(255, 255, 0, 0.5)',
+        overviewRulerLane: vscode.OverviewRulerLane.Left,
+        rangeBehavior: vscode.DecorationRangeBehavior.ClosedClosed,
     };
 }
