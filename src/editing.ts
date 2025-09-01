@@ -727,8 +727,10 @@ export function handleFindText(actionData: ActionData): string | undefined {
         const startPosition = document.positionAt(matches[0].index);
         const endPosition = document.positionAt(matches[0].index + matches[0][0].length);
         setVirtualCursor(moveCursor === 'before' ? startPosition : endPosition);
-        if (highlight)
+        if (highlight) {
             vscode.window.activeTextEditor!.selection = new vscode.Selection(startPosition, endPosition);
+            vscode.window.activeTextEditor!.revealRange(vscode.window.activeTextEditor!.selection, vscode.TextEditorRevealType.InCenterIfOutsideViewport);
+        }
         const cursorContext = getPositionContext(document, startPosition);
         logOutput('INFO', `Placed cursor at (${startPosition.line + 1}:${startPosition.character + 1})`);
         return `Found match and placed cursor at (${startPosition.line + 1}:${startPosition.character + 1})\n\n${formatContext(cursorContext)}`;
@@ -971,7 +973,8 @@ export function handleHighlightLines(actionData: ActionData): string | undefined
     const startLine: number = actionData.params.startLine;
     const endLine: number = actionData.params.endLine;
 
-    const document = vscode.window.activeTextEditor?.document;
+    const editor = vscode.window.activeTextEditor;
+    const document = editor?.document;
     if (document === undefined)
         return contextFailure(CONTEXT_NO_ACTIVE_DOCUMENT);
     if (!isPathNeuroSafe(document.fileName))
@@ -980,7 +983,8 @@ export function handleHighlightLines(actionData: ActionData): string | undefined
     const startPosition = new vscode.Position(startLine - 1, 0);
     const endPosition = new vscode.Position(endLine - 1, document.lineAt(endLine - 1).text.length);
 
-    vscode.window.activeTextEditor!.selection = new vscode.Selection(startPosition, endPosition);
+    editor!.selection = new vscode.Selection(startPosition, endPosition);
+    editor!.revealRange(editor!.selection, vscode.TextEditorRevealType.InCenterIfOutsideViewport);
 
     return `Highlighted lines ${startLine}-${endLine}.`;
 }

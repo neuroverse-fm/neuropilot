@@ -349,8 +349,10 @@ export function setVirtualCursor(position?: vscode.Position | null) {
         },
     ] satisfies vscode.DecorationOptions[]);
 
-    if (CONFIG.cursorFollowsNeuro)
+    if (CONFIG.cursorFollowsNeuro) {
         editor.selection = new vscode.Selection(cursorPosition, cursorPosition);
+        editor.revealRange(editor.selection, vscode.TextEditorRevealType.InCenterIfOutsideViewport);
+    }
 
     return;
 
