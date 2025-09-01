@@ -8,6 +8,7 @@ import { CONFIG, getPermissionLevel, PERMISSIONS } from '@/config';
 
 import { ActionValidationResult, ActionData, actionValidationAccept, actionValidationFailure } from '@/neuro_client_helper';
 import assert from 'node:assert';
+import { patienceDiff } from './patience_diff';
 
 export const REGEXP_ALWAYS = /^/;
 export const REGEXP_NEVER = /^\b$/;
@@ -380,6 +381,128 @@ export function getVirtualCursor(): vscode.Position | null | undefined {
     else {
         return editor.document.positionAt(result);
     }
+}
+
+export const enum DiffRangeType {
+    Added,
+    Modified,
+    Removed,
+}
+
+export interface DiffRange {
+    range: vscode.Range;
+    type: DiffRangeType;
+    removedText?: string;
+}
+
+/**
+ * Calculates the difference between the original and modified text. The ranges are based on the modified text.
+ * @param document The text document to calculate the difference for, used to calculate positions from offsets.
+ * @param startPosition The position where the diff starts, used to calculate positions from offsets.
+ * @param original The original text.
+ * @param modified The modified text.
+ */
+export function getDiffRanges(document: vscode.TextDocument, startPosition: vscode.Position, original: string, modified: string): DiffRange[] {
+    const tokenRegExp = /\w+|\s+|./g;
+    const originalTokens = original.match(tokenRegExp) ?? [];
+    const modifiedTokens = modified.match(tokenRegExp) ?? [];
+
+    const difference = patienceDiff(originalTokens, modifiedTokens);
+
+    const result: DiffRange[] = [];
+    let currentType: DiffRangeType | undefined = undefined;
+    let currentStartOffset = document.offsetAt(startPosition);
+    let currentLength = 0;
+    let currentRemovedText = '';
+
+    for (const token of difference.lines) {
+        // If the token is unchanged (token exists in both original and modified)
+        if (token.aIndex !== -1 && token.bIndex !== -1) {
+            // If this is the end of a change
+            if (currentType !== undefined) {
+                result.push({
+                    range: new vscode.Range(document.positionAt(currentStartOffset), document.positionAt(currentStartOffset + currentLength)),
+                    type: currentType,
+                    removedText: currentRemovedText,
+                });
+                currentStartOffset += currentLength;
+                currentLength = 0;
+                currentType = undefined;
+                currentRemovedText = '';
+            }
+            currentStartOffset += token.line.length;
+            continue;
+        }
+
+        // If the token was removed (token exists in original but not in modified)
+        if (token.bIndex === -1) { // token.aIndex !== -1
+            // Added + Removed = Modified
+            if (currentType === DiffRangeType.Added)
+                currentType = DiffRangeType.Modified;
+            else if (currentType === undefined)
+                currentType = DiffRangeType.Removed;
+
+            currentRemovedText += token.line;
+            continue;
+        }
+
+        // If the token was added (token exists in modified but not in original)
+        if (token.aIndex === -1) { // token.bIndex !== -1
+            // Removed + Added = Modified
+            if (currentType === DiffRangeType.Removed)
+                currentType = DiffRangeType.Modified;
+            else if (currentType === undefined)
+                currentType = DiffRangeType.Added;
+
+            currentLength += token.line.length;
+            continue;
+        }
+    }
+
+    // Add last change if it exists
+    if (currentType !== undefined) {
+        result.push({
+            range: new vscode.Range(document.positionAt(currentStartOffset), document.positionAt(currentStartOffset + currentLength)),
+            type: currentType,
+            removedText: currentRemovedText,
+        });
+    }
+
+    return result;
+}
+
+export function showDiffRanges(editor: vscode.TextEditor, ...ranges: DiffRange[]) {
+    const addedRanges = ranges.filter(r => r.type === DiffRangeType.Added);
+    const modifiedRanges = ranges.filter(r => r.type === DiffRangeType.Modified);
+    const removedRanges = ranges.filter(r => r.type === DiffRangeType.Removed);
+
+    const languageId = editor.document.languageId;
+    const user = CONFIG.currentlyAsNeuroAPI;
+
+    editor.setDecorations(NEURO.diffAddedDecorationType!, addedRanges.map(range => ({
+        range: range.range,
+        hoverMessage: `**Added by ${user}**`,
+    } satisfies vscode.DecorationOptions)));
+
+    editor.setDecorations(NEURO.diffModifiedDecorationType!, modifiedRanges.map(range => {
+        const fence = getFence(range.removedText!);
+        return {
+            range: range.range,
+            hoverMessage: range.removedText ? `**Modified by ${user}, original:**\n\n${fence}${languageId}\n${range.removedText}\n${fence}` : undefined,
+        } satisfies vscode.DecorationOptions;
+    }));
+
+    editor.setDecorations(NEURO.diffRemovedDecorationType!, removedRanges.map(range => {
+        const fence = getFence(range.removedText!);
+        return {
+            range: range.range,
+            hoverMessage: range.removedText ? `**Removed by ${user}, original:**\n\n${fence}${languageId}\n${range.removedText}\n${fence}` : undefined,
+        } satisfies vscode.DecorationOptions;
+    }));
+}
+
+export function clearDiffRanges(editor: vscode.TextEditor) {
+    showDiffRanges(editor);
 }
 
 /**

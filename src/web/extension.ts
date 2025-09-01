@@ -9,7 +9,10 @@ import {
     setupClientConnectedHandlers,
     createStatusBarItem,
     deactivate as commonDeactivate,
-    getDecorationRenderOptions,
+    getCursorDecorationRenderOptions,
+    getDiffRemovedDecorationRenderOptions,
+    getDiffModifiedDecorationRenderOptions,
+    getDiffAddedDecorationRenderOptions,
     reloadPermissions,
 } from '@shared/extension';
 import { registerUnsupervisedActions, registerUnsupervisedHandlers } from './unsupervised';
@@ -41,7 +44,10 @@ export function activate(context: vscode.ExtensionContext) {
     createClient();
 
     // Create cursor decoration (web-specific)
-    NEURO.cursorDecorationType = vscode.window.createTextEditorDecorationType(getDecorationRenderOptions());
+    NEURO.cursorDecorationType = vscode.window.createTextEditorDecorationType(getCursorDecorationRenderOptions());
+    NEURO.diffAddedDecorationType = vscode.window.createTextEditorDecorationType(getDiffAddedDecorationRenderOptions());
+    NEURO.diffRemovedDecorationType = vscode.window.createTextEditorDecorationType(getDiffRemovedDecorationRenderOptions());
+    NEURO.diffModifiedDecorationType = vscode.window.createTextEditorDecorationType(getDiffModifiedDecorationRenderOptions());
 
     // Set initial virtual cursor
     if (vscode.window.activeTextEditor && isPathNeuroSafe(vscode.window.activeTextEditor.document.fileName)) {
