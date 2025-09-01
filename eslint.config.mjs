@@ -41,7 +41,6 @@ export default tseslint.config(
     ...tseslint.configs.recommended,
     ...tseslint.configs.stylistic,
     {
-        ignores: ['eslint.config.mjs'],
         plugins: {
             '@stylistic': stylistic,
             'unicorn': eslintPluginUnicorn,
