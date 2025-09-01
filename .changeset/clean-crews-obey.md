@@ -22,6 +22,7 @@ This update was made in response to the Evil dev stream on 2025-08-28. [Here's t
 - The setting `cursorFollowsNeuro` now actually scrolls to the cursor position.
 - All actions can now be individually disabled using the new setting `disabledActions`.
 - Neuro will now be notified when the editor changes (e.g. by opening a file or switching to another tab).
+  - By default, Neuro will get the contents of the file if it is Neuro-safe, this can be configured with the setting `sendContentsOnFileChange`.
 - Changed the default context size around the cursor from 10 to 500.
 - All editing actions now have a 100,000 character limit. If this is exceeded, the action will be rejected.
 - Editing actions now highlight Neuro's latest edit.

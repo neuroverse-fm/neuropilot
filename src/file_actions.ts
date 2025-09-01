@@ -442,13 +442,14 @@ export function handleOpenFile(actionData: ActionData): string | undefined {
 
             logOutput('INFO', `Opened file ${relativePath}`);
 
-            // This is now handled by editorChangeHandler in editing.ts
-
-            // const cursorOffset = document.offsetAt(getVirtualCursor() ?? new vscode.Position(0, 0));
-            // let text = document.getText();
-            // text = text.slice(0, cursorOffset) + '<<<|>>>' + text.slice(cursorOffset);
-            // const fence = getFence(text);
-            // NEURO.client?.sendContext(`Opened file ${relativePath}\n\nContent (cursor position denoted by \`<<<|>>>\`):\n\n${fence}${document.languageId}\n${filterFileContents(text)}\n${fence}`);
+            // Usually handled by editorChangedHandler in editing.ts, except if this setting is off
+            if (!CONFIG.sendContentsOnFileChange) {
+                const cursorOffset = document.offsetAt(getVirtualCursor() ?? new vscode.Position(0, 0));
+                let text = document.getText();
+                text = text.slice(0, cursorOffset) + '<<<|>>>' + text.slice(cursorOffset);
+                const fence = getFence(text);
+                NEURO.client?.sendContext(`Opened file ${relativePath}\n\nContent (cursor position denoted by \`<<<|>>>\`):\n\n${fence}${document.languageId}\n${filterFileContents(text)}\n${fence}`);
+            }
         }
         catch {
             logOutput('ERROR', `Failed to open file ${relativePath}`);

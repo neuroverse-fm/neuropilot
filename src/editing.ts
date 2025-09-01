@@ -1081,7 +1081,10 @@ export function editorChangeHandler(editor: vscode.TextEditor | undefined) {
             const file = simpleFileName(editor.document.fileName);
             const cursor = getVirtualCursor()!;
             const context = getPositionContext(editor.document, cursor);
-            NEURO.client?.sendContext(`Switched to file ${file}.\n\n${formatContext(context)}`);
+            let text = `Switched to file ${file}.`;
+            if (CONFIG.sendContentsOnFileChange)
+                text += `\n\n${formatContext(context)}`;
+            NEURO.client?.sendContext(text);
         }
         else {
             NEURO.client?.sendContext('Switched to a file you\'re not allowed to edit.');
