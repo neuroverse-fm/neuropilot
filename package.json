@@ -537,6 +537,11 @@
 							"inCurrentFile",
 							"inWorkspace"
 						],
+						"enumItemLabels": [
+							"When manually checked",
+							"If it's in the current file",
+							"If it's any Neuro-safe file in the workspace"
+						],
 						"enumDescriptions": [
 							"Only when Neuro explicitly checks for it.",
 							"If a new problem appears in the file she is currently viewing.",
