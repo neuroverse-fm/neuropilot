@@ -8,6 +8,7 @@ import { PERMISSIONS, getPermissionLevel, CONFIG, isActionEnabled } from '@/conf
 const CONTEXT_NO_ACCESS = 'You do not have permission to access this file.';
 const CONTEXT_NO_ACTIVE_DOCUMENT = 'No active document to edit.';
 
+type MatchOptions = 'firstInFile' | 'lastInFile' | 'firstAfterCursor' | 'lastBeforeCursor' | 'allInFile';
 const MATCH_OPTIONS: string[] = ['firstInFile', 'lastInFile', 'firstAfterCursor', 'lastBeforeCursor', 'allInFile'] as const;
 const POSITION_SCHEMA = {
     type: 'object',
@@ -110,6 +111,10 @@ function checkCurrentFile(_actionData: ActionData): ActionValidationResult {
     return actionValidationAccept();
 }
 
+/**
+ * Validate that the `startLine` and `endLine` properties are valid and in-bounds.
+ * @param actionData The action data containing the line range to validate.
+ */
 function validateLineRange(actionData: ActionData): ActionValidationResult {
     const { startLine, endLine } = actionData.params;
     const document = vscode.window.activeTextEditor?.document;
@@ -256,7 +261,8 @@ export const editingActions = {
         name: 'find_text',
         description: 'Find text in the active document.'
             + ' If you set "useRegex" to true, you can use a Regex in the "find" parameter.'
-            + ' This will place your cursor directly after the found text, unless you searched for multiple instances.',
+            + ' This will place your cursor directly before or after the found text (depending on "moveCursor"), unless you searched for multiple instances.'
+            + ' Set "highlight" to true to highlight the found text, if you want to draw Vedal\'s or Chat\'s attention to it (this only works when searching for a single instance).',
         schema: {
             type: 'object',
             properties: {
@@ -264,6 +270,7 @@ export const editingActions = {
                 useRegex: { type: 'boolean' },
                 match: { type: 'string', enum: MATCH_OPTIONS },
                 moveCursor: { type: 'string', enum: ['start', 'end'] },
+                highlight: { type: 'boolean' },
             },
             required: ['find', 'match'],
             additionalProperties: false,
@@ -350,6 +357,25 @@ export const editingActions = {
             return `delete lines ${actionData.params.startLine}-${actionData.params.endLine}.`;
         },
     },
+    highlight_lines: {
+        name: 'highlight_lines',
+        description: 'Highlight the specified lines.'
+            + ' Can be used to draw Vedal\'s or Chat\'s attention towards something.'
+            + ' This will not move your cursor.',
+        schema: {
+            type: 'object',
+            properties: {
+                startLine: { type: 'integer' },
+                endLine: { type: 'integer' },
+            },
+            required: ['startLine', 'endLine'],
+            additionalProperties: false,
+        },
+        permissions: [PERMISSIONS.editActiveDocument],
+        handler: handleHighlightLines,
+        validator: [checkCurrentFile, validateLineRange],
+        promptGenerator: (actionData: ActionData) => `highlight lines ${actionData.params.startLine}-${actionData.params.endLine}.`,
+    },
 } satisfies Record<string, RCEAction>;
 
 export function registerEditingActions() {
@@ -367,6 +393,7 @@ export function registerEditingActions() {
             editingActions.rewrite_all,
             editingActions.rewrite_lines,
             editingActions.delete_lines,
+            editingActions.highlight_lines,
         ]).filter(isActionEnabled));
         if (vscode.workspace.getConfiguration('files').get<string>('autoSave') !== 'afterDelay') {
             NEURO.client?.registerActions(stripToActions([
@@ -676,9 +703,11 @@ export function handleDeleteText(actionData: ActionData): string | undefined {
 }
 
 export function handleFindText(actionData: ActionData): string | undefined {
-    const find = actionData.params.find;
-    const match = actionData.params.match;
-    const useRegex = actionData.params?.useRegex ?? false;
+    const find: string = actionData.params.find;
+    const match: MatchOptions = actionData.params.match;
+    const useRegex: boolean = actionData.params.useRegex ?? false;
+    const moveCursor: 'before' | 'after' = actionData.params.moveCursor ?? 'after';
+    const highlight: boolean = actionData.params.highlight ?? false;
 
     const document = vscode.window.activeTextEditor?.document;
     if (document === undefined)
@@ -695,12 +724,14 @@ export function handleFindText(actionData: ActionData): string | undefined {
 
     if (matches.length === 1) {
         // Single match
-        const offset = matches[0].index;
-        const pos = document.positionAt(offset);
-        setVirtualCursor(pos);
-        const cursorContext = getPositionContext(document, pos);
-        logOutput('INFO', `Placed cursor at (${pos.line + 1}:${pos.character + 1})`);
-        return `Found match and placed cursor at (${pos.line + 1}:${pos.character + 1})\n\n${formatContext(cursorContext)}`;
+        const startPosition = document.positionAt(matches[0].index);
+        const endPosition = document.positionAt(matches[0].index + matches[0][0].length);
+        setVirtualCursor(moveCursor === 'before' ? startPosition : endPosition);
+        if (highlight)
+            vscode.window.activeTextEditor!.selection = new vscode.Selection(startPosition, endPosition);
+        const cursorContext = getPositionContext(document, startPosition);
+        logOutput('INFO', `Placed cursor at (${startPosition.line + 1}:${startPosition.character + 1})`);
+        return `Found match and placed cursor at (${startPosition.line + 1}:${startPosition.character + 1})\n\n${formatContext(cursorContext)}`;
     }
     else {
         // Multiple matches
@@ -934,6 +965,24 @@ export function handleRewriteLines(actionData: ActionData): string | undefined {
     });
 
     return undefined;
+}
+
+export function handleHighlightLines(actionData: ActionData): string | undefined {
+    const startLine: number = actionData.params.startLine;
+    const endLine: number = actionData.params.endLine;
+
+    const document = vscode.window.activeTextEditor?.document;
+    if (document === undefined)
+        return contextFailure(CONTEXT_NO_ACTIVE_DOCUMENT);
+    if (!isPathNeuroSafe(document.fileName))
+        return contextFailure(CONTEXT_NO_ACCESS);
+
+    const startPosition = new vscode.Position(startLine - 1, 0);
+    const endPosition = new vscode.Position(endLine - 1, document.lineAt(endLine - 1).text.length);
+
+    vscode.window.activeTextEditor!.selection = new vscode.Selection(startPosition, endPosition);
+
+    return `Highlighted lines ${startLine}-${endLine}.`;
 }
 
 export function fileSaveListener(e: vscode.TextDocument) {
