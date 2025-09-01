@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 
 import { NEURO } from '@/constants';
-import { combineGlobLines, filterFileContents, getFence, getVirtualCursor, getWorkspacePath, isBinary, isPathNeuroSafe, logOutput, normalizePath } from '@/utils';
+import { combineGlobLines, getFence, getWorkspacePath, isBinary, isPathNeuroSafe, logOutput, normalizePath } from '@/utils';
 import { ActionData, contextNoAccess, RCEAction, actionValidationFailure, actionValidationAccept, ActionValidationResult, stripToActions } from '@/neuro_client_helper';
 import { CONFIG, PERMISSIONS, getPermissionLevel, isActionEnabled } from '@/config';
 
@@ -442,7 +442,7 @@ export function handleOpenFile(actionData: ActionData): string | undefined {
 
             logOutput('INFO', `Opened file ${relativePath}`);
 
-            // This is now handled by editorChangeHandler in file_actions.ts
+            // This is now handled by editorChangeHandler in editing.ts
 
             // const cursorOffset = document.offsetAt(getVirtualCursor() ?? new vscode.Position(0, 0));
             // let text = document.getText();
