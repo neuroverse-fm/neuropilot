@@ -43,7 +43,11 @@ async function getPathExistence(absolutePath: string): Promise<boolean> {
 
 async function neuroSafeValidation(actionData: ActionData): Promise<ActionValidationResult> {
     let result: ActionValidationResult = actionValidationAccept();
-    const checkExists = actionData.name === 'open_file' ? false : true;
+    const falseList = [
+        'open_file',
+        'read_file',
+    ];
+    const checkExists = falseList.includes(actionData.name) ? false : true;
     if (actionData.params?.filePath) {
         result = await validatePath(actionData.params.filePath, checkExists, 'file');
     }
@@ -109,6 +113,22 @@ export const fileActions = {
         handler: handleOpenFile,
         validator: [neuroSafeValidation, binaryFileValidation],
         promptGenerator: (actionData: ActionData) => `open the file "${actionData.params?.filePath}".`,
+    },
+    read_file: {
+        name: 'read_file',
+        description: 'Read a file\'s contents without opening it.',
+        schema: {
+            type: 'object',
+            properties: {
+                filePath: { type: 'string' },
+            },
+            required: ['filePath'],
+            additionalProperties: false,
+        },
+        permissions: [PERMISSIONS.openFiles],
+        handler: handleReadFile,
+        validator: [neuroSafeValidation, binaryFileValidation],
+        promptGenerator: (actionData: ActionData) => `read the file "${actionData.params?.filePath}" (without opening it).`,
     },
     create_file: {
         name: 'create_file',
@@ -183,6 +203,7 @@ export function registerFileActions() {
         NEURO.client?.registerActions(stripToActions([
             fileActions.get_files,
             fileActions.open_file,
+            fileActions.read_file,
         ]).filter(isActionEnabled));
     }
 
@@ -430,5 +451,29 @@ export function handleOpenFile(actionData: ActionData): string | undefined {
             logOutput('ERROR', `Failed to open file ${relativePath}`);
             NEURO.client?.sendContext(`Failed to open file ${relativePath}`);
         }
+    }
+}
+
+export function handleReadFile(actionData: ActionData): string | undefined {
+    const file = actionData.params.filePath;
+    const absolute = getWorkspacePath() + '/' + normalizePath(file).replace(/^\/|\/$/g, '');
+    if (!isPathNeuroSafe(getWorkspacePath() + '/' + file)) {
+        return contextNoAccess(file);
+    }
+    const fileAsUri = vscode.Uri.file(absolute);
+    try {
+        vscode.workspace.fs.readFile(fileAsUri).then(
+            (data: Uint8Array) => {
+                const decodedContent = Buffer.from(data).toString('utf8');
+                const fence = getFence(decodedContent);
+                NEURO.client?.sendContext(`Contents of the file ${file}:\n\n${fence}\n${decodedContent}\n${fence}`);
+            },
+            (erm) => {
+                logOutput('ERROR', `Couldn't read file ${absolute}: ${erm}`);
+                NEURO.client?.sendContext(`Couldn't read file ${file}.`);
+            },
+        );
+    } catch (erm) {
+        logOutput('ERROR', `Error occured while trying to access file: ${erm}`);
     }
 }
