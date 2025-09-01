@@ -33,6 +33,9 @@ All permissions are set to "Off" by default, [except one](vscode://settings/neur
 For more detailed documentation, visit [the docs site](https://vsc-neuropilot.github.io/docs).
 We've recently migrated a lot of information there, so you're more likely to find the information you're looking for there.
 
+> [!WARNING]
+> If you are installing the extension from Open VSX, be aware that your editor may or may not be supported. Review any extension API compatibility breaks between VS Code and your editor to determine whether or not NeuroPilot will function correctly.
+
 ## How to use
 
 On startup, the extension will immediately try to establish a connection to the Neuro API.
