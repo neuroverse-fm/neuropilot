@@ -1054,12 +1054,17 @@ function formatContext(context: NeuroPositionContext): string {
     return `File context (lines ${context.startLine + 1}-${context.endLine + 1}, cursor position denoted by \`<<<|>>>\`):\n\n${fence}\n${context.contextBefore}${context.contextBetween}<<<|>>>${context.contextAfter}\n${fence}`;
 }
 
+let editorChangeHandlerTimeout: NodeJS.Timeout | undefined;
 /**
  * Sets and displays the virtual cursor position when the active text editor changes.
  * @param editor The active text editor.
  */
 export function editorChangeHandler(editor: vscode.TextEditor | undefined) {
+    if (editorChangeHandlerTimeout)
+        clearTimeout(editorChangeHandlerTimeout);
+
     if (editor) {
+        // Set cursor
         const uri = editor.document.uri;
         if (!NEURO.cursorOffsets.has(uri)) {
             if (isPathNeuroSafe(uri.fsPath))
@@ -1070,6 +1075,25 @@ export function editorChangeHandler(editor: vscode.TextEditor | undefined) {
         else {
             setVirtualCursor();
         }
+
+        // Tell Neuro that the editor changed
+        if (isPathNeuroSafe(uri.fsPath)) {
+            const file = simpleFileName(editor.document.fileName);
+            const cursor = getVirtualCursor()!;
+            const context = getPositionContext(editor.document, cursor);
+            NEURO.client?.sendContext(`Switched to file ${file}.\n\n${formatContext(context)}`);
+        }
+        else {
+            NEURO.client?.sendContext('Switched to a file you\'re not allowed to edit.');
+        }
+    }
+    else {
+        // Switching editors first triggers this event with an undefined editor and then with the new editor
+        // Delay sending the context to wait for a second event
+        editorChangeHandlerTimeout = setTimeout(() => {
+            NEURO.client?.sendContext('Switched to a non-editable file.');
+            editorChangeHandlerTimeout = undefined;
+        }, 200);
     }
 }
 

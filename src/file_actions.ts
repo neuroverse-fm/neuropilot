@@ -441,11 +441,14 @@ export function handleOpenFile(actionData: ActionData): string | undefined {
             await vscode.window.showTextDocument(document);
 
             logOutput('INFO', `Opened file ${relativePath}`);
-            const cursorOffset = document.offsetAt(getVirtualCursor() ?? new vscode.Position(0, 0));
-            let text = document.getText();
-            text = text.slice(0, cursorOffset) + '<<<|>>>' + text.slice(cursorOffset);
-            const fence = getFence(text);
-            NEURO.client?.sendContext(`Opened file ${relativePath}\n\nContent (cursor position denoted by \`<<<|>>>\`):\n\n${fence}${document.languageId}\n${filterFileContents(text)}\n${fence}`);
+
+            // This is now handled by editorChangeHandler in file_actions.ts
+
+            // const cursorOffset = document.offsetAt(getVirtualCursor() ?? new vscode.Position(0, 0));
+            // let text = document.getText();
+            // text = text.slice(0, cursorOffset) + '<<<|>>>' + text.slice(cursorOffset);
+            // const fence = getFence(text);
+            // NEURO.client?.sendContext(`Opened file ${relativePath}\n\nContent (cursor position denoted by \`<<<|>>>\`):\n\n${fence}${document.languageId}\n${filterFileContents(text)}\n${fence}`);
         }
         catch {
             logOutput('ERROR', `Failed to open file ${relativePath}`);
