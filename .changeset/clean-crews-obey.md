@@ -31,3 +31,4 @@ This update was made in response to the Evil dev stream on 2025-08-28. [Here's t
 - Added `rewrite_lines` action which rewrites text in between a specified line range and moves the cursor to the end of the last added line.
 - Added `delete_lines` action which deletes text in between a specificed range and moves the cursor to the end of the line before the deleted lines.
 - Added `highlight_lines` action which selects text in a specified range and moves moves the view there.
+- Added `read_file` action which returns the entire contents of a file in the workspace without opening it.
