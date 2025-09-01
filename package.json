@@ -205,12 +205,12 @@
 					},
 					"neuropilot.beforeContext": {
 						"type": "integer",
-						"default": 10,
+						"default": 500,
 						"description": "The number of lines before the cursor position to include as context when editing a file or sending a completion request"
 					},
 					"neuropilot.afterContext": {
 						"type": "integer",
-						"default": 10,
+						"default": 500,
 						"description": "The number of lines after the cursor position to include as context when editing a file or sending a completion request"
 					},
 					"neuropilot.maxCompletions": {
