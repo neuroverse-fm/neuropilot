@@ -14,6 +14,7 @@ This update was made in response to the Evil dev stream on 2025-08-28. [Here's t
 - All editing actions that move the cursor now mention in their description that the cursor moves after usage.
 - Certain actions have had usage instructions clarified in their description.
 - Invalid cursor positions now fail at RCE validation time instead of execution time. This should improve the experience when using Copilot mode with editing actions.
+- Actions `replace_text`, `delete_text` and `find_text` now allow specifying a line range to search in.
 - The context message to send the current file to the connected Neuro twin is changed to indicate that Vedal used the command.
 - CRLF conversion offset has been fixed when using `insert_text`.
 - Docs are now hosted at [a different subpage](https://vsc-neuropilot.github.io/docs) than before. While this isn't part of the extension itself, the link on the README file broke as a result of this change. This has now been fixed.
