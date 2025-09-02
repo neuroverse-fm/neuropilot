@@ -23,6 +23,24 @@ const POSITION_SCHEMA = {
     additionalProperties: false,
     required: ['line', 'column', 'type'],
 };
+interface Position {
+    line: number;
+    column: number;
+    type: 'relative' | 'absolute';
+}
+const LINE_RANGE_SCHEMA = {
+    type: 'object',
+    properties: {
+        startLine: { type: 'integer', minimum: 1 },
+        endLine: { type: 'integer', minimum: 1 },
+    },
+    additionalProperties: false,
+    required: ['startLine', 'endLine'],
+};
+interface LineRange {
+    startLine: number;
+    endLine: number;
+}
 
 /**
  * Create a generic string validator that checks type and character limits.
@@ -58,7 +76,7 @@ function createStringValidator(paramPaths: string[], maxLength = 100000) {
  */
 function createPositionValidator(path = '') {
     return (actionData: ActionData): ActionValidationResult => {
-        const position = getProperty(actionData.params, path) as { line: number; column: number; type: 'absolute' | 'relative' } | undefined;
+        const position = getProperty(actionData.params, path) as Position | undefined;
 
         // If position is undefined, it is not required by the schema (otherwise the schema check would fail first)
         if (position === undefined)
@@ -112,30 +130,39 @@ function checkCurrentFile(_actionData: ActionData): ActionValidationResult {
 }
 
 /**
- * Validate that the `startLine` and `endLine` properties are valid and in-bounds.
- * @param actionData The action data containing the line range to validate.
+ * Creates a line range validator for the specified path.
+ * The validator checks that the `startLine` and `endLine` properties are valid and in-bounds.
+ * @param path The path to the line range object. For the root pass an empty string.
+ * @returns A function that validates the line range in the action data.
  */
-function validateLineRange(actionData: ActionData): ActionValidationResult {
-    const { startLine, endLine } = actionData.params;
-    const document = vscode.window.activeTextEditor?.document;
+function createLineRangeValidator(path = '') {
+    return (actionData: ActionData) => {
+        const range = getProperty(actionData, path) as LineRange | undefined;
 
-    // Recheck if there is an active document, because it is later needed to check if the line range is out of bounds. This in case this validator is used on its own.
-    if (!document) return actionValidationFailure(CONTEXT_NO_ACTIVE_DOCUMENT);
+        // If it's undefined it's not required
+        if (!range) return actionValidationAccept();
 
-    // Check line number validity
-    if (startLine <= 0 || endLine <= 0) {
-        return actionValidationRetry('Line numbers must be positive integers (1-based).');
-    }
+        const { startLine, endLine } = range;
+        const document = vscode.window.activeTextEditor?.document;
 
-    if (startLine > endLine) {
-        return actionValidationRetry(`Start line (${startLine}) cannot be greater than end line (${endLine}).`);
-    }
+        // Recheck if there is an active document, because it is later needed to check if the line range is out of bounds. This in case this validator is used on its own.
+        if (!document) return actionValidationFailure(CONTEXT_NO_ACTIVE_DOCUMENT);
 
-    if (startLine > document.lineCount || endLine > document.lineCount) {
-        return actionValidationRetry(`Line range ${startLine}-${endLine} is out of bounds. File has ${document.lineCount} lines.`);
-    }
+        // Check line number validity
+        if (startLine <= 0 || endLine <= 0) {
+            return actionValidationRetry('Line numbers must be positive integers (1-based).');
+        }
 
-    return actionValidationAccept();
+        if (startLine > endLine) {
+            return actionValidationRetry(`Start line (${startLine}) cannot be greater than end line (${endLine}).`);
+        }
+
+        if (startLine > document.lineCount || endLine > document.lineCount) {
+            return actionValidationRetry(`Line range ${startLine}-${endLine} is out of bounds. File has ${document.lineCount} lines.`);
+        }
+
+        return actionValidationAccept();
+    };
 }
 
 export const editingActions = {
@@ -228,13 +255,14 @@ export const editingActions = {
                 replaceWith: { type: 'string' },
                 useRegex: { type: 'boolean' },
                 match: { type: 'string', enum: MATCH_OPTIONS },
+                lineRange: LINE_RANGE_SCHEMA,
             },
             required: ['find', 'replaceWith', 'match'],
             additionalProperties: false,
         },
         permissions: [PERMISSIONS.editActiveDocument],
         handler: handleReplaceText,
-        validator: [checkCurrentFile, createStringValidator(['find', 'replaceWith'])],
+        validator: [checkCurrentFile, createStringValidator(['find', 'replaceWith']), createLineRangeValidator('lineRange')],
         promptGenerator: (actionData: ActionData) => `replace "${actionData.params.useRegex ? escapeRegExp(actionData.params.find) : actionData.params.find}" with "${actionData.params.replaceWith}".`,
     },
     delete_text: {
@@ -248,13 +276,14 @@ export const editingActions = {
                 find: { type: 'string' },
                 useRegex: { type: 'boolean' },
                 match: { type: 'string', enum: MATCH_OPTIONS },
+                lineRange: LINE_RANGE_SCHEMA,
             },
             required: ['find', 'match'],
             additionalProperties: false,
         },
         permissions: [PERMISSIONS.editActiveDocument],
         handler: handleDeleteText,
-        validator: [checkCurrentFile, createStringValidator(['find'])],
+        validator: [checkCurrentFile, createStringValidator(['find']), createLineRangeValidator('lineRange')],
         promptGenerator: (actionData: ActionData) => `delete "${actionData.params.useRegex ? escapeRegExp(actionData.params.find) : actionData.params.find}".`,
     },
     find_text: {
@@ -269,6 +298,7 @@ export const editingActions = {
                 find: { type: 'string' },
                 useRegex: { type: 'boolean' },
                 match: { type: 'string', enum: MATCH_OPTIONS },
+                lineRange: LINE_RANGE_SCHEMA,
                 moveCursor: { type: 'string', enum: ['start', 'end'] },
                 highlight: { type: 'boolean' },
             },
@@ -323,16 +353,15 @@ export const editingActions = {
         schema: {
             type: 'object',
             properties: {
-                startLine: { type: 'integer' },
-                endLine: { type: 'integer' },
+                ...LINE_RANGE_SCHEMA.properties,
                 content: { type: 'string' },
             },
-            required: ['startLine', 'endLine', 'content'],
+            required: [...LINE_RANGE_SCHEMA.required, 'content'],
             additionalProperties: false,
         },
         permissions: [PERMISSIONS.editActiveDocument],
         handler: handleRewriteLines,
-        validator: [checkCurrentFile, validateLineRange, createStringValidator(['content'])],
+        validator: [checkCurrentFile, createLineRangeValidator(), createStringValidator(['content'])],
         promptGenerator: (actionData: ActionData) => {
             const lineCount = actionData.params.content.trim().split('\n').length;
             return `rewrite lines ${actionData.params.startLine}-${actionData.params.endLine} with ${lineCount} line${lineCount === 1 ? '' : 's'} of content.`;
@@ -341,18 +370,10 @@ export const editingActions = {
     delete_lines: {
         name: 'delete_lines',
         description: 'Delete everything in the specified line range. After deleting, your cursor will be placed at the end of the line before the deleted lines.',
-        schema: {
-            type: 'object',
-            properties: {
-                startLine: { type: 'integer' },
-                endLine: { type: 'integer' },
-            },
-            required: ['startLine', 'endLine'],
-            additionalProperties: false,
-        },
+        schema: LINE_RANGE_SCHEMA,
         permissions: [PERMISSIONS.editActiveDocument],
         handler: handleDeleteLines,
-        validator: [checkCurrentFile, validateLineRange],
+        validator: [checkCurrentFile, createLineRangeValidator()],
         promptGenerator: (actionData: ActionData) => {
             return `delete lines ${actionData.params.startLine}-${actionData.params.endLine}.`;
         },
@@ -362,18 +383,10 @@ export const editingActions = {
         description: 'Highlight the specified lines.'
             + ' Can be used to draw Vedal\'s or Chat\'s attention towards something.'
             + ' This will not move your cursor.',
-        schema: {
-            type: 'object',
-            properties: {
-                startLine: { type: 'integer' },
-                endLine: { type: 'integer' },
-            },
-            required: ['startLine', 'endLine'],
-            additionalProperties: false,
-        },
+        schema: LINE_RANGE_SCHEMA,
         permissions: [PERMISSIONS.editActiveDocument],
         handler: handleHighlightLines,
-        validator: [checkCurrentFile, validateLineRange],
+        validator: [checkCurrentFile, createLineRangeValidator()],
         promptGenerator: (actionData: ActionData) => `highlight lines ${actionData.params.startLine}-${actionData.params.endLine}.`,
     },
 } satisfies Record<string, RCEAction>;
@@ -592,7 +605,8 @@ export function handleReplaceText(actionData: ActionData): string | undefined {
     const find: string = actionData.params.find;
     const replaceWith: string = actionData.params.replaceWith;
     const match: string = actionData.params.match;
-    const useRegex = actionData.params.useRegex ?? false;
+    const useRegex: boolean = actionData.params.useRegex ?? false;
+    const lineRange: LineRange | undefined = actionData.params.lineRange;
 
     const document = vscode.window.activeTextEditor?.document;
     if (document === undefined)
@@ -604,7 +618,7 @@ export function handleReplaceText(actionData: ActionData): string | undefined {
     const regex = new RegExp(useRegex ? find : escapeRegExp(find), 'g');
     const cursorOffset = document.offsetAt(getVirtualCursor()!);
 
-    const matches = findAndFilter(regex, document.getText(), cursorOffset, match);
+    const matches = findAndFilter(regex, document, cursorOffset, match, lineRange);
     if (matches.length === 0)
         return 'No matches found for the given parameters.';
 
@@ -648,9 +662,10 @@ export function handleReplaceText(actionData: ActionData): string | undefined {
 }
 
 export function handleDeleteText(actionData: ActionData): string | undefined {
-    const find = actionData.params.find;
+    const find: string = actionData.params.find;
     const match: string = actionData.params.match;
-    const useRegex = actionData.params?.useRegex ?? false;
+    const useRegex: boolean = actionData.params.useRegex ?? false;
+    const lineRange: LineRange | undefined = actionData.params.lineRange;
 
     const document = vscode.window.activeTextEditor?.document;
     if (document === undefined)
@@ -663,7 +678,7 @@ export function handleDeleteText(actionData: ActionData): string | undefined {
     const regex = new RegExp(useRegex ? find : escapeRegExp(find), 'g');
     const cursorOffset = document.offsetAt(getVirtualCursor()!);
 
-    const matches = findAndFilter(regex, document.getText(), cursorOffset, match);
+    const matches = findAndFilter(regex, document, cursorOffset, match, lineRange);
     if (matches.length === 0)
         return 'No matches found for the given parameters.';
 
@@ -706,6 +721,7 @@ export function handleFindText(actionData: ActionData): string | undefined {
     const find: string = actionData.params.find;
     const match: MatchOptions = actionData.params.match;
     const useRegex: boolean = actionData.params.useRegex ?? false;
+    const lineRange: LineRange | undefined = actionData.params.lineRange;
     const moveCursor: 'before' | 'after' = actionData.params.moveCursor ?? 'after';
     const highlight: boolean = actionData.params.highlight ?? false;
 
@@ -718,7 +734,7 @@ export function handleFindText(actionData: ActionData): string | undefined {
     const regex = new RegExp(useRegex ? find : escapeRegExp(find), 'g');
     const cursorOffset = document.offsetAt(getVirtualCursor()!);
 
-    const matches = findAndFilter(regex, document.getText(), cursorOffset, match);
+    const matches = findAndFilter(regex, document, cursorOffset, match, lineRange);
     if (matches.length === 0)
         return 'No matches found for the given parameters.';
 
@@ -1004,15 +1020,30 @@ export function fileSaveListener(e: vscode.TextDocument) {
 }
 
 /**
- * Find matches in the text and filter based on the match option.
+ * Find matches in the document and filter based on the match option.
  * @param regex The regular expression to search for.
- * @param text The text to search in.
+ * @param document The document to search in.
  * @param cursorOffset The current cursor offset in the text.
  * @param match The match option from the {@link MATCH_OPTIONS} array.
+ * @param lineRange The line range to limit results to. If not specified, defaults to the entire file.
  * @returns The matches found in the text based on the match option.
  */
-function findAndFilter(regex: RegExp, text: string, cursorOffset: number, match: string): RegExpExecArray[] {
-    const matches = text.matchAll(regex);
+function findAndFilter(regex: RegExp, document: vscode.TextDocument, cursorOffset: number, match: string, lineRange: LineRange | undefined = undefined): RegExpExecArray[] {
+    const matchIterator = document.getText().matchAll(regex);
+    let matches: RegExpStringIterator<RegExpExecArray> | RegExpExecArray[];
+
+    if (lineRange) {
+        const minOffset = document.offsetAt(document.lineAt(lineRange.startLine - 1).range.start);
+        const maxOffset = document.offsetAt(document.lineAt(lineRange.endLine - 1).range.end);
+        matches = [];
+        for (const m of matchIterator)
+            matches.push(m);
+        matches = matches.filter(m => m.index >= minOffset && m.index <= maxOffset);
+    }
+    else {
+        matches = matchIterator;
+    }
+
     let result: RegExpExecArray[] = [];
 
     switch (match) {
