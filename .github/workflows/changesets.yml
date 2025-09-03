@@ -18,7 +18,7 @@ jobs:
   create-version-pr:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout (full history)
+      - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -35,15 +35,35 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-
-      - name: Create release PR (Changesets)
-        uses: changesets/action@v1
-        with:
-          # run the script that executes `changeset version --global-changelog`
-          version: 'pnpm run version:changesets'
-          title: 'release: version + CHANGELOG.md'
-          # **important**: open the version PR onto master even though we run on dev
-          # baseBranch: 'master'
-          createGithubReleases: 'false'
+      
+      - name: Set up Git + GH CLI
+        run: |
+          git config user.name GitHub Actions
+          git config user.email actions@github.com
+          gh auth token ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Modify CHANELOG.md
+        run: |
+          pnpm run version:changesets
+          git switch --create release
+          git add .changeset/
+          git add CHANGELOG.md
+          git add package.json
+          git commit -m "Bump NeuroPilot version"
+          git push --force
+      
+      - name: Create a PR
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BASE_BRANCH: master
+          HEAD_BRANCH: release
+        run: |
+          if gh pr list --base "$BASE_BRANCH" --head "$HEAD_BRANCH" --state open --json number --jq '.[0].number' | grep -q '[0-9]'; then
+            echo "A PR already exists."
+            exit 0
+          else
+            gh pr create \
+              --title "Bump NeuroPilot version" \
+              --body "This PR was opened to bump NeuroPilot. If you're not ready yet, leave this PR and continue adding commits to the dev branch. Changes will automatically be force-pushed here." \
+              --base "master" \
+              --reviewer Pasu4,KTrain5169
+          fi
