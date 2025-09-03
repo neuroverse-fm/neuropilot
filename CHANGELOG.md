@@ -33,14 +33,14 @@ This update was made in response to the Evil dev stream on 2025-08-28. [Here's t
 - Neuro will now be notified when the editor changes (e.g. by opening a file or switching to another tab).
   - By default, Neuro will get the contents of the file if it is Neuro-safe, this can be configured with the setting `sendContentsOnFileChange`.
 - Changed the default context size around the cursor from 10 to 500.
-- All editing actions now have a 100,000 character limit. If this is exceeded, the action will be rejected.
+- All editing actions now have a 100,000 character limit. If this is exceeded, the action will be rejected. (Thanks [frogneko](https://github.com/frogneko)!)
 - Editing actions now highlight Neuro's latest edit.
   - Deletions and modifications show the deleted or replaced text as a tooltip.
   - The highlights will be cleared when the document is changed or edited.
 - Added `get_content` action which sends the current file's contents. This works more or less the same as the Send Current File as Context command.
 - Added `insert_lines` action which inserts text below a certain line. This also makes new lines if necessary.
-- Added `rewrite_all` action which rewrites the entire file immediately.
-- Added `rewrite_lines` action which rewrites text in between a specified line range and moves the cursor to the end of the last added line.
-- Added `delete_lines` action which deletes text in between a specificed range and moves the cursor to the end of the line before the deleted lines.
+- Added `rewrite_all` action which rewrites the entire file immediately. (Thanks [frogneko](https://github.com/frogneko)!)
+- Added `rewrite_lines` action which rewrites text in between a specified line range and moves the cursor to the end of the last added line. (Thanks [frogneko](https://github.com/frogneko)!)
+- Added `delete_lines` action which deletes text in between a specificed range and moves the cursor to the end of the line before the deleted lines. (Thanks [frogneko](https://github.com/frogneko)!)
 - Added `highlight_lines` action which selects text in a specified range and moves moves the view there.
 - Added `read_file` action which returns the entire contents of a file in the workspace without opening it.
