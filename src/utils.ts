@@ -106,6 +106,8 @@ export interface NeuroPositionContext {
     startLine: number;
     /** The zero-based line where {@link contextAfter} ends. */
     endLine: number;
+    /** The number of total lines in the file. */
+    totalLines: number;
 }
 
 /**
@@ -141,6 +143,7 @@ export function getPositionContext(document: vscode.TextDocument, position: vsco
         contextBetween: filterFileContents(contextBetween),
         startLine: startLine,
         endLine: endLine,
+        totalLines: document.lineCount,
     };
 }
 

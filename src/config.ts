@@ -104,6 +104,8 @@ class Config {
     get defaultOpenDocsWindow(): string { return get('defaultOpenDocsWindow')!; }
     get disabledActions(): string[] { return get('disabledActions')!; }
     get sendContentsOnFileChange(): boolean { return get('sendContentsOnFileChange')!; }
+    get cursorPositionContextStyle(): string { return get('cursorPositionContextStyle')!; }
+    get lineNumberContextFormat(): string { return get('lineNumberContextFormat')!; }
 
     get terminals(): { name: string; path: string; args?: string[]; }[] { return get('terminals')!; }
 }

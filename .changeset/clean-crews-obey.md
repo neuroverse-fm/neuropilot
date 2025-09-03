@@ -20,6 +20,10 @@ This update was made in response to the Evil dev stream on 2025-08-28. [Here's t
 - Docs are now hosted at [a different subpage](https://vsc-neuropilot.github.io/docs) than before. While this isn't part of the extension itself, the link on the README file broke as a result of this change. This has now been fixed.
   - The way that the open docs commands work is slightly different, now having a dropdown to select instead of opening our own docs directly. This is in preparation for our public API for extending NeuroPilot.
   - For now, you'll be selecting the `NeuroPilot` option most/all of the time.
+- You can now optionally specify a format for line numbers in code context with the settings `lineNumberContextFormat`.
+  - The `find_text` action now also uses this format.
+- You can now specify how Neuro will get the cursor position with the setting `cursorPositionContextStyle`.
+- Code context now includes the total number of lines in the file.
 - The setting `cursorFollowsNeuro` now actually scrolls to the cursor position.
 - All actions can now be individually disabled using the new setting `disabledActions`.
 - Neuro will now be notified when the editor changes (e.g. by opening a file or switching to another tab).

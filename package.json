@@ -654,6 +654,42 @@
 						"type": "boolean",
 						"default": true,
 						"markdownDescription": "Send contents of a file to Neuro when you switch to it? If false, Neuro will still know what file you switched to, but won't get the contents. Neuro will never get the contents or the name of files that aren't Neuro-safe."
+					},
+					"neuropilot.cursorPositionContextStyle": {
+						"type": "string",
+						"default": "inline",
+						"markdownDescription": "The style to use for specifying the cursor position in context messages.",
+						"enum": [
+							"off",
+							"inline",
+							"lineAndColumn",
+							"both"
+						],
+						"enumItemLabels": [
+							"Off",
+							"Inline",
+							"Line and column",
+							"Inline + Line and column"
+						],
+						"markdownEnumDescriptions": [
+							"Cursor position will not be mentioned to Neuro",
+							"\"Cursor position denoted by `<<<|>>>`\"",
+							"\"Cursor is at 198:4\"",
+							"\"Cursor is at 198:4, denoted by `<<<|>>>`\""
+						]
+					},
+					"neuropilot.lineNumberContextFormat": {
+						"type": "string",
+						"default": "",
+						"markdownDescription": "The format to use for line numbers in context messages. This format will be prepended to every line. Use `{n}` for the line number. Edit in settings.json for examples.",
+						"examples": [
+							"",
+							"{n} ",
+							"{n}|",
+							"{n}: ",
+							"/* {n} */ ",
+							"L. {n}: "
+						]
 					}
 				}
 			}

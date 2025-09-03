@@ -486,16 +486,23 @@ export function handleGetContent(): string {
 
     const document = editor.document;
     const fileName = simpleFileName(document.fileName);
-    const language = document.languageId;
-    const text = document.getText();
-    const fence = getFence(text);
     const cursor = getVirtualCursor()!;
 
     if (!isPathNeuroSafe(document.fileName)) {
         return contextNoAccess(fileName);
     }
 
-    return `Contents of the file ${fileName} (Cursor at ${cursor.line + 1}:${cursor.character + 1}):\n\n${fence}${language}\n${text}\n${fence}`;
+    // Manually construct context to include entire file
+    const positionContext: NeuroPositionContext = {
+        contextBefore: document.getText(new vscode.Range(new vscode.Position(0, 0), cursor)),
+        contextAfter: document.getText(new vscode.Range(cursor, document.lineAt(document.lineCount - 1).rangeIncludingLineBreak.end)),
+        contextBetween: '',
+        startLine: 0,
+        endLine: document.lineCount - 1,
+        totalLines: document.lineCount,
+    };
+
+    return `Contents of the file ${fileName}:\n\n${formatContext(positionContext)}`;
 }
 
 export function handleInsertText(actionData: ActionData): string | undefined {
@@ -756,9 +763,11 @@ export function handleFindText(actionData: ActionData): string | undefined {
         const positions = matches.map(m => document.positionAt(m.index));
         const lines = positions.map(p => document.lineAt(p.line).text);
         // max(1, ...) because log10(0) is -Infinity
-        const padding = Math.max(1, Math.log10(positions[positions.length - 1].line + 1) + 1); // Space for the line number
+        // const padding = Math.max(1, Math.log10(positions[positions.length - 1].line + 1) + 1); // Space for the line number
         logOutput('INFO', `Found ${positions.length} matches`);
-        const text = lines.map((line, i) => `L. ${(positions[i].line + 1).toString().padStart(padding)}: ${line}`).join('\n');
+        // const text = lines.map((line, i) => `L. ${(positions[i].line + 1).toString().padStart(padding)}: ${line}`).join('\n');
+        const lineNumberContextFormat = CONFIG.lineNumberContextFormat;
+        const text = lines.map((line, i) => lineNumberContextFormat.replace('{n}', (positions[i].line + 1).toString()) + line).join('\n');
         const fence = getFence(text);
         return `Found ${positions.length} matches:\n\n${fence}\n${text}\n${fence}`;
     }
@@ -1082,7 +1091,41 @@ function findAndFilter(regex: RegExp, document: vscode.TextDocument, cursorOffse
 
 function formatContext(context: NeuroPositionContext): string {
     const fence = getFence(context.contextBefore + context.contextBetween + context.contextAfter);
-    return `File context (lines ${context.startLine + 1}-${context.endLine + 1}, cursor position denoted by \`<<<|>>>\`):\n\n${fence}\n${context.contextBefore}${context.contextBetween}<<<|>>>${context.contextAfter}\n${fence}`;
+    const rawContextBefore = context.contextBefore + context.contextBetween;
+    const rawContextAfter = context.contextAfter;
+    const lineNumberContextFormat = CONFIG.lineNumberContextFormat;
+    const lineNumberNote = lineNumberContextFormat.includes('{n}') ? 'Note that line numbers are not part of the source code. ' : '';
+
+    let n = 1;
+    let contextArray = [];
+    for (const line of rawContextBefore.split('\n')) {
+        contextArray.push(lineNumberContextFormat.replace('{n}', n.toString()) + line);
+        n++;
+    }
+    const contextBefore = contextArray.join('\n');
+    contextArray = [];
+
+    let first = true;
+    for (const line of rawContextAfter.split('\n')) {
+        if (first) {
+            contextArray.push(line);
+            first = false;
+            continue;
+        }
+        contextArray.push(lineNumberContextFormat.replace('{n}', n.toString()) + line);
+        n++;
+    }
+    const contextAfter = contextArray.join('\n');
+
+    const cursor = getVirtualCursor()!;
+    const showCursor = ['inline', 'both'].includes(CONFIG.cursorPositionContextStyle) ? '<<<|>>>' : '';
+    const cursorNote =
+        CONFIG.cursorPositionContextStyle === 'inline' ? 'Cursor position denoted by `<<<|>>>`. '
+        : CONFIG.cursorPositionContextStyle === 'lineAndColumn' ? `Cursor is at ${cursor.line + 1}:${cursor.character + 1}. `
+        : CONFIG.cursorPositionContextStyle === 'both' ? `Cursor is at ${cursor.line + 1}:${cursor.character + 1}, denoted by \`<<<|>>>\`. `
+        : '';
+
+    return `File context for lines ${context.startLine + 1}-${context.endLine + 1} of ${context.totalLines}. ${cursorNote}${lineNumberNote}Content:\n\n${fence}\n${contextBefore}${showCursor}${contextAfter}\n${fence}`;
 }
 
 let editorChangeHandlerTimeout: NodeJS.Timeout | undefined;

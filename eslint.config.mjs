@@ -49,7 +49,10 @@ export default tseslint.config(
             'curly': 'off',
             'no-control-regex': 'off',
             '@stylistic/semi': ['error', 'always'],
-            '@stylistic/indent': ['warn', 4],
+            '@stylistic/indent': ['warn', 4, {
+                'flatTernaryExpressions': true,
+                'SwitchCase': 1,
+            }],
             '@stylistic/comma-dangle': ['warn', 'always-multiline'],
             '@stylistic/eol-last': ['warn', 'always'],
             '@stylistic/no-extra-parens': ['warn', 'all'],
