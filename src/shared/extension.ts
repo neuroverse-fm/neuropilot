@@ -220,7 +220,9 @@ export function obtainExtensionState(): void {
     } else {
         EXTENSIONS.git = null;
     }
-    getGitExtension();
+    if (vscode.env.uiKind === vscode.UIKind.Desktop) {
+        getGitExtension();
+    }
 }
 
 export function deactivate() {
