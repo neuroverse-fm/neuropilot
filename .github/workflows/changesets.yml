@@ -63,7 +63,7 @@ jobs:
             exit 0
           else
             gh pr create \
-              --title "Bump NeuroPilot version" \
+              --title "release: new NeuroPilot version" \
               --body "This PR was opened to bump NeuroPilot. If you're not ready yet, leave this PR and continue adding commits to the dev branch. Changes will automatically be force-pushed here." \
               --base "master" \
               --reviewer Pasu4,KTrain5169
