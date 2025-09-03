@@ -506,8 +506,9 @@ export function showDiffRanges(editor: vscode.TextEditor, ...ranges: DiffRange[]
     }));
 }
 
-export function clearDiffRanges(editor: vscode.TextEditor) {
+export function clearDecorations(editor: vscode.TextEditor) {
     showDiffRanges(editor);
+    editor.setDecorations(NEURO.highlightDecorationType!, []);
 }
 
 /**

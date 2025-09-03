@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 
 import { NEURO } from '@/constants';
-import { DiffRangeType, escapeRegExp, getDiffRanges, getFence, getPositionContext, getProperty, getVirtualCursor, showDiffRanges, isPathNeuroSafe, logOutput, NeuroPositionContext, setVirtualCursor, simpleFileName, substituteMatch, clearDiffRanges } from '@/utils';
+import { DiffRangeType, escapeRegExp, getDiffRanges, getFence, getPositionContext, getProperty, getVirtualCursor, showDiffRanges, isPathNeuroSafe, logOutput, NeuroPositionContext, setVirtualCursor, simpleFileName, substituteMatch, clearDecorations } from '@/utils';
 import { ActionData, actionValidationAccept, actionValidationFailure, ActionValidationResult, RCEAction, contextFailure, stripToActions, actionValidationRetry, contextNoAccess } from '@/neuro_client_helper';
 import { PERMISSIONS, getPermissionLevel, CONFIG, isActionEnabled } from '@/config';
 
@@ -291,7 +291,7 @@ export const editingActions = {
         description: 'Find text in the active document.'
             + ' If you set "useRegex" to true, you can use a Regex in the "find" parameter.'
             + ' This will place your cursor directly before or after the found text (depending on "moveCursor"), unless you searched for multiple instances.'
-            + ' Set "highlight" to true to highlight the found text, if you want to draw Vedal\'s or Chat\'s attention to it (this only works when searching for a single instance).',
+            + ' Set "highlight" to true to highlight the found text, if you want to draw Vedal\'s or Chat\'s attention to it.',
         schema: {
             type: 'object',
             properties: {
@@ -751,8 +751,8 @@ export function handleFindText(actionData: ActionData): string | undefined {
         const endPosition = document.positionAt(matches[0].index + matches[0][0].length);
         setVirtualCursor(moveCursor === 'before' ? startPosition : endPosition);
         if (highlight) {
-            vscode.window.activeTextEditor!.selection = new vscode.Selection(startPosition, endPosition);
-            vscode.window.activeTextEditor!.revealRange(vscode.window.activeTextEditor!.selection, vscode.TextEditorRevealType.InCenterIfOutsideViewport);
+            vscode.window.activeTextEditor!.setDecorations(NEURO.highlightDecorationType!, [new vscode.Range(startPosition, endPosition)]);
+            vscode.window.activeTextEditor!.revealRange(new vscode.Range(startPosition, endPosition), vscode.TextEditorRevealType.InCenterIfOutsideViewport);
         }
         const cursorContext = getPositionContext(document, startPosition);
         logOutput('INFO', `Placed cursor at (${startPosition.line + 1}:${startPosition.character + 1})`);
@@ -766,6 +766,9 @@ export function handleFindText(actionData: ActionData): string | undefined {
         // const padding = Math.max(1, Math.log10(positions[positions.length - 1].line + 1) + 1); // Space for the line number
         logOutput('INFO', `Found ${positions.length} matches`);
         // const text = lines.map((line, i) => `L. ${(positions[i].line + 1).toString().padStart(padding)}: ${line}`).join('\n');
+        if (highlight) {
+            vscode.window.activeTextEditor!.setDecorations(NEURO.highlightDecorationType!, matches.map((match, i) => new vscode.Range(positions[i], document.positionAt(match.index + match[0].length))));
+        }
         const lineNumberContextFormat = CONFIG.lineNumberContextFormat;
         const text = lines.map((line, i) => lineNumberContextFormat.replace('{n}', (positions[i].line + 1).toString()) + line).join('\n');
         const fence = getFence(text);
@@ -780,7 +783,7 @@ export function handleUndo(_actionData: ActionData): string | undefined {
     if (!isPathNeuroSafe(document.fileName))
         return contextFailure(CONTEXT_NO_ACCESS);
 
-    clearDiffRanges(vscode.window.activeTextEditor!);
+    clearDecorations(vscode.window.activeTextEditor!);
 
     vscode.commands.executeCommand('undo').then(
         () => {
@@ -1008,8 +1011,8 @@ export function handleHighlightLines(actionData: ActionData): string | undefined
     const startPosition = new vscode.Position(startLine - 1, 0);
     const endPosition = new vscode.Position(endLine - 1, document.lineAt(endLine - 1).text.length);
 
-    editor!.selection = new vscode.Selection(startPosition, endPosition);
-    editor!.revealRange(editor!.selection, vscode.TextEditorRevealType.InCenterIfOutsideViewport);
+    editor!.setDecorations(NEURO.highlightDecorationType!, [new vscode.Range(startPosition, endPosition)]);
+    editor!.revealRange(new vscode.Range(startPosition, endPosition), vscode.TextEditorRevealType.InCenterIfOutsideViewport);
 
     return `Highlighted lines ${startLine}-${endLine}.`;
 }
@@ -1185,7 +1188,7 @@ export function workspaceEditHandler(event: vscode.TextDocumentChangeEvent) {
     if (!getPermissionLevel(PERMISSIONS.editActiveDocument)) return;
 
     // Diffs
-    clearDiffRanges(vscode.window.activeTextEditor);
+    clearDecorations(vscode.window.activeTextEditor);
 
     // Cursor stuff
     const initialCursorOffset = NEURO.cursorOffsets.get(event.document.uri);

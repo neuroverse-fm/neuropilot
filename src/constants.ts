@@ -70,6 +70,8 @@ interface Neuro {
     diffRemovedDecorationType: vscode.TextEditorDecorationType | null;
     /** Decoration type for modified lines. */
     diffModifiedDecorationType: vscode.TextEditorDecorationType | null;
+    /** Decoration type for highlighted text. */
+    highlightDecorationType: vscode.TextEditorDecorationType | null;
     /** Current name set as the API controller */
     currentController: string | null;
 }
@@ -101,6 +103,7 @@ export const NEURO: Neuro = {
     diffAddedDecorationType: null,
     diffRemovedDecorationType: null,
     diffModifiedDecorationType: null,
+    highlightDecorationType: null,
     currentController: null,
 };
 
