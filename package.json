@@ -4,7 +4,7 @@
 	"private": true,
 	"description": "Allows Neuro-sama to either act as a companion/copilot or control Visual Studio Code by herself.",
 	"icon": "assets/heart-xaendril.png",
-	"version": "2.0.3",
+	"version": "2.1.0",
 	"publisher": "Pasu4",
 	"repository": "https://github.com/VSC-NeuroPilot/neuropilot",
 	"homepage": "https://vsc-neuropilot.github.io/neuropilot",
@@ -754,6 +754,7 @@
 		"watch:desktop:tsc": "tsc --noEmit --watch --project tsconfig.app.json"
 	},
 	"devDependencies": {
+		"@changesets/cli": "^2.29.6",
 		"@eslint/js": "^9.13.0",
 		"@stylistic/eslint-plugin": "^2.9.0",
 		"@types/eslint__js": "^8.42.3",
