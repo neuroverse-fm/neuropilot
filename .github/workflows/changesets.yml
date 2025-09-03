@@ -36,11 +36,10 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
       
-      - name: Set up Git + GH CLI
+      - name: Set up Git
         run: |
           git config user.name GitHub Actions
           git config user.email actions@github.com
-          gh auth token ${{ secrets.GITHUB_TOKEN }}
       
       - name: Modify CHANELOG.md
         run: |
@@ -56,6 +55,7 @@ jobs:
         env:
           BASE_BRANCH: master
           HEAD_BRANCH: release
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           if gh pr list --base "$BASE_BRANCH" --head "$HEAD_BRANCH" --state open --json number --jq '.[0].number' | grep -q '[0-9]'; then
             echo "A PR already exists."
