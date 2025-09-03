@@ -168,7 +168,7 @@ function createLineRangeValidator(path = '') {
 export const editingActions = {
     place_cursor: {
         name: 'place_cursor',
-        description: 'Place the cursor in the current file. Absolute line and column numbers are one-based.',
+        description: 'Place the cursor in the current file at the specified position. Absolute line and column numbers are one-based.',
         schema: POSITION_SCHEMA,
         permissions: [PERMISSIONS.editActiveDocument],
         handler: handlePlaceCursor,
@@ -219,7 +219,7 @@ export const editingActions = {
         name: 'insert_lines',
         description: 'Insert code below a certain line.'
             + ' Defaults to your current cursor\'s location'
-            + ' Your cursor will be moved to the start of the line you want to insert.', // TODO: Clarify cursor stuff again
+            + ' Your cursor will be moved to the end of the inserted line.', // TODO: Clarify cursor stuff again
         schema: {
             type: 'object',
             properties: {
@@ -313,7 +313,7 @@ export const editingActions = {
     undo: {
         name: 'undo',
         description: 'Undo the last change made to the active document.'
-            + ' Your cursor will be moved depending on the action that was undone.'
+            + ' Where your cursor will be moved cannot be determined.' // It will move to the real cursor but thats kinda useless for her to know
             + ' If this doesn\'t work, tell Vedal to focus your VS Code window.',
         permissions: [PERMISSIONS.editActiveDocument],
         handler: handleUndo,
@@ -330,7 +330,7 @@ export const editingActions = {
     },
     rewrite_all: {
         name: 'rewrite_all',
-        description: 'Rewrite the entire contents of the file.',
+        description: 'Rewrite the entire contents of the file. Your cursor will be moved to the start of the file.',
         schema: {
             type: 'object',
             properties: {
@@ -369,7 +369,7 @@ export const editingActions = {
     },
     delete_lines: {
         name: 'delete_lines',
-        description: 'Delete everything in the specified line range. After deleting, your cursor will be placed at the end of the line before the deleted lines.',
+        description: 'Delete everything in the specified line range. After deleting, your cursor will be placed at the end of the line before the deleted lines, if possible.',
         schema: LINE_RANGE_SCHEMA,
         permissions: [PERMISSIONS.editActiveDocument],
         handler: handleDeleteLines,
