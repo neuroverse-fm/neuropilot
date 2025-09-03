@@ -64,6 +64,14 @@ interface Neuro {
     cursorOffsets: Map<vscode.Uri, number | null>;
     /** Decoration type for the virtual cursor. */
     cursorDecorationType: vscode.TextEditorDecorationType | null;
+    /** Decoration type for added lines. */
+    diffAddedDecorationType: vscode.TextEditorDecorationType | null;
+    /** Decoration type for removed lines. */
+    diffRemovedDecorationType: vscode.TextEditorDecorationType | null;
+    /** Decoration type for modified lines. */
+    diffModifiedDecorationType: vscode.TextEditorDecorationType | null;
+    /** Decoration type for highlighted text. */
+    highlightDecorationType: vscode.TextEditorDecorationType | null;
     /** Current name set as the API controller */
     currentController: string | null;
 }
@@ -92,6 +100,10 @@ export const NEURO: Neuro = {
     warnOnCompletionsOff: true,
     cursorOffsets: new Map(),
     cursorDecorationType: null,
+    diffAddedDecorationType: null,
+    diffRemovedDecorationType: null,
+    diffModifiedDecorationType: null,
+    highlightDecorationType: null,
     currentController: null,
 };
 

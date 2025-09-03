@@ -1,5 +1,7 @@
 # <img src="assets/heart-xaendril.png" width="32" style="vertical-align:middle;horizontal-align:middle;"> NeuroPilot
 
+As seen on TV (dev stream)!
+
 **Disclaimer: For simplicity, all mentions of Neuro also apply to Evil unless otherwise stated.**
 
 This extension enables Neuro-sama to write code in Visual Studio Code, either together with a programmer or on her own.
@@ -28,7 +30,7 @@ Capabilities of this extension include:
 These can all be turned on or off using the extension's permission settings.
 All permissions are set to "Off" by default, [except one](vscode://settings/neuropilot.permission.requestCookies).
 
-For more detailed documentation, visit [the docs site](https://vsc-neuropilot.github.io/neuropilot).
+For more detailed documentation, visit [the docs site](https://vsc-neuropilot.github.io/docs).
 We've recently migrated a lot of information there, so you're more likely to find the information you're looking for there.
 
 > [!WARNING]
@@ -99,7 +101,7 @@ The short answer is no, there isn't an intentional Remote Code Execution vulnera
 ## Debugging
 
 - Clone the repository
-- Run `npm install` in terminal to install dependencies
+- Run `pnpm install` in terminal to install dependencies
 - Run the `Run Extension` target in the Debug View. This will:
   - Start a task `npm: watch` to compile the code
   - Run the extension in a new VS Code window
