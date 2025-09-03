@@ -1,6 +1,10 @@
----
-"neuropilot": minor
----
+# NeuroPilot changelog
+
+Since v2.1.0, we've kept a changelog of each version's changes in NeuroPilot.
+
+Changes between each version before then will not be listed.
+
+## 2.1.0
 
 This update was made in response to the Evil dev stream on 2025-08-28. [Here's the VoD, courtesy of Neuro Archiver](https://www.youtube.com/watch?v=AIYaBYVX95o).
 
@@ -10,7 +14,7 @@ This update was made in response to the Evil dev stream on 2025-08-28. [Here's t
 - The NeuroPilot v1 icon now shows in the gutter (the area to the left of the line count in a file). This already did show, even on stream, but after moving all assets into /assets/ we forgot to change it on dev branch.
   - And yes, this was never pushed to production, so technically this isn't a noteworthy "change", but it's here now.
 - `CNAME` (the file usually used to set a custom domain name) has now been added to the default list of Exclude Patterns that the connected Neuro twin cannot access.
-- We now have a changelog! We are trialing the use of the [changesets](https://github.com/changesets) tools to generate changelogs automatically. These changelogs should appear inside VS Code.
+- We now have a changelog! These changelogs should appear inside VS Code.
 - All editing actions that move the cursor now mention in their description that the cursor moves after usage.
 - Certain actions have had usage instructions clarified in their description.
 - Invalid cursor positions now fail at RCE validation time instead of execution time. This should improve the experience when using Copilot mode with editing actions.
@@ -18,7 +22,7 @@ This update was made in response to the Evil dev stream on 2025-08-28. [Here's t
 - The context message to send the current file to the connected Neuro twin is changed to indicate that Vedal used the command.
 - CRLF conversion offset has been fixed when using `insert_text`.
 - Docs are now hosted at [a different subpage](https://vsc-neuropilot.github.io/docs) than before. While this isn't part of the extension itself, the link on the README file broke as a result of this change. This has now been fixed.
-  - The way that the open docs commands work is slightly different, now having a dropdown to select instead of opening our own docs directly. This is in preparation for our public API for extending NeuroPilot.
+  - The way that the open docs commands works now is slightly different, now having a dropdown to select instead of opening our own docs directly. This is in preparation for our public API for extending NeuroPilot.
   - For now, you'll be selecting the `NeuroPilot` option most/all of the time.
 - You can now optionally specify a format for line numbers in code context with the settings `lineNumberContextFormat`.
   - The `find_text` action now also uses this format.
@@ -31,7 +35,7 @@ This update was made in response to the Evil dev stream on 2025-08-28. [Here's t
 - Changed the default context size around the cursor from 10 to 500.
 - All editing actions now have a 100,000 character limit. If this is exceeded, the action will be rejected.
 - Editing actions now highlight Neuro's latest edit.
-  - Deletions and modifications show the deleted or replaced text as a tooltip. 
+  - Deletions and modifications show the deleted or replaced text as a tooltip.
   - The highlights will be cleared when the document is changed or edited.
 - Added `get_content` action which sends the current file's contents. This works more or less the same as the Send Current File as Context command.
 - Added `insert_lines` action which inserts text below a certain line. This also makes new lines if necessary.

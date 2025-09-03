@@ -754,7 +754,6 @@
 		"watch:desktop:tsc": "tsc --noEmit --watch --project tsconfig.app.json"
 	},
 	"devDependencies": {
-		"@changesets/cli": "^2.29.6",
 		"@eslint/js": "^9.13.0",
 		"@stylistic/eslint-plugin": "^2.9.0",
 		"@types/eslint__js": "^8.42.3",

@@ -6,6 +6,16 @@ permissions:
 on:
   workflow_dispatch:
     inputs:
+      version:
+        type: choice
+        description: 'Bump version'
+        required: true
+        default: 'patch'
+        options:
+          - 'major'
+          - 'minor'
+          - 'patch'
+          - 'none'
       update_docs:
         type: boolean
         description: 'Docs are up to date'
@@ -39,9 +49,11 @@ jobs:
         git config --global user.name "GitHub Actions"
         git config --global user.email "actions@github.com"
     
-    - name: Get version
-      id: ver
+    - name: Bump version
+      id: bump
+      if: inputs.version != 'none'
       run: |
+        pnpm version ${{ inputs.version }}
         echo VERSION=$(pnpm show ./ version) >> $GITHUB_OUTPUT
     
     - name: Build extension
@@ -52,12 +64,11 @@ jobs:
     - name: Upload VSIX file
       uses: actions/upload-artifact@v4
       with:
-        name: NeuroPilot ${{ steps.ver.outputs.VERSION }}
-        path: neuropilot-${{ steps.ver.outputs.VERSION }}.vsix
+        name: NeuroPilot ${{ steps.bump.outputs.VERSION }}
+        path: neuropilot-${{ steps.bump.outputs.VERSION }}.vsix
 
     - name: Commit and push version change
       run: |
-        git tag v${{ steps.ver.outputs.VERSION }}
         git push --follow-tags https://VSC-NeuroPilot:${{secrets.GITHUB_TOKEN}}:@github.com/VSC-NeuroPilot/neuropilot
     
     - name: Rebuild docs site
