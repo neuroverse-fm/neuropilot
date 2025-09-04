@@ -85,7 +85,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     environment:
-      name: VS Marketplace
+      name: Visual Studio Marketplace
       url: https://marketplace.visualstudio.com/item?itemName=Pasu4.neuropilot
     steps:
       - name: Checkout repo # why
