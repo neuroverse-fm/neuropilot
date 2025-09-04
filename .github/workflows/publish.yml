@@ -97,7 +97,6 @@ jobs:
         with:
           node-version: 'latest'
           cache: 'pnpm'
-          cache-dependency-path: './pnpm-lock.yaml'
       
       - name: Publish VSIX to VS Marketplace
         run: pnpm dlx @vscode/vsce publish -p ${{ secrets.MARKETPLACE_TOKEN }} --packagePath ${{ steps.vsce-vsix-down.outputs.download-path }}/neuropilot-${{ needs.build.outputs.VERSION }}.vsix
@@ -124,7 +123,6 @@ jobs:
         with:
           node-version: 'latest'
           cache: 'pnpm'
-          cache-dependency-path: './pnpm-lock.yaml'
       
       - name: Publish VSIX to Open VSX
         run: pnpm dlx ovsx publish -p ${{ secrets.REGISTRY_TOKEN }} --packagePath ${{ steps.ovsx-vsix-down.outputs.download-path }}/neuropilot-${{ needs.build.outputs.VERSION }}.vsix
