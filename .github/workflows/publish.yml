@@ -50,22 +50,23 @@ jobs:
         git config --global user.email "actions@github.com"
     
     - name: Bump version
-      id: bump
       if: inputs.version != 'none'
       run: |
         pnpm version ${{ inputs.version }}
-        echo VERSION=$(pnpm show ./ version) >> $GITHUB_OUTPUT
     
     - name: Build extension
+      id: build
       env:
         NODE_ENV: 1
-      run: pnpm vsce package --allow-star-activation --no-dependencies
+      run: |
+        echo VERSION=$(pnpm show ./ version) >> $GITHUB_OUTPUT
+        pnpm vsce package --allow-star-activation --no-dependencies
     
     - name: Upload VSIX file
       uses: actions/upload-artifact@v4
       with:
-        name: NeuroPilot ${{ steps.bump.outputs.VERSION }}
-        path: neuropilot-${{ steps.bump.outputs.VERSION }}.vsix
+        name: NeuroPilot ${{ steps.build.outputs.VERSION }}
+        path: neuropilot-${{ steps.build.outputs.VERSION }}.vsix
 
     - name: Commit and push version change
       run: |
@@ -73,6 +74,8 @@ jobs:
     
     - name: Rebuild docs site
       if: ${{ inputs.update_docs }}
+      env: 
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: gh workflow run bump.yml -f check=${{ inputs.update_docs }} --repo VSC-NeuroPilot/docs
   
   vsce-publish:
