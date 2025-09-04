@@ -107,7 +107,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     env:
-      name: Open VSX
+      name: Open VSX Registry
+      url: https://open-vsx.org/extension/pasu4/neuropilot
     steps:
       - name: Download VSIX
         id: ovsx-vsix-down
