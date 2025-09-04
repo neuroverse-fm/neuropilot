@@ -99,7 +99,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 'latest'
-          cache: 'pnpm'
       
       - name: Publish VSIX to VS Marketplace
         run: pnpm dlx @vscode/vsce publish -p ${{ secrets.MARKETPLACE_TOKEN }} --packagePath ${{ steps.vsce-vsix-down.outputs.download-path }}/neuropilot-${{ needs.build.outputs.VERSION }}.vsix
