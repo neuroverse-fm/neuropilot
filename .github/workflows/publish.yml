@@ -26,6 +26,8 @@ jobs:
   build:
     name: Build VSIX file
     runs-on: ubuntu-latest
+    outputs:
+      VERSION: ${{ steps.build.outputs.VERSION }}
     steps:
     - uses: actions/checkout@v4
 
