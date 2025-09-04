@@ -6,6 +6,7 @@ import { Action } from 'neuro-game-sdk';
 import { Permission, PermissionLevel } from '@/config';
 import { logOutput } from '@/utils';
 import { PromptGenerator } from '@/rce';
+import { Disposable } from 'vscode';
 
 /** Data used by an action handler. */
 export interface ActionData {
@@ -36,7 +37,13 @@ export interface RCEAction extends Action {
     /** The permissions required to execute this action. */
     permissions: Permission[];
     /** The function to validate the action data *after* checking the schema. */
-    validator?: (((actionData: ActionData) => ActionValidationResult) | ((actionData: ActionData) => Promise<ActionValidationResult>))[];
+    validators?: (((actionData: ActionData) => ActionValidationResult) | ((actionData: ActionData) => Promise<ActionValidationResult>))[];
+    /**
+     * Cancellation events attached to the action that will be automatically set up.
+     * Each cancellation event will be setup in parallel to each other.
+     * If one cancellation event fires, the request is cancelled and all listeners will be disposed.
+     */
+    cancelEvents?: (() => Disposable)[];
     /** The function to handle the action. */
     handler: (actionData: ActionData) => string | undefined;
     /** 

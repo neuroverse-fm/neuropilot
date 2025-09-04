@@ -72,7 +72,7 @@ export const lintActions = {
         },
         permissions: [PERMISSIONS.accessLintingAnalysis],
         handler: handleGetFileLintProblems,
-        validator: [validateDirectoryAccess],
+        validators: [validateDirectoryAccess],
         promptGenerator: (actionData: ActionData) => `get linting diagnostics for "${actionData.params.file}".`,
     },
     get_folder_lint_problems: {
@@ -88,7 +88,7 @@ export const lintActions = {
         },
         permissions: [PERMISSIONS.accessLintingAnalysis],
         handler: handleGetFolderLintProblems,
-        validator: [validateDirectoryAccess],
+        validators: [validateDirectoryAccess],
         promptGenerator: (actionData: ActionData) => `get linting diagnostics for "${actionData.params.folder}".`,
     },
     get_workspace_lint_problems: {
@@ -96,7 +96,7 @@ export const lintActions = {
         description: 'Gets linting diagnostics for the current workspace.',
         permissions: [PERMISSIONS.accessLintingAnalysis],
         handler: handleGetWorkspaceLintProblems,
-        validator: [() => {
+        validators: [() => {
             const workspace = getWorkspacePath();
             if (!workspace) {
                 return actionValidationFailure('Unable to get current workspace.');

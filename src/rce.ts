@@ -252,7 +252,7 @@ export async function RCEActionHandler(actionData: ActionData, actionList: Recor
                 description: task.description,
                 permissions: [PERMISSIONS.runTasks],
                 handler: handleRunTask,
-                validator: [checkVirtualWorkspace, checkWorkspaceTrust],
+                validators: [checkVirtualWorkspace, checkWorkspaceTrust],
                 promptGenerator: () => `run the task "${task.id}".`,
             };
         }
@@ -284,8 +284,8 @@ export async function RCEActionHandler(actionData: ActionData, actionList: Recor
         }
 
         // Validate custom
-        if (action.validator) {
-            for (const validate of action.validator) {
+        if (action.validators) {
+            for (const validate of action.validators) {
                 const actionResult = await validate(actionData);
                 if (!actionResult.success) {
                     NEURO.client?.sendActionResult(actionData.id, !(actionResult.retry ?? false), actionResult.message);

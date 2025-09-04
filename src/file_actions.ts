@@ -89,7 +89,7 @@ export const fileActions = {
         description: 'Get a list of files in the workspace',
         permissions: [PERMISSIONS.openFiles],
         handler: handleGetFiles,
-        validator: [() => {
+        validators: [() => {
             const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
             if (workspaceFolder === undefined)
                 return actionValidationFailure('No open workspace to get files from.');
@@ -111,7 +111,7 @@ export const fileActions = {
         },
         permissions: [PERMISSIONS.openFiles],
         handler: handleOpenFile,
-        validator: [neuroSafeValidation, binaryFileValidation],
+        validators: [neuroSafeValidation, binaryFileValidation],
         promptGenerator: (actionData: ActionData) => `open the file "${actionData.params?.filePath}".`,
     },
     read_file: {
@@ -127,7 +127,7 @@ export const fileActions = {
         },
         permissions: [PERMISSIONS.openFiles],
         handler: handleReadFile,
-        validator: [neuroSafeValidation, binaryFileValidation],
+        validators: [neuroSafeValidation, binaryFileValidation],
         promptGenerator: (actionData: ActionData) => `read the file "${actionData.params?.filePath}" (without opening it).`,
     },
     create_file: {
@@ -143,7 +143,7 @@ export const fileActions = {
         },
         permissions: [PERMISSIONS.create],
         handler: handleCreateFile,
-        validator: [neuroSafeValidation],
+        validators: [neuroSafeValidation],
         promptGenerator: (actionData: ActionData) => `create the file "${actionData.params?.filePath}".`,
     },
     create_folder: {
@@ -159,7 +159,7 @@ export const fileActions = {
         },
         permissions: [PERMISSIONS.create],
         handler: handleCreateFolder,
-        validator: [neuroSafeValidation],
+        validators: [neuroSafeValidation],
         promptGenerator: (actionData: ActionData) => `create the folder "${actionData.params?.folderPath}".`,
     },
     rename_file_or_folder: {
@@ -176,7 +176,7 @@ export const fileActions = {
         },
         permissions: [PERMISSIONS.rename],
         handler: handleRenameFileOrFolder,
-        validator: [neuroSafeRenameValidation],
+        validators: [neuroSafeRenameValidation],
         promptGenerator: (actionData: ActionData) => `rename "${actionData.params?.oldPath}" to "${actionData.params?.newPath}".`,
     },
     delete_file_or_folder: {
@@ -193,7 +193,7 @@ export const fileActions = {
         },
         permissions: [PERMISSIONS.delete],
         handler: handleDeleteFileOrFolder,
-        validator: [neuroSafeDeleteValidation],
+        validators: [neuroSafeDeleteValidation],
         promptGenerator: (actionData: ActionData) => `delete "${actionData.params?.pathToDelete}".`,
     },
 } satisfies Record<string, RCEAction>;

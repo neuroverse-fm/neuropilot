@@ -19,7 +19,7 @@ export const taskHandlers = {
         permissions: [PERMISSIONS.runTasks],
         handler: handleTerminateTask,
         promptGenerator: 'terminate the currently running task.',
-        validator: [checkVirtualWorkspace, checkWorkspaceTrust, () => NEURO.currentTaskExecution !== null
+        validators: [checkVirtualWorkspace, checkWorkspaceTrust, () => NEURO.currentTaskExecution !== null
             ? actionValidationAccept()
             : actionValidationFailure('No task to terminate.')],
     },
