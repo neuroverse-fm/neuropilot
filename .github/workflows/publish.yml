@@ -125,7 +125,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 'latest'
-          cache: 'pnpm'
       
       - name: Publish VSIX to Open VSX
         run: pnpm dlx ovsx publish -p ${{ secrets.REGISTRY_TOKEN }} --packagePath ${{ steps.ovsx-vsix-down.outputs.download-path }}/neuropilot-${{ needs.build.outputs.VERSION }}.vsix
