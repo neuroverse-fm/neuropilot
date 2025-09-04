@@ -1,18 +1,32 @@
 import * as vscode from 'vscode';
-import * as path from 'path';
-import { NEURO } from './constants';
-import { GitExtension, Change, ForcePushMode, CommitOptions, Commit, Repository } from './types/git';
-import { StatusStrings, RefTypeStrings } from './types/git_status';
-import { logOutput, simpleFileName, isPathNeuroSafe, normalizePath } from './utils';
-import { ActionData, ActionValidationResult, actionValidationAccept, actionValidationFailure, ActionWithHandler, contextFailure, stripToActions } from './neuro_client_helper';
-import { PERMISSIONS, getPermissionLevel } from './config';
-import assert from 'assert';
+import { EXTENSIONS, NEURO } from '@/constants';
+import type { Change, CommitOptions, Commit, Repository, API } from '@typing/git.d';
+import { ForcePushMode } from '@typing/git.d';
+import { StatusStrings, RefTypeStrings } from '@typing/git_status';
+import { logOutput, simpleFileName, isPathNeuroSafe, normalizePath, getWorkspacePath } from '@/utils';
+import { ActionData, ActionValidationResult, actionValidationAccept, actionValidationFailure, RCEAction, contextFailure, stripToActions, actionValidationRetry } from '@/neuro_client_helper';
+import { PERMISSIONS, getPermissionLevel, isActionEnabled } from '@/config';
+import assert from 'node:assert';
 
 /* All actions located in here requires neuropilot.permission.gitOperations to be enabled. */
 
 // Get the Git extension
-const gitExtension = vscode.extensions.getExtension<GitExtension>('vscode.git')!.exports;
-const git = gitExtension.getAPI(1);
+let git: API | null = null;
+let repo: Repository | null = null;
+
+export function getGitExtension() {
+    NEURO.client?.unregisterActions(Object.keys(gitActions));
+    if (EXTENSIONS.git) {
+        git = EXTENSIONS.git.getAPI(1);
+        logOutput('DEBUG', 'Git extension obtained.');
+        repo = git.repositories[0];
+        logOutput('DEBUG', 'Git repo obtained (if any).');
+        registerGitActions();
+    } else {
+        git = null;
+        repo = null;
+    }
+}
 
 function gitValidator(_actionData: ActionData): ActionValidationResult {
     if (!git)
@@ -23,18 +37,35 @@ function gitValidator(_actionData: ActionData): ActionValidationResult {
     return actionValidationAccept();
 }
 
-function neuroSafeGitValidator(actionData: ActionData): ActionValidationResult {
+async function neuroSafeValidationHelper(filePath: string): Promise<ActionValidationResult> {
+    const absolutePath = getAbsoluteFilePath(filePath);
+    if (!isPathNeuroSafe(absolutePath)) {
+        return actionValidationFailure('You are not allowed to access this file path.');
+    }
+
+    const fileUri = vscode.Uri.file(absolutePath);
+    try {
+        await vscode.workspace.fs.stat(fileUri);
+        return actionValidationAccept();
+    } catch {
+        return actionValidationFailure(`File ${filePath} does not exist.`);
+    }
+}
+
+async function filePathGitValidator(actionData: ActionData): Promise<ActionValidationResult> {
+    if (actionData.params.filePath === '') {
+        return actionValidationFailure('No file path specified.', true);
+    };
+
     const filePath: string | string[] = actionData.params?.filePath;
     if (typeof filePath === 'string') {
-        if (!isPathNeuroSafe(getAbsoluteFilePath(filePath))) {
-            return actionValidationFailure('You are not allowed to access this file path.');
-        }
+        const result = await neuroSafeValidationHelper(filePath);
+        if (!result.success) return result;
     }
     else if (Array.isArray(filePath)) {
         for (const file of filePath) {
-            if (!isPathNeuroSafe(getAbsoluteFilePath(file))) {
-                return actionValidationFailure('You are not allowed to access this file path.');
-            }
+            const result = await neuroSafeValidationHelper(file);
+            if (!result.success) return result;
         }
     }
 
@@ -53,7 +84,7 @@ function gitDiffValidator(actionData: ActionData): ActionValidationResult {
             if (actionData.params?.ref1 && actionData.params?.ref2) {
                 return actionValidationAccept('Only "ref1" is needed for the "diffWith" diff type.');
             } else if (!actionData.params?.ref1) {
-                return actionValidationFailure('"ref1" is required for the diff type of "diffWith"', true);
+                return actionValidationRetry('"ref1" is required for the diff type of "diffWith"');
             } else {
                 return actionValidationAccept();
             }
@@ -66,13 +97,13 @@ function gitDiffValidator(actionData: ActionData): ActionValidationResult {
             if (actionData.params?.ref1 && actionData.params?.ref2) {
                 return actionValidationAccept('Only "ref1" is needed for the "diffIndexWith" diff type.');
             } else if (!actionData.params?.ref1) {
-                return actionValidationFailure('"ref1" is required for the diff type of "diffIndexWith"', true);
+                return actionValidationRetry('"ref1" is required for the diff type of "diffIndexWith"');
             } else {
                 return actionValidationAccept();
             }
         case 'diffBetween':
             if (!actionData.params?.ref1 || !actionData.params?.ref2) {
-                return actionValidationFailure('"ref1" AND "ref2" is required for the diff type of "diffWith"', true);
+                return actionValidationRetry('"ref1" AND "ref2" is required for the diff type of "diffWith"');
             } else {
                 return actionValidationAccept();
             }
@@ -112,11 +143,12 @@ export const gitActions = {
                 },
             },
             required: ['filePath'],
+            additionalProperties: false,
         },
         permissions: [PERMISSIONS.gitOperations],
         handler: handleAddFileToGit,
         promptGenerator: (actionData: ActionData) => `add the file "${actionData.params.filePath}" to the staging area.`,
-        validator: [gitValidator, neuroSafeGitValidator],
+        validator: [gitValidator, filePathGitValidator],
     },
     make_git_commit: {
         name: 'make_git_commit',
@@ -131,6 +163,7 @@ export const gitActions = {
                 },
             },
             required: ['message'],
+            additionalProperties: false,
         },
         permissions: [PERMISSIONS.gitOperations],
         handler: handleMakeGitCommit,
@@ -146,6 +179,7 @@ export const gitActions = {
                 ref_to_merge: { type: 'string' },
             },
             required: ['ref_to_merge'],
+            additionalProperties: false,
         },
         permissions: [PERMISSIONS.gitOperations],
         handler: handleGitMerge,
@@ -157,7 +191,7 @@ export const gitActions = {
         description: 'Get the current status of the Git repository',
         permissions: [PERMISSIONS.gitOperations],
         handler: handleGitStatus,
-        promptGenerator: 'get the Git status.',
+        promptGenerator: 'get the repository\'s Git status.',
         validator: [gitValidator],
     },
     remove_file_from_git: {
@@ -174,11 +208,12 @@ export const gitActions = {
                 },
             },
             required: ['filePath'],
+            additionalProperties: false,
         },
         permissions: [PERMISSIONS.gitOperations],
         handler: handleRemoveFileFromGit,
         promptGenerator: (actionData: ActionData) => `remove the file "${actionData.params.filePath}" from the staging area.`,
-        validator: [gitValidator, neuroSafeGitValidator],
+        validator: [gitValidator, filePathGitValidator],
     },
     delete_git_branch: {
         name: 'delete_git_branch',
@@ -190,6 +225,7 @@ export const gitActions = {
                 force: { type: 'boolean' },
             },
             required: ['branchName'],
+            additionalProperties: false,
         },
         permissions: [PERMISSIONS.gitOperations],
         handler: handleDeleteGitBranch,
@@ -205,6 +241,7 @@ export const gitActions = {
                 branchName: { type: 'string' },
             },
             required: ['branchName'],
+            additionalProperties: false,
         },
         permissions: [PERMISSIONS.gitOperations],
         handler: handleSwitchGitBranch,
@@ -220,6 +257,7 @@ export const gitActions = {
                 branchName: { type: 'string' },
             },
             required: ['branchName'],
+            additionalProperties: false,
         },
         permissions: [PERMISSIONS.gitOperations],
         handler: handleNewGitBranch,
@@ -237,11 +275,12 @@ export const gitActions = {
                 filePath: { type: 'string' },
                 diffType: { type: 'string', enum: ['diffWithHEAD', 'diffWith', 'diffIndexWithHEAD', 'diffIndexWith', 'diffBetween', 'fullDiff'] },
             },
+            additionalProperties: false,
         },
         permissions: [PERMISSIONS.gitOperations],
         handler: handleDiffFiles,
         promptGenerator: (actionData: ActionData) => `obtain ${actionData.params?.filePath ? `"${actionData.params.filePath}"'s` : 'a'} Git diff${actionData.params?.ref1 && actionData.params?.ref2 ? ` between ${actionData.params.ref1} and ${actionData.params.ref2}` : actionData.params?.ref1 ? ` at ref ${actionData.params.ref1}` : ''}${actionData.params?.diffType ? ` (of type "${actionData.params.diffType}")` : ''}.`,
-        validator: [gitValidator, neuroSafeGitValidator, gitDiffValidator],
+        validator: [gitValidator, filePathGitValidator, gitDiffValidator],
     },
     git_log: {
         name: 'git_log',
@@ -254,6 +293,7 @@ export const gitActions = {
                     minimum: 1,
                 },
             },
+            additionalProperties: false,
         },
         permissions: [PERMISSIONS.gitOperations],
         handler: handleGitLog,
@@ -269,11 +309,12 @@ export const gitActions = {
                 filePath: { type: 'string' },
             },
             required: ['filePath'],
+            additionalProperties: false,
         },
         permissions: [PERMISSIONS.gitOperations],
         handler: handleGitBlame,
         promptGenerator: (actionData: ActionData) => `get the Git blame for the file "${actionData.params.filePath}".`,
-        validator: [gitValidator, neuroSafeGitValidator],
+        validator: [gitValidator, filePathGitValidator],
     },
 
     // Requires gitTags
@@ -287,6 +328,7 @@ export const gitActions = {
                 upstream: { type: 'string' },
             },
             required: ['name', 'upstream'],
+            additionalProperties: false,
         },
         permissions: [PERMISSIONS.gitOperations, PERMISSIONS.gitTags],
         handler: handleTagHEAD,
@@ -302,6 +344,7 @@ export const gitActions = {
                 name: { type: 'string' },
             },
             required: ['name'],
+            additionalProperties: false,
         },
         permissions: [PERMISSIONS.gitOperations, PERMISSIONS.gitTags],
         handler: handleDeleteTag,
@@ -320,6 +363,7 @@ export const gitActions = {
                 value: { type: 'string' },
             },
             required: ['key', 'value'],
+            additionalProperties: false,
         },
         permissions: [PERMISSIONS.gitOperations, PERMISSIONS.gitConfigs],
         handler: handleSetGitConfig,
@@ -334,6 +378,7 @@ export const gitActions = {
             properties: {
                 key: { type: 'string' },
             },
+            additionalProperties: false,
         },
         permissions: [PERMISSIONS.gitOperations, PERMISSIONS.gitConfigs],
         handler: handleGetGitConfig,
@@ -351,6 +396,7 @@ export const gitActions = {
                 remoteName: { type: 'string' },
                 branchName: { type: 'string' },
             },
+            additionalProperties: false,
         },
         permissions: [PERMISSIONS.gitOperations, PERMISSIONS.gitRemotes],
         handler: handleFetchGitCommits,
@@ -383,6 +429,7 @@ export const gitActions = {
                 branchName: { type: 'string' },
                 forcePush: { type: 'boolean' },
             },
+            additionalProperties: false,
         },
         permissions: [PERMISSIONS.gitOperations, PERMISSIONS.gitRemotes],
         handler: handlePushGitCommits,
@@ -410,6 +457,7 @@ export const gitActions = {
                 remoteURL: { type: 'string' },
             },
             required: ['remoteName', 'remoteURL'],
+            additionalProperties: false,
         },
         permissions: [PERMISSIONS.gitOperations, PERMISSIONS.gitRemotes, PERMISSIONS.editRemoteData],
         handler: handleAddGitRemote,
@@ -425,6 +473,7 @@ export const gitActions = {
                 remoteName: { type: 'string' },
             },
             required: ['remoteName'],
+            additionalProperties: false,
         },
         permissions: [PERMISSIONS.gitOperations, PERMISSIONS.gitRemotes, PERMISSIONS.editRemoteData],
         handler: handleRemoveGitRemote,
@@ -441,6 +490,7 @@ export const gitActions = {
                 newRemoteName: { type: 'string' },
             },
             required: ['oldRemoteName', 'newRemoteName'],
+            additionalProperties: false,
         },
         permissions: [PERMISSIONS.gitOperations, PERMISSIONS.gitRemotes, PERMISSIONS.editRemoteData],
         handler: handleRenameGitRemote,
@@ -454,10 +504,10 @@ export const gitActions = {
         promptGenerator: 'abort the current merge operation.',
         validator: [gitValidator],
     },
-} satisfies Record<string, ActionWithHandler>;
+} satisfies Record<string, RCEAction>;
 
 // Get the current Git repository
-let repo: Repository | undefined = git.repositories[0];
+// let repo: Repository | undefined = git.repositories[0];
 // Handle git repo checks in each handler
 // eg.
 // if (!git)
@@ -465,68 +515,70 @@ let repo: Repository | undefined = git.repositories[0];
 
 // Register all git commands
 export function registerGitActions() {
-    if (getPermissionLevel(PERMISSIONS.gitOperations)) {
-        NEURO.client?.registerActions(stripToActions([
-            gitActions.init_git_repo,
-        ]));
+    if (git) {
+        if (getPermissionLevel(PERMISSIONS.gitOperations)) {
+            NEURO.client?.registerActions(stripToActions([
+                gitActions.init_git_repo,
+            ]).filter(isActionEnabled));
 
-        const root = vscode.workspace.workspaceFolders?.[0].uri;
-        if (!root) return;
+            const root = vscode.workspace.workspaceFolders?.[0].uri;
+            if (!root) return;
 
-        git.openRepository(root).then((r) => {
-            if (r === null) {
-                repo = undefined;
-                return;
-            }
-
-            repo = r;
-
-            if (repo) {
-                NEURO.client?.registerActions(stripToActions([
-                    gitActions.add_file_to_git,
-                    gitActions.make_git_commit,
-                    gitActions.merge_to_current_branch,
-                    gitActions.git_status,
-                    gitActions.remove_file_from_git,
-                    gitActions.delete_git_branch,
-                    gitActions.switch_git_branch,
-                    gitActions.new_git_branch,
-                    gitActions.diff_files,
-                    gitActions.git_log,
-                    gitActions.git_blame,
-                ]));
-
-                if (getPermissionLevel(PERMISSIONS.gitTags)) {
-                    NEURO.client?.registerActions(stripToActions([
-                        gitActions.tag_head,
-                        gitActions.delete_tag,
-                    ]));
+            git.openRepository(root).then((r) => {
+                if (r === null) {
+                    repo = null;
+                    return;
                 }
 
-                if (getPermissionLevel(PERMISSIONS.gitConfigs)) {
-                    NEURO.client?.registerActions(stripToActions([
-                        gitActions.set_git_config,
-                        gitActions.get_git_config,
-                    ]));
-                }
+                repo = r;
 
-                if (getPermissionLevel(PERMISSIONS.gitRemotes)) {
+                if (repo) {
                     NEURO.client?.registerActions(stripToActions([
-                        gitActions.fetch_git_commits,
-                        gitActions.pull_git_commits,
-                        gitActions.push_git_commits,
-                    ]));
+                        gitActions.add_file_to_git,
+                        gitActions.make_git_commit,
+                        gitActions.merge_to_current_branch,
+                        gitActions.git_status,
+                        gitActions.remove_file_from_git,
+                        gitActions.delete_git_branch,
+                        gitActions.switch_git_branch,
+                        gitActions.new_git_branch,
+                        gitActions.diff_files,
+                        gitActions.git_log,
+                        gitActions.git_blame,
+                    ]).filter(isActionEnabled));
 
-                    if (getPermissionLevel(PERMISSIONS.editRemoteData)) {
+                    if (getPermissionLevel(PERMISSIONS.gitTags)) {
                         NEURO.client?.registerActions(stripToActions([
-                            gitActions.add_git_remote,
-                            gitActions.remove_git_remote,
-                            gitActions.rename_git_remote,
-                        ]));
+                            gitActions.tag_head,
+                            gitActions.delete_tag,
+                        ]).filter(isActionEnabled));
+                    }
+
+                    if (getPermissionLevel(PERMISSIONS.gitConfigs)) {
+                        NEURO.client?.registerActions(stripToActions([
+                            gitActions.set_git_config,
+                            gitActions.get_git_config,
+                        ]).filter(isActionEnabled));
+                    }
+
+                    if (getPermissionLevel(PERMISSIONS.gitRemotes)) {
+                        NEURO.client?.registerActions(stripToActions([
+                            gitActions.fetch_git_commits,
+                            gitActions.pull_git_commits,
+                            gitActions.push_git_commits,
+                        ]).filter(isActionEnabled));
+
+                        if (getPermissionLevel(PERMISSIONS.editRemoteData)) {
+                            NEURO.client?.registerActions(stripToActions([
+                                gitActions.add_git_remote,
+                                gitActions.remove_git_remote,
+                                gitActions.rename_git_remote,
+                            ]).filter(isActionEnabled));
+                        }
                     }
                 }
-            }
-        });
+            });
+        }
     }
 }
 
@@ -542,8 +594,8 @@ export function handleNewGitRepo(_actionData: ActionData): string | undefined {
 
     const folderPath = workspaceFolders[0].uri.fsPath;
 
-    git.init(vscode.Uri.file(folderPath)).then(() => {
-        repo = git.repositories[0]; // Update the repo reference to the new repository, just in case
+    git!.init(vscode.Uri.file(folderPath)).then(() => {
+        repo = git!.repositories[0]; // Update the repo reference to the new repository, just in case
         registerGitActions(); // Re-register commands
         NEURO.client?.sendContext('Initialized a new Git repository in the workspace folder. You should now be able to use git commands.');
     }, (erm: string) => {
@@ -729,15 +781,11 @@ export function handleGitStatus(__actionData: ActionData): string | undefined {
 }
 
 // Helper to convert a provided file path (or wildcard) to an absolute path using the workspace folder (or repo root if not available)
-function getAbsoluteFilePath(filePath: string | undefined): string {
-    // Normalize the file path if provided; otherwise, use wildcard.
-    const normalizedPath: string = filePath ? normalizePath(filePath) : '*';
+function getAbsoluteFilePath(filePath = '.'): string {
     // Get the workspace folder; if not available, fall back to repo root.
-    const workspaceFolder = vscode.workspace.workspaceFolders?.[0].uri.fsPath || repo!.rootUri.fsPath;
+    const workspaceFolder = getWorkspacePath() || repo!.rootUri.fsPath;
     // Compute absolute path by joining the workspace folder with the normalized path.
-    return path.isAbsolute(normalizedPath)
-        ? normalizedPath
-        : path.join(workspaceFolder, normalizedPath);
+    return normalizePath(workspaceFolder + '/' + filePath);
 }
 
 export function handleAddFileToGit(actionData: ActionData): string | undefined {

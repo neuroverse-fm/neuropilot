@@ -5,7 +5,7 @@ import globals from 'globals';
 
 export default tseslint.config(
     {
-        files: ['**/*.{js,mjs,cjs,ts}'],
+        files: ['**/*.{js,mjs,cjs,ts,mts,cts}'],
         ignores: [
             'out',
             'playground/**',
@@ -43,6 +43,12 @@ export default tseslint.config(
                     'argsIgnorePattern': '^_',
                 },
             ],
+        },
+        languageOptions: {
+            parserOptions: {
+                tsconfigRootDir: import.meta.dirname,
+                project: './tsconfig.json',
+            },
         },
     },
     {

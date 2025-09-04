@@ -5,20 +5,38 @@
  */
 // @ts-check
 import js from '@eslint/js';
+import { globalIgnores } from 'eslint/config';
 import tseslint from 'typescript-eslint';
 import stylistic from '@stylistic/eslint-plugin';
 import eslintPluginUnicorn from 'eslint-plugin-unicorn';
+import globals from 'globals';
 
 export default tseslint.config(
     {
-        files: ['**/*.{js,mjs,cjs,ts}'],
+        files: ['**/*.{js,mjs,cjs,ts,mts,cts}'],
         ignores: [
             'out/**',
             'playground/**',
             '**/vscode*.d.ts',
+            'esbuild.{m,c,}js',
             'docs',
+            'src/types/**/*.d.ts',
+            'project-files/**/*',
+            '**/dist/**',
         ],
     },
+    globalIgnores([
+        'out/**',
+        '**/dist/**',
+        'playground/**',
+        '**/vscode*.d.ts',
+        'docs',
+        '**/.venv/**',
+        '**/venv/**',
+        '**/.vscode-test/**',
+        'src/types/**/*.d.ts',
+        'project-files/**/*',
+    ]),
     js.configs.recommended,
     ...tseslint.configs.recommended,
     ...tseslint.configs.stylistic,
@@ -31,7 +49,10 @@ export default tseslint.config(
             'curly': 'off',
             'no-control-regex': 'off',
             '@stylistic/semi': ['error', 'always'],
-            '@stylistic/indent': ['warn', 4],
+            '@stylistic/indent': ['warn', 4, {
+                'flatTernaryExpressions': true,
+                'SwitchCase': 1,
+            }],
             '@stylistic/comma-dangle': ['warn', 'always-multiline'],
             '@stylistic/eol-last': ['warn', 'always'],
             '@stylistic/no-extra-parens': ['warn', 'all'],
@@ -58,6 +79,24 @@ export default tseslint.config(
                     'name': 'erm',
                 },
             ],
+        },
+        languageOptions: {
+            parserOptions: {
+                tsconfigRootDir: import.meta.dirname,
+                project: './tsconfig.json',
+            },
+        },
+    },
+    {
+        files: ['esbuild.mjs', '**/*.esbuild.{m,c,}js'],
+        languageOptions: {
+            globals: {
+                ...globals.node,
+                ...globals.browser,
+            },
+            parserOptions: {
+                project: null,
+            },
         },
     },
 );

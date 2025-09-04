@@ -3,9 +3,9 @@
  */
 
 import { Action } from 'neuro-game-sdk';
-import { Permission, PermissionLevel } from './config';
-import { logOutput } from './utils';
-import { PromptGenerator } from './rce';
+import { Permission, PermissionLevel } from '@/config';
+import { logOutput } from '@/utils';
+import { PromptGenerator } from '@/rce';
 
 /** Data used by an action handler. */
 export interface ActionData {
@@ -32,11 +32,11 @@ export interface ActionValidationResult {
 }
 
 /** ActionHandler to use with constants for records of actions and their corresponding handlers */
-export interface ActionWithHandler extends Action {
+export interface RCEAction extends Action {
     /** The permissions required to execute this action. */
     permissions: Permission[];
     /** The function to validate the action data *after* checking the schema. */
-    validator?: ((actionData: ActionData) => ActionValidationResult)[];
+    validator?: (((actionData: ActionData) => ActionValidationResult) | ((actionData: ActionData) => Promise<ActionValidationResult>))[];
     /** The function to handle the action. */
     handler: (actionData: ActionData) => string | undefined;
     /** 
@@ -55,7 +55,7 @@ export interface ActionWithHandler extends Action {
  * @param action The action to strip to its basic form.
  * @returns The action stripped to its basic form, without the handler and permissions.
  */
-export function stripToAction(action: ActionWithHandler): Action {
+export function stripToAction(action: RCEAction): Action {
     return {
         name: action.name,
         description: action.description,
@@ -69,7 +69,7 @@ export function stripToAction(action: ActionWithHandler): Action {
  * @param actions The actions to strip to their basic form.
  * @returns An array of actions stripped to their basic form, without the handler and permissions.
  */
-export function stripToActions(actions: ActionWithHandler[]): Action[] {
+export function stripToActions(actions: RCEAction[]): Action[] {
     return actions.map(stripToAction);
 }
 
@@ -95,7 +95,7 @@ export function actionValidationAccept(message?: string): ActionValidationResult
  * @param message The message to send to Neuro.
  * This should explain, if possible, why the action failed.
  * If omitted, will just send "Action failed.".
- * @param {boolean} [retry=false] Whether to retry the action if it was forced. Defaults to `false`.
+ * @param retry It's highly recommended you use {@link actionValidationRetry} instead.
  * @returns A successful action result with the specified message.
  */
 export function actionValidationFailure(message: string, retry = false): ActionValidationResult {
@@ -167,6 +167,7 @@ export function actionResultIncorrectType(parameterName: string, expectedType: s
  * Create an action result that tells Neuro that she doesn't have the required permission.
  * @param permission The permission Neuro doesn't have.
  * @returns A successful action result with a message pointing out the missing permission.
+ * @deprecated Handled by the permissions checker component of RCE.
  */
 export function actionValidationNoPermission(permission: Permission): ActionValidationResult {
     logOutput('WARNING', `Action failed: Neuro attempted to ${permission.infinitive}, but permission is disabled.`);

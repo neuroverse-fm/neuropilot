@@ -1,9 +1,31 @@
+/** 
+ * This file's exports are not designed/intended to be used in the WebWorker build of the extension
+ * This means that the web version of the extension will not have this file here (such as [VS Code for the Web](https://vscode.dev) and its [GitHub version](https://github.dev))
+ * Feel free to use Node.js APIs here - they won't be a problem.
+ */
+
 import * as vscode from 'vscode';
-import { spawn } from 'child_process';
-import { NEURO } from './constants';
-import { TerminalSession, logOutput, delayAsync, getFence } from './utils';
-import { ActionData, actionValidationAccept, actionValidationFailure, ActionValidationResult, ActionWithHandler, contextFailure, stripToActions } from './neuro_client_helper';
-import { CONFIG, PERMISSIONS, getPermissionLevel } from './config';
+import { spawn, ChildProcessWithoutNullStreams } from 'node:child_process';
+import { NEURO } from '@/constants';
+import { checkWorkspaceTrust, checkVirtualWorkspace } from '@/utils';
+import { logOutput, delayAsync, getFence } from '@/utils';
+import { ActionData, actionValidationAccept, actionValidationFailure, ActionValidationResult, RCEAction, contextFailure, stripToActions } from '@/neuro_client_helper';
+import { CONFIG, PERMISSIONS, getPermissionLevel, isActionEnabled } from '@/config';
+
+/*
+ * Extended interface for terminal sessions.
+ * We now explicitly store the event emitter along with the pseudoterminal.
+ */
+export interface TerminalSession {
+    terminal: vscode.Terminal;
+    pty: vscode.Pseudoterminal;
+    emitter: vscode.EventEmitter<string>;
+    outputStdout?: string;
+    outputStderr?: string;
+    processStarted: boolean;
+    shellProcess?: ChildProcessWithoutNullStreams;
+    shellType: string;
+}
 
 function checkLiveTerminals(actionData: ActionData): ActionValidationResult {
     const shellType: string = actionData.params.shell;
@@ -24,9 +46,11 @@ export const terminalAccessHandlers = {
                 shell: { type: 'string', enum: getAvailableShellProfileNames() },
             },
             required: ['command', 'shell'],
+            additionalProperties: false,
         },
         permissions: [PERMISSIONS.terminalAccess],
         handler: handleRunCommand,
+        validator: [checkVirtualWorkspace, checkWorkspaceTrust],
         promptGenerator: (actionData: ActionData) => `run "${actionData.params?.command}" in the "${actionData.params?.shell}" shell.`,
     },
     'kill_terminal_process': {
@@ -38,10 +62,11 @@ export const terminalAccessHandlers = {
                 shell: { type: 'string' },
             },
             required: ['shell'],
+            additionalProperties: false,
         },
         permissions: [PERMISSIONS.terminalAccess],
         handler: handleKillTerminal,
-        validator: [checkLiveTerminals],
+        validator: [checkLiveTerminals, checkVirtualWorkspace, checkWorkspaceTrust],
         promptGenerator: (actionData: ActionData) => `kill the "${actionData.params?.shell}" shell.`,
     },
     'get_currently_running_shells': {
@@ -49,9 +74,10 @@ export const terminalAccessHandlers = {
         description: 'Get the list of terminal processes that are spawned.',
         permissions: [PERMISSIONS.terminalAccess],
         handler: handleGetCurrentlyRunningShells,
+        validator: [checkVirtualWorkspace, checkWorkspaceTrust],
         promptGenerator: 'get the list of currently running shells.',
     },
-} satisfies Record<string, ActionWithHandler>;
+} satisfies Record<string, RCEAction>;
 
 export function registerTerminalActions() {
     if (getPermissionLevel(PERMISSIONS.terminalAccess)) {
@@ -59,14 +85,8 @@ export function registerTerminalActions() {
             terminalAccessHandlers.execute_in_terminal,
             terminalAccessHandlers.kill_terminal_process,
             terminalAccessHandlers.get_currently_running_shells,
-        ]));
+        ]).filter(isActionEnabled));
     }
-}
-
-let extContext: vscode.ExtensionContext;
-
-export function saveContextForTerminal(context: vscode.ExtensionContext) {
-    extContext = context;
 }
 
 /**
@@ -110,7 +130,7 @@ function getShellProfileForType(shellType: string): { shellPath: string; shellAr
 * Creates a new pseudoterminal-based session.
 * This version captures output in separate STDOUT and STDERR properties.
 */
-function createPseudoterminal(shellType: string, terminalName: string, vscContext: vscode.ExtensionContext = extContext): TerminalSession {
+function createPseudoterminal(shellType: string, terminalName: string): TerminalSession {
     const emitter = new vscode.EventEmitter<string>();
 
     const startTime: string = new Date().toLocaleString();
@@ -132,7 +152,7 @@ function createPseudoterminal(shellType: string, terminalName: string, vscContex
     };
 
     // 50/50 chance of icon selection no longer
-    const icon = vscode.Uri.joinPath(vscContext.extensionUri, 'assets/console.png');
+    const icon = vscode.Uri.joinPath(NEURO.context!.extensionUri, 'assets/console.png');
 
     // Create the terminal using VS Code's API.
     const terminal = vscode.window.createTerminal({
@@ -185,7 +205,7 @@ export function handleRunCommand(actionData: ActionData): string | undefined {
     const shellType: string = actionData.params?.shell;
 
     // Get or create the terminal session for this shell.
-    const session = getOrCreateTerminal(shellType, `Neuro: ${shellType}`);
+    const session = getOrCreateTerminal(shellType, `${NEURO.currentController}: ${shellType}`);
     const outputDelay = CONFIG.terminalContextDelay;
 
     // Reset previous outputs.
@@ -342,6 +362,6 @@ export function emergencyTerminalShutdown() {
         logOutput('INFO', 'Emergency shutdown complete. All terminals have been terminated.');
     } else {
         logOutput('WARN', `Failed to terminate ${failedShutdownCount} shells, including: ${failedShutdownTerminals}.`);
-        vscode.window.showWarningMessage(`Failed to terminate ${failedShutdownCount} terminal(s), which include these terminals: ${failedShutdownTerminals}.\nPlease check on them.`);
+        vscode.window.showWarningMessage(`Failed to terminate ${failedShutdownCount} terminal(s), which include these terminals: ${failedShutdownTerminals.join(', ')}.\nPlease check on them.`);
     }
 }

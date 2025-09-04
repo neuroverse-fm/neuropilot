@@ -1,0 +1,63 @@
+name: Build extension
+
+on:
+    push:
+        branches-ignore:
+            - master
+        paths-ignore:
+            - ".github/"
+            - ".vscode/"
+            - ".husky/"
+            - "playground/"
+            - "tony/"
+    pull_request:
+        paths-ignore:
+            - ".github/"
+            - ".vscode/"
+            - ".husky/"
+            - "playground/"
+            - "tony/"
+    workflow_dispatch:
+        inputs:
+            prod:
+                type: choice
+                description: Whether to override to build in production mode. Use 0 for dev and 1 for prod.
+                required: false
+                default: "0"
+                options: ["0", "1"]
+
+jobs:
+    build:
+        name: Build extension
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout source repository
+              uses: actions/checkout@v4
+              with:
+                ref: ${{ github.sha }}
+
+            - name: Setup pnpm
+              uses: pnpm/action-setup@v4
+              with:
+                version: 10.14.0
+            
+            - name: Setup Node.js
+              uses: actions/setup-node@v4.4.0
+              with:
+                node-version: 22.x.x
+                cache: 'pnpm'
+                cache-dependency-path: './pnpm-lock.yaml'
+
+            - name: Install dependencies
+              run: pnpm install --frozen-lockfile
+            
+            - name: Package extension
+              env:
+                NODE_ENV: ${{ inputs.prod || '0' }}
+              run: pnpm vsce package --allow-star-activation --no-dependencies
+            
+            - name: Upload builds
+              uses: actions/upload-artifact@v4
+              with:
+                path: neuropilot-*.vsix
+                name: NeuroPilot (Non-Production) Build ${{ github.sha }}

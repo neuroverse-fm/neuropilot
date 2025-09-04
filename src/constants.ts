@@ -1,7 +1,8 @@
 import * as vscode from 'vscode';
 import { NeuroClient } from 'neuro-game-sdk';
-import { TerminalSession } from './utils';
+import { TerminalSession } from './pseudoterminal';
 import { RceRequest } from './rce';
+import type { GitExtension } from '@typing/git.d';
 
 export interface NeuroTask {
     id: string;
@@ -14,6 +15,8 @@ interface Neuro {
     initialized: boolean;
     /** Stores the NeuroClient class from the SDK being used. */
     client: NeuroClient | null;
+    /** The extension context */
+    context: vscode.ExtensionContext | null;
     /** The WebSocket URL set to be connected to. */
     url: string;
     /** The set name of the "game", which is sent to Neuro. */
@@ -61,6 +64,14 @@ interface Neuro {
     cursorOffsets: Map<vscode.Uri, number | null>;
     /** Decoration type for the virtual cursor. */
     cursorDecorationType: vscode.TextEditorDecorationType | null;
+    /** Decoration type for added lines. */
+    diffAddedDecorationType: vscode.TextEditorDecorationType | null;
+    /** Decoration type for removed lines. */
+    diffRemovedDecorationType: vscode.TextEditorDecorationType | null;
+    /** Decoration type for modified lines. */
+    diffModifiedDecorationType: vscode.TextEditorDecorationType | null;
+    /** Decoration type for highlighted text. */
+    highlightDecorationType: vscode.TextEditorDecorationType | null;
     /** Current name set as the API controller */
     currentController: string | null;
 }
@@ -69,6 +80,7 @@ interface Neuro {
 export const NEURO: Neuro = {
     initialized: false,
     client: null,
+    context: null,
     url: 'ws://localhost:8000',
     gameName: 'Visual Studio Code',
     connected: false,
@@ -88,5 +100,20 @@ export const NEURO: Neuro = {
     warnOnCompletionsOff: true,
     cursorOffsets: new Map(),
     cursorDecorationType: null,
+    diffAddedDecorationType: null,
+    diffRemovedDecorationType: null,
+    diffModifiedDecorationType: null,
+    highlightDecorationType: null,
     currentController: null,
+};
+
+// this will likely be transformed for a different use later when the API rolls around
+interface ExtensionDependencies {
+    copilotChat: boolean;
+    git: GitExtension | null;
+}
+
+export const EXTENSIONS: ExtensionDependencies = {
+    copilotChat: false,
+    git: null,
 };
