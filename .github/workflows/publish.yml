@@ -86,7 +86,7 @@ jobs:
     needs: build
     environment:
       name: Visual Studio Marketplace
-      url: https://marketplace.visualstudio.com/item?itemName=VSC-NeuroPilot.neuropilot
+      url: https://marketplace.visualstudio.com/item?itemName=Pasu4.neuropilot
     steps:
       - name: Checkout repo # why
         uses: actions/checkout@v4
@@ -114,7 +114,7 @@ jobs:
     needs: build
     environment:
       name: Open VSX Registry
-      url: https://open-vsx.org/extension/vsc-neuropilot/neuropilot
+      url: https://open-vsx.org/extension/pasu4/neuropilot
     steps:
       - name: Checkout repo # why
         uses: actions/checkout@v4
