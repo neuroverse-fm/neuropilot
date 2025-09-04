@@ -29,6 +29,8 @@ This update was made in response to the Evil dev stream on 2025-08-28. [Here's t
 ### Added features
 
 - We now have a changelog! These changelogs should appear inside VS Code.
+- The extension is now with esbuild.
+- Added support for web environments.
 - `CNAME` (the file usually used to set a custom domain name) has now been added to the default list of Exclude Patterns that the connected Neuro twin cannot access.
 - Actions `replace_text`, `delete_text` and `find_text` now allow specifying a line range to search in.
 - Invalid cursor positions now fail at RCE validation time instead of execution time. This should improve the experience when using Copilot mode with editing actions.
@@ -39,6 +41,7 @@ This update was made in response to the Evil dev stream on 2025-08-28. [Here's t
 - Editing actions now highlight Neuro's latest edit.
   - Deletions and modifications show the deleted or replaced text as a tooltip.
   - The highlights will be cleared when the document is changed or edited.
+- Added a new validator for `diff_files` action.
 
 ### Changes
 
@@ -48,6 +51,8 @@ This update was made in response to the Evil dev stream on 2025-08-28. [Here's t
 - The way that the open docs commands works now is slightly different, now having a dropdown to select instead of opening our own docs directly. This is in preparation for our public API for extending NeuroPilot.
   - For now, you'll be selecting the `NeuroPilot` option most/all of the time.
 - Increased the default context size around the cursor from 10 to 500.
+- Terminal actions and tasks are no longer available in untrusted workspaces.
+- Disconnection message is now a warning instead of an info.
 
 ### Fixes
 
@@ -59,6 +64,7 @@ This update was made in response to the Evil dev stream on 2025-08-28. [Here's t
 - CRLF conversion offset has been fixed when using `insert_text`.
 - Docs are now hosted at [a different subpage](https://vsc-neuropilot.github.io/docs) than before. While this isn't part of the extension itself, the link on the README file broke as a result of this change. This has now been fixed.
 - The setting `cursorFollowsNeuro` now actually scrolls to the cursor position.
+- Fixed security vulnerabilities from imports.
 
 <!-- ### Removed features -->
 
