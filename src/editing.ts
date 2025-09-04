@@ -291,7 +291,8 @@ export const editingActions = {
         description: 'Find text in the active document.'
             + ' If you set "useRegex" to true, you can use a Regex in the "find" parameter.'
             + ' This will place your cursor directly before or after the found text (depending on "moveCursor"), unless you searched for multiple instances.'
-            + ' Set "highlight" to true to highlight the found text, if you want to draw Vedal\'s or Chat\'s attention to it.',
+            + ' Set "highlight" to true to highlight the found text, if you want to draw Vedal\'s or Chat\'s attention to it.'
+            + ' If you search for multiple matches, the numbers at the start of each line are the line numbers and not part of the code.',
         schema: {
             type: 'object',
             properties: {
@@ -769,7 +770,7 @@ export function handleFindText(actionData: ActionData): string | undefined {
         if (highlight) {
             vscode.window.activeTextEditor!.setDecorations(NEURO.highlightDecorationType!, matches.map((match, i) => new vscode.Range(positions[i], document.positionAt(match.index + match[0].length))));
         }
-        const lineNumberContextFormat = CONFIG.lineNumberContextFormat;
+        const lineNumberContextFormat = CONFIG.lineNumberContextFormat || '{n}|';
         const text = lines.map((line, i) => lineNumberContextFormat.replace('{n}', (positions[i].line + 1).toString()) + line).join('\n');
         const fence = getFence(text);
         return `Found ${positions.length} matches:\n\n${fence}\n${text}\n${fence}`;
