@@ -16,11 +16,11 @@ on:
           - 'minor'
           - 'patch'
           - 'none'
-      update_docs:
-        type: boolean
-        description: 'Docs are up to date'
-        required: true
-        default: false
+      specific:
+        type: string
+        description: If you want to choose a specific ref to publish, set the version input to none and provide the desired tag here.
+        required: false
+        default: master
 
 jobs:
   build:
@@ -28,6 +28,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
+      with:
+        ref: ${{ inputs.specific || 'master' }}
 
     - name: Setup pnpm
       uses: pnpm/action-setup@v4
@@ -72,8 +74,9 @@ jobs:
         git push --follow-tags https://VSC-NeuroPilot:${{secrets.GITHUB_TOKEN}}:@github.com/VSC-NeuroPilot/neuropilot
     
     - name: Rebuild docs site
-      if: ${{ inputs.update_docs }}
-      run: gh workflow run bump.yml -f check=${{ inputs.update_docs }} --repo VSC-NeuroPilot/docs
+      env: 
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: gh workflow run bump.yml -f version=${{ inputs.version }} --repo VSC-NeuroPilot/docs
   
   vsce-publish:
     name: Publish to VS Marketplace

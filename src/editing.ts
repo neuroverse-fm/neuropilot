@@ -9,7 +9,7 @@ const CONTEXT_NO_ACCESS = 'You do not have permission to access this file.';
 const CONTEXT_NO_ACTIVE_DOCUMENT = 'No active document to edit.';
 
 type MatchOptions = 'firstInFile' | 'lastInFile' | 'firstAfterCursor' | 'lastBeforeCursor' | 'allInFile';
-const MATCH_OPTIONS: string[] = ['firstInFile', 'lastInFile', 'firstAfterCursor', 'lastBeforeCursor', 'allInFile'] as const;
+const MATCH_OPTIONS: MatchOptions[] = ['firstInFile', 'lastInFile', 'firstAfterCursor', 'lastBeforeCursor', 'allInFile'] as const;
 const POSITION_SCHEMA = {
     type: 'object',
     properties: {
@@ -1013,7 +1013,10 @@ export function handleHighlightLines(actionData: ActionData): string | undefined
     const startPosition = new vscode.Position(startLine - 1, 0);
     const endPosition = new vscode.Position(endLine - 1, document.lineAt(endLine - 1).text.length);
 
-    editor!.setDecorations(NEURO.highlightDecorationType!, [new vscode.Range(startPosition, endPosition)]);
+    editor!.setDecorations(NEURO.highlightDecorationType!, [{
+        range: new vscode.Range(startPosition, endPosition),
+        hoverMessage: `Highlighted by ${CONFIG.currentlyAsNeuroAPI}`,
+    }]);
     editor!.revealRange(new vscode.Range(startPosition, endPosition), vscode.TextEditorRevealType.InCenterIfOutsideViewport);
 
     return `Highlighted lines ${startLine}-${endLine}.`;
