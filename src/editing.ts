@@ -181,6 +181,7 @@ export const editingActions = {
         permissions: [PERMISSIONS.editActiveDocument],
         handler: handleGetCursor,
         validators: [checkCurrentFile],
+        cancelEvents: [vscode.workspace.onDidChangeTextDocument, vscode.workspace.onDidChangeWorkspaceFolders],
         promptGenerator: 'get the current cursor position and the text surrounding it.',
     },
     get_content: {

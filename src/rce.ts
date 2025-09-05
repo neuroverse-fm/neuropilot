@@ -42,6 +42,9 @@ export interface RceRequest {
      * Whether the notification has been revealed already.
      */
     notificationVisible: boolean;
+    /**
+     * Disposable events
+     */
 }
 
 export const cancelRequestAction: RCEAction = {
@@ -291,6 +294,21 @@ export async function RCEActionHandler(actionData: ActionData, actionList: Recor
                     NEURO.client?.sendActionResult(actionData.id, !(actionResult.retry ?? false), actionResult.message);
                     return;
                 }
+            }
+        }
+
+        const eventArray: vscode.Disposable[] = [];
+
+        if (action.cancelEvents) {
+            for (const events of action.cancelEvents) {
+                const event = events((_event) => {
+                    logOutput('WARN', `Action ${action.name} was cancelled because of a cancellation event.`);
+                    NEURO.client?.sendContext('Your request was cancelled because an activation event was fired.');
+                    for (const disposable of eventArray) {
+                        disposable.dispose();
+                    }
+                });
+                eventArray.push(event);
             }
         }
 
