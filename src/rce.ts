@@ -45,6 +45,7 @@ export interface RceRequest {
     /**
      * Disposable events
      */
+    cancelEvents?: vscode.Disposable[]
 }
 
 export const cancelRequestAction: RCEAction = {
@@ -89,6 +90,11 @@ export function clearRceRequest(): void { // Function to clear out RCE dialogs
     NEURO.statusBarItem!.tooltip = 'No active request';
     NEURO.statusBarItem!.color = new vscode.ThemeColor('statusBarItem.foreground');
     NEURO.statusBarItem!.backgroundColor = new vscode.ThemeColor('statusBarItem.background');
+    if (NEURO.rceRequest!.cancelEvents) {
+        for (const disposable of NEURO.rceRequest!.cancelEvents) {
+            disposable.dispose();
+        }
+    }
 }
 
 /**
@@ -99,6 +105,7 @@ export function clearRceRequest(): void { // Function to clear out RCE dialogs
 export function createRceRequest(
     prompt: string,
     callback: () => string | undefined,
+    cancelEvents?: vscode.Event<unknown>[],
 ): void {
     NEURO.rceRequest = {
         prompt,
@@ -142,6 +149,14 @@ export function createRceRequest(
                 clearRceRequest();
                 NEURO.client?.sendContext('Request expired.');
             }, timeoutDuration);
+        }
+
+        if (cancelEvents) {
+            for (const event of cancelEvents) {
+                event((_event) => {
+                    logOutput('INFO', '');
+                });
+            }
         }
 
         // this will be called on request resolution
@@ -304,9 +319,7 @@ export async function RCEActionHandler(actionData: ActionData, actionList: Recor
                 const event = events((_event) => {
                     logOutput('WARN', `Action ${action.name} was cancelled because of a cancellation event.`);
                     NEURO.client?.sendContext('Your request was cancelled because an activation event was fired.');
-                    for (const disposable of eventArray) {
-                        disposable.dispose();
-                    }
+                    clearRceRequest();
                 });
                 eventArray.push(event);
             }
