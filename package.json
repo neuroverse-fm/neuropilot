@@ -1,6 +1,6 @@
 {
 	"name": "neuropilot-base",
-	"displayName": "NeuroPilot",
+	"displayName": "NeuroPilot Base",
 	"private": true,
 	"description": "Allows Neuro-sama to either act as a companion/copilot or control Visual Studio Code by herself.",
 	"icon": "assets/heart-xaendril.png",
