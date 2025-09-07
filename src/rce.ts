@@ -105,7 +105,7 @@ export function clearRceRequest(): void { // Function to clear out RCE dialogs
 export function createRceRequest(
     prompt: string,
     callback: () => string | undefined,
-    cancelEvents?: vscode.Event<unknown>[],
+    cancelEvents?: vscode.Disposable[],
 ): void {
     NEURO.rceRequest = {
         prompt,
@@ -115,6 +115,7 @@ export function createRceRequest(
         // these immediately get replaced synchronously, this is just so we don't have them be nullable in the type
         resolve: () => { },
         attachNotification: async () => { },
+        cancelEvents,
     };
 
     const promise = new Promise<void>((resolve) => {
@@ -149,14 +150,6 @@ export function createRceRequest(
                 clearRceRequest();
                 NEURO.client?.sendContext('Request expired.');
             }, timeoutDuration);
-        }
-
-        if (cancelEvents) {
-            for (const event of cancelEvents) {
-                event((_event) => {
-                    logOutput('INFO', '');
-                });
-            }
         }
 
         // this will be called on request resolution
@@ -344,6 +337,7 @@ export async function RCEActionHandler(actionData: ActionData, actionList: Recor
             createRceRequest(
                 prompt,
                 () => action.handler(actionData),
+                eventArray,
             );
 
             NEURO.statusBarItem!.tooltip = new vscode.MarkdownString(prompt);
