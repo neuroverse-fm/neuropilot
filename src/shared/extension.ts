@@ -1,15 +1,15 @@
 import * as vscode from 'vscode';
-import { NEURO, EXTENSIONS } from '~/constants';
-import { logOutput, createClient, onClientConnected, setVirtualCursor } from '~/utils';
-import { completionsProvider, registerCompletionResultHandler } from '~/completions';
-import { giveCookie, registerRequestCookieAction, registerRequestCookieHandler, sendCurrentFile } from '~/context';
-import { registerChatResponseHandler } from '~/chat';
-import { CONFIG } from '~/config';
-import { explainWithNeuro, fixWithNeuro, NeuroCodeActionsProvider, sendDiagnosticsDiff } from '~/lint_problems';
-import { editorChangeHandler, fileSaveListener, moveNeuroCursorHere, toggleSaveAction, workspaceEditHandler } from '~/editing';
-import { emergencyDenyRequests, acceptRceRequest, denyRceRequest, revealRceNotification } from '~/rce';
+import { NEURO, EXTENSIONS } from '@/constants';
+import { logOutput, createClient, onClientConnected, setVirtualCursor } from '@/utils';
+import { completionsProvider, registerCompletionResultHandler } from '@/completions';
+import { giveCookie, registerRequestCookieAction, registerRequestCookieHandler, sendCurrentFile } from '@/context';
+import { registerChatResponseHandler } from '@/chat';
+import { CONFIG } from '@/config';
+import { explainWithNeuro, fixWithNeuro, NeuroCodeActionsProvider, sendDiagnosticsDiff } from '@/lint_problems';
+import { editorChangeHandler, fileSaveListener, moveNeuroCursorHere, toggleSaveAction, workspaceEditHandler } from '@/editing';
+import { emergencyDenyRequests, acceptRceRequest, denyRceRequest, revealRceNotification } from '@/rce';
 import type { GitExtension } from '@typing/git';
-import { getGitExtension } from '~/git';
+import { getGitExtension } from '@/git';
 import { registerDocsCommands, registerDocsLink } from './docs';
 
 // Shared commands
@@ -220,21 +220,23 @@ export function obtainExtensionState(): void {
     } else {
         EXTENSIONS.git = null;
     }
-    getGitExtension();
+    if (vscode.env.uiKind === vscode.UIKind.Desktop) {
+        getGitExtension();
+    }
 }
 
 export function deactivate() {
     NEURO.client?.sendContext(`NeuroPilot is being deactivated, or ${CONFIG.gameName} is closing. See you next time, ${NEURO.currentController}!`);
 }
 
-export function getDecorationRenderOptions() {
+export function getCursorDecorationRenderOptions(): vscode.DecorationRenderOptions {
     return {
         backgroundColor: 'rgba(0, 0, 0, 0)',
         border: '1px solid rgba(0, 0, 0, 0)',
         borderRadius: '1px',
         overviewRulerColor: 'rgba(255, 85, 229, 0.5)',
         overviewRulerLane: vscode.OverviewRulerLane.Right,
-        gutterIconPath: vscode.Uri.joinPath(NEURO.context!.extensionUri, 'icon.png'),
+        gutterIconPath: vscode.Uri.joinPath(NEURO.context!.extensionUri, 'assets/heart.png'),
         gutterIconSize: 'contain',
         rangeBehavior: vscode.DecorationRangeBehavior.ClosedClosed,
         before: {
@@ -243,5 +245,55 @@ export function getDecorationRenderOptions() {
             textDecoration: 'none; position: absolute; display: inline-block; top: 0; font-size: 200%; font-weight: bold, z-index: 1',
             color: 'rgba(255, 85, 229)',
         },
+    };
+}
+
+export function getDiffAddedDecorationRenderOptions(): vscode.DecorationRenderOptions {
+    return {
+        backgroundColor: 'rgba(0, 255, 0, 0.25)',
+        border: '1px solid rgba(255, 85, 229, 0.5)',
+        borderRadius: '0px',
+        overviewRulerColor: 'rgba(0, 255, 0, 0.5)',
+        overviewRulerLane: vscode.OverviewRulerLane.Left,
+        rangeBehavior: vscode.DecorationRangeBehavior.ClosedClosed,
+    };
+}
+
+export function getDiffRemovedDecorationRenderOptions(): vscode.DecorationRenderOptions {
+    return {
+        backgroundColor: 'rgba(0, 0, 0, 0)',
+        border: '1px solid rgba(255, 0, 0, 0.5)',
+        borderRadius: '0px',
+        overviewRulerColor: 'rgba(255, 0, 0, 0.5)',
+        overviewRulerLane: vscode.OverviewRulerLane.Left,
+        rangeBehavior: vscode.DecorationRangeBehavior.ClosedClosed,
+        before: {
+            contentText: '▲',
+            margin: '0 0 0 -0.4ch',
+            textDecoration: 'none; position: absolute; display: inline-block; top: 1.25ch; font-size: 75%, z-index: 1; -webkit-text-stroke: 1px rgba(255, 85, 229, 0.5)',
+            color: 'rgba(255, 0, 0, 0.5)',
+        },
+    };
+}
+
+export function getDiffModifiedDecorationRenderOptions(): vscode.DecorationRenderOptions {
+    return {
+        backgroundColor: 'rgba(255, 255, 0, 0.25)',
+        border: '1px solid rgba(255, 85, 229, 0.5)',
+        borderRadius: '0px',
+        overviewRulerColor: 'rgba(255, 255, 0, 0.5)',
+        overviewRulerLane: vscode.OverviewRulerLane.Left,
+        rangeBehavior: vscode.DecorationRangeBehavior.ClosedClosed,
+    };
+}
+
+export function getHighlightDecorationRenderOptions(): vscode.DecorationRenderOptions {
+    return {
+        backgroundColor: 'rgba(255, 255, 0, 1)',
+        border: '2px solid rgba(255, 85, 229, 1)',
+        borderRadius: '0px',
+        overviewRulerColor: 'rgba(255, 85, 229, 1)',
+        overviewRulerLane: vscode.OverviewRulerLane.Center,
+        rangeBehavior: vscode.DecorationRangeBehavior.ClosedClosed,
     };
 }

@@ -1,5 +1,7 @@
 # <img src="assets/heart-xaendril.png" width="32" style="vertical-align:middle;horizontal-align:middle;"> NeuroPilot
 
+As seen on TV (dev stream)!
+
 **Disclaimer: For simplicity, all mentions of Neuro also apply to Evil unless otherwise stated.**
 
 This extension enables Neuro-sama to write code in Visual Studio Code, either together with a programmer or on her own.
@@ -28,8 +30,11 @@ Capabilities of this extension include:
 These can all be turned on or off using the extension's permission settings.
 All permissions are set to "Off" by default, [except one](vscode://settings/neuropilot.permission.requestCookies).
 
-For more detailed documentation, visit [the docs site](https://vsc-neuropilot.github.io/neuropilot).
+For more detailed documentation, visit [the docs site](https://vsc-neuropilot.github.io/docs).
 We've recently migrated a lot of information there, so you're more likely to find the information you're looking for there.
+
+> [!WARNING]
+> If you are installing the extension from Open VSX, be aware that your editor may or may not be supported. Review any extension API compatibility breaks between VS Code and your editor to determine whether or not NeuroPilot will function correctly.
 
 ## How to use
 
@@ -96,7 +101,7 @@ The short answer is no, there isn't an intentional Remote Code Execution vulnera
 ## Debugging
 
 - Clone the repository
-- Run `npm install` in terminal to install dependencies
+- Run `pnpm install` in terminal to install dependencies
 - Run the `Run Extension` target in the Debug View. This will:
   - Start a task `npm: watch` to compile the code
   - Run the extension in a new VS Code window
@@ -106,4 +111,4 @@ The short answer is no, there isn't an intentional Remote Code Execution vulnera
 If you have an idea or want to contribute a feature, please first [create an issue](https://github.com/VSC-NeuroPilot/neuropilot/issues) or send a message to `@Pasu4` in the project's [post on the Neuro Discord](https://discord.com/channels/574720535888396288/1350968830230396938).
 If you make a pull request that contributes code, please run `npm run lint src` and resolve any errors that did not get auto-fixed, preferrably before each commit.
 
-Please also refer to our [contributor docs](https://vsc-neuropilot.github.io/docs/contributors).
+Please also refer to our [contributor docs](https://vsc-neuropilot.github.io/docs/meta/contributors).

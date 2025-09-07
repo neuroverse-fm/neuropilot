@@ -1,32 +1,34 @@
 import * as vscode from 'vscode';
 import { NeuroClient } from 'neuro-game-sdk';
 import globToRegExp from 'glob-to-regexp';
+import { fileTypeFromBuffer } from 'file-type';
 
-import { NEURO } from '~/constants';
-import { CONFIG, getPermissionLevel, PERMISSIONS } from '~/config';
+import { NEURO } from '@/constants';
+import { CONFIG, getPermissionLevel, PERMISSIONS } from '@/config';
 
-import { ActionValidationResult, ActionData, actionValidationAccept, actionValidationFailure } from '~/neuro_client_helper';
+import { ActionValidationResult, ActionData, actionValidationAccept, actionValidationFailure } from '@/neuro_client_helper';
 import assert from 'node:assert';
+import { patienceDiff } from './patience_diff';
 
 export const REGEXP_ALWAYS = /^/;
 export const REGEXP_NEVER = /^\b$/;
 
 export function logOutput(tag: string, message: string) {
-    if(!NEURO.outputChannel) {
+    if (!NEURO.outputChannel) {
         console.error('Output channel not initialized');
         return;
     }
     const ms = Date.now() % 1000;
-    const time = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit'}) + '.' + ms.toString().padStart(3, '0');
+    const time = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' }) + '.' + ms.toString().padStart(3, '0');
     const prefix = `${time} [${tag}] `;
-    for(const line of message.split('\n')) {
+    for (const line of message.split('\n')) {
         NEURO.outputChannel.appendLine(prefix + line);
     }
 }
 
 export function createClient() {
     logOutput('INFO', 'Creating Neuro API client');
-    if(NEURO.client)
+    if (NEURO.client)
         NEURO.client.disconnect();
 
     NEURO.connected = false;
@@ -58,7 +60,7 @@ export function createClient() {
             vscode.window.showErrorMessage(`Neuro client error: ${error}`);
         };
 
-        for(const handler of clientConnectedHandlers) {
+        for (const handler of clientConnectedHandlers) {
             handler();
         }
     });
@@ -78,7 +80,7 @@ export function onClientConnected(handler: () => void) {
 export function simpleFileName(fileName: string): string {
     const rootFolder = vscode.workspace.workspaceFolders?.[0].uri.fsPath.replace(/\\/, '/');
     const result = fileName.replace(/\\/g, '/');
-    if(rootFolder && result.startsWith(rootFolder))
+    if (rootFolder && result.startsWith(rootFolder))
         return result.substring(rootFolder.length);
     else
         return result.substring(result.lastIndexOf('/') + 1);
@@ -104,6 +106,8 @@ export interface NeuroPositionContext {
     startLine: number;
     /** The zero-based line where {@link contextAfter} ends. */
     endLine: number;
+    /** The number of total lines in the file. */
+    totalLines: number;
 }
 
 /**
@@ -117,10 +121,10 @@ export function getPositionContext(document: vscode.TextDocument, position: vsco
     const beforeContextLength = CONFIG.beforeContext;
     const afterContextLength = CONFIG.afterContext;
 
-    if(position2 === undefined) {
+    if (position2 === undefined) {
         position2 = position;
     }
-    if(position2.isBefore(position)) {
+    if (position2.isBefore(position)) {
         // Swap the positions if position2 is before position
         const temp = position;
         position = position2;
@@ -139,6 +143,7 @@ export function getPositionContext(document: vscode.TextDocument, position: vsco
         contextBetween: filterFileContents(contextBetween),
         startLine: startLine,
         endLine: endLine,
+        totalLines: document.lineCount,
     };
 }
 
@@ -232,49 +237,49 @@ export function substituteMatch(match: RegExpExecArray, replacement: string): st
     const substitutions = Array.from(replacement.matchAll(rx));
     const literals = replacement.split(rx);
     let result = '';
-    for(let i = 0; i < substitutions.length; i++) {
+    for (let i = 0; i < substitutions.length; i++) {
         // Append literal
         result += literals[i];
         // Append substitution
-        if(substitutions[i][0] === '$&') {
+        if (substitutions[i][0] === '$&') {
             // Full match
             result += match[0];
         }
-        else if(substitutions[i][0] === '$`' || substitutions[i][0] === '$\'' || substitutions[i][0] === '$_') {
+        else if (substitutions[i][0] === '$`' || substitutions[i][0] === '$\'' || substitutions[i][0] === '$_') {
             // Text before or after the match
             throw new Error('Substitution with text outside the match is not supported.');
         }
-        else if(substitutions[i][0] === '$+') {
+        else if (substitutions[i][0] === '$+') {
             // Last capture group
-            if(match.length === 0)
+            if (match.length === 0)
                 throw new Error('No capture groups in the match');
             result += match[match.length - 1];
         }
-        else if(substitutions[i][0] === '$$') {
+        else if (substitutions[i][0] === '$$') {
             // Escaped dollar sign
             result += '$';
         }
-        else if(substitutions[i][0].startsWith('$<') || substitutions[i][0].startsWith('${')) {
+        else if (substitutions[i][0].startsWith('$<') || substitutions[i][0].startsWith('${')) {
             const name = substitutions[i][0].slice(2, -1);
-            if(/^\d+$/.test(name)) {
+            if (/^\d+$/.test(name)) {
                 // Numbered group
                 const index = parseInt(name);
-                if(index >= match.length)
+                if (index >= match.length)
                     throw new Error(`Capture group ${index} does not exist in the match`);
                 result += match[index];
             }
             else {
                 // Named group
                 const content = match.groups?.[name];
-                if(content === undefined)
+                if (content === undefined)
                     throw new Error(`Capture group "${name}" does not exist in the match`);
                 result += content;
             }
         }
-        else if(/^\$\d+$/.test(substitutions[i][0])) {
+        else if (/^\$\d+$/.test(substitutions[i][0])) {
             // Numbered group
             const index = parseInt(substitutions[i][0].slice(1));
-            if(index >= match.length)
+            if (index >= match.length)
                 throw new Error(`Capture group ${index} does not exist in the match`);
             result += match[index];
         }
@@ -316,9 +321,9 @@ export function getFence(text: string): string {
  */
 export function setVirtualCursor(position?: vscode.Position | null) {
     const editor = vscode.window.activeTextEditor;
-    if(!editor) return;
+    if (!editor) return;
 
-    if(position === null || !getPermissionLevel(PERMISSIONS.editActiveDocument) || !isPathNeuroSafe(editor.document.fileName)) {
+    if (position === null || !getPermissionLevel(PERMISSIONS.editActiveDocument) || !isPathNeuroSafe(editor.document.fileName)) {
         removeVirtualCursor();
         return;
     }
@@ -327,12 +332,12 @@ export function setVirtualCursor(position?: vscode.Position | null) {
         ? editor.document.offsetAt(position)
         : NEURO.cursorOffsets.get(editor.document.uri);
 
-    if(offset === null) {
+    if (offset === null) {
         // Some setting changed that made the file Neuro-safe
         offset = editor.document.offsetAt(editor.selection.active);
     }
 
-    if(offset === undefined) {
+    if (offset === undefined) {
         logOutput('ERROR', 'No last known position available');
         return;
     }
@@ -347,8 +352,10 @@ export function setVirtualCursor(position?: vscode.Position | null) {
         },
     ] satisfies vscode.DecorationOptions[]);
 
-    if(CONFIG.cursorFollowsNeuro)
+    if (CONFIG.cursorFollowsNeuro) {
         editor.selection = new vscode.Selection(cursorPosition, cursorPosition);
+        editor.revealRange(editor.selection, vscode.TextEditorRevealType.InCenterIfOutsideViewport);
+    }
 
     return;
 
@@ -366,19 +373,142 @@ export function setVirtualCursor(position?: vscode.Position | null) {
  */
 export function getVirtualCursor(): vscode.Position | null | undefined {
     const editor = vscode.window.activeTextEditor;
-    if(!editor) return undefined;
+    if (!editor) return undefined;
     const result = NEURO.cursorOffsets.get(editor.document.uri);
-    if(result === undefined) {
+    if (result === undefined) {
         // Virtual cursor should always be set by onDidChangeActiveTextEditor
         logOutput('ERROR', 'No last known position available');
         return undefined;
     }
-    else if(result === null) {
+    else if (result === null) {
         return null;
     }
     else {
         return editor.document.positionAt(result);
     }
+}
+
+export const enum DiffRangeType {
+    Added,
+    Modified,
+    Removed,
+}
+
+export interface DiffRange {
+    range: vscode.Range;
+    type: DiffRangeType;
+    removedText?: string;
+}
+
+/**
+ * Calculates the difference between the original and modified text. The ranges are based on the modified text.
+ * @param document The text document to calculate the difference for, used to calculate positions from offsets.
+ * @param startPosition The position where the diff starts, used to calculate positions from offsets.
+ * @param original The original text.
+ * @param modified The modified text.
+ */
+export function getDiffRanges(document: vscode.TextDocument, startPosition: vscode.Position, original: string, modified: string): DiffRange[] {
+    const tokenRegExp = /\w+|\s+|./g;
+    const originalTokens = original.match(tokenRegExp) ?? [];
+    const modifiedTokens = modified.match(tokenRegExp) ?? [];
+
+    const difference = patienceDiff(originalTokens, modifiedTokens);
+
+    const result: DiffRange[] = [];
+    let currentType: DiffRangeType | undefined = undefined;
+    let currentStartOffset = document.offsetAt(startPosition);
+    let currentLength = 0;
+    let currentRemovedText = '';
+
+    for (const token of difference.lines) {
+        // If the token is unchanged (token exists in both original and modified)
+        if (token.aIndex !== -1 && token.bIndex !== -1) {
+            // If this is the end of a change
+            if (currentType !== undefined) {
+                result.push({
+                    range: new vscode.Range(document.positionAt(currentStartOffset), document.positionAt(currentStartOffset + currentLength)),
+                    type: currentType,
+                    removedText: currentRemovedText,
+                });
+                currentStartOffset += currentLength;
+                currentLength = 0;
+                currentType = undefined;
+                currentRemovedText = '';
+            }
+            currentStartOffset += token.line.length;
+            continue;
+        }
+
+        // If the token was removed (token exists in original but not in modified)
+        if (token.bIndex === -1) { // token.aIndex !== -1
+            // Added + Removed = Modified
+            if (currentType === DiffRangeType.Added)
+                currentType = DiffRangeType.Modified;
+            else if (currentType === undefined)
+                currentType = DiffRangeType.Removed;
+
+            currentRemovedText += token.line;
+            continue;
+        }
+
+        // If the token was added (token exists in modified but not in original)
+        if (token.aIndex === -1) { // token.bIndex !== -1
+            // Removed + Added = Modified
+            if (currentType === DiffRangeType.Removed)
+                currentType = DiffRangeType.Modified;
+            else if (currentType === undefined)
+                currentType = DiffRangeType.Added;
+
+            currentLength += token.line.length;
+            continue;
+        }
+    }
+
+    // Add last change if it exists
+    if (currentType !== undefined) {
+        result.push({
+            range: new vscode.Range(document.positionAt(currentStartOffset), document.positionAt(currentStartOffset + currentLength)),
+            type: currentType,
+            removedText: currentRemovedText,
+        });
+    }
+
+    return result;
+}
+
+export function showDiffRanges(editor: vscode.TextEditor, ...ranges: DiffRange[]) {
+    const addedRanges = ranges.filter(r => r.type === DiffRangeType.Added);
+    const modifiedRanges = ranges.filter(r => r.type === DiffRangeType.Modified);
+    const removedRanges = ranges.filter(r => r.type === DiffRangeType.Removed);
+
+    const languageId = editor.document.languageId;
+    const user = CONFIG.currentlyAsNeuroAPI;
+
+    editor.setDecorations(NEURO.diffAddedDecorationType!, addedRanges.map(range => ({
+        range: range.range,
+        hoverMessage: `**Added by ${user}**`,
+    } satisfies vscode.DecorationOptions)));
+
+    editor.setDecorations(NEURO.diffModifiedDecorationType!, modifiedRanges.map(range => {
+        const fence = getFence(range.removedText!);
+        return {
+            range: range.range,
+            hoverMessage: range.removedText ? `**Modified by ${user}, original:**\n\n${fence}${languageId}\n${range.removedText}\n${fence}` : undefined,
+        } satisfies vscode.DecorationOptions;
+    }));
+
+    editor.setDecorations(NEURO.diffRemovedDecorationType!, removedRanges.map(range => {
+        const fence = getFence(range.removedText!);
+        return {
+            range: range.range,
+            hoverMessage: range.removedText ? `**Removed by ${user}, original:**\n\n${fence}${languageId}\n${range.removedText}\n${fence}` : undefined,
+        } satisfies vscode.DecorationOptions;
+    }));
+}
+
+export function clearDecorations(editor: vscode.TextEditor) {
+    showDiffRanges(editor);
+    editor.setDecorations(NEURO.highlightDecorationType!, []);
 }
 
 /**
@@ -389,4 +519,44 @@ export function checkWorkspaceTrust(_actionData: ActionData): ActionValidationRe
         return actionValidationAccept();
     }
     return actionValidationFailure('You are in an untrusted workspace.');
+}
+
+/**
+ * Gets a property from an object using a dot-separated path.
+ * @param obj The object to get the property from.
+ * @param path The dot-separated path to the property. Pass an empty string to get the root object itself.
+ * @returns The value of the property, or undefined if it doesn't exist.
+ */
+export function getProperty(obj: unknown, path: string): unknown {
+    const keys = path.split('.');
+    let current: unknown = obj;
+    if (path === '')
+        return current;
+
+    for (const key of keys) {
+        if (typeof current === 'object' && current !== null && key in current) {
+            current = (current as Record<string, unknown>)[key];
+        } else {
+            return undefined;
+        }
+    }
+
+    return current;
+}
+
+/**
+ * Checks if the extension is currently on a virtual file system.
+ */
+export function checkVirtualWorkspace(_actionData: ActionData): ActionValidationResult {
+    if (vscode.workspace.workspaceFolders?.every(f => f.uri.scheme !== 'file')) {
+        return actionValidationFailure('You cannot perform this action in a virtual workspace.');
+    }
+    return actionValidationAccept();
+}
+
+/**
+ * Checks if the Uint8Array buffer is plaintext or binary.
+ */
+export async function isBinary(input: Uint8Array): Promise<boolean> {
+    return await fileTypeFromBuffer(input) ? true : false;
 }

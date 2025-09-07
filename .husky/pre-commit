@@ -1,2 +1,2 @@
 pnpm types
-pnpx eslint
+pnpm eslint src/

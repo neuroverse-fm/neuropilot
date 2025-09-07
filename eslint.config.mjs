@@ -49,7 +49,10 @@ export default tseslint.config(
             'curly': 'off',
             'no-control-regex': 'off',
             '@stylistic/semi': ['error', 'always'],
-            '@stylistic/indent': ['warn', 4],
+            '@stylistic/indent': ['warn', 4, {
+                'flatTernaryExpressions': true,
+                'SwitchCase': 1,
+            }],
             '@stylistic/comma-dangle': ['warn', 'always-multiline'],
             '@stylistic/eol-last': ['warn', 'always'],
             '@stylistic/no-extra-parens': ['warn', 'all'],
@@ -77,13 +80,22 @@ export default tseslint.config(
                 },
             ],
         },
+        languageOptions: {
+            parserOptions: {
+                tsconfigRootDir: import.meta.dirname,
+                project: './tsconfig.json',
+            },
+        },
     },
     {
-        files: ['esbuild.mjs'],
+        files: ['esbuild.mjs', '**/*.esbuild.{m,c,}js'],
         languageOptions: {
             globals: {
                 ...globals.node,
                 ...globals.browser,
+            },
+            parserOptions: {
+                project: null,
             },
         },
     },

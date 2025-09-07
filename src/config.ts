@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { Action } from 'neuro-game-sdk';
 
 /** Permission level enums */
 export const enum PermissionLevel {
@@ -14,6 +15,12 @@ export const enum PermissionLevel {
  */
 export function get<T>(key: string): T | undefined {
     return vscode.workspace.getConfiguration('neuropilot').get<T>(key);
+}
+
+export function isActionEnabled(action: string | Action): boolean {
+    if (typeof action === 'string')
+        return !CONFIG.disabledActions.includes(action);
+    return !CONFIG.disabledActions.includes(action.name);
 }
 
 /**
@@ -96,6 +103,10 @@ class Config {
     get currentlyAsNeuroAPI(): string { return get('currentlyAsNeuroAPI')!; }
     get docsURL(): string { return get('docsURL')!; }
     get defaultOpenDocsWindow(): string { return get('defaultOpenDocsWindow')!; }
+    get disabledActions(): string[] { return get('disabledActions')!; }
+    get sendContentsOnFileChange(): boolean { return get('sendContentsOnFileChange')!; }
+    get cursorPositionContextStyle(): string { return get('cursorPositionContextStyle')!; }
+    get lineNumberContextFormat(): string { return get('lineNumberContextFormat')!; }
 
     get terminals(): { name: string; path: string; args?: string[]; }[] { return get('terminals')!; }
 }
