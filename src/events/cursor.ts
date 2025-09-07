@@ -1,14 +1,15 @@
 import * as vscode from 'vscode';
 
-interface CursorProps {
-    line: number;
-    column: number;
-};
+// Cursor moved event - fires when Neuro's cursor is moved for any reason
+// Null typing is used if the cursor is not on the page.
+// Undefined is used when the text editor does not exist.
+const _onDidMoveCursor = new vscode.EventEmitter<vscode.Position | null | undefined>();
 
-export class CursorMoved implements vscode.Disposable {
-    private readonly _onDidMoveCursor = new vscode.EventEmitter<CursorProps>();
+export const onDidMoveCursor: vscode.Event<vscode.Position | null | undefined> = _onDidMoveCursor.event;
 
-    private _isDisposed = true;
-
-    public dispose(): void {}
+/**
+ * Event fire function.
+ */
+export function fireMovedCursorEvent(position: vscode.Position | null | undefined) {
+    _onDidMoveCursor.fire(position);
 }
