@@ -4,6 +4,7 @@ import { NEURO } from '@/constants';
 import { DiffRangeType, escapeRegExp, getDiffRanges, getFence, getPositionContext, getProperty, getVirtualCursor, showDiffRanges, isPathNeuroSafe, logOutput, NeuroPositionContext, setVirtualCursor, simpleFileName, substituteMatch, clearDecorations } from '@/utils';
 import { ActionData, actionValidationAccept, actionValidationFailure, ActionValidationResult, RCEAction, contextFailure, stripToActions, actionValidationRetry, contextNoAccess } from '@/neuro_client_helper';
 import { PERMISSIONS, getPermissionLevel, CONFIG, isActionEnabled } from '@/config';
+import { onDidMoveCursor } from './events/cursor';
 
 const CONTEXT_NO_ACCESS = 'You do not have permission to access this file.';
 const CONTEXT_NO_ACTIVE_DOCUMENT = 'No active document to edit.';
@@ -181,7 +182,7 @@ export const editingActions = {
         permissions: [PERMISSIONS.editActiveDocument],
         handler: handleGetCursor,
         validators: [checkCurrentFile],
-        cancelEvents: [vscode.workspace.onDidChangeTextDocument, vscode.workspace.onDidChangeWorkspaceFolders],
+        cancelEvents: [vscode.workspace.onDidChangeTextDocument, vscode.workspace.onDidChangeWorkspaceFolders, onDidMoveCursor],
         promptGenerator: 'get the current cursor position and the text surrounding it.',
     },
     get_content: {

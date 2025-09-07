@@ -5,6 +5,9 @@ import * as vscode from 'vscode';
 // Undefined is used when the text editor does not exist.
 const _onDidMoveCursor = new vscode.EventEmitter<vscode.Position | null | undefined>();
 
+/**
+ * Subscribe to this event to be notified when Neuro's cursor position moved.
+ */
 export const onDidMoveCursor: vscode.Event<vscode.Position | null | undefined> = _onDidMoveCursor.event;
 
 /**
