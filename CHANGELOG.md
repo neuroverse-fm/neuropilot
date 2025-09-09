@@ -4,6 +4,18 @@ Since v2.1.0, we're keeping a changelog of each version's changes in NeuroPilot.
 
 Changes between each version before then will not be listed.
 
+## 2.1.1
+
+### Changes
+
+- Further clarified when line and column numbers are one-based and zero-based for editing actions.
+
+### Fixes
+
+- Added missing entries to the 2.1.0 changelog.
+  - (I forgot to push them before publishing)
+  - Look at [dd06c39](https://github.com/VSC-NeuroPilot/neuropilot/commit/dd06c393a8b37d13db08189c30f95bee8fb4b356) for what exactly was added.
+
 ## 2.1.0
 
 This update was made in response to the Evil dev stream on 2025-08-28. [Here's the VoD, courtesy of Neuro Archiver](https://www.youtube.com/watch?v=AIYaBYVX95o).
