@@ -4,7 +4,7 @@ Since v2.1.0, we're keeping a changelog of each version's changes in NeuroPilot.
 
 Changes between each version before then will not be listed.
 
-## 2.1.1
+## 2.1.2
 
 ### Changes
 
