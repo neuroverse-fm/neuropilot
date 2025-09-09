@@ -51,7 +51,7 @@ This update was made in response to the Evil dev stream on 2025-08-28. [Here's t
 ### Added features
 
 - We now have a changelog! These changelogs should appear inside VS Code.
-- The extension is now with esbuild.
+- The extension is now bundled with esbuild.
 - Added support for web environments.
 - `CNAME` (the file usually used to set a custom domain name) has now been added to the default list of Exclude Patterns that the connected Neuro twin cannot access.
 - Actions `replace_text`, `delete_text` and `find_text` now allow specifying a line range to search in.
