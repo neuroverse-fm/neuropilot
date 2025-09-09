@@ -68,7 +68,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: NeuroPilot ${{ steps.build.outputs.VERSION }}
-        path: neuropilot-${{ steps.build.outputs.VERSION }}.vsix
+        path: neuropilot-base-${{ steps.build.outputs.VERSION }}.vsix
 
     - name: Commit and push version change
       run: |
@@ -85,7 +85,7 @@ jobs:
     needs: build
     environment:
       name: Visual Studio Marketplace
-      url: https://marketplace.visualstudio.com/item?itemName=Pasu4.neuropilot
+      url: https://marketplace.visualstudio.com/item?itemName=vsc-neuropilot.neuropilot-base
     steps:
       - name: Checkout repo # why
         uses: actions/checkout@v4
@@ -105,7 +105,7 @@ jobs:
           node-version: 'latest'
       
       - name: Publish VSIX to VS Marketplace
-        run: ls && pnpm dlx @vscode/vsce publish -p ${{ secrets.MARKETPLACE_TOKEN }} --packagePath "${{ steps.vsce-vsix-down.outputs.download-path }}/NeuroPilot ${{ needs.build.outputs.VERSION }}/neuropilot-${{ needs.build.outputs.VERSION }}.vsix"
+        run: ls && pnpm dlx @vscode/vsce publish -p ${{ secrets.MARKETPLACE_TOKEN }} --packagePath "${{ steps.vsce-vsix-down.outputs.download-path }}/NeuroPilot ${{ needs.build.outputs.VERSION }}/neuropilot-base-${{ needs.build.outputs.VERSION }}.vsix"
   
   ovsx-publish:
     name: Publish to Open VSX
@@ -113,7 +113,7 @@ jobs:
     needs: build
     environment:
       name: Open VSX Registry
-      url: https://open-vsx.org/extension/pasu4/neuropilot
+      url: https://open-vsx.org/extension/vsc-neuropilot/neuropilot-base
     steps:
       - name: Checkout repo # why
         uses: actions/checkout@v4
@@ -133,4 +133,4 @@ jobs:
           node-version: 'latest'
       
       - name: Publish VSIX to Open VSX
-        run: ls && pnpm dlx ovsx publish -p ${{ secrets.REGISTRY_TOKEN }} --packagePath "${{ steps.ovsx-vsix-down.outputs.download-path }}/NeuroPilot ${{ needs.build.outputs.VERSION }}/neuropilot-${{ needs.build.outputs.VERSION }}.vsix"
+        run: ls && pnpm dlx ovsx publish -p ${{ secrets.REGISTRY_TOKEN }} --packagePath "${{ steps.ovsx-vsix-down.outputs.download-path }}/NeuroPilot ${{ needs.build.outputs.VERSION }}/neuropilot-base-${{ needs.build.outputs.VERSION }}.vsix"
