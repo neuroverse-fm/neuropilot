@@ -761,6 +761,7 @@
 		"@types/node": "^20",
 		"@types/vscode": "^1.95.0",
 		"@types/ws": "^8.18.0",
+		"@vscode/test-web": "^0.0.73",
 		"@vscode/vsce": "^3.6.0",
 		"chalk": "^5.4.1",
 		"cross-env": "^7.0.3",
