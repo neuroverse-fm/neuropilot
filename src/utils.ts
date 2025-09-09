@@ -178,8 +178,9 @@ export function combineGlobLines(lines: string): string {
 
 export function combineGlobLinesToRegExp(lines: string): RegExp {
     const result = lines.split('\n')
-        .map(line => line.trim())
+        .map(line => line.trim().replace(/\\/g, '/').toLowerCase())
         .filter(line => line.length > 0)
+        .flatMap(line => line.includes('/') ? line : [`**/${line}`, `**/${line}/**`]) // If the line does not contain a slash, match it in any folder
         .map(line => globToRegExp(line, { extended: true, globstar: true }).source)
         .join('|');
     return new RegExp(result);
