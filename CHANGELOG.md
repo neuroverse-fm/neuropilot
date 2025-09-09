@@ -15,6 +15,7 @@ Changes between each version before then will not be listed.
 - Added missing entries to the 2.1.0 changelog.
   - (I forgot to push them before publishing)
   - Look at [dd06c39](https://github.com/VSC-NeuroPilot/neuropilot/commit/dd06c393a8b37d13db08189c30f95bee8fb4b356) for what exactly was added.
+- Added missing line range validator to `find_text` action.
 
 ## 2.1.1
 
