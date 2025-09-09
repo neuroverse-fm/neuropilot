@@ -137,7 +137,7 @@ function checkCurrentFile(_actionData: ActionData): ActionValidationResult {
  */
 function createLineRangeValidator(path = '') {
     return (actionData: ActionData) => {
-        const range = getProperty(actionData, path) as LineRange | undefined;
+        const range = getProperty(actionData.params, path) as LineRange | undefined;
 
         // If it's undefined it's not required
         if (!range) return actionValidationAccept();
