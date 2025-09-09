@@ -311,7 +311,7 @@ export async function RCEActionHandler(actionData: ActionData, actionList: Recor
             for (const events of action.cancelEvents) {
                 const event = events((_event) => {
                     logOutput('WARN', `Action ${action.name} was cancelled because of a cancellation event.`);
-                    NEURO.client?.sendContext('Your request was cancelled because an activation event was fired.');
+                    NEURO.client?.sendContext('Your request was cancelled because a cancellation event was fired.');
                     clearRceRequest();
                 });
                 eventArray.push(event);
