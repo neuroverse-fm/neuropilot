@@ -98,17 +98,6 @@ Copilot mode is developed for making Neuro request to do actions instead of dire
 This was called the **R**equested **C**ommand **E**xecution (or Request for Command Execution) framework when it was first conceived.
 The short answer is no, there isn't an intentional Remote Code Execution vulnerability in this extension, but by enabling Neuro's access to Pseudoterminals, one could say she already has access to a very powerful RCE, so be careful with that one.
 
-## Debugging
+## Contributing to NeuroPilot
 
-- Clone the repository
-- Run `pnpm install` in terminal to install dependencies
-- Run the `Run Extension` target in the Debug View. This will:
-  - Start a task `npm: watch` to compile the code
-  - Run the extension in a new VS Code window
-
-## Contributing
-
-If you have an idea or want to contribute a feature, please first [create an issue](https://github.com/VSC-NeuroPilot/neuropilot/issues) or send a message to `@Pasu4` in the project's [post on the Neuro Discord](https://discord.com/channels/574720535888396288/1350968830230396938).
-If you make a pull request that contributes code, please run `npm run lint src` and resolve any errors that did not get auto-fixed, preferrably before each commit.
-
-Please also refer to our [contributor docs](https://vsc-neuropilot.github.io/docs/meta/contributors).
+Please see [CONTRIBUTING.md](./CONTRIBUTING.md).
