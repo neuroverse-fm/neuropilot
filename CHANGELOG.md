@@ -4,6 +4,13 @@ Since v2.1.0, we're keeping a changelog of each version's changes in NeuroPilot.
 
 Changes between each version before then will not be listed.
 
+## 2.1.1
+
+### Meta changes
+
+We have now consolidated back to using `NeuroPilot` as the display name on both VS Marketplace and Open VSX.
+The namespace will remain on `vsc-neuropilot.neuropilot-base` to ensure parity across both registries.
+
 ## 2.1.0
 
 This update was made in response to the Evil dev stream on 2025-08-28. [Here's the VoD, courtesy of Neuro Archiver](https://www.youtube.com/watch?v=AIYaBYVX95o).
