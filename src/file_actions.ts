@@ -3,7 +3,7 @@ import * as vscode from 'vscode';
 import { NEURO } from '@/constants';
 import { combineGlobLines, filterFileContents, getFence, getVirtualCursor, getWorkspacePath, isBinary, isPathNeuroSafe, logOutput, normalizePath } from '@/utils';
 import { ActionData, contextNoAccess, RCEAction, actionValidationFailure, actionValidationAccept, ActionValidationResult, stripToActions } from '@/neuro_client_helper';
-import { CONFIG, PERMISSIONS, getPermissionLevel, isActionEnabled } from '@/config';
+import { ACCESS, CONFIG, PERMISSIONS, getPermissionLevel, isActionEnabled } from '@/config';
 
 /**
  * The path validator.
@@ -397,8 +397,8 @@ export function handleDeleteFileOrFolder(actionData: ActionData): string | undef
 }
 
 export function handleGetFiles(_actionData: ActionData): string | undefined {
-    const includePattern = combineGlobLines(CONFIG.includePattern || '**');
-    const excludePattern = combineGlobLines(CONFIG.excludePattern || '');
+    const includePattern = combineGlobLines(ACCESS.includePattern || ['**']);
+    const excludePattern = combineGlobLines(ACCESS.excludePattern || ['']);
     vscode.workspace.findFiles(includePattern, excludePattern).then(
         (uris) => {
             const paths = uris

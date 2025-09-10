@@ -4,7 +4,7 @@ import globToRegExp from 'glob-to-regexp';
 import { fileTypeFromBuffer } from 'file-type';
 
 import { NEURO } from '@/constants';
-import { CONFIG, getPermissionLevel, PERMISSIONS } from '@/config';
+import { ACCESS, CONFIG, getPermissionLevel, PERMISSIONS } from '@/config';
 
 import { ActionValidationResult, ActionData, actionValidationAccept, actionValidationFailure } from '@/neuro_client_helper';
 import assert from 'node:assert';
@@ -168,16 +168,16 @@ export function getWorkspacePath(): string | undefined {
     return path ? normalizePath(path) : undefined;
 }
 
-export function combineGlobLines(lines: string): string {
-    const result = lines.split('\n')
+export function combineGlobLines(lines: string[]): string {
+    const result = lines
         .map(line => line.trim())
         .filter(line => line.length > 0)
         .join(',');
     return `{${result}}`;
 }
 
-export function combineGlobLinesToRegExp(lines: string): RegExp {
-    const result = lines.split('\n')
+export function combineGlobLinesToRegExp(lines: string[]): RegExp {
+    const result = lines
         .map(line => line.trim().replace(/\\/g, '/').toLowerCase())
         .filter(line => line.length > 0)
         .flatMap(line => line.includes('/') ? line : [`**/${line}`, `**/${line}/**`]) // If the line does not contain a slash, match it in any folder
@@ -197,25 +197,28 @@ export function combineGlobLinesToRegExp(lines: string): RegExp {
 export function isPathNeuroSafe(path: string, checkPatterns = true): boolean {
     const rootFolder = getWorkspacePath()?.toLowerCase();
     const normalizedPath = normalizePath(path).toLowerCase();
-    const includePattern = CONFIG.includePattern || '**/*';
-    const excludePattern = CONFIG.excludePattern;
+    const includePattern = ACCESS.includePattern || ['**/*'];
+    const excludePattern = ACCESS.excludePattern;
     const includeRegExp: RegExp = checkPatterns ? combineGlobLinesToRegExp(includePattern) : REGEXP_ALWAYS;
     const excludeRegExp: RegExp = checkPatterns && excludePattern ? combineGlobLinesToRegExp(excludePattern) : REGEXP_NEVER;
 
-    if (CONFIG.allowUnsafePaths === true && vscode.workspace.isTrusted === true) {
-        return includeRegExp.test(normalizedPath)       // Check against include pattern
-            && !excludeRegExp.test(normalizedPath);     // Check against exclude pattern
-    }
-
     return rootFolder !== undefined
-        && normalizedPath !== rootFolder            // Prevent access to the workspace folder itself
-        && normalizedPath.startsWith(rootFolder)    // Prevent access to paths outside the workspace
-        && !normalizedPath.includes('/.')           // Prevent access to special files and folders (e.g. .vscode)
-        && !normalizedPath.includes('..')           // Prevent access to parent folders
-        && !normalizedPath.includes('~')            // Prevent access to home directory
-        && !normalizedPath.includes('$')            // Prevent access to environment variables
-        && includeRegExp.test(normalizedPath)       // Check against include pattern
-        && !excludeRegExp.test(normalizedPath);     // Check against exclude pattern
+        // Prevent access to the workspace folder itself (not sure how to handle this)
+        && normalizedPath !== rootFolder
+        // Prevent access to paths outside the workspace
+        && (ACCESS.externalFiles === false ? normalizedPath.startsWith(rootFolder) : true)
+        // Prevent access to special files and folders (e.g. .vscode)
+        && !(ACCESS.dotFiles === false ? normalizedPath.includes('/.') : false)
+        // Prevent access to parent folders
+        && !(ACCESS.externalFiles === false ? normalizedPath.includes('..') : false)
+        // Prevent access to home directory
+        && !(ACCESS.externalFiles === false ? normalizedPath.includes('~') : false)
+        // Prevent access to environment variables
+        && !(ACCESS.environmentVariables === false ? normalizedPath.includes('$') : false)
+        // Check against include pattern
+        && includeRegExp.test(normalizedPath)
+        // Check against exclude pattern
+        && !excludeRegExp.test(normalizedPath);
 }
 
 export const delayAsync = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
