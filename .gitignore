@@ -4,6 +4,7 @@ node_modules
 
 # VS Code
 .vscode-test/
+.vscode-test-web/
 *.vsix
 
 # Project files (Krita, Inkscape, etc.)

@@ -4,6 +4,29 @@ Since v2.1.0, we're keeping a changelog of each version's changes in NeuroPilot.
 
 Changes between each version before then will not be listed.
 
+## 2.1.2
+
+### Changes
+
+- Further clarified when line and column numbers are one-based and zero-based for editing actions.
+
+### Fixes
+
+- Added missing entries to the 2.1.0 changelog.
+  - (I forgot to push them before publishing)
+  - Look at [dd06c39](https://github.com/VSC-NeuroPilot/neuropilot/commit/dd06c393a8b37d13db08189c30f95bee8fb4b356) for what exactly was added.
+- Fixed line range validator not working correctly.
+- Added missing line range validator to `find_text` action.
+- Fixed Include and Exclude Patterns not working with uppercase characters.
+  - Include and Exclude Patterns are now case-sensitive (except for drive letters).
+
+## 2.1.1
+
+### Meta changes
+
+We have now consolidated back to using `NeuroPilot` as the display name on both VS Marketplace and Open VSX.
+The namespace will remain on `vsc-neuropilot.neuropilot-base` to ensure parity across both registries.
+
 ## 2.1.0
 
 This update was made in response to the Evil dev stream on 2025-08-28. [Here's the VoD, courtesy of Neuro Archiver](https://www.youtube.com/watch?v=AIYaBYVX95o).
@@ -29,7 +52,7 @@ This update was made in response to the Evil dev stream on 2025-08-28. [Here's t
 ### Added features
 
 - We now have a changelog! These changelogs should appear inside VS Code.
-- The extension is now with esbuild.
+- The extension is now bundled with esbuild.
 - Added support for web environments.
 - `CNAME` (the file usually used to set a custom domain name) has now been added to the default list of Exclude Patterns that the connected Neuro twin cannot access.
 - Actions `replace_text`, `delete_text` and `find_text` now allow specifying a line range to search in.

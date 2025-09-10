@@ -2,6 +2,13 @@
 
 As seen on TV (dev stream)!
 
+> [!WARNING]
+> We recently migrated our extension namespace from `pasu4` to `vsc-neuropilot`, and the extension ID from `neuropilot` to `neuropilot-base`.
+> Please uninstall `pasu4.neuropilot`, as all updates will be published to `vsc-neuropilot.neuropilot-base`.
+> This applies to both VS Marketplace and Open VSX (even though there weren't many install on Open VSX in the first place).
+>
+> `pasu4.neuropilot` is being kept around for historical reasons on VS Marketplace. All versions prior to v2.1.0 are published exclusively on that namespace on VS Marketplace.
+
 **Disclaimer: For simplicity, all mentions of Neuro also apply to Evil unless otherwise stated.**
 
 This extension enables Neuro-sama to write code in Visual Studio Code, either together with a programmer or on her own.
