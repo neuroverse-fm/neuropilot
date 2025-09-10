@@ -241,14 +241,14 @@
 					"neuropilot.includePattern": {
 						"type": "string",
 						"default": "**/*",
-						"markdownDescription": "A case-insensitive glob pattern for files Neuro is allowed to open, i.e. she will be unable to open files that don't match this pattern. Separate multiple patterns with a newline. Patterns without a slash will match any file or folder with that name.",
+						"markdownDescription": "A case-sensitive glob pattern for files Neuro is allowed to open, i.e. she will be unable to open files that don't match this pattern. Separate multiple patterns with a newline. Patterns without a slash will match any file or folder with that name.",
 						"editPresentation": "multilineText",
 						"markdownDeprecationMessage": "This setting has been moved to `neuropilot.access.includePattern`."
 					},
 					"neuropilot.excludePattern": {
 						"type": "string",
 						"default": "**/node_modules/**\n**/venv/**\nCNAME",
-						"markdownDescription": "A case-insensitive glob pattern for files Neuro is not allowed to open. Applied after the include pattern. Files and folders beginning with a dot are always excluded, regardless of this setting. Separate multiple patterns with a newline. Patterns without a slash will match any file or folder with that name.",
+						"markdownDescription": "A case-sensitive glob pattern for files Neuro is not allowed to open. Applied after the include pattern. Files and folders beginning with a dot are always excluded, regardless of this setting. Separate multiple patterns with a newline. Patterns without a slash will match any file or folder with that name.",
 						"editPresentation": "multilineText",
 						"markdownDeprecationMessage": "This setting has been moved to `neuropilot.access.excludePattern`."
 					},
@@ -715,7 +715,7 @@
 							"type": "string"
 						},
 						"default": ["**/*"],
-						"markdownDescription": "A case-insensitive list of glob patterns for files Neuro is allowed to open, i.e. she will be unable to open files that don't match this pattern.\n\nPatterns without a slash will match any file or folder with that name."
+						"markdownDescription": "A case-sensitive list of glob patterns for files Neuro is allowed to open, i.e. she will be unable to open files that don't match this pattern.\n\nPatterns without a slash will match any file or folder with that name."
 					},
 					"neuropilot.access.excludePattern": {
 						"type": "array",
@@ -723,7 +723,7 @@
 							"type": "string"
 						},
 						"default": ["**/node_modules/**", "**/venv/**", "CNAME"],
-						"markdownDescription": "A case-insensitive glob pattern for files Neuro is not allowed to open. Applied after the include pattern. Patterns without a slash will match any file or folder with that name."
+						"markdownDescription": "A case-sensitive glob pattern for files Neuro is not allowed to open. Applied after the include pattern. Patterns without a slash will match any file or folder with that name."
 					}
 				}
 			}
@@ -797,6 +797,7 @@
 		"@types/node": "^20",
 		"@types/vscode": "^1.95.0",
 		"@types/ws": "^8.18.0",
+		"@vscode/test-web": "^0.0.73",
 		"@vscode/vsce": "^3.6.0",
 		"chalk": "^5.4.1",
 		"cross-env": "^7.0.3",

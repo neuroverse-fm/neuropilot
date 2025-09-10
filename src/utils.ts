@@ -155,7 +155,11 @@ export function formatActionID(name: string): string {
 }
 
 export function normalizePath(path: string): string {
-    return path.replace(/\\/g, '/');
+    let result = path.replace(/\\/g, '/');
+    if (/^[A-Z]:/.test(result)) {
+        result = result.charAt(0).toLowerCase() + result.slice(1);
+    }
+    return result;
 }
 
 /**
@@ -170,15 +174,16 @@ export function getWorkspacePath(): string | undefined {
 
 export function combineGlobLines(lines: string[]): string {
     const result = lines
-        .map(line => line.trim())
+        .map(line => normalizePath(line.trim()))
         .filter(line => line.length > 0)
+        .flatMap(line => line.includes('/') ? line : [`**/${line}`, `**/${line}/**`]) // If the line does not contain a slash, match it in any folder
         .join(',');
     return `{${result}}`;
 }
 
 export function combineGlobLinesToRegExp(lines: string[]): RegExp {
     const result = lines
-        .map(line => line.trim().replace(/\\/g, '/').toLowerCase())
+        .map(line => normalizePath(line.trim()))
         .filter(line => line.length > 0)
         .flatMap(line => line.includes('/') ? line : [`**/${line}`, `**/${line}/**`]) // If the line does not contain a slash, match it in any folder
         .map(line => globToRegExp(line, { extended: true, globstar: true }).source)
@@ -195,7 +200,8 @@ export function combineGlobLinesToRegExp(lines: string[]): RegExp {
  * @returns True if Neuro may safely access the path.
  */
 export function isPathNeuroSafe(path: string, checkPatterns = true): boolean {
-    const rootFolder = getWorkspacePath()?.toLowerCase();
+    const workspacePath = getWorkspacePath();
+    const rootFolder = workspacePath ? normalizePath(workspacePath) : undefined;
     const normalizedPath = normalizePath(path).toLowerCase();
     const includePattern = ACCESS.includePattern || ['**/*'];
     const excludePattern = ACCESS.excludePattern;

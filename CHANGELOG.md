@@ -27,6 +27,7 @@ Changes between each version before then will not be listed.
 - Fixed line range validator not working correctly.
 - Added missing line range validator to `find_text` action.
 - Fixed Include and Exclude Patterns not working with uppercase characters.
+  - Include and Exclude Patterns are now case-sensitive (except for drive letters).
 
 ## 2.1.1
 

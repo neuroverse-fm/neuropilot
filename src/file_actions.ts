@@ -397,7 +397,7 @@ export function handleDeleteFileOrFolder(actionData: ActionData): string | undef
 }
 
 export function handleGetFiles(_actionData: ActionData): string | undefined {
-    const includePattern = combineGlobLines(ACCESS.includePattern || ['**']);
+    const includePattern = combineGlobLines(ACCESS.includePattern || ['**']); // '**' works for vscode but not for glob-to-regexp
     const excludePattern = combineGlobLines(ACCESS.excludePattern || ['']);
     vscode.workspace.findFiles(includePattern, excludePattern).then(
         (uris) => {
