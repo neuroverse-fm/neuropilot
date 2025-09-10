@@ -40,7 +40,7 @@
       		"name": "Open in Browser",
 			"type":	"node-terminal",
 			"request": "launch",
-			"command": "explorer http://localhost:3000; pnpx @vscode/test-web --extensionDevelopmentPath=${workspaceFolder} ${workspaceFolder}/playground",
+			"command": "pnpm vscode-test-web --extensionDevelopmentPath=${workspaceFolder} ${workspaceFolder}/playground",
     	}
 	]
 }

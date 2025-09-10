@@ -253,8 +253,8 @@ export function handleCreateFile(actionData: ActionData): string | undefined {
         // Create the file
         try {
             await vscode.workspace.fs.writeFile(fileUri, new Uint8Array(0));
-        } catch {
-            logOutput('ERROR', `Failed to create file ${relativePath}`);
+        } catch (erm: unknown) {
+            logOutput('ERROR', `Failed to create file ${relativePath}: ${erm}`);
             NEURO.client?.sendContext(`Failed to create file ${relativePath}`);
             return;
         }
@@ -270,8 +270,8 @@ export function handleCreateFile(actionData: ActionData): string | undefined {
             const document = await vscode.workspace.openTextDocument(fileUri);
             await vscode.window.showTextDocument(document);
             NEURO.client?.sendContext(`Opened new file ${relativePath}`);
-        } catch {
-            logOutput('ERROR', `Failed to open new file ${relativePath}`);
+        } catch (erm: unknown) {
+            logOutput('ERROR', `Failed to open new file ${relativePath}: ${erm}`);
             NEURO.client?.sendContext(`Failed to open new file ${relativePath}`);
         }
     }
@@ -301,8 +301,8 @@ export function handleCreateFolder(actionData: ActionData): string | undefined {
         // Create the folder
         try {
             await vscode.workspace.fs.createDirectory(folderUri);
-        } catch {
-            logOutput('ERROR', `Failed to create folder ${relativePath}`);
+        } catch (erm: unknown) {
+            logOutput('ERROR', `Failed to create folder ${relativePath}: ${erm}`);
             NEURO.client?.sendContext(`Failed to create folder ${relativePath}`);
             return;
         }
@@ -341,8 +341,8 @@ export function handleRenameFileOrFolder(actionData: ActionData): string | undef
         // Rename the file/folder
         try {
             await vscode.workspace.fs.rename(oldUri, newUri);
-        } catch {
-            logOutput('ERROR', `Failed to rename ${oldRelativePath} to ${newRelativePath}`);
+        } catch (erm: unknown) {
+            logOutput('ERROR', `Failed to rename ${oldRelativePath} to ${newRelativePath}: ${erm}`);
             NEURO.client?.sendContext(`Failed to rename ${oldRelativePath} to ${newRelativePath}`);
             return;
         }
@@ -384,9 +384,9 @@ export function handleDeleteFileOrFolder(actionData: ActionData): string | undef
 
         // Delete the file/folder
         try {
-            await vscode.workspace.fs.delete(uri, { recursive: recursive, useTrash: true });
-        } catch {
-            logOutput('ERROR', `Failed to delete ${relativePath}`);
+            await vscode.workspace.fs.delete(uri, { recursive, useTrash: true });
+        } catch (erm: unknown) {
+            logOutput('ERROR', `Failed to delete ${relativePath}: ${erm}`);
             NEURO.client?.sendContext(`Failed to delete ${relativePath}`);
             return;
         }
@@ -451,8 +451,8 @@ export function handleOpenFile(actionData: ActionData): string | undefined {
                 NEURO.client?.sendContext(`Opened file ${relativePath}\n\nContent (cursor position denoted by \`<<<|>>>\`):\n\n${fence}${document.languageId}\n${filterFileContents(text)}\n${fence}`);
             }
         }
-        catch {
-            logOutput('ERROR', `Failed to open file ${relativePath}`);
+        catch (erm: unknown) {
+            logOutput('ERROR', `Failed to open file ${relativePath}: ${erm}`);
             NEURO.client?.sendContext(`Failed to open file ${relativePath}`);
         }
     }
@@ -478,6 +478,6 @@ export function handleReadFile(actionData: ActionData): string | undefined {
             },
         );
     } catch (erm) {
-        logOutput('ERROR', `Error occured while trying to access file: ${erm}`);
+        logOutput('ERROR', `Error occured while trying to access file ${file}: ${erm}`);
     }
 }
