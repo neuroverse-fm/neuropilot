@@ -1,11 +1,11 @@
 {
-	"name": "neuropilot",
+	"name": "neuropilot-base",
 	"displayName": "NeuroPilot",
 	"private": true,
 	"description": "Allows Neuro-sama to either act as a companion/copilot or control Visual Studio Code by herself.",
 	"icon": "assets/heart-xaendril.png",
-	"version": "2.0.3",
-	"publisher": "Pasu4",
+	"version": "2.1.1",
+	"publisher": "VSC-NeuroPilot",
 	"repository": "https://github.com/VSC-NeuroPilot/neuropilot",
 	"homepage": "https://vsc-neuropilot.github.io/neuropilot",
 	"license": "MIT",
@@ -241,13 +241,13 @@
 					"neuropilot.includePattern": {
 						"type": "string",
 						"default": "**/*",
-						"markdownDescription": "A glob pattern for files Neuro is allowed to open, i.e. she will be unable to open files that don't match this pattern. Separate multiple patterns with a newline.",
+						"markdownDescription": "A case-sensitive glob pattern for files Neuro is allowed to open, i.e. she will be unable to open files that don't match this pattern. Separate multiple patterns with a newline. Patterns without a slash will match any file or folder with that name.",
 						"editPresentation": "multilineText"
 					},
 					"neuropilot.excludePattern": {
 						"type": "string",
-						"default": "**/node_modules/**\n**/venv/**\n**/CNAME",
-						"markdownDescription": "A glob pattern for files Neuro is not allowed to open. Applied after the include pattern. Files and folders beginning with a dot are always excluded, regardless of this setting. Separate multiple patterns with a newline.",
+						"default": "**/node_modules/**\n**/venv/**\nCNAME",
+						"markdownDescription": "A case-sensitive glob pattern for files Neuro is not allowed to open. Applied after the include pattern. Files and folders beginning with a dot are always excluded, regardless of this setting. Separate multiple patterns with a newline. Patterns without a slash will match any file or folder with that name.",
 						"editPresentation": "multilineText"
 					},
 					"neuropilot.terminals": {
@@ -761,6 +761,7 @@
 		"@types/node": "^20",
 		"@types/vscode": "^1.95.0",
 		"@types/ws": "^8.18.0",
+		"@vscode/test-web": "^0.0.73",
 		"@vscode/vsce": "^3.6.0",
 		"chalk": "^5.4.1",
 		"cross-env": "^7.0.3",

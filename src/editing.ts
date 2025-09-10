@@ -138,7 +138,7 @@ function checkCurrentFile(_actionData: ActionData): ActionValidationResult {
  */
 function createLineRangeValidator(path = '') {
     return (actionData: ActionData) => {
-        const range = getProperty(actionData, path) as LineRange | undefined;
+        const range = getProperty(actionData.params, path) as LineRange | undefined;
 
         // If it's undefined it's not required
         if (!range) return actionValidationAccept();
@@ -169,7 +169,7 @@ function createLineRangeValidator(path = '') {
 export const editingActions = {
     place_cursor: {
         name: 'place_cursor',
-        description: 'Place the cursor in the current file at the specified position. Absolute line and column numbers are one-based.',
+        description: 'Place the cursor in the current file at the specified position. Line and column numbers are one-based for "absolute" and zero-based for "relative".',
         schema: POSITION_SCHEMA,
         permissions: [PERMISSIONS.editActiveDocument],
         handler: handlePlaceCursor,
@@ -178,7 +178,7 @@ export const editingActions = {
     },
     get_cursor: {
         name: 'get_cursor',
-        description: 'Get the current cursor position and the text surrounding it',
+        description: 'Get the current cursor position and the text surrounding it.',
         permissions: [PERMISSIONS.editActiveDocument],
         handler: handleGetCursor,
         validators: [checkCurrentFile],
@@ -196,7 +196,7 @@ export const editingActions = {
     insert_text: {
         name: 'insert_text',
         description: 'Insert code at the specified position.'
-            + ' Absolute line and column numbers are one-based.'
+            + ' Line and column numbers are one-based for "absolute" and zero-based for "relative".'
             + ' If no position is specified, your cursor\'s current position will be used.'
             + ' After inserting, your cursor will be placed at the end of the inserted text.'
             + ' Also make sure you use new lines and indentation appropriately.',
@@ -271,7 +271,8 @@ export const editingActions = {
         name: 'delete_text',
         description: 'Delete text in the active document.'
             + ' If you set "useRegex" to true, you can use a Regex in the "find" parameter.'
-            + ' This will place your cursor where the deleted text was, unless you deleted multiple instances.',
+            + ' This will place your cursor where the deleted text was, unless you deleted multiple instances.'
+            + ' Line numbers are one-based.',
         schema: {
             type: 'object',
             properties: {
@@ -294,7 +295,7 @@ export const editingActions = {
             + ' If you set "useRegex" to true, you can use a Regex in the "find" parameter.'
             + ' This will place your cursor directly before or after the found text (depending on "moveCursor"), unless you searched for multiple instances.'
             + ' Set "highlight" to true to highlight the found text, if you want to draw Vedal\'s or Chat\'s attention to it.'
-            + ' If you search for multiple matches, the numbers at the start of each line are the line numbers and not part of the code.',
+            + ' If you search for multiple matches, the numbers at the start of each line are the one-based line numbers and not part of the code.',
         schema: {
             type: 'object',
             properties: {
@@ -310,7 +311,7 @@ export const editingActions = {
         },
         permissions: [PERMISSIONS.editActiveDocument],
         handler: handleFindText,
-        validators: [checkCurrentFile, createStringValidator(['find'])],
+        validators: [checkCurrentFile, createStringValidator(['find']), createLineRangeValidator('lineRange')],
         promptGenerator: (actionData: ActionData) => `find "${actionData.params.useRegex ? escapeRegExp(actionData.params.find) : actionData.params.find}".`,
     },
     undo: {
@@ -352,7 +353,9 @@ export const editingActions = {
     },
     rewrite_lines: {
         name: 'rewrite_lines',
-        description: 'Rewrite everything in the specified line range. After rewriting, your cursor will be placed at the end of the last inserted line.',
+        description: 'Rewrite everything in the specified line range.'
+            + ' After rewriting, your cursor will be placed at the end of the last inserted line.'
+            + ' Line numbers are one-based.',
         schema: {
             type: 'object',
             properties: {
@@ -372,7 +375,9 @@ export const editingActions = {
     },
     delete_lines: {
         name: 'delete_lines',
-        description: 'Delete everything in the specified line range. After deleting, your cursor will be placed at the end of the line before the deleted lines, if possible.',
+        description: 'Delete everything in the specified line range.'
+            + ' After deleting, your cursor will be placed at the end of the line before the deleted lines, if possible.'
+            + ' Line numbers are one-based.',
         schema: LINE_RANGE_SCHEMA,
         permissions: [PERMISSIONS.editActiveDocument],
         handler: handleDeleteLines,
@@ -385,7 +390,8 @@ export const editingActions = {
         name: 'highlight_lines',
         description: 'Highlight the specified lines.'
             + ' Can be used to draw Vedal\'s or Chat\'s attention towards something.'
-            + ' This will not move your cursor.',
+            + ' This will not move your cursor.'
+            + ' Line numbers are one-based.',
         schema: LINE_RANGE_SCHEMA,
         permissions: [PERMISSIONS.editActiveDocument],
         handler: handleHighlightLines,
