@@ -1,16 +1,17 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
 
-suite('Desktop Extension Tests', () => {
+suite('Integration: Desktop extension smoke', () => {
     test('Sanity Check', () => {
         assert.strictEqual(1 + 1, 2, '1 + 1 should equal 2'); // can we do the sanity test using 9 + 10
     });
 
     test('Extension exists', async () => {
-        const extension = vscode.extensions.getExtension('Pasu4.neuropilot');
-        assert.ok(extension, 'Extension Pasu4.neuropilot should be installed!');
+        const extension = vscode.extensions.getExtension('VSC-NeuroPilot.neuropilot-base')
+            ?? vscode.extensions.getExtension('Pasu4.neuropilot');
+        assert.ok(extension, 'Expected extension to be installed (VSC-NeuroPilot.neuropilot-base or Pasu4.neuropilot)');
         await extension.activate();
-        assert.ok(extension.isActive, 'Extension Pasu4.neuropilot should be active!');
+        assert.ok(extension.isActive, 'Extension should be active');
     });
 
     test('Workspace folder is correct', function() {

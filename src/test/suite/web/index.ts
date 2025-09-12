@@ -7,6 +7,8 @@ import '../utils.test';
 
 // Testing the meta stuff
 import '../test_utils.test';
+// Common env-agnostic tests
+import '../../unit/rewrite_all.simple.test';
 
 export function run(): Promise<void> {
     const mocha = new Mocha({

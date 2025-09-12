@@ -1,9 +1,22 @@
 import * as assert from 'assert';
+import * as vscode from 'vscode';
 import * as utils from '../../utils';
 import { NEURO } from '../../constants';
 import { anyString, capture, reset, spy, verify } from 'ts-mockito';
 
 suite('Utils Tests', async function() {
+    let channel: vscode.OutputChannel | null = null;
+
+    suiteSetup(() => {
+        channel = vscode.window.createOutputChannel('Neuropilot Test');
+        NEURO.outputChannel = channel;
+    });
+
+    suiteTeardown(() => {
+        channel?.dispose();
+        NEURO.outputChannel = null;
+        channel = null;
+    });
     test('logOutput: Log single lines', async function() {
         // === Arrange ===
         const outputChannelSpy = spy(NEURO.outputChannel);

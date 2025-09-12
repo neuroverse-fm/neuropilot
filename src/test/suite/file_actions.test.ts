@@ -2,7 +2,6 @@ import * as assert from 'assert';
 import * as vscode from 'vscode';
 import * as fileActions from '../../file_actions';
 import { assertProperties, checkNoErrorWithTimeout, createTestDirectory, createTestFile } from '../test_utils';
-import { ActionData, ActionValidationResult } from '../../neuro_client_helper';
 import { NeuroClient } from 'neuro-game-sdk';
 import { NEURO } from '../../constants';
 import { anything, capture, instance, mock, verify } from 'ts-mockito';
@@ -124,7 +123,7 @@ suite('File Actions', () => {
     });
 
     test('neuroSafeDeleteValidation', async function() {
-            const neuroSafeDeleteValidation = fileActions._internals.neuroSafeDeleteValidation;
+        const neuroSafeDeleteValidation = fileActions._internals.neuroSafeDeleteValidation;
 
         // === Arrange ===
         const fileUri = await createTestFile('fileToDelete.js');
@@ -233,19 +232,31 @@ suite('File Actions', () => {
     });
 
     test('handleOpenFile', async function() {
+        this.timeout(5000);
         // === Arrange ===
         const fileContent = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.\n68043cf7-01af-43cb-a9ac-6feeec7cdcc1\n';
         const fileUri = await createTestFile('file.js', fileContent);
         const filePath = vscode.workspace.asRelativePath(fileUri, false);
 
+        // Ensure contents are sent on open in this test scenario
+        const config = vscode.workspace.getConfiguration('neuropilot');
+        const originalSetting = config.get<boolean>('sendContentsOnFileChange');
+        await config.update('sendContentsOnFileChange', false, vscode.ConfigurationTarget.Workspace);
+
         // === Act ===
         fileActions.handleOpenFile({ id: 'abc', name: 'open_file', params: { filePath: filePath } });
+        // Allow VS Code to open and show the document before asserting
         await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); });
+        // Brief delay to ensure activeTextEditor is updated across platforms
+        await new Promise(resolve => setTimeout(resolve, 100));
         const [context] = capture(mockedClient.sendContext).last();
 
         // === Assert ===
         assert.strictEqual(vscode.window.activeTextEditor?.document.uri.path.toLowerCase(), fileUri.path.toLowerCase(), 'The correct file should be opened in the active editor');
         assert.strictEqual(context.includes(fileContent), true, 'The file content should be sent in the context');
+
+        // Restore setting
+        await config.update('sendContentsOnFileChange', originalSetting ?? true, vscode.ConfigurationTarget.Workspace);
     });
 
     test('handleCreateFile', async function() {
