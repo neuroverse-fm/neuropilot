@@ -7,6 +7,8 @@ import 'mocha';
 import './extension.test';
 import '../file_actions.test';
 import '../utils.test';
+// Common integration tests that are environment-agnostic
+import '../common/editing_actions.test';
 
 // Testing the meta stuff
 import '../test_utils.test';

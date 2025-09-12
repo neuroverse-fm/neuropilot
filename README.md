@@ -150,6 +150,7 @@ Commands:
 Notes:
 - The browser test workspace is mounted under a virtual scheme; the workspace name may appear as `mount` instead of `test-playground` in this mode.
 - File operations in browser mode use the VS Code virtual FS, so ‘trash’ is disabled and deletes are immediate.
+- Headless web runs may log noisy warnings like "Output channel not initialized", "[NeuroClient] WebSocket is not open", or 404s for some dev server assets. These are expected in the test harness: we mock the client and don’t connect to a real server. Assertions still validate real side effects (file edits/opens/renames/deletes, document text, active editor) and verify `sendContext` via a mocked client, so tests will fail if the code paths don’t execute.
 
 ## Contributing
 

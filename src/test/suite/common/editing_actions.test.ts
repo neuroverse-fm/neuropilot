@@ -112,14 +112,12 @@ suite('Integration: Editing actions', () => {
     });
 
     test('find_text single match returns description string', () => {
-        // Search for text we inserted earlier to avoid dependency on initial content
         const actionData: ActionData = { id: 't', name: 'find_text', params: { find: 'Echo', match: 'firstInFile', useRegex: false, highlight: false } };
         const result = handleFindText(actionData);
         assert.ok(result && result.includes('Found match'));
     });
 
     test('undo sends context after reverting last change', async () => {
-        // Make a trivial change directly
         await vscode.workspace.openTextDocument(docUri);
         const edit = new vscode.WorkspaceEdit();
         edit.insert(docUri, new vscode.Position(0, 0), 'Z');
@@ -165,13 +163,11 @@ suite('Integration: Editing actions', () => {
     });
 
     test('rewrite_lines replaces a range and sends context; delete_lines removes a range and sends context', async () => {
-        // Prepare content
         const resetContent = ['L1', 'L2', 'L3', 'L4', 'L5'].join('\n');
         handleRewriteAll({ id: 't', name: 'rewrite_all', params: { content: resetContent } } as ActionData);
         await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); }, 3000, 100);
         reset(mockedClient);
 
-        // Rewrite lines 2-3
         handleRewriteLines({ id: 't', name: 'rewrite_lines', params: { startLine: 2, endLine: 3, content: 'X\nY' } } as ActionData);
         await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); }, 3000, 100);
         let text = (await vscode.workspace.openTextDocument(docUri)).getText();
@@ -180,7 +176,6 @@ suite('Integration: Editing actions', () => {
         assert.ok(text.includes('Y'));
 
         reset(mockedClient);
-        // Delete line 4
         handleDeleteLines({ id: 't', name: 'delete_lines', params: { startLine: 4, endLine: 4 } } as ActionData);
         await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); }, 3000, 100);
         text = (await vscode.workspace.openTextDocument(docUri)).getText();
