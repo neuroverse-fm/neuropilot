@@ -68,8 +68,8 @@ jobs:
                 cache: 'pnpm'
                 cache-dependency-path: './pnpm-lock.yaml'
             - run: pnpm install --frozen-lockfile
-            - name: Install Playwright browsers (Chromium headless shell)
-              run: pnpm exec playwright install --with-deps chromium-headless-shell
+            - name: Install Playwright browsers
+              run: pnpm dlx playwright install --with-deps
             - name: Run web tests (headless browser)
               run: pnpm run test:web:browser
     #test-web:
