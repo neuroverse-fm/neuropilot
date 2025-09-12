@@ -117,16 +117,24 @@ The short answer is no, there isn't an intentional Remote Code Execution vulnera
 
 We have both unit tests and integration tests. Integration tests spin up a VS Code host (desktop Electron or the browser-hosted workbench) and exercise the extension.
 
-- Unit tests:
-  - Scope: small, self-contained logic (e.g., `rewrite_all` unit cases, utilities)
-  - Runs inside both desktop and web test bundles
+Folder layout:
 
-- Integration tests:
-  - Scope: interacts with VS Code APIs and the extension behavior (file actions, activation)
-  - Desktop integration runs in Electron host
-  - Web integration can run in two modes:
-    - Desktop-hosted web tests (Electron extension host with the web bundle)
-    - True browser web tests via `@vscode/test-web`
+- `src/test/unit-test/` — unit tests that validate prompt text generation logic only
+- `src/test/suite/desktop/` and `src/test/suite/web/` — integration test harnesses and suites
+
+Unit tests:
+
+- Purpose: verify prompt text formatting and related pure logic (e.g., line counts, pluralization, escaping)
+- Scope: they DO NOT execute action handlers or use VS Code APIs; they only cover prompt-generation logic
+- Examples: `rewrite_all.simple.test.ts`, `find_text.simple.test.ts`, etc. under `src/test/unit-test/`
+
+Integration tests:
+
+- Purpose: verify actual action functionality and end-to-end extension behavior
+- Scope: these use VS Code APIs (open/save files, edits, decorations, terminal/tasks, git, etc.) and assert the real effects
+- Environments:
+  - Desktop integration runs in the Electron host
+  - Web integration runs either under the Electron host with the web bundle or in a real browser via `@vscode/test-web`
 
 Commands:
 

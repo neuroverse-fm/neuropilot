@@ -11,7 +11,7 @@ export function run(): Promise<void> {
                 await import('../file_actions.test.js');
                 await import('../utils.test.js');
                 await import('../test_utils.test.js');
-                await import('../../unit/rewrite_all.simple.test.js');
+                await import('../../unit-test/rewrite_all.simple.test.js');
                 mocha.run((failures: number) => {
                     if (failures > 0) {
                         reject(new Error(`${failures} tests failed.`));

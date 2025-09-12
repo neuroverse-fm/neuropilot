@@ -1,7 +1,7 @@
 import * as assert from 'assert';
 
 // Simple test for the rewrite_all action logic
-suite('rewrite_all Action', () => {
+suite('rewrite_all Action (unit)', () => {
     test('should calculate line count correctly for single line', () => {
         const content = 'Single line content';
         const lineCount = content.trim().split('\n').length;
@@ -42,3 +42,5 @@ suite('rewrite_all Action', () => {
         assert.strictEqual(prompt, 'rewrite the entire file with 3 lines of content.');
     });
 });
+
+

@@ -9,7 +9,7 @@ import './editing_actions.test';
 
 // Testing the meta stuff
 import '../test_utils.test';
-import '../../unit/rewrite_all.simple.test';
+import '../../unit-test/rewrite_all.simple.test';
 
 export function run(): Promise<void> {
     const mocha = new Mocha({
