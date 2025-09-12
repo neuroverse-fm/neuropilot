@@ -83,18 +83,19 @@ export function emergencyDenyRequests(): void {
     vscode.window.showInformationMessage(`The last request from ${NEURO.currentController} has been denied automatically.`);
 }
 
-export function clearRceRequest(): void { // Function to clear out RCE dialogs
-    NEURO.rceRequest?.resolve();
+export function clearRceRequest(): void {
+    if (!NEURO.rceRequest) return;
+    NEURO.rceRequest.resolve();
+    if (NEURO.rceRequest.cancelEvents) {
+        for (const disposable of NEURO.rceRequest.cancelEvents) {
+            try { disposable.dispose(); } catch (erm: unknown) { logOutput('ERROR', `Failed to dispose a cancellation event: ${erm}`); }
+        }
+    }
     NEURO.rceRequest = null;
     NEURO.client?.unregisterActions([cancelRequestAction.name]);
     NEURO.statusBarItem!.tooltip = 'No active request';
     NEURO.statusBarItem!.color = new vscode.ThemeColor('statusBarItem.foreground');
     NEURO.statusBarItem!.backgroundColor = new vscode.ThemeColor('statusBarItem.background');
-    if (NEURO.rceRequest!.cancelEvents) {
-        for (const disposable of NEURO.rceRequest!.cancelEvents) {
-            disposable.dispose();
-        }
-    }
 }
 
 /**
@@ -308,14 +309,18 @@ export async function RCEActionHandler(actionData: ActionData, actionList: Recor
         const eventArray: vscode.Disposable[] = [];
 
         if (action.cancelEvents) {
-            for (const events of action.cancelEvents) {
-                const event = events((_event) => {
+            const disposables: vscode.Disposable[] = [];
+            for (const eventSource of action.cancelEvents) {
+                const disposable = eventSource((_event) => {
                     logOutput('WARN', `Action ${action.name} was cancelled because of a cancellation event.`);
                     NEURO.client?.sendContext('Your request was cancelled because a cancellation event was fired.');
                     clearRceRequest();
+                    // Dispose all listeners
+                    for (const d of disposables) d.dispose();
                 });
-                eventArray.push(event);
+                disposables.push(disposable);
             }
+            eventArray.push(...disposables);
         }
 
         if (effectivePermission === PermissionLevel.AUTOPILOT) {
