@@ -31,8 +31,9 @@ suite('Utils Tests', async function() {
         const [message1] = capture(outputChannelSpy.appendLine).first();
         const [message2] = capture(outputChannelSpy.appendLine).second();
 
-        assert.match(message1, /^\d{2}:\d{2}:\d{2}\.\d{3} \[DEBUG\] Lorem ipsum$/);
-        assert.match(message2, /^\d{2}:\d{2}:\d{2}\.\d{3} \[INFO\] dolor sit amet$/);
+        // Node's assert.match may be unavailable in browser polyfills; use RegExp#test instead
+        assert.ok(/^\d{2}:\d{2}:\d{2}\.\d{3} \[DEBUG\] Lorem ipsum$/.test(message1));
+        assert.ok(/^\d{2}:\d{2}:\d{2}\.\d{3} \[INFO\] dolor sit amet$/.test(message2));
 
         reset(outputChannelSpy);
     });

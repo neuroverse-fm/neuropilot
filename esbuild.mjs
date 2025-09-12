@@ -1,4 +1,4 @@
-import { web, webTest } from './esbuild-configs/web.esbuild.js';
+import { web, webTest, webTestBrowser } from './esbuild-configs/web.esbuild.js';
 import { desktop, desktopTest } from './esbuild-configs/desktop.esbuild.js';
 import * as fs from 'fs';
 import chalk from 'chalk';
@@ -46,6 +46,7 @@ const watch = process.argv.includes('--watch');
 const modeArgIndex = process.argv.indexOf('--mode');
 const test = process.argv.includes('--test');
 const mode = modeArgIndex !== -1 && process.argv[modeArgIndex + 1] ? process.argv[modeArgIndex + 1] : 'default';
+const webBrowserTest = process.argv.includes('--web-browser-test');
 
 // Log the build configuration
 console.log(chalk.bold(`🏗️  Build mode: ${production ? chalk.green('🏭 Production') : chalk.yellow('🛠️ Development')}`));
@@ -57,7 +58,7 @@ let outDir;
 if (test) {
     switch (mode.toLowerCase()) {
         case 'web':
-            outDir = ['./out/web/test.js'];
+            outDir = webBrowserTest ? ['./out/web/test-browser.js'] : ['./out/web/test.js'];
             break;
         case 'desktop':
             outDir = ['./out/desktop/test.js'];
@@ -92,7 +93,8 @@ try {
         case 'web':
             if (test) {
                 console.log(chalk.blue(`🌐 ${watch ? 'Watching' : 'Running'} web test build...`));
-                await webTest(production, watch).catch(erm => {
+                const runner = webBrowserTest ? webTestBrowser : webTest;
+                await runner(production, watch).catch(erm => {
                     console.error(chalk.red.bold(`💥  Web test build failed: ${erm}`));
                     process.exit(1);
                 });

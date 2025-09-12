@@ -113,6 +113,36 @@ The short answer is no, there isn't an intentional Remote Code Execution vulnera
   - Start a task `npm: watch` to compile the code
   - Run the extension in a new VS Code window
 
+### Tests
+
+We have both unit tests and integration tests. Integration tests spin up a VS Code host (desktop Electron or the browser-hosted workbench) and exercise the extension.
+
+- Unit tests:
+  - Scope: small, self-contained logic (e.g., `rewrite_all` unit cases, utilities)
+  - Runs inside both desktop and web test bundles
+
+- Integration tests:
+  - Scope: interacts with VS Code APIs and the extension behavior (file actions, activation)
+  - Desktop integration runs in Electron host
+  - Web integration can run in two modes:
+    - Desktop-hosted web tests (Electron extension host with the web bundle)
+    - True browser web tests via `@vscode/test-web`
+
+Commands:
+
+- Desktop (Electron host) builds and runs tests for desktop and web bundles:
+  - All web tests under Electron host: `npm run test:web`
+  - All desktop tests: `npm run test:desktop`
+  - All tests: `npm run test`
+
+- Web (true browser) tests:
+  - Build browser test bundle and run in Chromium headless via `@vscode/test-web`:
+    - `npm run test:web:browser`
+
+Notes:
+- The browser test workspace is mounted under a virtual scheme; the workspace name may appear as `mount` instead of `test-playground` in this mode.
+- File operations in browser mode use the VS Code virtual FS, so ‘trash’ is disabled and deletes are immediate.
+
 ## Contributing
 
 If you have an idea or want to contribute a feature, please first [create an issue](https://github.com/VSC-NeuroPilot/neuropilot/issues) or send a message to `@Pasu4` in the project's [post on the Neuro Discord](https://discord.com/channels/574720535888396288/1350968830230396938).

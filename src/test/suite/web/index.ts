@@ -1,4 +1,7 @@
+// Use the global Mocha provided by the web test runner
+
 import Mocha from 'mocha';
+import 'mocha';
 
 // Extension unit tests
 import './extension.test';
@@ -11,14 +14,10 @@ import '../test_utils.test';
 import '../../unit/rewrite_all.simple.test';
 
 export function run(): Promise<void> {
-    const mocha = new Mocha({
-        ui: 'tdd', // or 'bdd' if you prefer that syntax
-        color: true,
-    });
-
+    const mocha = new Mocha({ ui: 'tdd', color: true });
     return new Promise((resolve, reject) => {
         try {
-            mocha.run(failures => {
+            mocha.run((failures: number) => {
                 if (failures > 0) {
                     reject(new Error(`${failures} tests failed.`));
                 } else {

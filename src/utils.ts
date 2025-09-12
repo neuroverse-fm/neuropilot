@@ -168,8 +168,13 @@ export function normalizePath(path: string): string {
  * @returns The path to the workspace folder, or undefined if the workspace is not open.
  */
 export function getWorkspacePath(): string | undefined {
-    const path = vscode.workspace.workspaceFolders?.[0].uri.fsPath;
-    return path ? normalizePath(path) : undefined;
+    const uri = vscode.workspace.workspaceFolders?.[0]?.uri;
+    if (!uri) return undefined;
+    if (uri.scheme === 'file') {
+        return normalizePath(uri.fsPath);
+    }
+    // For non-file schemes (e.g., vscode-test-web://mount), use the URI path
+    return normalizePath(uri.path);
 }
 
 export function combineGlobLines(lines: string): string {

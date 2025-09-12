@@ -48,21 +48,53 @@ export async function webTest(_prodFlag, watchFlag) {
         minify: false, // Don't minify tests for better debugging
         sourcemap: true, // Always generate sourcemaps for tests
         sourcesContent: true, // Include source content for better debugging
-        platform: 'browser',
+        // Build tests for Node/Electron environment since we run them via vscode-test (desktop)
+        platform: 'node',
         outfile: 'out/web/test.js',
         tsconfig: './test-tsconfigs/tsconfig.web.json',
         external: [
             'vscode',
             'mocha',
-            '@vscode/test-web',
+            '@vscode/test-electron',
         ],
         logLevel: 'warning',
         define: {
             // Define test environment variables
             'process.env.NODE_ENV': '"test"',
         },
+        // Do NOT include browser polyfills in Node/Electron test bundle
+        plugins: [esbuildProblemMatcherPlugin],
+    });
+
+    if (watchFlag) {
+        await ctx.watch();
+    } else {
+        await ctx.rebuild();
+        await ctx.dispose();
+    }
+}
+
+export async function webTestBrowser(_prodFlag, watchFlag) {
+    const ctx = await context({
+        entryPoints: ['src/test/suite/web/index.browser.ts'],
+        bundle: true,
+        format: 'cjs',
+        minify: false,
+        sourcemap: true,
+        sourcesContent: true,
+        platform: 'browser',
+        outfile: 'out/web/test-browser.js',
+        tsconfig: './test-tsconfigs/tsconfig.web.json',
+        external: [
+            'vscode',
+            '@vscode/test-web',
+        ],
+        logLevel: 'warning',
+        define: {
+            'process.env.NODE_ENV': '"test"',
+        },
         plugins: [
-            polyfillNode({ polyfills: { // trying to make the build as small as possible
+            polyfillNode({ polyfills: {
                 child_process: false,
                 module: false,
                 os: false,
