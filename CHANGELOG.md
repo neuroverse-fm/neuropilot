@@ -25,6 +25,7 @@ Changes between each version before then will not be listed.
 - Added missing line range validator to `find_text` action.
 - Fixed Include and Exclude Patterns not working with uppercase characters.
   - Include and Exclude Patterns are now case-sensitive (except for drive letters).
+- Fixed actions that access the file system not working in virtual workspaces.
 
 ## 2.1.1
 
