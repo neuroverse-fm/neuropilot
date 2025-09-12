@@ -69,6 +69,9 @@ export function setupCommonEventHandlers() {
             ) {
                 setVirtualCursor();
             }
+            if (event.affectsConfiguration('neuropilot.permission')) {
+                reloadPermissions();
+            }
         }),
         vscode.extensions.onDidChange(obtainExtensionState),
     ];
