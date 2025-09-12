@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 
 import { NEURO } from '@/constants';
-import { combineGlobLines, filterFileContents, getFence, getVirtualCursor, getWorkspacePath, isBinary, isPathNeuroSafe, logOutput, normalizePath } from '@/utils';
+import { filterFileContents, getFence, getVirtualCursor, getWorkspacePath, isBinary, isPathNeuroSafe, logOutput, normalizePath } from '@/utils';
 import { ActionData, contextNoAccess, RCEAction, actionValidationFailure, actionValidationAccept, ActionValidationResult, stripToActions } from '@/neuro_client_helper';
 import { CONFIG, PERMISSIONS, getPermissionLevel, isActionEnabled } from '@/config';
 
@@ -397,9 +397,10 @@ export function handleDeleteFileOrFolder(actionData: ActionData): string | undef
 }
 
 export function handleGetFiles(_actionData: ActionData): string | undefined {
-    const includePattern = combineGlobLines(CONFIG.includePattern || '**'); // '**' works for vscode but not for glob-to-regexp
-    const excludePattern = combineGlobLines(CONFIG.excludePattern || '');
-    vscode.workspace.findFiles(includePattern, excludePattern).then(
+    // const includePattern = combineGlobLines(CONFIG.includePattern || '**'); // '**' works for vscode but not for glob-to-regexp
+    // const excludePattern = combineGlobLines(CONFIG.excludePattern || '');
+    const workspaceFolder = vscode.workspace.workspaceFolders![0].uri;
+    recurseWorkspace(workspaceFolder).then(
         (uris) => {
             const paths = uris
                 .filter(uri => isPathNeuroSafe(uri.fsPath, false))
@@ -423,6 +424,28 @@ export function handleGetFiles(_actionData: ActionData): string | undefined {
     );
 
     return undefined;
+
+    async function recurseWorkspace(uri: vscode.Uri): Promise<vscode.Uri[]> {
+        const entries = await vscode.workspace.fs.readDirectory(uri);
+        const uriEntries: [vscode.Uri, vscode.FileType][] = entries.map(entry => [uri.with({ path: uri.path + '/' + entry[0] }), entry[1] ]);
+
+        const result: vscode.Uri[] = [];
+        for (const [childUri, fileType] of uriEntries) {
+            if (fileType === vscode.FileType.File) {
+                if (isPathNeuroSafe(childUri.fsPath))
+                    result.push(childUri);
+            }
+            else if (fileType === vscode.FileType.Directory) {
+                if (isPathNeuroSafe(childUri.fsPath))
+                    result.push(...await recurseWorkspace(childUri));
+            }
+            else {
+                logOutput('WARNING', `Unhandled file type ${fileType}.`);
+            }
+        }
+
+        return result;
+    }
 }
 
 export function handleOpenFile(actionData: ActionData): string | undefined {
