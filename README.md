@@ -127,6 +127,7 @@ Unit tests:
 - Purpose: verify prompt text formatting and related pure logic (e.g., line counts, pluralization, escaping)
 - Scope: they DO NOT execute action handlers or use VS Code APIs; they only cover prompt-generation logic
 - Examples: `rewrite_all.simple.test.ts`, `find_text.simple.test.ts`, etc. under `src/test/unit-test/`
+- Execution: unit tests are imported into both the desktop and web test runners, so `pnpm test` (and CI) runs them alongside integration tests; no separate Node/Mocha job is required
 
 Integration tests:
 

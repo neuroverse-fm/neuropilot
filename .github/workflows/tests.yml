@@ -1,19 +1,17 @@
-name: Test extension
+name: Tests (Desktop & Web)
 
 on:
     push:
         branches:
             - master
             - dev
+    # Tests should always run on Pull Requests in order to catch regressions early
     pull_request:
-        branches:
-            - master
-            - dev
     workflow_dispatch: # in case we need to regenerate test coverage
 
 jobs:
-    test-desktop:
-        name: Electron tests
+    desktop-tests:
+        name: Desktop (Electron) tests
         strategy:
             fail-fast: false
             matrix:
@@ -28,10 +26,10 @@ jobs:
         steps:
             - name: Checkout
               uses: actions/checkout@v4
-            - name: Cache configs
+            - name: Cache VS Code test downloads
               uses: actions/cache@v4
               with:
-                key: neuropilot-tests-${{ github.repository }}-${{ matrix.os }}
+                key: neuropilot-tests-vscode-${{ github.repository }}-${{ matrix.os }}
                 path: .vscode-test/
             - name: Setup pnpm
               uses: pnpm/action-setup@v4
@@ -44,12 +42,34 @@ jobs:
                 cache: 'pnpm'
                 cache-dependency-path: './pnpm-lock.yaml'
             - run: npm install
-            - run: xvfb-run -a pnpm test
+            - name: Run desktop tests (Linux)
+              run: xvfb-run -a pnpm run test:desktop
               if: runner.os == 'Linux'
-            - run: pnpm test
+            - name: Run desktop tests (macOS/Windows)
+              run: pnpm run test:desktop
               if: runner.os != 'Linux'
             # for now we'll stop with this
             # VSC-NeuroPilot/actions/send-test-repo-action will be added later
+
+    web-tests:
+        name: Web tests (Chromium headless)
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+            - name: Setup pnpm
+              uses: pnpm/action-setup@v4
+              with:
+                  version: 10.14.0
+            - name: Install Node.js
+              uses: actions/setup-node@v4
+              with:
+                node-version: 22.x
+                cache: 'pnpm'
+                cache-dependency-path: './pnpm-lock.yaml'
+            - run: npm install
+            - name: Run web tests (headless browser)
+              run: pnpm run test:web:browser
     #test-web:
     #    name: Web tests
     #    strategy:
