@@ -1,3 +1,5 @@
+<!-- markdownlint-disable -->
+
 # NeuroPilot changelog
 
 Since v2.1.0, we're keeping a changelog of each version's changes in NeuroPilot.
@@ -5,6 +7,10 @@ Since v2.1.0, we're keeping a changelog of each version's changes in NeuroPilot.
 Changes between each version before then will not be listed.
 
 ## 2.1.2
+
+### Known issues
+
+- Certain file actions don't work properly in virtual workspaces. This seems to specifically only happen on virtual workspaces like opening a remote repository (via Azure Repos/Github Repositories), which is slightly hard to set up debugging for, so this may take a bit to debug. (Tracked at [#102](https://github.com/VSC-NeuroPilot/neuropilot/issues/102))
 
 ### Changes
 
