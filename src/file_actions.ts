@@ -346,6 +346,15 @@ export function handleRenameFileOrFolder(actionData: ActionData): string | undef
 		const oldUri = vscode.Uri.joinPath(base, oldRelativePath);
 		const newUri = vscode.Uri.joinPath(base, newRelativePath);
 
+		// Capture which tabs/editors reference the old path before the rename
+		const wasActiveEditor = vscode.window.activeTextEditor?.document.uri.toString() ?? null;
+		const visibleEditorsPointingToOld = vscode.window.visibleTextEditors
+			.filter(ed => ed.document.uri.path === oldUri.path || ed.document.uri.path.startsWith(oldUri.path + '/'))
+			.map(ed => ({ uri: ed.document.uri, viewColumn: ed.viewColumn, wasActive: ed.document.uri.toString() === wasActiveEditor }));
+		const tabsPointingToOld = vscode.window.tabGroups.all.flatMap(group => group.tabs.filter(tab =>
+			(tab.input instanceof vscode.TabInputText) && (tab.input.uri.path === oldUri.path || tab.input.uri.path.startsWith(oldUri.path + '/'))
+		) as vscode.Tab[]);
+
 		// Check if the new path already exists
 		try {
 			await vscode.workspace.fs.stat(newUri);
@@ -365,6 +374,26 @@ export function handleRenameFileOrFolder(actionData: ActionData): string | undef
 
 		logOutput('INFO', `Renamed ${oldRelativePath} to ${newRelativePath}`);
 		NEURO.client?.sendContext(`Renamed ${oldRelativePath} to ${newRelativePath}`);
+
+		// Re-target any open editors/tabs that pointed to the old location
+		try {
+			// For each previously visible editor that referenced the old path (file or under folder), open its new URI
+			for (const { uri, viewColumn, wasActive } of visibleEditorsPointingToOld) {
+				const suffix = uri.path.substring(oldUri.path.length);
+				const segments = suffix.replace(/^\//, '').split('/').filter(Boolean);
+				const targetUri = segments.length ? vscode.Uri.joinPath(newUri, ...segments) : newUri;
+
+				const doc = await vscode.workspace.openTextDocument(targetUri);
+				await vscode.window.showTextDocument(doc, { preview: false, preserveFocus: !wasActive, viewColumn: viewColumn });
+			}
+
+			// Close any tabs still referencing the old URIs
+			for (const tab of tabsPointingToOld) {
+				try {
+					await vscode.window.tabGroups.close(tab, true);
+				} catch { /* best-effort */ }
+			}
+		} catch { /* best-effort remediation */ }
 	}
 }
 
