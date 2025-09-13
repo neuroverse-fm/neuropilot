@@ -1,9 +1,9 @@
 import * as vscode from 'vscode';
 
 import { NEURO } from '@/constants';
-import { combineGlobLines, filterFileContents, getFence, getVirtualCursor, getWorkspacePath, isBinary, isPathNeuroSafe, logOutput, normalizePath } from '@/utils';
+import { filterFileContents, getFence, getVirtualCursor, getWorkspacePath, getWorkspaceUri, isBinary, isPathNeuroSafe, logOutput, normalizePath } from '@/utils';
 import { ActionData, contextNoAccess, RCEAction, actionValidationFailure, actionValidationAccept, ActionValidationResult, stripToActions } from '@/neuro_client_helper';
-import { ACCESS, CONFIG, PERMISSIONS, getPermissionLevel, isActionEnabled } from '@/config';
+import { CONFIG, PERMISSIONS, getPermissionLevel, isActionEnabled } from '@/config';
 
 /**
  * The path validator.
@@ -16,12 +16,16 @@ async function validatePath(path: string, checkExist: boolean, directoryType: st
     if (path === '') {
         return actionValidationFailure('No file path specified.', true);
     };
-    const absolutePath = getWorkspacePath() + '/' + normalizePath(path).replace(/^\/|\/$/g, '');
+    const workspaceUri = getWorkspaceUri();
+    const absolutePath = workspaceUri?.fsPath + '/' + normalizePath(path).replace(/^\/|\/$/g, '');
     if (!isPathNeuroSafe(absolutePath)) {
         return actionValidationFailure(`You are not allowed to access this ${directoryType}.`);
     }
+    if (!workspaceUri) {
+        return actionValidationFailure('You are not in a workspace.');
+    }
 
-    const existence = await getPathExistence(absolutePath);
+    const existence = await getUriExistence(workspaceUri.with({ path: normalizePath(absolutePath) }));
     if (checkExist === true && existence === true) {
         return actionValidationFailure(`${directoryType} "${path}" already exists.`);
     } else if (checkExist === false && existence === false) {
@@ -31,10 +35,9 @@ async function validatePath(path: string, checkExist: boolean, directoryType: st
     return actionValidationAccept();
 };
 
-async function getPathExistence(absolutePath: string): Promise<boolean> {
-    const pathAsUri = vscode.Uri.file(absolutePath);
+async function getUriExistence(uri: vscode.Uri): Promise<boolean> {
     try {
-        await vscode.workspace.fs.stat(pathAsUri);
+        await vscode.workspace.fs.stat(uri);
         return true;
     } catch {
         return false;
@@ -75,8 +78,14 @@ async function neuroSafeRenameValidation(actionData: ActionData): Promise<Action
 
 async function binaryFileValidation(actionData: ActionData): Promise<ActionValidationResult> {
     const relativePath = actionData.params.filePath;
-    const absolutePath = getWorkspacePath() + '/' + normalizePath(relativePath).replace(/^\/|\/$/g, '');
-    const file = await vscode.workspace.fs.readFile(vscode.Uri.file(absolutePath));
+
+    const workspaceUri = getWorkspaceUri();
+
+    if(!workspaceUri)
+        return actionValidationFailure('You are not in a workspace.');
+
+    const absolutePath = normalizePath(workspaceUri.fsPath + '/' + relativePath.replace(/^\/|\/$/g, ''));
+    const file = await vscode.workspace.fs.readFile(workspaceUri.with({ path: absolutePath }));
     if (await isBinary(file)) {
         return actionValidationFailure('You cannot open a binary file.');
     }
@@ -240,7 +249,7 @@ export function handleCreateFile(actionData: ActionData): string | undefined {
 
     // Function to avoid pyramid of doom
     async function checkAndOpenFileAsync(absolutePath: string, relativePath: string) {
-        const fileUri = vscode.Uri.file(absolutePath);
+        const fileUri = getWorkspaceUri()!.with({ path: absolutePath });
 
         // Check if the file already exists
         try {
@@ -253,8 +262,8 @@ export function handleCreateFile(actionData: ActionData): string | undefined {
         // Create the file
         try {
             await vscode.workspace.fs.writeFile(fileUri, new Uint8Array(0));
-        } catch {
-            logOutput('ERROR', `Failed to create file ${relativePath}`);
+        } catch (erm: unknown) {
+            logOutput('ERROR', `Failed to create file ${relativePath}: ${erm}`);
             NEURO.client?.sendContext(`Failed to create file ${relativePath}`);
             return;
         }
@@ -270,8 +279,8 @@ export function handleCreateFile(actionData: ActionData): string | undefined {
             const document = await vscode.workspace.openTextDocument(fileUri);
             await vscode.window.showTextDocument(document);
             NEURO.client?.sendContext(`Opened new file ${relativePath}`);
-        } catch {
-            logOutput('ERROR', `Failed to open new file ${relativePath}`);
+        } catch (erm: unknown) {
+            logOutput('ERROR', `Failed to open new file ${relativePath}: ${erm}`);
             NEURO.client?.sendContext(`Failed to open new file ${relativePath}`);
         }
     }
@@ -288,7 +297,7 @@ export function handleCreateFolder(actionData: ActionData): string | undefined {
 
     // Function to avoid pyramid of doom
     async function checkAndCreateFolderAsync(absolutePath: string, relativePath: string) {
-        const folderUri = vscode.Uri.file(absolutePath);
+        const folderUri = getWorkspaceUri()!.with({ path: absolutePath });
 
         // Check if the folder already exists
         try {
@@ -301,8 +310,8 @@ export function handleCreateFolder(actionData: ActionData): string | undefined {
         // Create the folder
         try {
             await vscode.workspace.fs.createDirectory(folderUri);
-        } catch {
-            logOutput('ERROR', `Failed to create folder ${relativePath}`);
+        } catch (erm: unknown) {
+            logOutput('ERROR', `Failed to create folder ${relativePath}: ${erm}`);
             NEURO.client?.sendContext(`Failed to create folder ${relativePath}`);
             return;
         }
@@ -327,8 +336,8 @@ export function handleRenameFileOrFolder(actionData: ActionData): string | undef
 
     // Function to avoid pyramid of doom
     async function checkAndRenameAsync(oldAbsolutePath: string, oldRelativePath: string, newAbsolutePath: string, newRelativePath: string) {
-        const oldUri = vscode.Uri.file(oldAbsolutePath);
-        const newUri = vscode.Uri.file(newAbsolutePath);
+        const oldUri = getWorkspaceUri()!.with({ path: oldAbsolutePath });
+        const newUri = getWorkspaceUri()!.with({ path: newAbsolutePath });
 
         // Check if the new path already exists
         try {
@@ -341,8 +350,8 @@ export function handleRenameFileOrFolder(actionData: ActionData): string | undef
         // Rename the file/folder
         try {
             await vscode.workspace.fs.rename(oldUri, newUri);
-        } catch {
-            logOutput('ERROR', `Failed to rename ${oldRelativePath} to ${newRelativePath}`);
+        } catch (erm: unknown) {
+            logOutput('ERROR', `Failed to rename ${oldRelativePath} to ${newRelativePath}: ${erm}`);
             NEURO.client?.sendContext(`Failed to rename ${oldRelativePath} to ${newRelativePath}`);
             return;
         }
@@ -365,7 +374,7 @@ export function handleDeleteFileOrFolder(actionData: ActionData): string | undef
 
     // Function to avoid pyramid of doom
     async function checkAndDeleteAsync(absolutePath: string, relativePath: string, recursive: boolean) {
-        const uri = vscode.Uri.file(absolutePath);
+        const uri = getWorkspaceUri()!.with({ path: absolutePath });
         let stat: vscode.FileStat;
 
         // Check if the path exists
@@ -384,9 +393,9 @@ export function handleDeleteFileOrFolder(actionData: ActionData): string | undef
 
         // Delete the file/folder
         try {
-            await vscode.workspace.fs.delete(uri, { recursive: recursive, useTrash: true });
-        } catch {
-            logOutput('ERROR', `Failed to delete ${relativePath}`);
+            await vscode.workspace.fs.delete(uri, { recursive, useTrash: uri.scheme === 'file' });
+        } catch (erm: unknown) {
+            logOutput('ERROR', `Failed to delete ${relativePath}: ${erm}`);
             NEURO.client?.sendContext(`Failed to delete ${relativePath}`);
             return;
         }
@@ -397,9 +406,8 @@ export function handleDeleteFileOrFolder(actionData: ActionData): string | undef
 }
 
 export function handleGetFiles(_actionData: ActionData): string | undefined {
-    const includePattern = combineGlobLines(ACCESS.includePattern || ['**']); // '**' works for vscode but not for glob-to-regexp
-    const excludePattern = combineGlobLines(ACCESS.excludePattern || ['']);
-    vscode.workspace.findFiles(includePattern, excludePattern).then(
+    const workspaceFolder = vscode.workspace.workspaceFolders![0].uri;
+    recurseWorkspace(workspaceFolder).then(
         (uris) => {
             const paths = uris
                 .filter(uri => isPathNeuroSafe(uri.fsPath, false))
@@ -423,12 +431,35 @@ export function handleGetFiles(_actionData: ActionData): string | undefined {
     );
 
     return undefined;
+
+    async function recurseWorkspace(uri: vscode.Uri): Promise<vscode.Uri[]> {
+        const entries = await vscode.workspace.fs.readDirectory(uri);
+        const uriEntries: [vscode.Uri, vscode.FileType][] = entries.map(entry => [uri.with({ path: uri.path + '/' + entry[0] }), entry[1] ]);
+
+        const result: vscode.Uri[] = [];
+        for (const [childUri, fileType] of uriEntries) {
+            if (fileType === vscode.FileType.File) {
+                if (isPathNeuroSafe(childUri.fsPath))
+                    result.push(childUri);
+            }
+            else if (fileType === vscode.FileType.Directory) {
+                if (isPathNeuroSafe(childUri.fsPath))
+                    result.push(...await recurseWorkspace(childUri));
+            }
+            else {
+                logOutput('WARNING', `Unhandled file type ${fileType}.`);
+            }
+        }
+
+        return result;
+    }
 }
 
 export function handleOpenFile(actionData: ActionData): string | undefined {
     const relativePath = actionData.params.filePath;
 
-    const uri = vscode.Uri.file(getWorkspacePath() + '/' + normalizePath(relativePath));
+    const workspaceUri = getWorkspaceUri()!;
+    const uri = workspaceUri.with({ path: getWorkspacePath() + '/' + normalizePath(relativePath) });
     if (!isPathNeuroSafe(uri.fsPath))
         return contextNoAccess(uri.fsPath);
 
@@ -451,8 +482,8 @@ export function handleOpenFile(actionData: ActionData): string | undefined {
                 NEURO.client?.sendContext(`Opened file ${relativePath}\n\nContent (cursor position denoted by \`<<<|>>>\`):\n\n${fence}${document.languageId}\n${filterFileContents(text)}\n${fence}`);
             }
         }
-        catch {
-            logOutput('ERROR', `Failed to open file ${relativePath}`);
+        catch (erm: unknown) {
+            logOutput('ERROR', `Failed to open file ${relativePath}: ${erm}`);
             NEURO.client?.sendContext(`Failed to open file ${relativePath}`);
         }
     }
@@ -460,11 +491,13 @@ export function handleOpenFile(actionData: ActionData): string | undefined {
 
 export function handleReadFile(actionData: ActionData): string | undefined {
     const file = actionData.params.filePath;
-    const absolute = getWorkspacePath() + '/' + normalizePath(file).replace(/^\/|\/$/g, '');
-    if (!isPathNeuroSafe(getWorkspacePath() + '/' + file)) {
+
+    const workspaceUri = getWorkspaceUri()!;
+    const absolute = normalizePath(workspaceUri.fsPath + '/' + file.replace(/^\/|\/$/g, ''));
+    if (!isPathNeuroSafe(absolute)) {
         return contextNoAccess(file);
     }
-    const fileAsUri = vscode.Uri.file(absolute);
+    const fileAsUri = workspaceUri.with({ path: absolute });
     try {
         vscode.workspace.fs.readFile(fileAsUri).then(
             (data: Uint8Array) => {
@@ -478,6 +511,6 @@ export function handleReadFile(actionData: ActionData): string | undefined {
             },
         );
     } catch (erm) {
-        logOutput('ERROR', `Error occured while trying to access file: ${erm}`);
+        logOutput('ERROR', `Error occured while trying to access file ${file}: ${erm}`);
     }
 }

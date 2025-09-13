@@ -172,6 +172,10 @@ export function getWorkspacePath(): string | undefined {
     return path ? normalizePath(path) : undefined;
 }
 
+export function getWorkspaceUri(): vscode.Uri | undefined {
+    return vscode.workspace.workspaceFolders?.[0].uri;
+}
+
 export function combineGlobLines(lines: string[]): string {
     const result = lines
         .map(line => normalizePath(line.trim()))
