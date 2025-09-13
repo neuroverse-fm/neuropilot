@@ -7,7 +7,7 @@ import { registerChatResponseHandler } from '@/chat';
 import { CONFIG } from '@/config';
 import { explainWithNeuro, fixWithNeuro, NeuroCodeActionsProvider, sendDiagnosticsDiff } from '@/lint_problems';
 import { editorChangeHandler, fileSaveListener, moveNeuroCursorHere, toggleSaveAction, workspaceEditHandler } from '@/editing';
-import { emergencyDenyRequests, acceptRceRequest, denyRceRequest, revealRceNotification } from '@/rce';
+import { emergencyDenyRequests, acceptRceRequest, denyRceRequest, revealRceNotification, clearRceRequest } from '@/rce';
 import type { GitExtension } from '@typing/git';
 import { getGitExtension } from '@/git';
 import { registerDocsCommands, registerDocsLink } from './docs';
@@ -227,6 +227,7 @@ export function obtainExtensionState(): void {
 
 export function deactivate() {
     NEURO.client?.sendContext(`NeuroPilot is being deactivated, or ${CONFIG.gameName} is closing. See you next time, ${NEURO.currentController}!`);
+    clearRceRequest();
 }
 
 export function getCursorDecorationRenderOptions(): vscode.DecorationRenderOptions {
