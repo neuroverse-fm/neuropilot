@@ -182,7 +182,22 @@ export const editingActions = {
         permissions: [PERMISSIONS.editActiveDocument],
         handler: handleGetCursor,
         validators: [checkCurrentFile],
-        cancelEvents: [vscode.workspace.onDidChangeTextDocument, vscode.workspace.onDidChangeWorkspaceFolders, onDidMoveCursor],
+        cancelEvents: [
+            {
+                event: () => vscode.workspace.onDidChangeTextDocument,
+                reason: 'the active document was changed.',
+            },
+            {
+                event: () => vscode.window.onDidChangeActiveTextEditor,
+                reason: 'you\'ve switched files.',
+                logReason: 'the active file was switched.',
+            },
+            {
+                event: () => onDidMoveCursor,
+                reason: 'your cursor was moved.',
+                logReason: 'Neuro\'s cursor was moved.',
+            },
+        ],
         promptGenerator: 'get the current cursor position and the text surrounding it.',
     },
     get_content: {
@@ -190,6 +205,12 @@ export const editingActions = {
         description: 'Get the contents of the current file.',
         permissions: [PERMISSIONS.editActiveDocument],
         handler: handleGetContent,
+        cancelEvents: [
+            {
+                event: () => vscode.window.onDidChangeActiveTextEditor,
+                reason: 'the active text editor has changed.',
+            },
+        ],
         promptGenerator: 'get the current file\'s contents.',
         validators: [checkCurrentFile],
     },

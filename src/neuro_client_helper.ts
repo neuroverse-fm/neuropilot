@@ -32,6 +32,25 @@ export interface ActionValidationResult {
     retry?: boolean;
 }
 
+/**
+ * The object that defines a cancellation event.
+ * @todo Allow actionData to be passed in to set up events
+ */
+export interface CancelEventsObject {
+    /** The event to subscribe to. */
+    event: (actionData: ActionData) => Event<unknown>;
+    /** 
+     * The cancel reason that will be sent to Neuro.
+     * This prompt should fit the phrasing scheme 'Your action was cancelled because [reason]'
+     */
+    reason?: string;
+    /** 
+     * The cancel reason that will be logged.
+     * This prompt should fit the phrasing scheme 'The action was cancelled because [reason]'
+     */
+    logReason?: string;
+}
+
 /** ActionHandler to use with constants for records of actions and their corresponding handlers */
 export interface RCEAction extends Action {
     /** The permissions required to execute this action. */
@@ -45,7 +64,7 @@ export interface RCEAction extends Action {
      * 
      * Following VS Code's pattern, Disposables will not be awaited if async.
      */
-    cancelEvents?: (Event<unknown>)[];
+    cancelEvents?: (CancelEventsObject)[];
     /** The function to handle the action. */
     handler: (actionData: ActionData) => string | undefined;
     /** 

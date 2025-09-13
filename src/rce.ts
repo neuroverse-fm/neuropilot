@@ -4,7 +4,7 @@
  */
 
 import * as vscode from 'vscode';
-import { ActionData, RCEAction, stripToAction } from '@/neuro_client_helper';
+import { ActionData, CancelEventsObject, RCEAction, stripToAction } from '@/neuro_client_helper';
 import { NEURO } from '@/constants';
 import { checkVirtualWorkspace, checkWorkspaceTrust, logOutput } from '@/utils';
 import { CONFIG, getPermissionLevel, isActionEnabled, PermissionLevel, PERMISSIONS } from '@/config';
@@ -88,7 +88,7 @@ export function clearRceRequest(): void {
     NEURO.rceRequest.resolve();
     if (NEURO.rceRequest.cancelEvents) {
         for (const disposable of NEURO.rceRequest.cancelEvents) {
-            try { disposable.dispose(); } catch (erm: unknown) { logOutput('ERROR', `Failed to dispose a cancellation event: ${erm}`); }
+            try { disposable.dispose(); } catch (erm: unknown) { logOutput('ERROR', `Failed to dispose a cancellation event: ${erm}. This could contribute to a memory leak.`); }
         }
     }
     NEURO.rceRequest = null;
@@ -309,18 +309,15 @@ export async function RCEActionHandler(actionData: ActionData, actionList: Recor
         const eventArray: vscode.Disposable[] = [];
 
         if (action.cancelEvents) {
-            const disposables: vscode.Disposable[] = [];
-            for (const eventSource of action.cancelEvents) {
-                const disposable = eventSource((_event) => {
-                    logOutput('WARN', `Action ${action.name} was cancelled because of a cancellation event.`);
-                    NEURO.client?.sendContext('Your request was cancelled because a cancellation event was fired.');
-                    clearRceRequest();
-                    // Dispose all listeners
-                    for (const d of disposables) d.dispose();
-                });
-                disposables.push(disposable);
+            const eventHandler = (eventObject: CancelEventsObject) => {
+                logOutput('WARN', `${CONFIG.currentlyAsNeuroAPI}'${CONFIG.currentlyAsNeuroAPI.endsWith('s') ? '' : 's'} action ${action.name} was cancelled because ${eventObject.logReason?.trim() ?? eventObject.reason?.trim() ?? 'of a cancellation event.'}`);
+                NEURO.client?.sendContext(`Your request was cancelled because ${eventObject.reason?.trim() ?? 'a cancellation event was fired.'}`);
+                clearRceRequest();
+            };
+            for (const eventObject of action.cancelEvents) {
+                const disposable = eventObject.event(actionData)(() => eventHandler(eventObject));
+                eventArray.push(disposable);
             }
-            eventArray.push(...disposables);
         }
 
         if (effectivePermission === PermissionLevel.AUTOPILOT) {
@@ -337,7 +334,7 @@ export async function RCEActionHandler(actionData: ActionData, actionList: Recor
                 ? NEURO.currentController
                 : 'The Neuro API server') +
                 ' wants to ' +
-                (typeof action.promptGenerator === 'string' ? action.promptGenerator.trim() : action.promptGenerator(actionData).trim());
+                (typeof action.promptGenerator === 'string' ? action.promptGenerator : action.promptGenerator(actionData)).trim();
 
             createRceRequest(
                 prompt,
