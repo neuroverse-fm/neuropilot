@@ -34,7 +34,6 @@ export interface ActionValidationResult {
 
 /**
  * The object that defines a cancellation event.
- * @todo Allow actionData to be passed in to set up events
  */
 export interface CancelEventsObject {
     /** The event to subscribe to. */
