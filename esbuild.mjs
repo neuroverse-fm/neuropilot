@@ -58,13 +58,13 @@ let outDir;
 if (test) {
     switch (mode.toLowerCase()) {
         case 'web':
-            outDir = webBrowserTest ? ['./out/web/test-browser.js'] : ['./out/web/test.js'];
+            outDir = webBrowserTest ? ['./out/web/test/browser.js'] : ['./out/web/test/index.js'];
             break;
         case 'desktop':
             outDir = ['./out/desktop/test.js'];
             break;
         default:
-            outDir = ['./out/desktop/test.js', './out/web/test.js'];
+            outDir = ['./out/desktop/test.js', './out/web/test/index.js'];
             break;
     }
 } else {

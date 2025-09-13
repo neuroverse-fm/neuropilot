@@ -31,3 +31,6 @@ pnpm-debug.log*
 
 # Coverage
 /coverage
+
+# Local Playwright browser cache if needed for local web tests, in non-default location
+.playwright-browsers

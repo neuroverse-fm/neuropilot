@@ -1,5 +1,4 @@
 import Mocha from 'mocha';
-import 'mocha';
 
 // Extension unit tests
 import './extension.test';

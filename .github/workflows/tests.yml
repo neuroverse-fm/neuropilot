@@ -29,7 +29,9 @@ jobs:
             - name: Cache VS Code test downloads
               uses: actions/cache@v4
               with:
-                key: neuropilot-tests-vscode-${{ github.repository }}-${{ matrix.os }}
+                key: neuropilot-tests-vscode-${{ github.repository }}-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+                restore-keys: |
+                  neuropilot-tests-vscode-${{ github.repository }}-${{ runner.os }}-
                 path: .vscode-test/
             - name: Setup pnpm
               uses: pnpm/action-setup@v4
@@ -52,11 +54,24 @@ jobs:
             # VSC-NeuroPilot/actions/send-test-repo-action will be added later
 
     web-tests:
-        name: Web tests (Chromium headless)
+        name: Web tests (browser matrix)
         runs-on: ubuntu-latest
+        strategy:
+            matrix:
+                browser: [chromium, firefox, webkit]
         steps:
             - name: Checkout
               uses: actions/checkout@v4
+            - name: Cache VS Code web test downloads
+              uses: actions/cache@v4
+              with:
+                key: neuropilot-tests-vscode-web-${{ github.repository }}-${{ runner.os }}
+                path: .vscode-test-web/
+            - name: Cache Playwright browsers
+              uses: actions/cache@v4
+              with:
+                key: neuropilot-playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+                path: ~/.cache/ms-playwright
             - name: Setup pnpm
               uses: pnpm/action-setup@v4
               with:
@@ -70,8 +85,10 @@ jobs:
             - run: pnpm install --frozen-lockfile
             - name: Install Playwright browsers
               run: pnpm dlx playwright install --with-deps
-            - name: Run web tests (headless browser)
-              run: pnpm run test:web:browser
+            - name: Build web test bundle (browser)
+              run: pnpm run test:web:browser:esbuild
+            - name: Run web tests (headless)
+              run: pnpm run test:web:browser:vscode -- --browser=${{ matrix.browser }}
     #test-web:
     #    name: Web tests
     #    strategy:

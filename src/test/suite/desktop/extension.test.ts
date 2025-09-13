@@ -7,9 +7,8 @@ suite('Integration: Desktop extension smoke', () => {
     });
 
     test('Extension exists', async () => {
-        const extension = vscode.extensions.getExtension('VSC-NeuroPilot.neuropilot-base')
-            ?? vscode.extensions.getExtension('Pasu4.neuropilot');
-        assert.ok(extension, 'Expected extension to be installed (VSC-NeuroPilot.neuropilot-base or Pasu4.neuropilot)');
+        const extension = vscode.extensions.getExtension('VSC-NeuroPilot.neuropilot-base');            
+        assert.ok(extension, 'Expected extension to be installed (VSC-NeuroPilot.neuropilot-base)');
         await extension.activate();
         assert.ok(extension.isActive, 'Extension should be active');
     });

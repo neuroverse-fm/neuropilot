@@ -113,6 +113,13 @@ The short answer is no, there isn't an intentional Remote Code Execution vulnera
   - Start a task `npm: watch` to compile the code
   - Run the extension in a new VS Code window
 
+## Contributing
+
+If you have an idea or want to contribute a feature, please first [create an issue](https://github.com/VSC-NeuroPilot/neuropilot/issues) or send a message to `@Pasu4` in the project's [post on the Neuro Discord](https://discord.com/channels/574720535888396288/1350968830230396938).
+If you make a pull request that contributes code, please run `npm run lint src` and resolve any errors that did not get auto-fixed, preferrably before each commit.
+
+Please also refer to our [contributor docs](https://vsc-neuropilot.github.io/docs/meta/contributors).
+
 ### Tests
 
 We have both unit tests and integration tests. Integration tests spin up a VS Code host (desktop Electron or the browser-hosted workbench) and exercise the extension.
@@ -137,25 +144,28 @@ Integration tests:
   - Desktop integration runs in the Electron host
   - Web integration runs either under the Electron host with the web bundle or in a real browser via `@vscode/test-web`
 
+Prerequisites (web tests):
+
+- Install Playwright browsers (required for Firefox/WebKit; Chromium usually works out-of-the-box but we recommend installing all):
+  - `pnpm dlx playwright install --with-deps`
+
 Commands:
 
-- Desktop (Electron host) builds and runs tests for desktop and web bundles:
-  - All web tests under Electron host: `npm run test:web`
-  - All desktop tests: `npm run test:desktop`
-  - All tests: `npm run test`
+- Desktop (Electron host):
+  - Run desktop tests: `pnpm run test:desktop`
 
-- Web (true browser) tests:
-  - Build browser test bundle and run in Chromium headless via `@vscode/test-web`:
-    - `npm run test:web:browser`
+- Web (true browser via `@vscode/test-web`):
+  - Quick (Chromium default, build + run): `pnpm run test:web`
+  - Per-browser shortcuts (build + run):
+    - Chromium: `pnpm run test:web:browser:chromium`
+    - Firefox: `pnpm run test:web:browser:firefox`
+    - WebKit: `pnpm run test:web:browser:webkit`
+  - Manual steps (if you need them):
+    - Build browser test bundle: `pnpm run test:web:browser:esbuild`
+    - Run with explicit browser flag: `pnpm run test:web:browser:vscode -- --browser=chromium`
 
 Notes:
-- The browser test workspace is mounted under a virtual scheme; the workspace name may appear as `mount` instead of `test-playground` in this mode.
+- Web tests run in a real browser using the web extension bundle; they do not use the Electron (desktop) harness.
+- The browser test workspace is mounted under a virtual scheme; the workspace name may appear as `mount` instead of `test-playground`.
 - File operations in browser mode use the VS Code virtual FS, so ‘trash’ is disabled and deletes are immediate.
-- Headless web runs may log noisy warnings like "Output channel not initialized", "[NeuroClient] WebSocket is not open", or 404s for some dev server assets. These are expected in the test harness: we mock the client and don’t connect to a real server. Assertions still validate real side effects (file edits/opens/renames/deletes, document text, active editor) and verify `sendContext` via a mocked client, so tests will fail if the code paths don’t execute.
-
-## Contributing
-
-If you have an idea or want to contribute a feature, please first [create an issue](https://github.com/VSC-NeuroPilot/neuropilot/issues) or send a message to `@Pasu4` in the project's [post on the Neuro Discord](https://discord.com/channels/574720535888396288/1350968830230396938).
-If you make a pull request that contributes code, please run `npm run lint src` and resolve any errors that did not get auto-fixed, preferrably before each commit.
-
-Please also refer to our [contributor docs](https://vsc-neuropilot.github.io/docs/meta/contributors).
+- Headless web runs may log warnings like "Output channel not initialized", "[NeuroClient] WebSocket is not open", or 404s for dev assets. These are expected in the test harness; assertions still validate real side effects (file edits/opens/renames/deletes, document text, active editor) and verify `sendContext` via a mocked client.
