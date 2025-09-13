@@ -106,6 +106,7 @@ class Config {
     get sendContentsOnFileChange(): boolean { return get('sendContentsOnFileChange')!; }
     get cursorPositionContextStyle(): string { return get('cursorPositionContextStyle')!; }
     get lineNumberContextFormat(): string { return get('lineNumberContextFormat')!; }
+    get enableCancelEvents(): boolean { return get('enableCancelEvents')!; }
 
     get terminals(): { name: string; path: string; args?: string[]; }[] { return get('terminals')!; }
 }
