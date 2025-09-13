@@ -15,6 +15,9 @@ Changes between each version before then will not be listed.
 ### Changes
 
 - Further clarified when line and column numbers are one-based and zero-based for editing actions.
+- Changing permissions will now automatically reload permissions.
+  - This also applies if you change the list of disabled actions.
+  - The `Reload Permissions` command is still available in case you need to reload manually.
 
 ### Fixes
 
