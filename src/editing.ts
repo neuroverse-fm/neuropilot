@@ -1219,6 +1219,7 @@ export function workspaceEditHandler(event: vscode.TextDocumentChangeEvent) {
     if (event.contentChanges.length === 0) return;
     if (event.document !== vscode.window.activeTextEditor?.document) return;
     if (!getPermissionLevel(PERMISSIONS.editActiveDocument)) return;
+    if (event.document.fileName.startsWith('extension-output-')) return; // Ignore extension output to avoid infinite logging
 
     // Diffs
     clearDecorations(vscode.window.activeTextEditor);
