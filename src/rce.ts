@@ -309,14 +309,16 @@ export async function RCEActionHandler(actionData: ActionData, actionList: Recor
         const eventArray: vscode.Disposable[] = [];
 
         if (action.cancelEvents) {
-            const eventHandler = (eventObject: CancelEventsObject) => {
+            const eventListener = (eventObject: CancelEventsObject) => {
                 logOutput('WARN', `${CONFIG.currentlyAsNeuroAPI}'${CONFIG.currentlyAsNeuroAPI.endsWith('s') ? '' : 's'} action ${action.name} was cancelled because ${eventObject.logReason?.trim() ?? eventObject.reason?.trim() ?? 'of a cancellation event.'}`);
                 NEURO.client?.sendContext(`Your request was cancelled because ${eventObject.reason?.trim() ?? 'a cancellation event was fired.'}`);
                 clearRceRequest();
             };
             for (const eventObject of action.cancelEvents) {
-                const disposable = eventObject.event(actionData)(() => eventHandler(eventObject));
-                eventArray.push(disposable);
+                const eventHandler = eventObject.event(actionData);
+                if (eventHandler) {
+                    eventArray.push(eventHandler(() => eventListener(eventObject)));
+                }
             }
         }
 

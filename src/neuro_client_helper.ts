@@ -36,8 +36,12 @@ export interface ActionValidationResult {
  * The object that defines a cancellation event.
  */
 export interface CancelEventsObject {
-    /** The event to subscribe to. */
-    event: (actionData: ActionData) => Event<unknown>;
+    /** 
+     * The event to subscribe to.
+     * It is a callable function that returns an event because sometimes the event isn't necessary, so we pass the actionData to find out.
+     * If the function returns `null`, the event will be skipped and won't cause a cancel event to fire.
+     */
+    event: (actionData: ActionData) => (Event<unknown> | null);
     /** 
      * The cancel reason that will be sent to Neuro.
      * This prompt should fit the phrasing scheme 'Your action was cancelled because [reason]'
