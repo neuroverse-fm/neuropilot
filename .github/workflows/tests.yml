@@ -85,8 +85,8 @@ jobs:
             - run: pnpm install --frozen-lockfile
             - name: Install Playwright browsers
               run: pnpm dlx playwright install --with-deps
-            - name: Build web test bundle (browser)
-              run: pnpm run test:web:browser:esbuild
+            - name: Build web extension and test bundle (browser)
+              run: pnpm run build:web && pnpm run test:web:browser:esbuild
             - name: Run web tests (headless)
               run: pnpm run test:web:browser:vscode -- --browser=${{ matrix.browser }}
     #test-web:
