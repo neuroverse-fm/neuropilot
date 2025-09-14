@@ -242,13 +242,15 @@
 						"type": "string",
 						"default": "**/*",
 						"markdownDescription": "A case-sensitive glob pattern for files Neuro is allowed to open, i.e. she will be unable to open files that don't match this pattern. Separate multiple patterns with a newline. Patterns without a slash will match any file or folder with that name.",
-						"editPresentation": "multilineText"
+						"editPresentation": "multilineText",
+						"markdownDeprecationMessage": "This setting has been moved to `neuropilot.access.includePattern`."
 					},
 					"neuropilot.excludePattern": {
 						"type": "string",
 						"default": "**/node_modules/**\n**/venv/**\nCNAME",
 						"markdownDescription": "A case-sensitive glob pattern for files Neuro is not allowed to open. Applied after the include pattern. Files and folders beginning with a dot are always excluded, regardless of this setting. Separate multiple patterns with a newline. Patterns without a slash will match any file or folder with that name.",
-						"editPresentation": "multilineText"
+						"editPresentation": "multilineText",
+						"markdownDeprecationMessage": "This setting has been moved to `neuropilot.access.excludePattern`."
 					},
 					"neuropilot.terminals": {
 						"type": "array",
@@ -298,6 +300,190 @@
 									"-i"
 								]
 							}
+						]
+					},
+					"neuropilot.showTimeOnTerminalStart": {
+						"type": "boolean",
+						"default": true,
+						"markdownDescription": "Display the date and time of when a terminal is started by Neuro."
+					},
+					"neuropilot.terminalContextDelay": {
+						"type": "number",
+						"default": 400,
+						"markdownDescription": "The time in ms to wait for the terminal to print more output before sending context to Neuro. This is to prevent sending multiple context messages if the terminal doesn't print fast enough."
+					},
+					"neuropilot.allowUnsafePaths": {
+						"type": "boolean",
+						"default": false,
+						"markdownDescription": "Allow Neuro to view & edit files and folders in unsafe paths. These include:\n- files/folders starting with a '.'\n- parent directories and directories outside the workspace\n- Environmental variables\n\nNote that your include/exclude patterns are still respected.",
+						"markdownDeprecationMessage": "This setting is no longer used. Please use the more granular access permissions such as `neuropilot.access.dotFiles` and `neuropilot.access.externalFiles`."
+					},
+					"neuropilot.allowRunningAllTasks": {
+						"type": "boolean",
+						"default": false,
+						"markdownDescription": "Allow Neuro to run all tasks regardless of their prefix in their 'detail' key."
+					},
+					"neuropilot.sendNewLintingProblemsOn": {
+						"type": "string",
+						"default": "off",
+						"description": "If a new linting problem appears, on what condition should it be sent to Neuro?",
+						"enum": [
+							"off",
+							"inCurrentFile",
+							"inWorkspace"
+						],
+						"enumItemLabels": [
+							"When manually checked",
+							"If it's in the current file",
+							"If it's any Neuro-safe file in the workspace"
+						],
+						"enumDescriptions": [
+							"Only when Neuro explicitly checks for it.",
+							"If a new problem appears in the file she is currently viewing.",
+							"When a new problem appears anywhere in the workspace."
+						]
+					},
+					"neuropilot.sendSaveNotifications": {
+						"type": "boolean",
+						"default": true,
+						"markdownDescription": "Automatically send save notifications to Neuro."
+					},
+					"neuropilot.requestExpiryTimeout": {
+						"type": "number",
+						"default": 0,
+						"markdownDescription": "The time to wait (in milliseconds) before automatically rejecting Copilot-mode action requests from Neuro.\nSetting this to 0 will cause the requests to never expire."
+					},
+					"neuropilot.hideCopilotRequests": {
+						"type": "boolean",
+						"default": false,
+						"markdownDescription": "Don't immediately show Copilot-mode action requests, requiring clicking the status bar item to reveal them."
+					},
+					"neuropilot.cursorFollowsNeuro": {
+						"type": "boolean",
+						"default": false,
+						"markdownDescription": "Make the real cursor follow Neuro's cursor."
+					},
+					"neuropilot.defaultOpenDocsWindow": {
+						"type": "string",
+						"default": "ask",
+						"enum": [
+							"ask",
+							"alwaysBrowser",
+							"alwaysWebView"
+						],
+						"enumItemLabels": [
+							"Ask where to open",
+							"Always open in browser",
+							"Always open in a WebView"
+						],
+						"enumDescriptions": [
+							"Always ask where to open the docs",
+							"Always open docs in your browser",
+							"Always open docs in a new WebView window"
+						],
+						"markdownDescription": "Choose where to open docs links.\n\nThis applies to both docs commands."
+					},
+					"neuropilot.disabledActions": {
+						"type": "array",
+						"default": [],
+						"items": {
+							"type": "string",
+							"enum": [
+								"abort_merge",
+								"add_file_to_git",
+								"add_git_remote",
+								"create_file",
+								"create_folder",
+								"delete_file_or_folder",
+								"delete_git_branch",
+								"delete_lines",
+								"delete_tag",
+								"delete_text",
+								"diff_files",
+								"execute_in_terminal",
+								"fetch_git_commits",
+								"find_text",
+								"get_content",
+								"get_currently_running_shells",
+								"get_cursor",
+								"get_file_lint_problems",
+								"get_files",
+								"get_folder_lint_problems",
+								"get_git_config",
+								"get_workspace_lint_problems",
+								"git_blame",
+								"git_log",
+								"git_status",
+								"highlight_lines",
+								"init_git_repo",
+								"insert_lines",
+								"insert_text",
+								"kill_terminal_process",
+								"make_git_commit",
+								"merge_to_current_branch",
+								"new_git_branch",
+								"open_file",
+								"place_cursor",
+								"pull_git_commits",
+								"push_git_commits",
+								"read_file",
+								"remove_file_from_git",
+								"remove_git_remote",
+								"rename_file_or_folder",
+								"rename_git_remote",
+								"replace_text",
+								"request_cookie",
+								"rewrite_all",
+								"rewrite_lines",
+								"save",
+								"set_git_config",
+								"switch_git_branch",
+								"tag_head",
+								"terminate_task",
+								"undo"
+							]
+						},
+						"markdownDescription": "List of action names that Neuro can't use, regardless of other permission settings.\n\nRequires [reloading permissions](command:neuropilot.reloadPermissions) if changed."
+					},
+					"neuropilot.sendContentsOnFileChange": {
+						"type": "boolean",
+						"default": true,
+						"markdownDescription": "Send contents of a file to Neuro when you switch to it? If false, Neuro will still know what file you switched to, but won't get the contents. Neuro will never get the contents or the name of files that aren't Neuro-safe."
+					},
+					"neuropilot.cursorPositionContextStyle": {
+						"type": "string",
+						"default": "inline",
+						"markdownDescription": "The style to use for specifying the cursor position in context messages.",
+						"enum": [
+							"off",
+							"inline",
+							"lineAndColumn",
+							"both"
+						],
+						"enumItemLabels": [
+							"Off",
+							"Inline",
+							"Line and column",
+							"Inline + Line and column"
+						],
+						"markdownEnumDescriptions": [
+							"Cursor position will not be mentioned to Neuro",
+							"\"Cursor position denoted by `<<<|>>>`\"",
+							"\"Cursor is at 198:4\"",
+							"\"Cursor is at 198:4, denoted by `<<<|>>>`\""
+						]
+					},
+					"neuropilot.lineNumberContextFormat": {
+						"type": "string",
+						"default": "",
+						"markdownDescription": "The format to use for line numbers in context messages. This format will be prepended to every line. Use `{n}` for the line number. Edit in settings.json for examples.",
+						"examples": [
+							"",
+							"{n} ",
+							"{n}|",
+							"{n}: ",
+							"/* {n} */ ",
+							"L. {n}: "
 						]
 					},
 					"neuropilot.permission.openFiles": {
@@ -508,188 +694,36 @@
 						],
 						"markdownDescription": "Allow Neuro to get access to linting problems within loaded files."
 					},
-					"neuropilot.showTimeOnTerminalStart": {
-						"type": "boolean",
-						"default": true,
-						"markdownDescription": "Display the date and time of when a terminal is started by Neuro."
-					},
-					"neuropilot.terminalContextDelay": {
-						"type": "number",
-						"default": 400,
-						"markdownDescription": "The time in ms to wait for the terminal to print more output before sending context to Neuro. This is to prevent sending multiple context messages if the terminal doesn't print fast enough."
-					},
-					"neuropilot.allowUnsafePaths": {
+					"neuropilot.access.dotFiles": {
 						"type": "boolean",
 						"default": false,
-						"markdownDescription": "Allow Neuro to view & edit files and folders in unsafe paths. These include:\n- files/folders starting with a '.'\n- parent directories and directories outside the workspace\n- Environmental variables\n\nNote that your include/exclude patterns are still respected."
+						"markdownDescription": "Allows Neuro to access files and folders beginning with a dot."
 					},
-					"neuropilot.allowRunningAllTasks": {
+					"neuropilot.access.externalFiles": {
 						"type": "boolean",
 						"default": false,
-						"markdownDescription": "Allow Neuro to run all tasks regardless of their prefix in their 'detail' key."
+						"markdownDescription": "Allows Neuro to access files and folders outside the current workspace."
 					},
-					"neuropilot.sendNewLintingProblemsOn": {
-						"type": "string",
-						"default": "off",
-						"description": "If a new linting problem appears, on what condition should it be sent to Neuro?",
-						"enum": [
-							"off",
-							"inCurrentFile",
-							"inWorkspace"
-						],
-						"enumItemLabels": [
-							"When manually checked",
-							"If it's in the current file",
-							"If it's any Neuro-safe file in the workspace"
-						],
-						"enumDescriptions": [
-							"Only when Neuro explicitly checks for it.",
-							"If a new problem appears in the file she is currently viewing.",
-							"When a new problem appears anywhere in the workspace."
-						]
-					},
-					"neuropilot.sendSaveNotifications": {
-						"type": "boolean",
-						"default": true,
-						"markdownDescription": "Automatically send save notifications to Neuro."
-					},
-					"neuropilot.requestExpiryTimeout": {
-						"type": "number",
-						"default": 0,
-						"markdownDescription": "The time to wait (in milliseconds) before automatically rejecting Copilot-mode action requests from Neuro.\nSetting this to 0 will cause the requests to never expire."
-					},
-					"neuropilot.hideCopilotRequests": {
+					"neuropilot.access.environmentVariables": {
 						"type": "boolean",
 						"default": false,
-						"markdownDescription": "Don't immediately show Copilot-mode action requests, requiring clicking the status bar item to reveal them."
+						"markdownDescription": "Allows Neuro to use environment variables in paths. This probably won't work, this security setting is just in case it somehow does."
 					},
-					"neuropilot.cursorFollowsNeuro": {
-						"type": "boolean",
-						"default": false,
-						"markdownDescription": "Make the real cursor follow Neuro's cursor."
-					},
-					"neuropilot.defaultOpenDocsWindow": {
-						"type": "string",
-						"default": "ask",
-						"enum": [
-							"ask",
-							"alwaysBrowser",
-							"alwaysWebView"
-						],
-						"enumItemLabels": [
-							"Ask where to open",
-							"Always open in browser",
-							"Always open in a WebView"
-						],
-						"enumDescriptions": [
-							"Always ask where to open the docs",
-							"Always open docs in your browser",
-							"Always open docs in a new WebView window"
-						],
-						"markdownDescription": "Choose where to open docs links.\n\nThis applies to both docs commands."
-					},
-					"neuropilot.disabledActions": {
+					"neuropilot.access.includePattern": {
 						"type": "array",
-						"default": [],
 						"items": {
-							"type": "string",
-							"enum": [
-								"abort_merge",
-								"add_file_to_git",
-								"add_git_remote",
-								"create_file",
-								"create_folder",
-								"delete_file_or_folder",
-								"delete_git_branch",
-								"delete_lines",
-								"delete_tag",
-								"delete_text",
-								"diff_files",
-								"execute_in_terminal",
-								"fetch_git_commits",
-								"find_text",
-								"get_content",
-								"get_currently_running_shells",
-								"get_cursor",
-								"get_file_lint_problems",
-								"get_files",
-								"get_folder_lint_problems",
-								"get_git_config",
-								"get_workspace_lint_problems",
-								"git_blame",
-								"git_log",
-								"git_status",
-								"highlight_lines",
-								"init_git_repo",
-								"insert_lines",
-								"insert_text",
-								"kill_terminal_process",
-								"make_git_commit",
-								"merge_to_current_branch",
-								"new_git_branch",
-								"open_file",
-								"place_cursor",
-								"pull_git_commits",
-								"push_git_commits",
-								"read_file",
-								"remove_file_from_git",
-								"remove_git_remote",
-								"rename_file_or_folder",
-								"rename_git_remote",
-								"replace_text",
-								"request_cookie",
-								"rewrite_all",
-								"rewrite_lines",
-								"save",
-								"set_git_config",
-								"switch_git_branch",
-								"tag_head",
-								"terminate_task",
-								"undo"
-							]
+							"type": "string"
 						},
-						"markdownDescription": "List of action names that Neuro can't use, regardless of other permission settings.\n\nRequires [reloading permissions](command:neuropilot.reloadPermissions) if changed."
+						"default": ["**/*"],
+						"markdownDescription": "A case-sensitive list of glob patterns for files Neuro is allowed to open, i.e. she will be unable to open files that don't match this pattern.\n\nPatterns without a slash will match any file or folder with that name."
 					},
-					"neuropilot.sendContentsOnFileChange": {
-						"type": "boolean",
-						"default": true,
-						"markdownDescription": "Send contents of a file to Neuro when you switch to it? If false, Neuro will still know what file you switched to, but won't get the contents. Neuro will never get the contents or the name of files that aren't Neuro-safe."
-					},
-					"neuropilot.cursorPositionContextStyle": {
-						"type": "string",
-						"default": "inline",
-						"markdownDescription": "The style to use for specifying the cursor position in context messages.",
-						"enum": [
-							"off",
-							"inline",
-							"lineAndColumn",
-							"both"
-						],
-						"enumItemLabels": [
-							"Off",
-							"Inline",
-							"Line and column",
-							"Inline + Line and column"
-						],
-						"markdownEnumDescriptions": [
-							"Cursor position will not be mentioned to Neuro",
-							"\"Cursor position denoted by `<<<|>>>`\"",
-							"\"Cursor is at 198:4\"",
-							"\"Cursor is at 198:4, denoted by `<<<|>>>`\""
-						]
-					},
-					"neuropilot.lineNumberContextFormat": {
-						"type": "string",
-						"default": "",
-						"markdownDescription": "The format to use for line numbers in context messages. This format will be prepended to every line. Use `{n}` for the line number. Edit in settings.json for examples.",
-						"examples": [
-							"",
-							"{n} ",
-							"{n}|",
-							"{n}: ",
-							"/* {n} */ ",
-							"L. {n}: "
-						]
+					"neuropilot.access.excludePattern": {
+						"type": "array",
+						"items": {
+							"type": "string"
+						},
+						"default": ["**/node_modules/**", "**/venv/**", "CNAME"],
+						"markdownDescription": "A case-sensitive glob pattern for files Neuro is not allowed to open. Applied after the include pattern. Patterns without a slash will match any file or folder with that name."
 					}
 				}
 			}
@@ -724,7 +758,9 @@
 				"neuropilot.permission.runTasks",
 				"neuropilot.terminals",
 				"neuropilot.allowRunningAllTasks",
-				"neuropilot.allowUnsafePaths"
+				"neuropilot.access.dotFiles",
+				"neuropilot.access.externalFiles",
+				"neuropilot.access.environmentVariables"
 			]
 		}
 	},

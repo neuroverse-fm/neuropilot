@@ -406,8 +406,6 @@ export function handleDeleteFileOrFolder(actionData: ActionData): string | undef
 }
 
 export function handleGetFiles(_actionData: ActionData): string | undefined {
-    // const includePattern = combineGlobLines(CONFIG.includePattern || '**'); // '**' works for vscode but not for glob-to-regexp
-    // const excludePattern = combineGlobLines(CONFIG.excludePattern || '');
     const workspaceFolder = vscode.workspace.workspaceFolders![0].uri;
     recurseWorkspace(workspaceFolder).then(
         (uris) => {

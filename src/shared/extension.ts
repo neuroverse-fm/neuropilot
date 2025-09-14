@@ -4,7 +4,7 @@ import { logOutput, createClient, onClientConnected, setVirtualCursor } from '@/
 import { completionsProvider, registerCompletionResultHandler } from '@/completions';
 import { giveCookie, registerRequestCookieAction, registerRequestCookieHandler, sendCurrentFile } from '@/context';
 import { registerChatResponseHandler } from '@/chat';
-import { CONFIG } from '@/config';
+import { ACCESS, CONFIG } from '@/config';
 import { explainWithNeuro, fixWithNeuro, NeuroCodeActionsProvider, sendDiagnosticsDiff } from '@/lint_problems';
 import { editorChangeHandler, fileSaveListener, moveNeuroCursorHere, toggleSaveAction, workspaceEditHandler } from '@/editing';
 import { emergencyDenyRequests, acceptRceRequest, denyRceRequest, revealRceNotification } from '@/rce';
@@ -62,9 +62,10 @@ export function setupCommonEventHandlers() {
                 }
             }
             if (
-                event.affectsConfiguration('neuropilot.allowUnsafePaths')
-                || event.affectsConfiguration('neuropilot.includePattern')
-                || event.affectsConfiguration('neuropilot.excludePattern')
+                event.affectsConfiguration('neuropilot.access.dotFiles')
+                || event.affectsConfiguration('neuropilot.access.externalFiles')
+                || event.affectsConfiguration('neuropilot.access.includePattern')
+                || event.affectsConfiguration('neuropilot.access.excludePattern')
                 || event.affectsConfiguration('neuropilot.permission.editActiveDocument')
             ) {
                 setVirtualCursor();
@@ -167,8 +168,16 @@ function disableAllPermissions() {
         }
     }
 
-    if (CONFIG.allowUnsafePaths === true) {
-        promises.push(config.update('allowUnsafePaths', false, vscode.ConfigurationTarget.Workspace));
+    if (ACCESS.dotFiles === true) {
+        promises.push(config.update('access.dotFiles', false, vscode.ConfigurationTarget.Workspace));
+    }
+
+    if (ACCESS.externalFiles) {
+        promises.push(config.update('access.externalFiles', false, vscode.ConfigurationTarget.Workspace));
+    }
+
+    if (ACCESS.environmentVariables) {
+        promises.push(config.update('access.environmentVariables', false, vscode.ConfigurationTarget.Workspace));
     }
 
     if (CONFIG.sendNewLintingProblemsOn !== 'off') {
