@@ -702,7 +702,7 @@
 					"neuropilot.access.externalFiles": {
 						"type": "boolean",
 						"default": false,
-						"markdownDescription": "Allows Neuro to access files and folders outside the current directory."
+						"markdownDescription": "Allows Neuro to access files and folders outside the current workspace."
 					},
 					"neuropilot.access.environmentVariables": {
 						"type": "boolean",
