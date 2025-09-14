@@ -4,7 +4,7 @@ import globToRegExp from 'glob-to-regexp';
 import { fileTypeFromBuffer } from 'file-type';
 
 import { NEURO } from '@/constants';
-import { CONFIG, getPermissionLevel, PERMISSIONS } from '@/config';
+import { ACCESS, CONFIG, getPermissionLevel, PERMISSIONS } from '@/config';
 
 import { ActionValidationResult, ActionData, actionValidationAccept, actionValidationFailure } from '@/neuro_client_helper';
 import assert from 'node:assert';
@@ -155,7 +155,11 @@ export function formatActionID(name: string): string {
 }
 
 export function normalizePath(path: string): string {
-    return path.replace(/\\/g, '/');
+    let result = path.replace(/\\/g, '/');
+    if (/^[A-Z]:/.test(result)) {
+        result = result.charAt(0).toLowerCase() + result.slice(1);
+    }
+    return result;
 }
 
 /**
@@ -168,18 +172,24 @@ export function getWorkspacePath(): string | undefined {
     return path ? normalizePath(path) : undefined;
 }
 
-export function combineGlobLines(lines: string): string {
-    const result = lines.split('\n')
-        .map(line => line.trim())
+export function getWorkspaceUri(): vscode.Uri | undefined {
+    return vscode.workspace.workspaceFolders?.[0].uri;
+}
+
+export function combineGlobLines(lines: string[]): string {
+    const result = lines
+        .map(line => normalizePath(line.trim()))
         .filter(line => line.length > 0)
+        .flatMap(line => line.includes('/') ? line : [`**/${line}`, `**/${line}/**`]) // If the line does not contain a slash, match it in any folder
         .join(',');
     return `{${result}}`;
 }
 
-export function combineGlobLinesToRegExp(lines: string): RegExp {
-    const result = lines.split('\n')
-        .map(line => line.trim())
+export function combineGlobLinesToRegExp(lines: string[]): RegExp {
+    const result = lines
+        .map(line => normalizePath(line.trim()))
         .filter(line => line.length > 0)
+        .flatMap(line => line.includes('/') ? line : [`**/${line}`, `**/${line}/**`]) // If the line does not contain a slash, match it in any folder
         .map(line => globToRegExp(line, { extended: true, globstar: true }).source)
         .join('|');
     return new RegExp(result);
@@ -194,27 +204,31 @@ export function combineGlobLinesToRegExp(lines: string): RegExp {
  * @returns True if Neuro may safely access the path.
  */
 export function isPathNeuroSafe(path: string, checkPatterns = true): boolean {
-    const rootFolder = getWorkspacePath()?.toLowerCase();
-    const normalizedPath = normalizePath(path).toLowerCase();
-    const includePattern = CONFIG.includePattern || '**/*';
-    const excludePattern = CONFIG.excludePattern;
+    const workspacePath = getWorkspacePath();
+    const rootFolder = workspacePath ? normalizePath(workspacePath) : undefined;
+    const normalizedPath = normalizePath(path);
+    const includePattern = ACCESS.includePattern || ['**/*'];
+    const excludePattern = ACCESS.excludePattern;
     const includeRegExp: RegExp = checkPatterns ? combineGlobLinesToRegExp(includePattern) : REGEXP_ALWAYS;
     const excludeRegExp: RegExp = checkPatterns && excludePattern ? combineGlobLinesToRegExp(excludePattern) : REGEXP_NEVER;
 
-    if (CONFIG.allowUnsafePaths === true && vscode.workspace.isTrusted === true) {
-        return includeRegExp.test(normalizedPath)       // Check against include pattern
-            && !excludeRegExp.test(normalizedPath);     // Check against exclude pattern
-    }
-
     return rootFolder !== undefined
-        && normalizedPath !== rootFolder            // Prevent access to the workspace folder itself
-        && normalizedPath.startsWith(rootFolder)    // Prevent access to paths outside the workspace
-        && !normalizedPath.includes('/.')           // Prevent access to special files and folders (e.g. .vscode)
-        && !normalizedPath.includes('..')           // Prevent access to parent folders
-        && !normalizedPath.includes('~')            // Prevent access to home directory
-        && !normalizedPath.includes('$')            // Prevent access to environment variables
-        && includeRegExp.test(normalizedPath)       // Check against include pattern
-        && !excludeRegExp.test(normalizedPath);     // Check against exclude pattern
+        // Prevent access to the workspace folder itself
+        && (ACCESS.externalFiles || normalizedPath !== rootFolder)
+        // Prevent access to paths outside the workspace
+        && (ACCESS.externalFiles || normalizedPath.startsWith(rootFolder))
+        // Prevent access to special files and folders (e.g. .vscode) (excluding '..' because that is handled below) (also excluding ./ because that is just the current folder)
+        && (ACCESS.dotFiles || !normalizedPath.match(/\/\.(?!\.?(\/|$))/))
+        // Prevent access to parent folders
+        && (ACCESS.externalFiles || !normalizedPath.match(/\/\.\.(\/|$)/))
+        // Prevent access to home directory (probably doesn't work but just in case)
+        && (ACCESS.externalFiles || !normalizedPath.includes('~'))
+        // Prevent access to environment variables (probably doesn't work but just in case)
+        && (ACCESS.environmentVariables || !normalizedPath.includes('$'))
+        // Check against include pattern
+        && includeRegExp.test(normalizedPath)
+        // Check against exclude pattern
+        && !excludeRegExp.test(normalizedPath);
 }
 
 export const delayAsync = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
