@@ -707,7 +707,7 @@
 					"neuropilot.access.environmentVariables": {
 						"type": "boolean",
 						"default": false,
-						"markdownDescription": "Allows Neuro to access environmental variable values."
+						"markdownDescription": "Allows Neuro to use environment variables in paths. This probably won't work, this security setting is just in case it somehow does."
 					},
 					"neuropilot.access.includePattern": {
 						"type": "array",
