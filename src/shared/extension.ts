@@ -70,7 +70,7 @@ export function setupCommonEventHandlers() {
                 setVirtualCursor();
             }
             if (event.affectsConfiguration('neuropilot.permission') || event.affectsConfiguration('neuropilot.disabledActions')) {
-                vscode.commands.executeCommand('neuropilot.disableAllPermissions');
+                vscode.commands.executeCommand('neuropilot.reloadPermissions');
             }
         }),
         vscode.extensions.onDidChange(obtainExtensionState),
