@@ -1,11 +1,16 @@
 import * as assert from 'assert';
+import { editingActions } from '@/editing';
+import { ActionData } from '@/neuro_client_helper';
 
-// Simple tests for the highlight_lines action prompt logic
+// Tests for the highlight_lines action prompt generator using real logic
 suite('highlight_lines Action', () => {
-    test('should generate correct prompt', () => {
-        const params = { startLine: 1, endLine: 3 };
-        const prompt = `highlight lines ${params.startLine}-${params.endLine}.`;
-        assert.strictEqual(prompt, 'highlight lines 1-3.');
+    test('generates a prompt and includes start and end', () => {
+        const prompt = editingActions.highlight_lines.promptGenerator({
+            params: { startLine: 1, endLine: 3 },
+        } as ActionData);
+        assert.ok(typeof prompt === 'string' && prompt.length > 0);
+        assert.ok(prompt.includes('1'));
+        assert.ok(prompt.includes('3'));
     });
 });
 

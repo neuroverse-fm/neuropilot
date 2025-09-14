@@ -1,21 +1,18 @@
 import * as assert from 'assert';
+import { taskHandlers } from '@/tasks';
+import { cancelRequestAction } from '@/rce';
 
-// Simple tests for tasks and rce action prompt logic
+// Tests for tasks and rce action prompt generators using real logic
 suite('tasks/rce Actions', () => {
     test('terminate_task fixed prompt', () => {
-        const prompt = 'terminate the currently running task.';
-        assert.strictEqual(prompt, 'terminate the currently running task.');
-    });
-
-    test('run_task formats task id', () => {
-        const taskId = 'build';
-        const prompt = `run the task "${taskId}".`;
-        assert.strictEqual(prompt, 'run the task "build".');
+        const prompt = taskHandlers.terminate_task.promptGenerator as string;
+        assert.ok(typeof prompt === 'string' && prompt.length > 0);
     });
 
     test('cancel_request has empty prompt', () => {
-        const prompt = '';
-        assert.strictEqual(prompt, '');
+        const prompt = (cancelRequestAction.promptGenerator as () => string)();
+        assert.ok(typeof prompt === 'string');
+        assert.strictEqual(prompt.length, 0);
     });
 });
 

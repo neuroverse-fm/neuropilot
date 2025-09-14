@@ -1,19 +1,23 @@
 import * as assert from 'assert';
+import { editingActions } from '@/editing';
+import { ActionData } from '@/neuro_client_helper';
 
-// Simple tests for the insert_text action prompt logic
+// Tests for the insert_text action prompt generator using real logic
 suite('insert_text Action', () => {
-    test('should generate correct prompt for single line', () => {
-        const text = 'hello world';
-        const lineCount = text.trim().split('\n').length;
-        const prompt = `insert ${lineCount} line${lineCount === 1 ? '' : 's'} of code.`;
-        assert.strictEqual(prompt, 'insert 1 line of code.');
+    test('generates a prompt and reflects single line count', () => {
+        const prompt = editingActions.insert_text.promptGenerator({
+            params: { text: 'hello world' },
+        } as ActionData);
+        assert.ok(typeof prompt === 'string' && prompt.length > 0);
+        assert.ok(prompt.includes('1'));
     });
 
-    test('should generate correct prompt for multiple lines', () => {
-        const text = 'a\nb\nc';
-        const lineCount = text.trim().split('\n').length;
-        const prompt = `insert ${lineCount} line${lineCount === 1 ? '' : 's'} of code.`;
-        assert.strictEqual(prompt, 'insert 3 lines of code.');
+    test('generates a prompt and reflects multi-line count', () => {
+        const prompt = editingActions.insert_text.promptGenerator({
+            params: { text: 'a\nb\nc' },
+        } as ActionData);
+        assert.ok(typeof prompt === 'string' && prompt.length > 0);
+        assert.ok(prompt.includes('3'));
     });
 });
 

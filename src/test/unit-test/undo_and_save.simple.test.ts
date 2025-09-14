@@ -1,15 +1,16 @@
 import * as assert from 'assert';
+import { editingActions } from '@/editing';
 
-// Simple tests for the undo and save action prompt logic
+// Tests for the undo and save action prompt generators using real logic
 suite('undo/save Actions', () => {
-    test('undo should have fixed prompt', () => {
-        const prompt = 'undo the last action.';
-        assert.strictEqual(prompt, 'undo the last action.');
+    test('undo has non-empty fixed prompt', () => {
+        const prompt = editingActions.undo.promptGenerator as string;
+        assert.ok(typeof prompt === 'string' && prompt.length > 0);
     });
 
-    test('save should have fixed prompt', () => {
-        const prompt = 'save.';
-        assert.strictEqual(prompt, 'save.');
+    test('save has non-empty fixed prompt', () => {
+        const prompt = editingActions.save.promptGenerator as string;
+        assert.ok(typeof prompt === 'string' && prompt.length > 0);
     });
 });
 

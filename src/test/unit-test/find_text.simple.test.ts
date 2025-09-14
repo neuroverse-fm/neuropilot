@@ -1,19 +1,23 @@
 import * as assert from 'assert';
+import { editingActions } from '@/editing';
+import { ActionData } from '@/neuro_client_helper';
 
-// Simple tests for the find_text action prompt logic
+// Tests for the find_text action prompt generator using real logic
 suite('find_text Action', () => {
-    test('should generate prompt with regex escaping when useRegex is true', () => {
-        const params = { find: 'foo(bar)', useRegex: true };
-        const shown = params.useRegex ? params.find.replace(/[/-\\^$*+?.()|[\]{}]/g, '\\$&') : params.find;
-        const prompt = `find "${shown}".`;
-        assert.strictEqual(prompt, 'find "foo\\(bar\\)".');
+    test('generates a prompt and includes escaped find when useRegex is true', () => {
+        const prompt = editingActions.find_text.promptGenerator({
+            params: { find: 'foo(bar)', useRegex: true },
+        } as ActionData);
+        assert.ok(typeof prompt === 'string' && prompt.length > 0);
+        assert.ok(prompt.includes('foo\\(bar\\)'));
     });
 
-    test('should generate prompt plain when useRegex is false', () => {
-        const params = { find: 'baz', useRegex: false };
-        const shown = params.useRegex ? params.find.replace(/[/-\\^$*+?.()|[\]{}]/g, '\\$&') : params.find;
-        const prompt = `find "${shown}".`;
-        assert.strictEqual(prompt, 'find "baz".');
+    test('generates a prompt and includes raw find when useRegex is false', () => {
+        const prompt = editingActions.find_text.promptGenerator({
+            params: { find: 'baz', useRegex: false },
+        } as ActionData);
+        assert.ok(typeof prompt === 'string' && prompt.length > 0);
+        assert.ok(prompt.includes('baz'));
     });
 });
 

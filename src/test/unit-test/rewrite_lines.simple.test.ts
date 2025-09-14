@@ -1,19 +1,30 @@
 import * as assert from 'assert';
+import { editingActions } from '@/editing';
+import { ActionData } from '@/neuro_client_helper';
 
-// Simple tests for the rewrite_lines action prompt logic
+// Tests for the rewrite_lines action prompt generator using real logic
 suite('rewrite_lines Action', () => {
-    test('should generate correct prompt for single line content', () => {
+    test('generates a prompt and reflects single-line content count', () => {
         const params = { startLine: 2, endLine: 4, content: 'only one line' };
-        const lineCount = params.content.trim().split('\n').length;
-        const prompt = `rewrite lines ${params.startLine}-${params.endLine} with ${lineCount} line${lineCount === 1 ? '' : 's'} of content.`;
-        assert.strictEqual(prompt, 'rewrite lines 2-4 with 1 line of content.');
+        const prompt = editingActions.rewrite_lines.promptGenerator({ params } as ActionData);
+        assert.ok(typeof prompt === 'string' && prompt.length > 0);
+        assert.ok(prompt.includes('2') && prompt.includes('4'));
+        assert.ok(prompt.includes('1'));
     });
 
-    test('should generate correct prompt for multiple line content', () => {
+    test('generates a prompt and reflects multi-line content count', () => {
         const params = { startLine: 5, endLine: 10, content: 'a\nb\nc' };
-        const lineCount = params.content.trim().split('\n').length;
-        const prompt = `rewrite lines ${params.startLine}-${params.endLine} with ${lineCount} line${lineCount === 1 ? '' : 's'} of content.`;
-        assert.strictEqual(prompt, 'rewrite lines 5-10 with 3 lines of content.');
+        const prompt = editingActions.rewrite_lines.promptGenerator({ params } as ActionData);
+        assert.ok(typeof prompt === 'string' && prompt.length > 0);
+        assert.ok(prompt.includes('5') && prompt.includes('10'));
+        assert.ok(prompt.includes('3'));
+    });
+
+    test('generates a prompt for reversed ranges (format-only)', () => {
+        const params = { startLine: 8, endLine: 6, content: 'x\ny' };
+        const prompt = editingActions.rewrite_lines.promptGenerator({ params } as ActionData);
+        assert.ok(typeof prompt === 'string' && prompt.length > 0);
+        assert.ok(prompt.includes('8') && prompt.includes('6'));
     });
 });
 
