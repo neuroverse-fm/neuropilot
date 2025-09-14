@@ -36,8 +36,10 @@ Changes between each version before then will not be listed.
   - Include and Exclude Patterns are now case-sensitive (except for drive letters).
 - Fixed actions that access the file system not working in virtual workspaces.
 - Direct terminal access cannot be enabled in untrusted workspaces now (didn't work before because of wrong setting ID).
-- "Disable All Permissions" command now unregisters all actions again.
+- "Disable All Permissions" kill switch command now unregisters all actions again.
   - They were still being blocked before, just not unregistered.
+  - It will also spam Neuro with register/unregister commands but if you have to use this she probably deserves it.
+- "Disable All Permissions" kill switch command now blocks all permissions instantly.
 
 ## 2.1.1
 

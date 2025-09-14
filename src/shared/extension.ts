@@ -158,11 +158,13 @@ function registerPostActionHandler() {
 }
 
 function disableAllPermissions() {
+    NEURO.killSwitch = true;
     const config = vscode.workspace.getConfiguration('neuropilot');
     const permissionKeys = config.get<Record<string, string>>('permission');
     const promises: Thenable<void>[] = [];
 
     if (permissionKeys) {
+        // Yes this will spam Neuro but if Vedal has to use it she probably deserves it
         for (const key of Object.keys(permissionKeys)) {
             promises.push(config.update(`permission.${key}`, 'Off', vscode.ConfigurationTarget.Workspace));
         }
@@ -184,16 +186,18 @@ function disableAllPermissions() {
         promises.push(config.update('sendNewLintingProblemsOn', 'off', vscode.ConfigurationTarget.Workspace));
     }
 
+    const exe = NEURO.currentTaskExecution;
+    if (exe) {
+        exe.terminate();
+        NEURO.currentTaskExecution = null;
+    }
+    emergencyDenyRequests();
+
     Promise.all(promises).then(() => {
-        const exe = NEURO.currentTaskExecution;
-        if (exe) {
-            exe.terminate();
-            NEURO.currentTaskExecution = null;
-        }
-        emergencyDenyRequests();
         vscode.commands.executeCommand('neuropilot.reloadPermissions'); // Reload permissions to unregister all actions
         NEURO.client?.sendContext('Vedal has turned off all permissions.');
-        vscode.window.showInformationMessage('All permissions have been turned off, all actions have been unregistered and any terminal shells have been killed.');
+        vscode.window.showInformationMessage('All permissions, all unsafe path rules and linting auto-context have been turned off, all actions have been unregistered and any terminal shells have been killed.');
+        NEURO.killSwitch = false;
     });
 }
 

@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { Action } from 'neuro-game-sdk';
+import { NEURO } from './constants';
 
 /** Permission level enums */
 export const enum PermissionLevel {
@@ -36,6 +37,9 @@ export function isActionEnabled(action: string | Action): boolean {
  * If no permissions are specified, this function assumes Copilot
  */
 export function getPermissionLevel(...permissions: Permission[]): PermissionLevel {
+    if (NEURO.killSwitch) {
+        return PermissionLevel.OFF;
+    }
     if (permissions.length === 0) {
         return PermissionLevel.COPILOT;
     }
