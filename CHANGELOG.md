@@ -12,12 +12,15 @@ Changes between each version before then will not be listed.
 
 - Certain file actions don't work properly in virtual workspaces. This seems to specifically only happen on virtual workspaces like opening a remote repository (via Azure Repos/Github Repositories), which is slightly hard to set up debugging for, so this may take a bit to debug. (Tracked at [#102](https://github.com/VSC-NeuroPilot/neuropilot/issues/102))
 
-### Changes
+### Added features
 
-- Further clarified when line and column numbers are one-based and zero-based for editing actions.
 - Changing permissions will now automatically reload permissions.
   - This also applies if you change the list of disabled actions.
   - The `Reload Permissions` command is still available in case you need to reload manually.
+
+### Changes
+
+- Further clarified when line and column numbers are one-based and zero-based for editing actions.
 
 ### Fixes
 
@@ -29,6 +32,7 @@ Changes between each version before then will not be listed.
 - Fixed Include and Exclude Patterns not working with uppercase characters.
   - Include and Exclude Patterns are now case-sensitive (except for drive letters).
 - Fixed actions that access the file system not working in virtual workspaces.
+- Direct terminal access cannot be enabled in untrusted workspaces now (didn't work before because of wrong setting ID).
 
 ## 2.1.1
 
