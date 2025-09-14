@@ -213,18 +213,18 @@ export function isPathNeuroSafe(path: string, checkPatterns = true): boolean {
     const excludeRegExp: RegExp = checkPatterns && excludePattern ? combineGlobLinesToRegExp(excludePattern) : REGEXP_NEVER;
 
     return rootFolder !== undefined
-        // Prevent access to the workspace folder itself (not sure how to handle this)
-        && normalizedPath !== rootFolder
+        // Prevent access to the workspace folder itself
+        && (ACCESS.externalFiles || normalizedPath !== rootFolder)
         // Prevent access to paths outside the workspace
-        && (ACCESS.externalFiles === false ? normalizedPath.startsWith(rootFolder) : true)
-        // Prevent access to special files and folders (e.g. .vscode)
-        && !(ACCESS.dotFiles === false ? normalizedPath.includes('/.') : false)
+        && (ACCESS.externalFiles || normalizedPath.startsWith(rootFolder))
+        // Prevent access to special files and folders (e.g. .vscode) (excluding '..' because that is handled below) (also excluding ./ because that is just the current folder)
+        && (ACCESS.dotFiles || !normalizedPath.match(/\/\.(?!\.?(\/|$))/))
         // Prevent access to parent folders
-        && !(ACCESS.externalFiles === false ? normalizedPath.includes('..') : false)
-        // Prevent access to home directory
-        && !(ACCESS.externalFiles === false ? normalizedPath.includes('~') : false)
-        // Prevent access to environment variables
-        && !(ACCESS.environmentVariables === false ? normalizedPath.includes('$') : false)
+        && (ACCESS.externalFiles || !normalizedPath.match(/\/\.\.(\/|$)/))
+        // Prevent access to home directory (probably doesn't work but just in case)
+        && (ACCESS.externalFiles || !normalizedPath.includes('~'))
+        // Prevent access to environment variables (probably doesn't work but just in case)
+        && (ACCESS.environmentVariables || !normalizedPath.includes('$'))
         // Check against include pattern
         && includeRegExp.test(normalizedPath)
         // Check against exclude pattern
