@@ -13,7 +13,7 @@ Changes between each version before then will not be listed.
 - `neuropilot.includePattern`, `neuropilot.excludePattern` and `neuropilot.allowUnsafePaths` are now moved to their `neuropilot.access.*` variants. These old settings have been deprecated and will display a warning in VS Code.
   - In addition, the settings have been changed:
     - `neuropilot.access.includePatterns` and `neuropilot.access.excludePatterns` are now each an array of strings instead of a big string separated by newlines.
-    - `neuropilot.allowUnsafePaths` has been split into 3 separate settings for their respective uses: `neuropilot.access.dotFiles`, `neuropilot.access.externalFiles` and `neuropilot.access.environmentalVariables`.
+    - `neuropilot.allowUnsafePaths` has been split into 3 separate settings for their respective uses: `neuropilot.access.dotFiles`, `neuropilot.access.externalFiles` and `neuropilot.access.environmentVariables`.
 
 ### Changes
 
