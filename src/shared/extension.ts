@@ -191,9 +191,9 @@ function disableAllPermissions() {
             NEURO.currentTaskExecution = null;
         }
         emergencyDenyRequests();
-        reloadPermissions();
-        NEURO.client?.sendContext('Vedal has turned off all dangerous permissions.');
-        vscode.window.showInformationMessage('All dangerous permissions have been turned off and actions have been re-registered. Terminal shells have also been killed, if any.');
+        vscode.commands.executeCommand('neuropilot.reloadPermissions'); // Reload permissions to unregister all actions
+        NEURO.client?.sendContext('Vedal has turned off all permissions.');
+        vscode.window.showInformationMessage('All permissions have been turned off, all actions have been unregistered and any terminal shells have been killed.');
     });
 }
 
