@@ -718,7 +718,7 @@
 		},
 		"untrustedWorkspaces": {
 			"supported": "limited",
-			"description": "Terminals and Tasks access will be forcefully disabled for Neuro. She will also be unable to access Neuro-unsafe paths and won't have all tasks registered.",
+			"description": "Terminal access, running tasks and accessing unsafe paths will be disabled for Neuro, regardless of settings.",
 			"restrictedConfigurations": [
 				"neuropilot.permission.terminalAccess",
 				"neuropilot.permission.runTasks",
