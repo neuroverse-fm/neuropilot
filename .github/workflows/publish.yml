@@ -16,11 +16,6 @@ on:
           - 'minor'
           - 'patch'
           - 'none'
-      update_docs:
-        type: boolean
-        description: 'Docs are up to date'
-        required: true
-        default: false
 
 jobs:
   build:
