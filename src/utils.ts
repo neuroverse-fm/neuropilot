@@ -206,7 +206,7 @@ export function combineGlobLinesToRegExp(lines: string[]): RegExp {
 export function isPathNeuroSafe(path: string, checkPatterns = true): boolean {
     const workspacePath = getWorkspacePath();
     const rootFolder = workspacePath ? normalizePath(workspacePath) : undefined;
-    const normalizedPath = normalizePath(path).toLowerCase();
+    const normalizedPath = normalizePath(path);
     const includePattern = ACCESS.includePattern || ['**/*'];
     const excludePattern = ACCESS.excludePattern;
     const includeRegExp: RegExp = checkPatterns ? combineGlobLinesToRegExp(includePattern) : REGEXP_ALWAYS;
