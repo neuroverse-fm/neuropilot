@@ -73,12 +73,6 @@ jobs:
     - name: Commit and push version change
       run: |
         git push --follow-tags https://VSC-NeuroPilot:${{secrets.GITHUB_TOKEN}}:@github.com/VSC-NeuroPilot/neuropilot
-    
-    - name: Rebuild docs site
-      if: ${{ inputs.update_docs }}
-      env: 
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: gh workflow run bump.yml -f check=${{ inputs.update_docs }} --repo VSC-NeuroPilot/docs
   
   vsce-publish:
     name: Publish to VS Marketplace
