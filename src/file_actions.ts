@@ -3,7 +3,7 @@ import * as vscode from 'vscode';
 import { NEURO } from '@/constants';
 import { filterFileContents, getFence, getVirtualCursor, getWorkspacePath, getWorkspaceUri, isBinary, isPathNeuroSafe, logOutput, normalizePath } from '@/utils';
 import { ActionData, contextNoAccess, RCEAction, actionValidationFailure, actionValidationAccept, ActionValidationResult, stripToActions } from '@/neuro_client_helper';
-import { CONFIG, PERMISSIONS, getPermissionLevel, isActionEnabled } from '@/config';
+import { CONFIG, PERMISSIONS, PermissionLevel, getPermissionLevel, isActionEnabled } from '@/config';
 
 /**
  * The path validator.
@@ -272,7 +272,7 @@ export function handleCreateFile(actionData: ActionData): string | undefined {
         NEURO.client?.sendContext(`Created file ${relativePath}`);
 
         // Open the file if Neuro has permission to do so
-        if (!getPermissionLevel(PERMISSIONS.openFiles))
+        if (getPermissionLevel(PERMISSIONS.openFiles) !== PermissionLevel.AUTOPILOT)
             return;
 
         try {
