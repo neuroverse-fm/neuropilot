@@ -16,11 +16,6 @@ on:
           - 'minor'
           - 'patch'
           - 'none'
-      specific:
-        type: string
-        description: If you want to choose a specific ref to publish, set the version input to none and provide the desired tag here.
-        required: false
-        default: master
 
 jobs:
   build:
@@ -30,8 +25,6 @@ jobs:
       VERSION: ${{ steps.build.outputs.VERSION }}
     steps:
     - uses: actions/checkout@v4
-      with:
-        ref: ${{ inputs.specific || 'master' }}
 
     - name: Setup pnpm
       uses: pnpm/action-setup@v4
@@ -64,7 +57,7 @@ jobs:
         NODE_ENV: 1
       run: |
         echo VERSION=$(pnpm show ./ version) >> $GITHUB_OUTPUT
-        pnpm vsce package --allow-star-activation --no-dependencies
+        pnpm vsce package --no-dependencies
     
     - name: Upload VSIX file
       uses: actions/upload-artifact@v4
@@ -75,11 +68,6 @@ jobs:
     - name: Commit and push version change
       run: |
         git push --follow-tags https://VSC-NeuroPilot:${{secrets.GITHUB_TOKEN}}:@github.com/VSC-NeuroPilot/neuropilot
-    
-    - name: Rebuild docs site
-      env: 
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: gh workflow run bump.yml -f version=${{ inputs.version }} --repo VSC-NeuroPilot/docs
   
   vsce-publish:
     name: Publish to VS Marketplace
