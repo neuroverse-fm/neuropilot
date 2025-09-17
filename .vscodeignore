@@ -30,7 +30,7 @@ sort-enums.ts
 tony/
 
 # Coverage
-/coverage
+/*coverage
 
 # Integration testing
 test-playground/

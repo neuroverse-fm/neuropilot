@@ -30,7 +30,7 @@ pnpm-debug.log*
 .DS_Store
 
 # Coverage
-/coverage
+/*coverage
 
 # Local Playwright browser cache if needed for local web tests, in non-default location
 .playwright-browsers
