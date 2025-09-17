@@ -36,6 +36,7 @@ export default tseslint.config(
         '**/.vscode-test/**',
         'src/types/**/*.d.ts',
         'project-files/**/*',
+        '.vscode-test.mjs',
     ]),
     js.configs.recommended,
     ...tseslint.configs.recommended,
