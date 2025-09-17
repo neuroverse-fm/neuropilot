@@ -529,7 +529,7 @@ export function handleReadFile(actionData: ActionData): string | undefined {
  */
 export const _internals = {
     validatePath,
-    getPathExistence,
+    getUriExistence,
     neuroSafeValidation,
     neuroSafeDeleteValidation,
     neuroSafeRenameValidation,
