@@ -1,7 +1,9 @@
-import { web, webTest, webTestBrowser } from './esbuild-configs/web.esbuild.js';
-import { desktop, desktopTest } from './esbuild-configs/desktop.esbuild.js';
+import { web, webTest, webTestBrowser } from '../esbuild-configs/web.esbuild.js';
+import { desktop, desktopTest } from '../esbuild-configs/desktop.esbuild.js';
 import * as fs from 'fs';
 import chalk from 'chalk';
+import console from 'node:console';
+import process from 'node:process';
 
 // Checks production mode
 function determineProductionMode() {
@@ -80,12 +82,13 @@ if (test) {
     }
 }
 
-const directoryPlural = outDir.length === 1 || outDir.length === -1 ? 'directory' : 'directories';
-if (fs.existsSync(outDir)) {
-    console.log(chalk.yellow(`🗑️  Output ${directoryPlural} ${outDir} already exists, removing dir...`));
-    fs.rmSync(outDir, {recursive: true});
-} else {
-    console.log(chalk.dim(`📁  Output ${directoryPlural} ${outDir} doesn't exist, skipping removal step.`));
+for (const dir of outDir) {
+    if (fs.existsSync(dir)) {
+        console.log(chalk.yellow(`🗑️  Output directory ${dir} already exists, removing dir...`));
+        fs.rmSync(dir, {recursive: true});
+    } else {
+        console.log(chalk.dim(`📁  Output directory ${dir} doesn't exist, skipping removal step.`));
+    }
 }
 
 try {
