@@ -26,7 +26,6 @@ import '../../unit-test/replace_text.simple.test';
 import '../../unit-test/rewrite_all.simple.test';
 import '../../unit-test/rewrite_lines.simple.test';
 import '../../unit-test/tasks_and_rce.simple.test';
-import '../../unit-test/terminal.simple.test';
 import '../../unit-test/undo_and_save.simple.test';
 
 // Testing the meta stuff
