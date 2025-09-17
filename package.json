@@ -761,11 +761,14 @@
 		"test:desktop": "npm run build:desktop && npm-run-all -s test:desktop:*",
 		"test:web:tsc": "tsc --noEmit --project test-tsconfigs/tsconfig.web.json",
 		"test:web:esbuild": "node ./scripts/esbuild.mjs --mode web --test",
+		"test:web:extension-runner-patch": "tsx ./scripts/post-test-regex.ts ./out/web/test/index.js",
 		"test:web:browser:esbuild": "node ./scripts/esbuild.mjs --mode web --test --web-browser-test",
+		"test:web:browser:extension-runner-patch": "tsx ./scripts/post-test-regex.ts ./out/web/test/browser.js",
 		"test:web:vscode": "vscode-test --coverage --label webUnitTest",
 		"test:web:browser:vscode": "vscode-test-web --headless --extensionDevelopmentPath=. --extensionTestsPath=out/web/test/browser.js test-playground",
 		"test:desktop:tsc": "tsc --noEmit --project test-tsconfigs/tsconfig.app.json",
 		"test:desktop:esbuild": "node ./scripts/esbuild.mjs --mode desktop --test",
+		"test:desktop:extension-runner-patch": "tsx ./scripts/post-test-regex.ts ./out/desktop/test.js",
 		"test:desktop:vscode": "vscode-test --coverage --label desktopUnitTest"
 	},
 	"devDependencies": {
