@@ -16,11 +16,6 @@ on:
           - 'minor'
           - 'patch'
           - 'none'
-      update_docs:
-        type: boolean
-        description: 'Docs are up to date'
-        required: true
-        default: false
 
 jobs:
   build:
@@ -62,7 +57,7 @@ jobs:
         NODE_ENV: 1
       run: |
         echo VERSION=$(pnpm show ./ version) >> $GITHUB_OUTPUT
-        pnpm vsce package --allow-star-activation --no-dependencies
+        pnpm vsce package --no-dependencies
     
     - name: Upload VSIX file
       uses: actions/upload-artifact@v4
@@ -73,11 +68,6 @@ jobs:
     - name: Commit and push version change
       run: |
         git push --follow-tags https://VSC-NeuroPilot:${{secrets.GITHUB_TOKEN}}:@github.com/VSC-NeuroPilot/neuropilot
-    
-    - name: Rebuild docs site
-      env: 
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: gh workflow run bump.yml -f check=${{ inputs.update_docs }} --repo VSC-NeuroPilot/docs
   
   vsce-publish:
     name: Publish to VS Marketplace
