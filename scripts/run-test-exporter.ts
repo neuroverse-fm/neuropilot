@@ -42,7 +42,7 @@ if (require.main === module) {
     const fileArg = args.find(arg => !arg.startsWith('--'));
 
     if (!fileArg) {
-        console.error('Usage: node post-test-regex.js [--unexport] <path-to-js-file>');
+        console.error('Usage: tsx ./scripts/post-test-exporter.ts [--unexport] <path-to-js-file>');
         process.exit(1);
     }
     try {
