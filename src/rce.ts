@@ -4,7 +4,7 @@
  */
 
 import * as vscode from 'vscode';
-import { ActionData, CancelEventsObject, RCEAction, stripToAction } from '@/neuro_client_helper';
+import { ActionData, CancelEvent, RCEAction, stripToAction } from '@/neuro_client_helper';
 import { NEURO } from '@/constants';
 import { checkVirtualWorkspace, checkWorkspaceTrust, logOutput } from '@/utils';
 import { CONFIG, getPermissionLevel, isActionEnabled, PermissionLevel, PERMISSIONS } from '@/config';
@@ -309,15 +309,36 @@ export async function RCEActionHandler(actionData: ActionData, actionList: Recor
         const eventArray: vscode.Disposable[] = [];
 
         if (CONFIG.enableCancelEvents && action.cancelEvents) {
-            const eventListener = (eventObject: CancelEventsObject) => {
-                logOutput('WARN', `${CONFIG.currentlyAsNeuroAPI}'${CONFIG.currentlyAsNeuroAPI.endsWith('s') ? '' : 's'} action ${action.name} was cancelled because ${eventObject.logReason?.trim() ?? eventObject.reason?.trim() ?? 'of a cancellation event.'}`);
-                NEURO.client?.sendContext(`Your request was cancelled because ${eventObject.reason?.trim() ?? 'a cancellation event was fired.'}`);
+            const eventListener = (eventObject: CancelEvent) => {
+                let createdReason: string;
+                let createdLogReason: string;
+                const reason = eventObject.reason;
+                if (typeof reason === 'string') {
+                    createdReason = reason.trim();
+                } else if (typeof reason === 'function') {
+                    createdReason = reason(actionData).trim();
+                } else {
+                    createdReason = 'a cancellation event was fired.';
+                };
+                const logReason = eventObject.logReason;
+                if (typeof logReason === 'string') {
+                    createdLogReason = logReason.trim();
+                } else if (typeof logReason === 'function') {
+                    createdLogReason = logReason(actionData).trim();
+                } else {
+                    createdLogReason = createdReason;
+                }
+                logOutput('WARN', `${CONFIG.currentlyAsNeuroAPI}'${CONFIG.currentlyAsNeuroAPI.endsWith('s') ? '' : 's'} action ${action.name} was cancelled because ${createdLogReason}`);
+                NEURO.client?.sendContext(`Your request was cancelled because ${createdReason}`);
                 clearRceRequest();
             };
             for (const eventObject of action.cancelEvents) {
-                const eventHandler = eventObject.event(actionData);
-                if (eventHandler) {
-                    eventArray.push(eventHandler(() => eventListener(eventObject)));
+                const eventDetails = eventObject.details(actionData);
+                if (eventDetails.event) {
+                    eventArray.push(eventDetails.event(() => eventListener(eventObject)));
+                    if (eventDetails.extraDisposables) {
+                        eventArray.push(eventDetails.extraDisposables);
+                    }
                 }
             }
         }

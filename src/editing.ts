@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 
 import { NEURO } from '@/constants';
 import { DiffRangeType, escapeRegExp, getDiffRanges, getFence, getPositionContext, getProperty, getVirtualCursor, showDiffRanges, isPathNeuroSafe, logOutput, NeuroPositionContext, setVirtualCursor, simpleFileName, substituteMatch, clearDecorations } from '@/utils';
-import { ActionData, actionValidationAccept, actionValidationFailure, ActionValidationResult, RCEAction, contextFailure, stripToActions, actionValidationRetry, contextNoAccess, CancelEventsObject } from '@/neuro_client_helper';
+import { ActionData, actionValidationAccept, actionValidationFailure, ActionValidationResult, RCEAction, contextFailure, stripToActions, actionValidationRetry, contextNoAccess, CancelEvent } from '@/neuro_client_helper';
 import { PERMISSIONS, getPermissionLevel, CONFIG, isActionEnabled } from '@/config';
 import { onDidMoveCursor } from '@events/cursor';
 
@@ -166,22 +166,22 @@ function createLineRangeValidator(path = '') {
     };
 }
 
-const commonCancelEvents: CancelEventsObject[] = [
+const commonCancelEvents: CancelEvent[] = [
     {
-        event: () => vscode.workspace.onDidChangeTextDocument,
+        details: () => { return { event: vscode.workspace.onDidChangeTextDocument }; },
         reason: 'the active document was changed.',
     },
     {
-        event: () => vscode.window.onDidChangeActiveTextEditor,
+        details: () => { return { event: vscode.window.onDidChangeActiveTextEditor }; },
         reason: 'you\'ve switched files.',
         logReason: 'the active file was switched.',
     },
 ];
 
-const commonCancelEventsWithCursor: CancelEventsObject[] = [
+const commonCancelEventsWithCursor: CancelEvent[] = [
     ...commonCancelEvents,
     {
-        event: () => onDidMoveCursor,
+        details: () => { return { event: onDidMoveCursor }; },
         reason: 'your cursor was moved.',
         logReason: 'Neuro\'s cursor was moved.',
     },
@@ -214,7 +214,7 @@ export const editingActions = {
         handler: handleGetContent,
         cancelEvents: [
             {
-                event: () => vscode.window.onDidChangeActiveTextEditor,
+                details: () => { return { event: vscode.window.onDidChangeActiveTextEditor }; },
                 reason: 'the active text editor has changed.',
             },
         ],
@@ -345,7 +345,7 @@ export const editingActions = {
         handler: handleFindText,
         cancelEvents: [
             {
-                event: () => vscode.window.onDidChangeActiveTextEditor,
+                details: () => { return { event: vscode.window.onDidChangeActiveTextEditor }; },
                 reason: 'you\'ve switched files.',
                 logReason: 'the active file was switched.',
             },
@@ -372,7 +372,7 @@ export const editingActions = {
         cancelEvents: [
             ...commonCancelEvents,
             {
-                event: () => vscode.workspace.onDidSaveTextDocument,
+                details: () => { return { event: vscode.workspace.onDidSaveTextDocument }; },
                 reason: 'the active document was saved.',
             },
         ],
@@ -394,7 +394,7 @@ export const editingActions = {
         handler: handleRewriteAll,
         cancelEvents: [
             {
-                event: () => vscode.window.onDidChangeActiveTextEditor,
+                details: () => { return { event: vscode.window.onDidChangeActiveTextEditor }; },
                 reason: 'you\'ve switched files.',
                 logReason: 'the active file was switched.',
             },

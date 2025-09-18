@@ -4,6 +4,7 @@ import { NEURO } from '@/constants';
 import { filterFileContents, getFence, getVirtualCursor, getWorkspacePath, getWorkspaceUri, isBinary, isPathNeuroSafe, logOutput, normalizePath } from '@/utils';
 import { ActionData, contextNoAccess, RCEAction, actionValidationFailure, actionValidationAccept, ActionValidationResult, stripToActions } from '@/neuro_client_helper';
 import { CONFIG, PERMISSIONS, PermissionLevel, getPermissionLevel, isActionEnabled } from '@/config';
+import { createTargetedFileEvent } from './events/files';
 
 /**
  * The path validator.
@@ -92,6 +93,13 @@ async function binaryFileValidation(actionData: ActionData): Promise<ActionValid
     return actionValidationAccept();
 }
 
+const commonCancelEvents = [
+    {
+        details: (actionData: ActionData) => createTargetedFileEvent(actionData.params?.filePath),
+        reason: (actionData: ActionData) => `the file ${actionData.params.filePath} was modified from the workspace.`,
+    },
+];
+
 export const fileActions = {
     get_files: {
         name: 'get_files',
@@ -120,6 +128,7 @@ export const fileActions = {
         },
         permissions: [PERMISSIONS.openFiles],
         handler: handleOpenFile,
+        cancelEvents: commonCancelEvents,
         validators: [neuroSafeValidation, binaryFileValidation],
         promptGenerator: (actionData: ActionData) => `open the file "${actionData.params?.filePath}".`,
     },
@@ -136,6 +145,7 @@ export const fileActions = {
         },
         permissions: [PERMISSIONS.openFiles],
         handler: handleReadFile,
+        cancelEvents: commonCancelEvents,
         validators: [neuroSafeValidation, binaryFileValidation],
         promptGenerator: (actionData: ActionData) => `read the file "${actionData.params?.filePath}" (without opening it).`,
     },

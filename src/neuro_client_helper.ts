@@ -6,7 +6,7 @@ import { Action } from 'neuro-game-sdk';
 import { Permission, PermissionLevel } from '@/config';
 import { logOutput } from '@/utils';
 import { PromptGenerator } from '@/rce';
-import { Event } from 'vscode';
+import { Event, Disposable } from 'vscode';
 
 /** Data used by an action handler. */
 export interface ActionData {
@@ -35,23 +35,33 @@ export interface ActionValidationResult {
 /**
  * The object that defines a cancellation event.
  */
-export interface CancelEventsObject {
+export interface CancelEvent {
     /** 
      * The event to subscribe to.
-     * It is a callable function that returns an event because sometimes the event isn't necessary, so we pass the actionData to find out.
-     * If the function returns `null`, the event will be skipped and won't cause a cancel event to fire.
+     * It is a callable function that returns an object that contains an event because sometimes the event isn't necessary, so we pass the actionData to find out.
+     * If the function returns `null`, the event will be skipped and won't cause a cancel event to be set up.
      */
-    event: (actionData: ActionData) => (Event<unknown> | null);
+    details: (actionData: ActionData) => CancelEventObject;
     /** 
      * The cancel reason that will be sent to Neuro.
      * This prompt should fit the phrasing scheme 'Your action was cancelled because [reason]'
      */
-    reason?: string;
+    reason?: string | ((actionData: ActionData) => string);
     /** 
      * The cancel reason that will be logged.
      * This prompt should fit the phrasing scheme 'The action was cancelled because [reason]'
      */
-    logReason?: string;
+    logReason?: string | ((actionData: ActionData) => string);
+}
+
+/**
+ * Returned by the cancellation event getter.
+ */
+export interface CancelEventObject {
+    /** The actual event function to subscribe to. */
+    event: Event<unknown> | null;
+    /** Any extra disposable resources. */
+    extraDisposables?: Disposable;
 }
 
 /** ActionHandler to use with constants for records of actions and their corresponding handlers */
@@ -67,7 +77,7 @@ export interface RCEAction extends Action {
      * 
      * Following VS Code's pattern, Disposables will not be awaited if async.
      */
-    cancelEvents?: (CancelEventsObject)[];
+    cancelEvents?: (CancelEvent)[];
     /** The function to handle the action. */
     handler: (actionData: ActionData) => string | undefined;
     /** 
