@@ -6,6 +6,12 @@ Since v2.1.0, we're keeping a changelog of each version's changes in NeuroPilot.
 
 Changes between each version before then will not be listed.
 
+## 2.2.0 <!-- Assuming we'll just put everything into the next minor release, change to 2.1.3 if we decide to release a patch first -->
+
+### Fixes
+
+- Fixed automatically opening files created by Neuro when she only has Copilot permission for opening files.
+
 ## 2.1.2
 
 ### New settings
