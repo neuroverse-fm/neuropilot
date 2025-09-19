@@ -305,11 +305,12 @@ export function getDiffModifiedDecorationRenderOptions(): vscode.DecorationRende
 
 export function getHighlightDecorationRenderOptions(): vscode.DecorationRenderOptions {
     return {
-        backgroundColor: 'rgba(255, 255, 0, 1)',
+        backgroundColor: 'rgba(202, 22, 175, 1)',
         border: '2px solid rgba(255, 85, 229, 1)',
         borderRadius: '0px',
         overviewRulerColor: 'rgba(255, 85, 229, 1)',
         overviewRulerLane: vscode.OverviewRulerLane.Center,
         rangeBehavior: vscode.DecorationRangeBehavior.ClosedClosed,
+        
     };
 }
