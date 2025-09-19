@@ -8,6 +8,17 @@ Changes between each version before then will not be listed.
 
 ## 2.2.0 <!-- Assuming we'll just put everything into the next minor release, change to 2.1.3 if we decide to release a patch first -->
 
+### Added features
+
+- A tooltip will now show when hovering over Neuro-highlighted text, indicating that Neuro highlighted it, and how (either through finding text or manually).
+
+### Changes
+
+- Changed the colour of Neuro's highlight.
+  - AHHHH MY EYES - Vedal
+  - The specific colour used now is RGBA 202 22 175 1 as opposed to RGBA 255 255 0 1.
+- Some Copilot mode prompts for editing actions have been rewritten majorly to properly reflect the options available to Neuro.
+
 ### Fixes
 
 - Fixed automatically opening files created by Neuro when she only has Copilot permission for opening files.
