@@ -22,6 +22,7 @@ Changes between each version before then will not be listed.
 ### Fixes
 
 - Fixed automatically opening files created by Neuro when she only has Copilot permission for opening files.
+- `rename_git_remote` now has a Git extension validator attached to it, matching all other Git actions.
 
 ## 2.1.2
 
