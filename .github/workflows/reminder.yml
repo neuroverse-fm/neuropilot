@@ -16,5 +16,5 @@ jobs:
               issue_number: context.payload.pull_request.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: "## Reminder\n\nPlease remember to update the changelog (in the CHANGGELOG.md file) and documentation (over at [VSC-NeuroPilot/docs](https://github.com/VSC-NeuroPilot/docs)) if necessary. Thank you!"
+              body: "## Reminder\n\nPlease remember to update the changelog (in the CHANGELOG.md file) and documentation (over at [VSC-NeuroPilot/docs](https://github.com/VSC-NeuroPilot/docs)) if necessary. Thank you!"
             })
