@@ -1,10 +1,10 @@
 import * as vscode from 'vscode';
 import { EXTENSIONS, NEURO } from '@/constants';
-import type { Change, CommitOptions, Commit, Repository, API } from '@typing/git.d';
+import type { Change, CommitOptions, Commit, Repository, API, GitExtension } from '@typing/git.d';
 import { ForcePushMode } from '@typing/git.d';
 import { StatusStrings, RefTypeStrings } from '@typing/git_status';
 import { logOutput, simpleFileName, isPathNeuroSafe, normalizePath, getWorkspacePath } from '@/utils';
-import { ActionData, ActionValidationResult, actionValidationAccept, actionValidationFailure, RCEAction, contextFailure, stripToActions, actionValidationRetry } from '@/neuro_client_helper';
+import { ActionData, ActionValidationResult, actionValidationAccept, actionValidationFailure, RCEAction, contextFailure, stripToActions, actionValidationRetry, CancelEventObject } from '@/neuro_client_helper';
 import { PERMISSIONS, getPermissionLevel, isActionEnabled } from '@/config';
 import assert from 'node:assert';
 
@@ -117,6 +117,29 @@ function gitDiffValidator(actionData: ActionData): ActionValidationResult {
     }
 }
 
+function gitCancellationEvent(_actionData: ActionData): CancelEventObject {
+    assert(git);
+    const emitter = new vscode.EventEmitter<unknown>();
+    const event = vscode.extensions.getExtension<GitExtension>('vscode.git')?.exports.onDidChangeEnablement(_ => {
+        emitter.fire(undefined);
+    });
+    const extraDisposables = new vscode.Disposable(() => {
+        event?.dispose();
+        emitter.dispose();
+    });
+    return {
+        event: emitter.event,
+        extraDisposables,
+    };
+}
+
+const commonCancelEvents = [
+    {
+        details: gitCancellationEvent,
+        reason: 'the Git extension was disabled.',
+    },
+];
+
 export const gitActions = {
     init_git_repo: {
         name: 'init_git_repo',
@@ -124,6 +147,7 @@ export const gitActions = {
         permissions: [PERMISSIONS.gitOperations],
         handler: handleNewGitRepo,
         promptGenerator: 'initialize a Git repository in the workspace.',
+        cancelEvents: commonCancelEvents,
         validators: [(_actionData: ActionData) => {
             if (!git) return actionValidationFailure('Git extension not available.');
             return actionValidationAccept();
@@ -147,6 +171,7 @@ export const gitActions = {
         },
         permissions: [PERMISSIONS.gitOperations],
         handler: handleAddFileToGit,
+        cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `add the file "${actionData.params.filePath}" to the staging area.`,
         validators: [gitValidator, filePathGitValidator],
     },
@@ -167,6 +192,7 @@ export const gitActions = {
         },
         permissions: [PERMISSIONS.gitOperations],
         handler: handleMakeGitCommit,
+        cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `commit changes with the message "${actionData.params.message}".`,
         validators: [gitValidator],
     },
@@ -183,6 +209,7 @@ export const gitActions = {
         },
         permissions: [PERMISSIONS.gitOperations],
         handler: handleGitMerge,
+        cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `merge "${actionData.params.ref_to_merge}" into the current branch.`,
         validators: [gitValidator],
     },
@@ -191,6 +218,7 @@ export const gitActions = {
         description: 'Get the current status of the Git repository',
         permissions: [PERMISSIONS.gitOperations],
         handler: handleGitStatus,
+        cancelEvents: commonCancelEvents,
         promptGenerator: 'get the repository\'s Git status.',
         validators: [gitValidator],
     },
@@ -212,6 +240,7 @@ export const gitActions = {
         },
         permissions: [PERMISSIONS.gitOperations],
         handler: handleRemoveFileFromGit,
+        cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `remove the file "${actionData.params.filePath}" from the staging area.`,
         validators: [gitValidator, filePathGitValidator],
     },
@@ -229,6 +258,7 @@ export const gitActions = {
         },
         permissions: [PERMISSIONS.gitOperations],
         handler: handleDeleteGitBranch,
+        cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `delete the branch "${actionData.params.branchName}".`,
         validators: [gitValidator],
     },
@@ -245,6 +275,7 @@ export const gitActions = {
         },
         permissions: [PERMISSIONS.gitOperations],
         handler: handleSwitchGitBranch,
+        cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `switch to the branch "${actionData.params.branchName}".`,
         validators: [gitValidator],
     },
@@ -261,6 +292,7 @@ export const gitActions = {
         },
         permissions: [PERMISSIONS.gitOperations],
         handler: handleNewGitBranch,
+        cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `create a new branch "${actionData.params.branchName}".`,
         validators: [gitValidator],
     },
@@ -279,6 +311,7 @@ export const gitActions = {
         },
         permissions: [PERMISSIONS.gitOperations],
         handler: handleDiffFiles,
+        cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `obtain ${actionData.params?.filePath ? `"${actionData.params.filePath}"'s` : 'a'} Git diff${actionData.params?.ref1 && actionData.params?.ref2 ? ` between ${actionData.params.ref1} and ${actionData.params.ref2}` : actionData.params?.ref1 ? ` at ref ${actionData.params.ref1}` : ''}${actionData.params?.diffType ? ` (of type "${actionData.params.diffType}")` : ''}.`,
         validators: [gitValidator, filePathGitValidator, gitDiffValidator],
     },
@@ -297,6 +330,7 @@ export const gitActions = {
         },
         permissions: [PERMISSIONS.gitOperations],
         handler: handleGitLog,
+        cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `get the ${actionData.params?.log_limit ? `${actionData.params.log_limit} most recent commits in the ` : ''}Git log.`,
         validators: [gitValidator],
     },
@@ -313,6 +347,7 @@ export const gitActions = {
         },
         permissions: [PERMISSIONS.gitOperations],
         handler: handleGitBlame,
+        cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `get the Git blame for the file "${actionData.params.filePath}".`,
         validators: [gitValidator, filePathGitValidator],
     },
@@ -332,6 +367,7 @@ export const gitActions = {
         },
         permissions: [PERMISSIONS.gitOperations, PERMISSIONS.gitTags],
         handler: handleTagHEAD,
+        cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `tag the current commit with the name "${actionData.params.name}" and associate it with the "${actionData.params.upstream}" remote.`,
         validators: [gitValidator],
     },
@@ -348,6 +384,7 @@ export const gitActions = {
         },
         permissions: [PERMISSIONS.gitOperations, PERMISSIONS.gitTags],
         handler: handleDeleteTag,
+        cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `delete the tag "${actionData.params.name}".`,
         validators: [gitValidator],
     },
@@ -367,6 +404,7 @@ export const gitActions = {
         },
         permissions: [PERMISSIONS.gitOperations, PERMISSIONS.gitConfigs],
         handler: handleSetGitConfig,
+        cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `set the Git config key "${actionData.params.key}" to "${actionData.params.value}".`,
         validators: [gitValidator],
     },
@@ -382,6 +420,7 @@ export const gitActions = {
         },
         permissions: [PERMISSIONS.gitOperations, PERMISSIONS.gitConfigs],
         handler: handleGetGitConfig,
+        cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => actionData.params?.key ? `get the Git config key "${actionData.params.key}".` : 'get the Git config.',
         validators: [gitValidator],
     },
@@ -400,6 +439,7 @@ export const gitActions = {
         },
         permissions: [PERMISSIONS.gitOperations, PERMISSIONS.gitRemotes],
         handler: handleFetchGitCommits,
+        cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => {
             if (actionData.params.remoteName && actionData.params.branchName)
                 return `fetch commits ${actionData.params.remoteName}/${actionData.params.branchName}.`;
@@ -416,6 +456,7 @@ export const gitActions = {
         description: 'Pull commits from the remote repository',
         permissions: [PERMISSIONS.gitOperations, PERMISSIONS.gitRemotes],
         handler: handlePullGitCommits,
+        cancelEvents: commonCancelEvents,
         promptGenerator: 'pull commits.',
         validators: [gitValidator],
     },
@@ -433,6 +474,7 @@ export const gitActions = {
         },
         permissions: [PERMISSIONS.gitOperations, PERMISSIONS.gitRemotes],
         handler: handlePushGitCommits,
+        cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => {
             const force = actionData.params.forcePush ? 'force ' : '';
             if (actionData.params.remoteName && actionData.params.branchName)
@@ -461,6 +503,7 @@ export const gitActions = {
         },
         permissions: [PERMISSIONS.gitOperations, PERMISSIONS.gitRemotes, PERMISSIONS.editRemoteData],
         handler: handleAddGitRemote,
+        cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `add a new remote "${actionData.params.remoteName}" with URL "${actionData.params.remoteURL}".`,
         validators: [gitValidator],
     },
@@ -477,6 +520,7 @@ export const gitActions = {
         },
         permissions: [PERMISSIONS.gitOperations, PERMISSIONS.gitRemotes, PERMISSIONS.editRemoteData],
         handler: handleRemoveGitRemote,
+        cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `remove the remote "${actionData.params.remoteName}".`,
         validators: [gitValidator],
     },
@@ -494,6 +538,7 @@ export const gitActions = {
         },
         permissions: [PERMISSIONS.gitOperations, PERMISSIONS.gitRemotes, PERMISSIONS.editRemoteData],
         handler: handleRenameGitRemote,
+        cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `rename the remote "${actionData.params.oldRemoteName}" to "${actionData.params.newRemoteName}".`,
     },
     abort_merge: {
@@ -501,6 +546,7 @@ export const gitActions = {
         description: 'Aborts the current merge operation.',
         permissions: [PERMISSIONS.gitOperations],
         handler: handleAbortMerge,
+        cancelEvents: commonCancelEvents,
         promptGenerator: 'abort the current merge operation.',
         validators: [gitValidator],
     },
