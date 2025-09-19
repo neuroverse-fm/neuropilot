@@ -334,7 +334,7 @@ export async function RCEActionHandler(actionData: ActionData, actionList: Recor
             };
             for (const eventObject of action.cancelEvents) {
                 const eventDetails = eventObject.details(actionData);
-                if (eventDetails.event) {
+                if (eventDetails) {
                     eventArray.push(eventDetails.event(() => eventListener(eventObject)));
                     if (eventDetails.extraDisposables) {
                         eventArray.push(eventDetails.extraDisposables);

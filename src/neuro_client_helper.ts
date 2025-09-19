@@ -41,7 +41,7 @@ export interface CancelEvent {
      * It is a callable function that returns an object that contains an event because sometimes the event isn't necessary, so we pass the actionData to find out.
      * If the function returns `null`, the event will be skipped and won't cause a cancel event to be set up.
      */
-    details: (actionData: ActionData) => CancelEventObject;
+    details: (actionData: ActionData) => CancelEventObject | null;
     /** 
      * The cancel reason that will be sent to Neuro.
      * This prompt should fit the phrasing scheme 'Your action was cancelled because [reason]'
@@ -59,7 +59,7 @@ export interface CancelEvent {
  */
 export interface CancelEventObject {
     /** The actual event function to subscribe to. */
-    event: Event<unknown> | null;
+    event: Event<unknown>;
     /** Any extra disposable resources. */
     extraDisposables?: Disposable;
 }

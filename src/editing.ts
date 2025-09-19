@@ -239,7 +239,19 @@ export const editingActions = {
         },
         permissions: [PERMISSIONS.editActiveDocument],
         handler: handleInsertText,
-        cancelEvents: commonCancelEventsWithCursor,
+        cancelEvents: [
+            ...commonCancelEvents,
+            {
+                details(actionData) {
+                    if (actionData.params.position) {
+                        return null;
+                    };
+                    return {
+                        event: onDidMoveCursor,
+                    };
+                },
+            },
+        ],
         validators: [checkCurrentFile, createPositionValidator('position'), createStringValidator(['text'])],
         promptGenerator: (actionData: ActionData) => {
             const lineCount = actionData.params.text.trim().split('\n').length;
@@ -250,7 +262,8 @@ export const editingActions = {
         name: 'insert_lines',
         description: 'Insert code below a certain line.'
             + ' Defaults to your current cursor\'s location'
-            + ' Your cursor will be moved to the end of the inserted line.', // TODO: Clarify cursor stuff again
+            + ' Your cursor will be moved to the end of the inserted line.'
+            + ' The insertUnder parameter is one-based, not zero-based.',
         schema: {
             type: 'object',
             properties: {
@@ -267,7 +280,19 @@ export const editingActions = {
         },
         permissions: [PERMISSIONS.editActiveDocument],
         handler: handleInsertLines,
-        cancelEvents: commonCancelEvents,
+        cancelEvents: [
+            ...commonCancelEvents,
+            {
+                details(actionData) {
+                    if (actionData.params.insertUnder) {
+                        return null;
+                    }
+                    return {
+                        event: onDidMoveCursor,
+                    };
+                },
+            },
+        ],
         validators: [checkCurrentFile, createStringValidator(['lines'])],
         promptGenerator: (actionData: ActionData) => {
             const lines = actionData.params.text.trim().split('\n').length;
@@ -294,7 +319,7 @@ export const editingActions = {
         },
         permissions: [PERMISSIONS.editActiveDocument],
         handler: handleReplaceText,
-        cancelEvents: commonCancelEvents,
+        cancelEvents: [commonCancelEvents[1]],
         validators: [checkCurrentFile, createStringValidator(['find', 'replaceWith']), createLineRangeValidator('lineRange')],
         promptGenerator: (actionData: ActionData) => `replace "${actionData.params.useRegex ? escapeRegExp(actionData.params.find) : actionData.params.find}" with "${actionData.params.replaceWith}".`,
     },
@@ -317,7 +342,7 @@ export const editingActions = {
         },
         permissions: [PERMISSIONS.editActiveDocument],
         handler: handleDeleteText,
-        cancelEvents: commonCancelEvents,
+        cancelEvents: [commonCancelEvents[1]],
         validators: [checkCurrentFile, createStringValidator(['find']), createLineRangeValidator('lineRange')],
         promptGenerator: (actionData: ActionData) => `delete "${actionData.params.useRegex ? escapeRegExp(actionData.params.find) : actionData.params.find}".`,
     },
@@ -343,13 +368,7 @@ export const editingActions = {
         },
         permissions: [PERMISSIONS.editActiveDocument],
         handler: handleFindText,
-        cancelEvents: [
-            {
-                details: () => { return { event: vscode.window.onDidChangeActiveTextEditor }; },
-                reason: 'you\'ve switched files.',
-                logReason: 'the active file was switched.',
-            },
-        ],
+        cancelEvents: [commonCancelEvents[1]],
         validators: [checkCurrentFile, createStringValidator(['find']), createLineRangeValidator('lineRange')],
         promptGenerator: (actionData: ActionData) => `find "${actionData.params.useRegex ? escapeRegExp(actionData.params.find) : actionData.params.find}".`,
     },
@@ -392,13 +411,7 @@ export const editingActions = {
         },
         permissions: [PERMISSIONS.editActiveDocument],
         handler: handleRewriteAll,
-        cancelEvents: [
-            {
-                details: () => { return { event: vscode.window.onDidChangeActiveTextEditor }; },
-                reason: 'you\'ve switched files.',
-                logReason: 'the active file was switched.',
-            },
-        ],
+        cancelEvents: [commonCancelEvents[1]],
         validators: [checkCurrentFile, createStringValidator(['content'])],
         promptGenerator: (actionData: ActionData) => {
             const lineCount = actionData.params.content.trim().split('\n').length;
