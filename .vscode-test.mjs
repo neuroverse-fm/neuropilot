@@ -39,6 +39,7 @@ export default defineConfig({
         },
     ],
     coverage: { // only as a backup, should be overridden by CLI options (thank you microsoft, why can't this be simpler)
+        reporter: ['html', 'json'],
         include: ['src/**/*.ts'],
         exclude: ['src/test/**/*.ts'],
         output: './coverage',
