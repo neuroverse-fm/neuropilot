@@ -540,6 +540,7 @@ export const gitActions = {
         handler: handleRenameGitRemote,
         cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `rename the remote "${actionData.params.oldRemoteName}" to "${actionData.params.newRemoteName}".`,
+        validators: [gitValidator],
     },
     abort_merge: {
         name: 'abort_merge',
