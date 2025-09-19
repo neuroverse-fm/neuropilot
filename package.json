@@ -87,6 +87,11 @@
 				"category": "NeuroPilot"
 			},
 			{
+				"command": "neuropilot.disconnect",
+				"title": "Disconnect",
+				"category": "NeuroPilot"
+			},
+			{
 				"command": "neuropilot.moveNeuroCursorHere",
 				"title": "Move Neuro's Cursor Here",
 				"category": "NeuroPilot"

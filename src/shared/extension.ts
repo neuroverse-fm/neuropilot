@@ -16,6 +16,7 @@ import { registerDocsCommands, registerDocsLink } from './docs';
 export function registerCommonCommands() {
     return [
         vscode.commands.registerCommand('neuropilot.reconnect', reconnect),
+        vscode.commands.registerCommand('neuropilot.disconnect', disconnect),
         vscode.commands.registerCommand('neuropilot.moveNeuroCursorHere', moveNeuroCursorHere),
         vscode.commands.registerCommand('neuropilot.sendCurrentFile', sendCurrentFile),
         vscode.commands.registerCommand('neuropilot.giveCookie', giveCookie),
@@ -135,6 +136,15 @@ export function createStatusBarItem() {
 function reconnect() {
     logOutput('INFO', 'Attempting to reconnect to Neuro API');
     createClient();
+}
+
+function disconnect() {
+    if (!NEURO.client) {
+        vscode.window.showErrorMessage('Not connected to Neuro API.');
+        return;
+    }
+    logOutput('INFO', 'Manually disconnecting from Neuro API');
+    NEURO.client.disconnect();
 }
 
 export function reloadPermissions(...extraFunctions: (() => void)[]) {
@@ -311,6 +321,6 @@ export function getHighlightDecorationRenderOptions(): vscode.DecorationRenderOp
         overviewRulerColor: 'rgba(255, 85, 229, 1)',
         overviewRulerLane: vscode.OverviewRulerLane.Center,
         rangeBehavior: vscode.DecorationRangeBehavior.ClosedClosed,
-        
+
     };
 }
