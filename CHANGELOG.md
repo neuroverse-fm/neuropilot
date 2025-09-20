@@ -19,11 +19,14 @@ Changes between each version before then will not be listed.
   - The specific colour used now is RGBA 202 22 175 1 as opposed to RGBA 255 255 0 1.
 - Some Copilot mode prompts for editing actions have been rewritten majorly to properly reflect the options available to Neuro.
 - Clarified whose cursor will be moved in action descriptions and contexts.
+- Context returned from editing actions now uses a common format.
 
 ### Fixes
 
 - Fixed automatically opening files created by Neuro when she only has Copilot permission for opening files.
 - `rename_git_remote` now has a Git extension validator attached to it, matching all other Git actions.
+- Usage of CRLF and LF in context was inconsistent across actions, and sometimes even inconsistent within the same context. This has now (hopefully) been fixed to only use LF.
+- Line numbers should now appear for all actions.
 
 ## 2.1.2
 

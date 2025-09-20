@@ -4,7 +4,7 @@ import globToRegExp from 'glob-to-regexp';
 import { fileTypeFromBuffer } from 'file-type';
 
 import { NEURO } from '@/constants';
-import { ACCESS, CONFIG, getPermissionLevel, PERMISSIONS } from '@/config';
+import { ACCESS, CONFIG, CursorPositionContextStyle, getPermissionLevel, PERMISSIONS } from '@/config';
 
 import { ActionValidationResult, ActionData, actionValidationAccept, actionValidationFailure } from '@/neuro_client_helper';
 import assert from 'node:assert';
@@ -110,19 +110,26 @@ export interface NeuroPositionContext {
     totalLines: number;
 }
 
+// TODO: Add cursor position to context so we don't need to assume it's `position2`
 /**
  * Gets the context around a specified range in a document.
+ * If no range is specified, gets the entire document.
+ * Do not use the result of this for position calculations, as the file is filtered to remove Windows-style line endings.
  * @param document The document to get the context from.
  * @param position The start of the range around which to get the context.
  * @param position2 The end of the range around which to get the context. If not provided, defaults to {@link position}.
  * @returns The context around the specified range. The amount of lines before and after the range is configurable in the settings.
  */
-export function getPositionContext(document: vscode.TextDocument, position: vscode.Position, position2?: vscode.Position): NeuroPositionContext {
+export function getPositionContext(document: vscode.TextDocument, position?: vscode.Position, position2?: vscode.Position): NeuroPositionContext {
     const beforeContextLength = CONFIG.beforeContext;
     const afterContextLength = CONFIG.afterContext;
 
     if (position2 === undefined) {
         position2 = position;
+    }
+    if (position === undefined || position2 === undefined) { // Second check is redundant but the compiler wants it
+        position = new vscode.Position(0, 0);
+        position2 = new vscode.Position(document.lineCount - 1, document.lineAt(document.lineCount - 1).text.length);
     }
     if (position2.isBefore(position)) {
         // Swap the positions if position2 is before position
@@ -573,4 +580,52 @@ export function checkVirtualWorkspace(_actionData: ActionData): ActionValidation
  */
 export async function isBinary(input: Uint8Array): Promise<boolean> {
     return await fileTypeFromBuffer(input) ? true : false;
+}
+
+/**
+ * Formats the context for sending to Neuro.
+ * Assumes the cursor is at the end of `contextBefore` + `contextBetween` and at the start of `contextAfter`.
+ * @param context The context to format.
+ * @param overrideCursorStyle If provided, overrides the cursor style setting for this context.
+ * @returns The formatted context.
+ */
+export function formatContext(context: NeuroPositionContext, overrideCursorStyle: CursorPositionContextStyle | undefined = undefined): string {
+    const fence = getFence(context.contextBefore + context.contextBetween + context.contextAfter);
+    const rawContextBefore = context.contextBefore + context.contextBetween;
+    const rawContextAfter = context.contextAfter;
+    const lineNumberContextFormat = CONFIG.lineNumberContextFormat;
+    const lineNumberNote = lineNumberContextFormat.includes('{n}') ? 'Note that line numbers are not part of the source code. ' : '';
+
+    let n = 1;
+    let contextArray = [];
+    for (const line of rawContextBefore.split(/\r?\n/)) {
+        contextArray.push(lineNumberContextFormat.replace('{n}', n.toString()) + line);
+        n++;
+    }
+    const contextBefore = contextArray.join('\n');
+    contextArray = [];
+
+    let first = true;
+    for (const line of rawContextAfter.split(/\r?\n/)) {
+        if (first) {
+            contextArray.push(line);
+            first = false;
+            continue;
+        }
+        contextArray.push(lineNumberContextFormat.replace('{n}', n.toString()) + line);
+        n++;
+    }
+    const contextAfter = contextArray.join('\n');
+
+    const cursorStyle = overrideCursorStyle ?? CONFIG.cursorPositionContextStyle;
+
+    const cursor = getVirtualCursor()!;
+    const showCursor = ['inline', 'both'].includes(cursorStyle) ? '<<<|>>>' : '';
+    const cursorNote =
+        cursorStyle === 'inline' ? 'Your cursor\'s position is denoted by `<<<|>>>`. '
+        : cursorStyle === 'lineAndColumn' ? `Your cursor is at ${cursor.line + 1}:${cursor.character + 1}. `
+        : cursorStyle === 'both' ? `Your cursor is at ${cursor.line + 1}:${cursor.character + 1}, denoted by \`<<<|>>>\`. `
+        : '';
+
+    return `File context for lines ${context.startLine + 1}-${context.endLine + 1} of ${context.totalLines}. ${cursorNote}${lineNumberNote}Content:\n\n${fence}\n${contextBefore}${showCursor}${contextAfter}\n${fence}`;
 }

@@ -2,6 +2,12 @@ import * as vscode from 'vscode';
 import { Action } from 'neuro-game-sdk';
 import { NEURO } from './constants';
 
+//#region Types
+
+export type CursorPositionContextStyle = 'off' | 'inline' | 'lineAndColumn' | 'both';
+
+//#endregion
+
 /** Permission level enums */
 export const enum PermissionLevel {
     OFF = 0,
@@ -109,7 +115,7 @@ class Config {
     get defaultOpenDocsWindow(): string { return get('defaultOpenDocsWindow')!; }
     get disabledActions(): string[] { return get('disabledActions')!; }
     get sendContentsOnFileChange(): boolean { return get('sendContentsOnFileChange')!; }
-    get cursorPositionContextStyle(): string { return get('cursorPositionContextStyle')!; }
+    get cursorPositionContextStyle(): CursorPositionContextStyle { return get('cursorPositionContextStyle')!; }
     get lineNumberContextFormat(): string { return get('lineNumberContextFormat')!; }
 
     get terminals(): { name: string; path: string; args?: string[]; }[] { return get('terminals')!; }

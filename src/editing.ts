@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 
 import { NEURO } from '@/constants';
-import { DiffRangeType, escapeRegExp, getDiffRanges, getFence, getPositionContext, getProperty, getVirtualCursor, showDiffRanges, isPathNeuroSafe, logOutput, NeuroPositionContext, setVirtualCursor, simpleFileName, substituteMatch, clearDecorations } from '@/utils';
+import { DiffRangeType, escapeRegExp, getDiffRanges, getFence, getPositionContext, getProperty, getVirtualCursor, showDiffRanges, isPathNeuroSafe, logOutput, NeuroPositionContext, setVirtualCursor, simpleFileName, substituteMatch, clearDecorations, formatContext, filterFileContents } from '@/utils';
 import { ActionData, actionValidationAccept, actionValidationFailure, ActionValidationResult, RCEAction, contextFailure, stripToActions, actionValidationRetry, contextNoAccess } from '@/neuro_client_helper';
 import { PERMISSIONS, getPermissionLevel, CONFIG, isActionEnabled } from '@/config';
 
@@ -600,7 +600,10 @@ export function handleGetCursor(_actionData: ActionData): string | undefined {
     const relativePath = vscode.workspace.asRelativePath(document.uri);
     logOutput('INFO', `Sending cursor position to ${NEURO.currentController}`);
 
-    return `In file ${relativePath}\n\nYour cursor is at (${cursorPosition.line + 1}:${cursorPosition.character + 1})\n\n${formatContext(cursorContext)}`;
+    let cursorStyle = CONFIG.cursorPositionContextStyle;
+    if (cursorStyle === 'off')
+        cursorStyle = 'lineAndColumn';
+    return `In file ${relativePath}.\n\n${formatContext(cursorContext)}`;
 }
 
 export function handleGetContent(): string {
@@ -619,8 +622,8 @@ export function handleGetContent(): string {
 
     // Manually construct context to include entire file
     const positionContext: NeuroPositionContext = {
-        contextBefore: document.getText(new vscode.Range(new vscode.Position(0, 0), cursor)),
-        contextAfter: document.getText(new vscode.Range(cursor, document.lineAt(document.lineCount - 1).rangeIncludingLineBreak.end)),
+        contextBefore: filterFileContents(document.getText(new vscode.Range(new vscode.Position(0, 0), cursor))),
+        contextAfter: filterFileContents(document.getText(new vscode.Range(cursor, document.lineAt(document.lineCount - 1).rangeIncludingLineBreak.end))),
         contextBetween: '',
         startLine: 0,
         endLine: document.lineCount - 1,
@@ -783,8 +786,7 @@ export function handleReplaceText(actionData: ActionData): string | undefined {
                 const document = vscode.window.activeTextEditor!.document;
                 const diffRanges = getDiffRanges(document, new vscode.Position(0, 0), originalText, document.getText());
                 showDiffRanges(vscode.window.activeTextEditor!, ...diffRanges);
-                const fence = getFence(document.getText());
-                NEURO.client?.sendContext(`Deleted ${matches.length} occurrences from the document\n\nUpdated content:\n\n${fence}\n${document.getText()}\n${fence}`);
+                NEURO.client?.sendContext(`Deleted ${matches.length} occurrences from the document\n\n${formatContext(getPositionContext(document), 'off')}`);
             }
         }
         else {
@@ -839,8 +841,7 @@ export function handleDeleteText(actionData: ActionData): string | undefined {
                 const document = vscode.window.activeTextEditor!.document;
                 const diffRanges = getDiffRanges(document, new vscode.Position(0, 0), originalText, document.getText());
                 showDiffRanges(vscode.window.activeTextEditor!, ...diffRanges);
-                const fence = getFence(document.getText());
-                NEURO.client?.sendContext(`Deleted ${matches.length} occurrences from the document\n\nUpdated content:\n\n${fence}\n${document.getText()}\n${fence}`);
+                NEURO.client?.sendContext(`Deleted ${matches.length} occurrences from the document\n\n${formatContext(getPositionContext(document), 'off')}`);
             }
         }
         else {
@@ -997,8 +998,7 @@ export function handleRewriteAll(actionData: ActionData): string | undefined {
             const diffRanges = getDiffRanges(document, new vscode.Position(0, 0), originalText, document.getText());
             showDiffRanges(vscode.window.activeTextEditor!, ...diffRanges);
 
-            const fence = getFence(content);
-            NEURO.client?.sendContext(`Rewrote entire file ${relativePath} with ${lineCount} line${lineCount === 1 ? '' : 's'} of content\n\nUpdated content:\n\n${fence}\n${content}\n${fence}`);
+            NEURO.client?.sendContext(`Rewrote entire file ${relativePath} with ${lineCount} line${lineCount === 1 ? '' : 's'} of content\n\n${formatContext(getPositionContext(document, startPosition))}`);
         } else {
             NEURO.client?.sendContext(contextFailure('Failed to rewrite document content'));
         }
@@ -1227,45 +1227,6 @@ function findAndFilter(regex: RegExp, document: vscode.TextDocument, cursorOffse
         default:
             throw new Error(`Invalid match option: ${match}`);
     }
-}
-
-function formatContext(context: NeuroPositionContext): string {
-    const fence = getFence(context.contextBefore + context.contextBetween + context.contextAfter);
-    const rawContextBefore = context.contextBefore + context.contextBetween;
-    const rawContextAfter = context.contextAfter;
-    const lineNumberContextFormat = CONFIG.lineNumberContextFormat;
-    const lineNumberNote = lineNumberContextFormat.includes('{n}') ? 'Note that line numbers are not part of the source code. ' : '';
-
-    let n = 1;
-    let contextArray = [];
-    for (const line of rawContextBefore.split('\n')) {
-        contextArray.push(lineNumberContextFormat.replace('{n}', n.toString()) + line);
-        n++;
-    }
-    const contextBefore = contextArray.join('\n');
-    contextArray = [];
-
-    let first = true;
-    for (const line of rawContextAfter.split('\n')) {
-        if (first) {
-            contextArray.push(line);
-            first = false;
-            continue;
-        }
-        contextArray.push(lineNumberContextFormat.replace('{n}', n.toString()) + line);
-        n++;
-    }
-    const contextAfter = contextArray.join('\n');
-
-    const cursor = getVirtualCursor()!;
-    const showCursor = ['inline', 'both'].includes(CONFIG.cursorPositionContextStyle) ? '<<<|>>>' : '';
-    const cursorNote =
-        CONFIG.cursorPositionContextStyle === 'inline' ? 'Cursor position denoted by `<<<|>>>`. '
-        : CONFIG.cursorPositionContextStyle === 'lineAndColumn' ? `Cursor is at ${cursor.line + 1}:${cursor.character + 1}. `
-        : CONFIG.cursorPositionContextStyle === 'both' ? `Cursor is at ${cursor.line + 1}:${cursor.character + 1}, denoted by \`<<<|>>>\`. `
-        : '';
-
-    return `File context for lines ${context.startLine + 1}-${context.endLine + 1} of ${context.totalLines}. ${cursorNote}${lineNumberNote}Content:\n\n${fence}\n${contextBefore}${showCursor}${contextAfter}\n${fence}`;
 }
 
 let editorChangeHandlerTimeout: NodeJS.Timeout | undefined;
