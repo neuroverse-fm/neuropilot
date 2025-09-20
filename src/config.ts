@@ -18,8 +18,12 @@ export function get<T>(key: string): T | undefined {
     return vscode.workspace.getConfiguration('neuropilot').get<T>(key);
 }
 
-export function checkAccess<T>(key: string): T | undefined {
+export function getAccess<T>(key: string): T | undefined {
     return vscode.workspace.getConfiguration('neuropilot').get<T>('access.' + key);
+}
+
+export function getConnection<T>(key: string): T | undefined {
+    return vscode.workspace.getConfiguration('neuropilot').get<T>('connection.' + key);
 }
 
 export function isActionEnabled(action: string | Action): boolean {
@@ -88,13 +92,10 @@ class Permissions {
 export const PERMISSIONS = new Permissions();
 
 class Config {
-    get websocketUrl(): string { return get('websocketUrl')!; }
-    get gameName(): string { return get('gameName')!; }
     get beforeContext(): number { return get('beforeContext')!; }
     get afterContext(): number { return get('afterContext')!; }
     get maxCompletions(): number { return get('maxCompletions')!; }
     get completionTrigger(): string { return get('completionTrigger')!; }
-    get initialContext(): string { return get('initialContext')!; }
     get timeout(): number { return get('timeout')!; }
     get showTimeOnTerminalStart(): boolean { return get('showTimeOnTerminalStart')!; }
     get terminalContextDelay(): number { return get('terminalContextDelay')!; }
@@ -118,11 +119,22 @@ class Config {
 export const CONFIG = new Config();
 
 class Access {
-    get includePattern(): string[] { return checkAccess<string[]>('includePattern')!; }
-    get excludePattern(): string[] { return checkAccess<string[]>('excludePattern')!; }
-    get dotFiles(): boolean { return checkAccess<boolean>('dotFiles')!; }
-    get externalFiles(): boolean { return checkAccess<boolean>('externalFiles')!; }
-    get environmentVariables(): boolean { return checkAccess<boolean>('environmentVariables')!; }
+    get includePattern(): string[] { return getAccess<string[]>('includePattern')!; }
+    get excludePattern(): string[] { return getAccess<string[]>('excludePattern')!; }
+    get dotFiles(): boolean { return getAccess<boolean>('dotFiles')!; }
+    get externalFiles(): boolean { return getAccess<boolean>('externalFiles')!; }
+    get environmentVariables(): boolean { return getAccess<boolean>('environmentVariables')!; }
 }
 
 export const ACCESS = new Access();
+
+class Connection {
+    get websocketUrl(): string { return getConnection<string>('websocketUrl')!; }
+    get gameName(): string { return getConnection<string>('gameName')!; }
+    get initialContext(): string { return getConnection<string>('initialContext')!; }
+    get autoConnect(): boolean { return getConnection<boolean>('autoConnect')!; }
+    get retryInterval(): number { return getConnection<number>('retryInterval')!; }
+    get retryAmount(): number { return getConnection<number>('retryAmount')!; }
+}
+
+export const CONNECTION = new Connection();

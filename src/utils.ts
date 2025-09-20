@@ -574,3 +574,72 @@ export function checkVirtualWorkspace(_actionData: ActionData): ActionValidation
 export async function isBinary(input: Uint8Array): Promise<boolean> {
     return await fileTypeFromBuffer(input) ? true : false;
 }
+
+/**
+ * Shows a disconnect message with options for quickly connecting to the Neuro API.
+ */
+export async function showAPIMessage(type: 'disconnect' | 'failed' | 'connected' | 'error') {
+    try {
+        switch (type) {
+            case 'connected': {
+                const option = await vscode.window.showInformationMessage('Connected to Neuro API.', 'Disconnect', 'Change Auto-connect settings');
+                if (option) {
+                    switch (option) {
+                        case 'Disconnect':
+                            vscode.commands.executeCommand('neuropilot.disconnect');
+                            break;
+                        case 'Change Auto-connect settings':
+                            vscode.commands.executeCommand('workbench.action.openSettings', 'neuropilot.connection.autoConnect');
+                            break;
+                    }
+                }
+                break;
+            }
+            case 'failed': {
+                const option = await vscode.window.showErrorMessage('Failed to connect to Neuro API.', 'Retry', 'Change Auto-connect settings');
+                if (option) {
+                    switch (option) {
+                        case 'Retry':
+                            vscode.commands.executeCommand('neuropilot.reconnect');
+                            break;
+                        case 'Change Auto-connect settings':
+                            vscode.commands.executeCommand('workbench.action.openSettings', 'neuropilot.connection.autoConnect');
+                            break;
+                    }
+                }
+                break;
+            }
+            case 'disconnect': {
+                const option = await vscode.window.showWarningMessage('Disconnected from Neuro API.', 'Reconnect', 'Change Auto-connect settings');
+                if (option) {
+                    switch (option) {
+                        case 'Reconnect':
+                            vscode.commands.executeCommand('neuropilot.reconnect');
+                            break;
+                        case 'Change Auto-connect settings':
+                            vscode.commands.executeCommand('workbench.action.openSettings', 'neuropilot.connection.autoConnect');
+                            break;
+                    }
+                }
+                break;
+            }
+            case 'error': {
+                const option = await vscode.window.showErrorMessage('Error on the Neuro API, please check logs.', 'Reconnect', 'Change Auto-connect settings');
+                if (option) {
+                    switch (option) {
+                        case 'Reconnect':
+                            vscode.commands.executeCommand('neuropilot.reconnect');
+                            break;
+                        case 'Change Auto-connect settings':
+                            vscode.commands.executeCommand('workbench.action.openSettings', 'neuropilot.connection.autoConnect');
+                            break;
+                    }
+                }
+                break;
+            }
+        }
+    } catch (erm: unknown) {
+        logOutput('ERROR', 'Error attempting to show an API connection message: ' + erm);
+    }
+    return;
+}

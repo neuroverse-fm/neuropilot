@@ -169,17 +169,20 @@
 					"neuropilot.websocketUrl": {
 						"type": "string",
 						"default": "ws://localhost:8000",
-						"description": "The URL to connect to the Neuro API"
+						"description": "The URL to connect to the Neuro API",
+						"deprecationMessage": "This setting has been moved to `neuropilot.connection.websocketUrl`"
 					},
 					"neuropilot.gameName": {
 						"type": "string",
 						"default": "Visual Studio Code",
-						"description": "The name to use for this \"game\""
+						"description": "The name to use for this \"game\"",
+						"deprecationMessage": "This setting has been moved to `neuropilot.connection.gameName`"
 					},
 					"neuropilot.initialContext": {
 						"type": "string",
 						"default": "You are using an extension in Visual Studio Code that allows you to code together with Vedal.",
 						"description": "The initial context to sent to Neuro-sama (or whatever is connected to NeuroPilot)",
+						"deprecationMessage": "This setting has been moved to `neuropilot.connection.initialContext`",
 						"editPresentation": "multilineText"
 					},
 					"neuropilot.currentlyAsNeuroAPI": {
@@ -735,6 +738,39 @@
 							"CNAME"
 						],
 						"markdownDescription": "A case-sensitive glob pattern for files Neuro is not allowed to open. Applied after the include pattern. Patterns without a slash will match any file or folder with that name."
+					},
+					"neuropilot.connection.websocketUrl": {
+						"type": "string",
+						"default": "ws://localhost:8000",
+						"description": "The URL to connect to the Neuro API"
+					},
+					"neuropilot.connection.gameName": {
+						"type": "string",
+						"default": "Visual Studio Code",
+						"description": "The name to use for this \"game\""
+					},
+					"neuropilot.connection.initialContext": {
+						"type": "string",
+						"default": "You are using an extension in Visual Studio Code that allows you to code together with Vedal.",
+						"description": "The initial context to sent to Neuro-sama (or whatever is connected to NeuroPilot)",
+						"editPresentation": "multilineText"
+					},
+					"neuropilot.connection.autoConnect": {
+						"type": "boolean",
+						"default": true,
+						"markdownDescription": "Whether to auto-connect to the Neuro API on extension setup."
+					},
+					"neuropilot.connection.retryInterval": {
+						"type": "integer",
+						"default": 0,
+						"minimum": 0,
+						"markdownDescription": "The delay (in ms) between NeuroPilot retrying connections to NeuroPilot.\n\nSet to 0 if you want to retry as soon as possible. <!-- What about making it do exponential backoff? -->"
+					},
+					"neuropilot.connection.retryAmount": {
+						"type": "integer",
+						"default": 0,
+						"minimum": 0,
+						"markdownDescription": "The amount of retries to connect to the Neuro API if it fails.\n\nThe amount of tries total will be (this setting) + 1.\n\nSet to 0 to disallow retries."
 					}
 				}
 			}

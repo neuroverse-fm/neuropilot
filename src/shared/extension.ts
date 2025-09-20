@@ -4,7 +4,7 @@ import { logOutput, createClient, onClientConnected, setVirtualCursor } from '@/
 import { completionsProvider, registerCompletionResultHandler } from '@/completions';
 import { giveCookie, registerRequestCookieAction, registerRequestCookieHandler, sendCurrentFile } from '@/context';
 import { registerChatResponseHandler } from '@/chat';
-import { ACCESS, CONFIG } from '@/config';
+import { ACCESS, CONFIG, CONNECTION } from '@/config';
 import { explainWithNeuro, fixWithNeuro, NeuroCodeActionsProvider, sendDiagnosticsDiff } from '@/lint_problems';
 import { editorChangeHandler, fileSaveListener, moveNeuroCursorHere, toggleSaveAction, workspaceEditHandler } from '@/editing';
 import { emergencyDenyRequests, acceptRceRequest, denyRceRequest, revealRceNotification } from '@/rce';
@@ -83,8 +83,8 @@ export function setupCommonEventHandlers() {
 
 export function initializeCommonState(context: vscode.ExtensionContext) {
     NEURO.context = context;
-    NEURO.url = CONFIG.websocketUrl;
-    NEURO.gameName = CONFIG.gameName;
+    NEURO.url = CONNECTION.websocketUrl;
+    NEURO.gameName = CONNECTION.gameName;
     NEURO.connected = false;
     NEURO.waiting = false;
     NEURO.cancelled = false;
@@ -252,7 +252,7 @@ export function obtainExtensionState(): void {
 }
 
 export function deactivate() {
-    NEURO.client?.sendContext(`NeuroPilot is being deactivated, or ${CONFIG.gameName} is closing. See you next time, ${NEURO.currentController}!`);
+    NEURO.client?.sendContext(`NeuroPilot is being deactivated, or ${CONNECTION.gameName} is closing. See you next time, ${NEURO.currentController}!`);
 }
 
 export function getCursorDecorationRenderOptions(): vscode.DecorationRenderOptions {
