@@ -168,20 +168,20 @@ function createLineRangeValidator(path = '') {
 export const editingActions = {
     place_cursor: {
         name: 'place_cursor',
-        description: 'Place the cursor in the current file at the specified position. Line and column numbers are one-based for "absolute" and zero-based for "relative".',
+        description: 'Place your cursor in the current file at the specified position. Line and column numbers are one-based for "absolute" and zero-based for "relative".',
         schema: POSITION_SCHEMA,
         permissions: [PERMISSIONS.editActiveDocument],
         handler: handlePlaceCursor,
         validator: [checkCurrentFile, createPositionValidator()],
-        promptGenerator: (actionData: ActionData) => `${actionData.params.type === 'absolute' ? 'place the cursor at' : 'move the cursor by'} (${actionData.params.line}:${actionData.params.column}).`,
+        promptGenerator: (actionData: ActionData) => `${actionData.params.type === 'absolute' ? 'place her cursor at' : 'move her cursor by'} (${actionData.params.line}:${actionData.params.column}).`,
     },
     get_cursor: {
         name: 'get_cursor',
-        description: 'Get the current cursor position and the text surrounding it.',
+        description: 'Get your current cursor position and the text surrounding it.',
         permissions: [PERMISSIONS.editActiveDocument],
         handler: handleGetCursor,
         validator: [checkCurrentFile],
-        promptGenerator: 'get the current cursor position and the text surrounding it.',
+        promptGenerator: 'get her current cursor position and the text surrounding it.',
     },
     get_content: {
         name: 'get_content',
@@ -600,7 +600,7 @@ export function handleGetCursor(_actionData: ActionData): string | undefined {
     const relativePath = vscode.workspace.asRelativePath(document.uri);
     logOutput('INFO', `Sending cursor position to ${NEURO.currentController}`);
 
-    return `In file ${relativePath}\n\nCursor is at (${cursorPosition.line + 1}:${cursorPosition.character + 1})\n\n${formatContext(cursorContext)}`;
+    return `In file ${relativePath}\n\nYour cursor is at (${cursorPosition.line + 1}:${cursorPosition.character + 1})\n\n${formatContext(cursorContext)}`;
 }
 
 export function handleGetContent(): string {
@@ -675,7 +675,7 @@ export function handleInsertText(actionData: ActionData): string | undefined {
                 type: DiffRangeType.Added,
             });
             const cursorContext = getPositionContext(document, insertStart, insertEnd);
-            NEURO.client?.sendContext(`Inserted text into document and moved cursor\n\n${formatContext(cursorContext)}`);
+            NEURO.client?.sendContext(`Inserted text into document and moved your cursor\n\n${formatContext(cursorContext)}`);
         }
         else {
             NEURO.client?.sendContext(contextFailure('Failed to insert text'));
@@ -885,7 +885,7 @@ export function handleFindText(actionData: ActionData): string | undefined {
         }
         const cursorContext = getPositionContext(document, startPosition);
         logOutput('INFO', `Placed cursor at (${startPosition.line + 1}:${startPosition.character + 1})`);
-        return `Found match and placed cursor at (${startPosition.line + 1}:${startPosition.character + 1})\n\n${formatContext(cursorContext)}`;
+        return `Found match and placed your cursor at (${startPosition.line + 1}:${startPosition.character + 1})\n\n${formatContext(cursorContext)}`;
     }
     else {
         // Multiple matches
@@ -920,7 +920,7 @@ export function handleUndo(_actionData: ActionData): string | undefined {
     vscode.commands.executeCommand('undo').then(
         () => {
             logOutput('INFO', 'Undoing last action in document');
-            // We don't keep track of the cursor position in the undo stack, so we reset it to the real cursor position
+            // We don't keep track of the virtual cursor position in the undo stack, so we reset it to the real cursor position
             const cursorContext = getPositionContext(document, vscode.window.activeTextEditor!.selection.active);
             setVirtualCursor(vscode.window.activeTextEditor!.selection.active);
             NEURO.client?.sendContext(`Undid last action in document\n\n${formatContext(cursorContext)}`);

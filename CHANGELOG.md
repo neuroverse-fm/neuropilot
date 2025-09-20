@@ -18,6 +18,7 @@ Changes between each version before then will not be listed.
   - AHHHH MY EYES - Vedal
   - The specific colour used now is RGBA 202 22 175 1 as opposed to RGBA 255 255 0 1.
 - Some Copilot mode prompts for editing actions have been rewritten majorly to properly reflect the options available to Neuro.
+- Clarified whose cursor will be moved in action descriptions and contexts.
 
 ### Fixes
 
