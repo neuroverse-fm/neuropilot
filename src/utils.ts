@@ -38,6 +38,7 @@ export function createClient() {
     let attempts = 0;
     const configuredAttempts = CONNECTION.retryAmount + 1;
     const configuredInterval = CONNECTION.retryInterval;
+    console.log(configuredAttempts);
 
     function attemptConnection() {
         // TODO: Check if this is a memory leak
@@ -64,20 +65,22 @@ export function createClient() {
             logOutput('INFO', 'Disconnected from Neuro API');
             showAPIMessage('disconnect');
 
-            if (attempts < configuredAttempts) {
-                attempts++;
-                logOutput('INFO', `Attempting to reconnect (${attempts}/${configuredAttempts}) in ${configuredInterval}ms...`);
-                setTimeout(() => {
-                    attemptConnection();
-                }, configuredInterval);
-            } else {
-                logOutput('WARN', `Failed to reconnect after ${configuredAttempts} attempts`);
-                showAPIMessage('failed', `Failed to reconnect to the Neuro API after ${configuredAttempts} attempt(s).`);
+            if (configuredAttempts > 1) {
+                if (attempts < configuredAttempts) {
+                    attempts++;
+                    logOutput('INFO', `Attempting to reconnect (${attempts}/${configuredAttempts}) in ${configuredInterval}ms...`);
+                    setTimeout(() => {
+                        attemptConnection();
+                    }, configuredInterval);
+                } else {
+                    logOutput('WARN', `Failed to reconnect after ${configuredAttempts} attempts`);
+                    showAPIMessage('failed', `Failed to reconnect to the Neuro API after ${configuredAttempts} attempt(s).`);
+                }
             }
         };
 
         NEURO.client.onError = (erm: unknown) => {
-            if (typeof erm === 'object' && erm && Object.keys(erm).length === 0) return; // ensures non-connects don't cause duplicated warnings.
+            if (typeof erm === 'object' && erm && Object.keys(erm).length === 0) return; // ensures non-connects don't cause duplicated warnings
             logOutput('ERROR', 'Could not connect to Neuro API, error: ' + JSON.stringify(erm));
             showAPIMessage('error');
         };
