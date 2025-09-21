@@ -4,7 +4,7 @@ import globToRegExp from 'glob-to-regexp';
 import { fileTypeFromBuffer } from 'file-type';
 
 import { NEURO } from '@/constants';
-import { ACCESS, CONFIG, getPermissionLevel, PERMISSIONS } from '@/config';
+import { ACCESS, CONFIG, CONNECTION, getPermissionLevel, PERMISSIONS } from '@/config';
 
 import { ActionValidationResult, ActionData, actionValidationAccept, actionValidationFailure } from '@/neuro_client_helper';
 import assert from 'node:assert';
@@ -35,40 +35,54 @@ export function createClient() {
     NEURO.waiting = false;
     NEURO.cancelled = false;
     NEURO.waitingForCookie = false;
+    let attempts = 0;
+    const configuredAttempts = CONNECTION.retryAmount;
+    const configuredInterval = CONNECTION.retryInterval;
 
-    // TODO: Check if this is a memory leak
-    NEURO.client = new NeuroClient(NEURO.url, NEURO.gameName, () => {
-        assert(NEURO.client instanceof NeuroClient);
+    function attemptConnection() {
+        // TODO: Check if this is a memory leak
+        NEURO.client = new NeuroClient(NEURO.url, NEURO.gameName, () => {
+            assert(NEURO.client instanceof NeuroClient);
 
-        logOutput('INFO', 'Connected to Neuro API');
-        NEURO.connected = true;
+            logOutput('INFO', 'Connected to Neuro API');
+            NEURO.connected = true;
+            attempts = 0; // Reset attempts on successful connection
 
-        vscode.window.showInformationMessage('Successfully connected to Neuro API.');
+            vscode.window.showInformationMessage('Successfully connected to Neuro API.');
 
-        NEURO.client.sendContext(
-            vscode.workspace.getConfiguration('neuropilot').get('initialContext', 'Something went wrong, blame whoever made this extension.'),
-        );
+            NEURO.client.sendContext(
+                vscode.workspace.getConfiguration('neuropilot').get('initialContext', 'Something went wrong, blame whoever made this extension.'),
+            );
+
+            for (const handler of clientConnectedHandlers) {
+                handler();
+            }
+        });
 
         NEURO.client.onClose = () => {
             NEURO.connected = false;
             logOutput('INFO', 'Disconnected from Neuro API');
-            vscode.window.showWarningMessage('Disconnected from Neuro API.');
+
+            if (attempts < configuredAttempts) {
+                attempts++;
+                logOutput('INFO', `Attempting to reconnect (${attempts}/${configuredAttempts}) in ${configuredInterval}ms...`);
+                setTimeout(() => {
+                    attemptConnection();
+                }, configuredInterval);
+            } else {
+                logOutput('WARN', `Failed to reconnect after ${configuredAttempts} attempts`);
+                vscode.window.showWarningMessage(`Disconnected from Neuro API. Failed to reconnect after ${configuredAttempts} attempts.`);
+            }
         };
 
-        NEURO.client.onError = (error) => {
-            logOutput('ERROR', `Neuro client error: ${error}`);
-            vscode.window.showErrorMessage(`Neuro client error: ${error}`);
+        NEURO.client.onError = (erm: unknown) => {
+            logOutput('ERROR', 'Could not connect to Neuro API, error: ' + JSON.stringify(erm));
+            vscode.window.showErrorMessage('Could not connect to Neuro API.');
         };
+    }
 
-        for (const handler of clientConnectedHandlers) {
-            handler();
-        }
-    });
-
-    NEURO.client.onError = () => {
-        logOutput('ERROR', 'Could not connect to Neuro API');
-        vscode.window.showErrorMessage('Could not connect to Neuro API.');
-    };
+    // Start the initial connection attempt
+    attemptConnection();
 }
 
 const clientConnectedHandlers: (() => void)[] = [];
