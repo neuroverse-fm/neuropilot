@@ -764,7 +764,7 @@
 						"type": "integer",
 						"default": 0,
 						"minimum": 0,
-						"markdownDescription": "The delay (in ms) between NeuroPilot retrying connections to NeuroPilot.\n\nSet to 0 if you want to retry as soon as possible. <!-- What about making it do exponential backoff? -->"
+						"markdownDescription": "The delay (in ms) between NeuroPilot retrying connections to NeuroPilot.\n\nSet to 0 if you want to retry as soon as possible."
 					},
 					"neuropilot.connection.retryAmount": {
 						"type": "integer",
