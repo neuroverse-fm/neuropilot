@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { NEURO, EXTENSIONS } from '@/constants';
-import { logOutput, createClient, onClientConnected, setVirtualCursor } from '@/utils';
+import { logOutput, createClient, onClientConnected, setVirtualCursor, showAPIMessage } from '@/utils';
 import { completionsProvider, registerCompletionResultHandler } from '@/completions';
 import { giveCookie, registerRequestCookieAction, registerRequestCookieHandler, sendCurrentFile } from '@/context';
 import { registerChatResponseHandler } from '@/chat';
@@ -135,6 +135,8 @@ export function createStatusBarItem() {
 export function startupCreateClient() {
     if (CONNECTION.autoConnect) {
         createClient();
+    } else {
+        showAPIMessage('disabled');
     }
 }
 

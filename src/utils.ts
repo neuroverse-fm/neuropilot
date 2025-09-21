@@ -51,7 +51,7 @@ export function createClient() {
             showAPIMessage('connected');
 
             NEURO.client.sendContext(
-                vscode.workspace.getConfiguration('neuropilot').get('initialContext', 'Something went wrong, blame whoever made this extension.'),
+                vscode.workspace.getConfiguration('neuropilot').get('connection.initialContext', 'Something went wrong, blame Pasu4 and/or KTrain5369 and tell Vedal to file a bug report.'),
             );
 
             for (const handler of clientConnectedHandlers) {
@@ -62,6 +62,7 @@ export function createClient() {
         NEURO.client.onClose = () => {
             NEURO.connected = false;
             logOutput('INFO', 'Disconnected from Neuro API');
+            showAPIMessage('disconnect');
 
             if (attempts < configuredAttempts) {
                 attempts++;
@@ -71,7 +72,7 @@ export function createClient() {
                 }, configuredInterval);
             } else {
                 logOutput('WARN', `Failed to reconnect after ${configuredAttempts} attempts`);
-                showAPIMessage('disconnect', `Disconnected from Neuro API. Failed to reconnect after ${configuredAttempts} attempt(s).`);
+                showAPIMessage('failed', `Failed to reconnect to the Neuro API after ${configuredAttempts} attempt(s).`);
             }
         };
 
@@ -593,7 +594,7 @@ export async function isBinary(input: Uint8Array): Promise<boolean> {
 /**
  * Shows a disconnect message with options for quickly connecting to the Neuro API.
  */
-export async function showAPIMessage(type: 'disconnect' | 'failed' | 'connected' | 'error', customMessage?: string) {
+export async function showAPIMessage(type: 'disconnect' | 'failed' | 'connected' | 'error' | 'disabled', customMessage?: string) {
     try {
         switch (type) {
             case 'connected': {
@@ -647,6 +648,21 @@ export async function showAPIMessage(type: 'disconnect' | 'failed' | 'connected'
                 if (option) {
                     switch (option) {
                         case 'Reconnect':
+                            vscode.commands.executeCommand('neuropilot.reconnect');
+                            break;
+                        case 'Change Auto-connect settings':
+                            vscode.commands.executeCommand('workbench.action.openSettings', 'neuropilot.connection.autoConnect');
+                            break;
+                    }
+                }
+                break;
+            }
+            case 'disabled': {
+                const message = customMessage || 'Disabled connecting to the Neuro API.';
+                const option = await vscode.window.showWarningMessage(message, 'Connect', 'Change Auto-connect settings');
+                if (option) {
+                    switch (option) {
+                        case 'Connect':
                             vscode.commands.executeCommand('neuropilot.reconnect');
                             break;
                         case 'Change Auto-connect settings':
