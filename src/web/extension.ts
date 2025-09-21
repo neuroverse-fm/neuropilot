@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { createClient, isPathNeuroSafe, setVirtualCursor } from '@/utils';
+import { isPathNeuroSafe, setVirtualCursor } from '@/utils';
 import { NEURO } from '@/constants';
 import {
     initializeCommonState,
@@ -15,6 +15,7 @@ import {
     getDiffAddedDecorationRenderOptions,
     reloadPermissions,
     getHighlightDecorationRenderOptions,
+    startupCreateClient,
 } from '@shared/extension';
 import { registerUnsupervisedActions, registerUnsupervisedHandlers } from './unsupervised';
 
@@ -42,7 +43,7 @@ export function activate(context: vscode.ExtensionContext) {
     // We don't obtain extension state here automatically
 
     // Create client
-    createClient();
+    startupCreateClient();
 
     // Create cursor decoration (web-specific)
     NEURO.cursorDecorationType = vscode.window.createTextEditorDecorationType(getCursorDecorationRenderOptions());

@@ -36,7 +36,7 @@ export function createClient() {
     NEURO.cancelled = false;
     NEURO.waitingForCookie = false;
     let attempts = 0;
-    const configuredAttempts = CONNECTION.retryAmount;
+    const configuredAttempts = CONNECTION.retryAmount + 1;
     const configuredInterval = CONNECTION.retryInterval;
 
     function attemptConnection() {
@@ -48,7 +48,7 @@ export function createClient() {
             NEURO.connected = true;
             attempts = 0; // Reset attempts on successful connection
 
-            vscode.window.showInformationMessage('Successfully connected to Neuro API.');
+            showAPIMessage('connected');
 
             NEURO.client.sendContext(
                 vscode.workspace.getConfiguration('neuropilot').get('initialContext', 'Something went wrong, blame whoever made this extension.'),
@@ -71,13 +71,14 @@ export function createClient() {
                 }, configuredInterval);
             } else {
                 logOutput('WARN', `Failed to reconnect after ${configuredAttempts} attempts`);
-                vscode.window.showWarningMessage(`Disconnected from Neuro API. Failed to reconnect after ${configuredAttempts} attempts.`);
+                showAPIMessage('disconnect', `Disconnected from Neuro API. Failed to reconnect after ${configuredAttempts} attempt(s).`);
             }
         };
 
         NEURO.client.onError = (erm: unknown) => {
+            if (typeof erm === 'object' && erm && Object.keys(erm).length === 0) return; // ensures non-connects don't cause duplicated warnings.
             logOutput('ERROR', 'Could not connect to Neuro API, error: ' + JSON.stringify(erm));
-            vscode.window.showErrorMessage('Could not connect to Neuro API.');
+            showAPIMessage('error');
         };
     }
 
@@ -592,11 +593,12 @@ export async function isBinary(input: Uint8Array): Promise<boolean> {
 /**
  * Shows a disconnect message with options for quickly connecting to the Neuro API.
  */
-export async function showAPIMessage(type: 'disconnect' | 'failed' | 'connected' | 'error') {
+export async function showAPIMessage(type: 'disconnect' | 'failed' | 'connected' | 'error', customMessage?: string) {
     try {
         switch (type) {
             case 'connected': {
-                const option = await vscode.window.showInformationMessage('Connected to Neuro API.', 'Disconnect', 'Change Auto-connect settings');
+                const message = customMessage || 'Connected to Neuro API.';
+                const option = await vscode.window.showInformationMessage(message, 'Disconnect', 'Change Auto-connect settings');
                 if (option) {
                     switch (option) {
                         case 'Disconnect':
@@ -610,7 +612,8 @@ export async function showAPIMessage(type: 'disconnect' | 'failed' | 'connected'
                 break;
             }
             case 'failed': {
-                const option = await vscode.window.showErrorMessage('Failed to connect to Neuro API.', 'Retry', 'Change Auto-connect settings');
+                const message = customMessage || 'Failed to connect to Neuro API.';
+                const option = await vscode.window.showErrorMessage(message, 'Retry', 'Change Auto-connect settings');
                 if (option) {
                     switch (option) {
                         case 'Retry':
@@ -624,7 +627,8 @@ export async function showAPIMessage(type: 'disconnect' | 'failed' | 'connected'
                 break;
             }
             case 'disconnect': {
-                const option = await vscode.window.showWarningMessage('Disconnected from Neuro API.', 'Reconnect', 'Change Auto-connect settings');
+                const message = customMessage || 'Disconnected from Neuro API.';
+                const option = await vscode.window.showWarningMessage(message, 'Reconnect', 'Change Auto-connect settings');
                 if (option) {
                     switch (option) {
                         case 'Reconnect':
@@ -638,7 +642,8 @@ export async function showAPIMessage(type: 'disconnect' | 'failed' | 'connected'
                 break;
             }
             case 'error': {
-                const option = await vscode.window.showErrorMessage('Error on the Neuro API, please check logs.', 'Reconnect', 'Change Auto-connect settings');
+                const message = customMessage || 'Error on the Neuro API, please check logs.';
+                const option = await vscode.window.showErrorMessage(message, 'Reconnect', 'Change Auto-connect settings');
                 if (option) {
                     switch (option) {
                         case 'Reconnect':

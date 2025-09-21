@@ -132,6 +132,12 @@ export function createStatusBarItem() {
     }
 }
 
+export function startupCreateClient() {
+    if (CONNECTION.autoConnect) {
+        createClient();
+    }
+}
+
 // Shared utility functions
 function reconnect() {
     logOutput('INFO', 'Attempting to reconnect to Neuro API');
