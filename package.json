@@ -767,7 +767,7 @@
 		"test:desktop": "npm run build:desktop && npm-run-all -s test:desktop:*",
 		"test:desktop:tsc": "tsc --noEmit --project test-tsconfigs/tsconfig.app.json",
 		"test:desktop:esbuild": "node ./scripts/esbuild.mjs --mode desktop --test",
-		"test:desktop:vscode": "vscode-test --coverage --label desktopUnitTest --coverage-output ./desktop-coverage"
+		"test:desktop:vscode": "vscode-test --coverage --label desktopUnitTest --coverage-output ./coverage-desktop"
 	},
 	"devDependencies": {
 		"@eslint/js": "^9.13.0",
