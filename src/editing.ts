@@ -212,7 +212,20 @@ export const editingActions = {
         validator: [checkCurrentFile, createPositionValidator('position'), createStringValidator(['text'])],
         promptGenerator: (actionData: ActionData) => {
             const lineCount = actionData.params.text.trim().split('\n').length;
-            return `insert ${lineCount} line${lineCount === 1 ? '' : 's'} of code.`;
+            let text = `insert ${lineCount} line${lineCount === 1 ? '' : 's'} of code`;
+            if (actionData.params.position) {
+                const position = actionData.params.position;
+                switch (position.type) {
+                    case 'relative':
+                        text += `, (${position.line}:${position.column}) away from her cursor`;
+                        break;
+                    case 'absolute':
+                        text += `, at line (${position.line}:${position.column})`;
+                        break;
+                }
+            }
+            text += '.';
+            return text;
         },
     },
     insert_lines: {
@@ -263,7 +276,39 @@ export const editingActions = {
         permissions: [PERMISSIONS.editActiveDocument],
         handler: handleReplaceText,
         validator: [checkCurrentFile, createStringValidator(['find', 'replaceWith']), createLineRangeValidator('lineRange')],
-        promptGenerator: (actionData: ActionData) => `replace "${actionData.params.useRegex ? escapeRegExp(actionData.params.find) : actionData.params.find}" with "${actionData.params.replaceWith}".`,
+        promptGenerator: (actionData: ActionData) => {
+            let text = 'replace ';
+            const target = actionData.params.useRegex ? escapeRegExp(actionData.params.find) : actionData.params.find;
+            switch (actionData.params.match as MatchOptions) {
+                case 'allInFile':
+                    text += 'all matches ';
+                    break;
+                case 'firstAfterCursor':
+                    text += 'the first match (after her cursor) ';
+                    break;
+                case 'firstInFile':
+                    text += 'the first match (in the file) ';
+                    break;
+                case 'lastBeforeCursor':
+                    text += 'the last match (before her cursor) ';
+                    break;
+                case 'lastInFile':
+                    text += 'the last match (in the file) ';
+                    break;
+            }
+            text += `of "${target}" with "${actionData.params.replaceWith}"`;
+            if (actionData.params.useRegex) {
+                text += ' (using RegEx)';
+            }
+            if (actionData.params.lineRange) {
+                const lineRange = actionData.params.lineRange;
+                text += ` within lines ${lineRange.startLine}-${lineRange.endLine}`;
+            }
+            text += ' and move her cursor to the replaced text';
+            if (actionData.params.match === 'allInFile') text += ' (unless there were multiple matches)';
+            text += '.';
+            return text;
+        },
     },
     delete_text: {
         name: 'delete_text',
@@ -285,7 +330,42 @@ export const editingActions = {
         permissions: [PERMISSIONS.editActiveDocument],
         handler: handleDeleteText,
         validator: [checkCurrentFile, createStringValidator(['find']), createLineRangeValidator('lineRange')],
-        promptGenerator: (actionData: ActionData) => `delete "${actionData.params.useRegex ? escapeRegExp(actionData.params.find) : actionData.params.find}".`,
+        promptGenerator: (actionData: ActionData) => {
+            let text = 'delete ';
+            const target = actionData.params.useRegex ? escapeRegExp(actionData.params.find) : actionData.params.find;
+            switch (actionData.params.match as MatchOptions) {
+                case 'allInFile':
+                    text += 'all matches ';
+                    break;
+                case 'firstAfterCursor':
+                    text += 'the first match (after her cursor) ';
+                    break;
+                case 'firstInFile':
+                    text += 'the first match (in the file) ';
+                    break;
+                case 'lastBeforeCursor':
+                    text += 'the last match (before her cursor) ';
+                    break;
+                case 'lastInFile':
+                    text += 'the last match (in the file) ';
+                    break;
+                default:
+                    text += 'unknown matches ';
+                    break;
+            }
+            text += `of "${target}"`;
+            if (actionData.params.useRegex) {
+                text += ' (using RegEx)';
+            }
+            if (actionData.params.lineRange) {
+                const lineRange = actionData.params.lineRange;
+                text += ` within lines ${lineRange.startLine}-${lineRange.endLine}`;
+            }
+            text += ' and move her cursor to the deleted text';
+            if (actionData.params.match === 'allInFile') text += ' (unless there were multiple matches)';
+            text += '.';
+            return text;
+        },
     },
     find_text: {
         name: 'find_text',
@@ -310,7 +390,45 @@ export const editingActions = {
         permissions: [PERMISSIONS.editActiveDocument],
         handler: handleFindText,
         validator: [checkCurrentFile, createStringValidator(['find']), createLineRangeValidator('lineRange')],
-        promptGenerator: (actionData: ActionData) => `find "${actionData.params.useRegex ? escapeRegExp(actionData.params.find) : actionData.params.find}".`,
+        promptGenerator: (actionData: ActionData) => {
+            let text = 'find ';
+            const target = actionData.params.useRegex ? escapeRegExp(actionData.params.find) : actionData.params.find;
+            if (actionData.params.highlight) text += 'and highlight ';
+            switch (actionData.params.match as MatchOptions) {
+                case 'allInFile':
+                    text += 'all matches ';
+                    break;
+                case 'firstAfterCursor':
+                    text += 'the first match (after her cursor) ';
+                    break;
+                case 'firstInFile':
+                    text += 'the first match (in the file) ';
+                    break;
+                case 'lastBeforeCursor':
+                    text += 'the last match (before her cursor) ';
+                    break;
+                case 'lastInFile':
+                    text += 'the last match (in the file) ';
+                    break;
+                default:
+                    text += 'unknown matches ';
+                    break;
+            }
+            text += `of "${target}"`;
+            if (actionData.params.useRegex) {
+                text += ' (using RegEx)';
+            }
+            if (actionData.params.lineRange) {
+                const lineRange = actionData.params.lineRange;
+                text += ` within lines ${lineRange.startLine}-${lineRange.endLine}`;
+            }
+            if (actionData.params.moveCursor) {
+                text += ' and move her cursor to the result';
+                if (actionData.params.match === 'allInFile') text += ' (unless there are multiple matches)';
+            }
+            text += '.';
+            return text;
+        },
     },
     undo: {
         name: 'undo',
@@ -758,8 +876,12 @@ export function handleFindText(actionData: ActionData): string | undefined {
         const endPosition = document.positionAt(matches[0].index + matches[0][0].length);
         setVirtualCursor(moveCursor === 'before' ? startPosition : endPosition);
         if (highlight) {
-            vscode.window.activeTextEditor!.setDecorations(NEURO.highlightDecorationType!, [new vscode.Range(startPosition, endPosition)]);
-            vscode.window.activeTextEditor!.revealRange(new vscode.Range(startPosition, endPosition), vscode.TextEditorRevealType.InCenterIfOutsideViewport);
+            const range = new vscode.Range(startPosition, endPosition);
+            vscode.window.activeTextEditor!.setDecorations(NEURO.highlightDecorationType!, [{
+                range,
+                hoverMessage: `**Highlighted by ${CONFIG.currentlyAsNeuroAPI} via finding text**`,
+            }]);
+            vscode.window.activeTextEditor!.revealRange(range, vscode.TextEditorRevealType.InCenterIfOutsideViewport);
         }
         const cursorContext = getPositionContext(document, startPosition);
         logOutput('INFO', `Placed cursor at (${startPosition.line + 1}:${startPosition.character + 1})`);
@@ -774,7 +896,10 @@ export function handleFindText(actionData: ActionData): string | undefined {
         logOutput('INFO', `Found ${positions.length} matches`);
         // const text = lines.map((line, i) => `L. ${(positions[i].line + 1).toString().padStart(padding)}: ${line}`).join('\n');
         if (highlight) {
-            vscode.window.activeTextEditor!.setDecorations(NEURO.highlightDecorationType!, matches.map((match, i) => new vscode.Range(positions[i], document.positionAt(match.index + match[0].length))));
+            vscode.window.activeTextEditor!.setDecorations(NEURO.highlightDecorationType!, matches.map((match, i) => ({
+                range: new vscode.Range(positions[i], document.positionAt(match.index + match[0].length)),
+                hoverMessage: `**Highlighted by ${CONFIG.currentlyAsNeuroAPI} via finding text**`,
+            })));
         }
         const lineNumberContextFormat = CONFIG.lineNumberContextFormat || '{n}|';
         const text = lines.map((line, i) => lineNumberContextFormat.replace('{n}', (positions[i].line + 1).toString()) + line).join('\n');
@@ -1018,8 +1143,13 @@ export function handleHighlightLines(actionData: ActionData): string | undefined
     const startPosition = new vscode.Position(startLine - 1, 0);
     const endPosition = new vscode.Position(endLine - 1, document.lineAt(endLine - 1).text.length);
 
-    editor!.setDecorations(NEURO.highlightDecorationType!, [new vscode.Range(startPosition, endPosition)]);
-    editor!.revealRange(new vscode.Range(startPosition, endPosition), vscode.TextEditorRevealType.InCenterIfOutsideViewport);
+    const range = new vscode.Range(startPosition, endPosition);
+
+    editor!.setDecorations(NEURO.highlightDecorationType!, [{
+        range,
+        hoverMessage: `**Highlighted manually by ${CONFIG.currentlyAsNeuroAPI}**`,
+    }]);
+    editor!.revealRange(range, vscode.TextEditorRevealType.InCenterIfOutsideViewport);
 
     return `Highlighted lines ${startLine}-${endLine}.`;
 }

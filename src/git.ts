@@ -495,6 +495,7 @@ export const gitActions = {
         permissions: [PERMISSIONS.gitOperations, PERMISSIONS.gitRemotes, PERMISSIONS.editRemoteData],
         handler: handleRenameGitRemote,
         promptGenerator: (actionData: ActionData) => `rename the remote "${actionData.params.oldRemoteName}" to "${actionData.params.newRemoteName}".`,
+        validator: [gitValidator],
     },
     abort_merge: {
         name: 'abort_merge',
