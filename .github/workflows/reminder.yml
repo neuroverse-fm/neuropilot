@@ -2,6 +2,7 @@ name: Remind about changelog & docs on PRs
 
 on:
   pull_request_target:
+    branches: [dev]
     types: [opened, reopened]
 
 jobs:
