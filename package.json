@@ -755,7 +755,7 @@
 		"test:web": "pnpm run build:web && npm-run-all -s test:web:*",
 		"test:web:tsc": "tsc --noEmit --project test-tsconfigs/tsconfig.web.json",
 		"test:web:esbuild": "node ./scripts/esbuild.mjs --mode web --test",
-		"test:web:vscode": "vscode-test --coverage --label webUnitTest --coverage-output ./web-coverage",
+		"test:web:vscode": "vscode-test --coverage --label webUnitTest --coverage-output ./coverage-web",
 		"test:web:browser": "pnpm run build:web && npm-run-all -s test:web:browser:*",
 		"test:web:browser:tsc": "tsc =--noEmit --project test-tsconfigs/tsconfig.web.json",
 		"test:web:browser:esbuild": "node ./scripts/esbuild.mjs --mode web --test --web-browser-test",
