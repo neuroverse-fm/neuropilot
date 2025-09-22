@@ -38,7 +38,6 @@ export function createClient() {
     let attempts = 0;
     const configuredAttempts = CONNECTION.retryAmount + 1;
     const configuredInterval = CONNECTION.retryInterval;
-    console.log(configuredAttempts);
 
     function attemptConnection() {
         // TODO: Check if this is a memory leak
