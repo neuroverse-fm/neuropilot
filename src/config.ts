@@ -19,26 +19,29 @@ const DEPRECATED_SETTINGS = [
     },
     {
         old: 'includePattern',
-        new() {
+        async new(target?: vscode.ConfigurationTarget) {
+            const cfg = vscode.workspace.getConfiguration('neuropilot');
             const config = getConfig<string>(DEPRECATED_SETTINGS[3].old)!;
             const newConfig = config.split('\n');
-            vscode.workspace.getConfiguration('neuropilot').update('access.includePattern', newConfig);
+            await cfg.update('access.includePattern', newConfig, target);
         },
     },
     {
         old: 'excludePattern',
-        new() {
+        async new(target?: vscode.ConfigurationTarget) {
+            const cfg = vscode.workspace.getConfiguration('neuropilot');
             const config = getConfig<string>(DEPRECATED_SETTINGS[4].old)!;
             const newConfig = config.split('\n');
-            vscode.workspace.getConfiguration('neuropilot').update('access.excludePattern', newConfig);
+            await cfg.update('access.excludePattern', newConfig, target);
         },
     },
     {
         old: 'allowUnsafePaths',
-        async new() {
-            await vscode.workspace.getConfiguration('neuropilot').update('access.dotFiles', true);
-            await vscode.workspace.getConfiguration('neuropilot').update('access.externalFiles', true);
-            await vscode.workspace.getConfiguration('neuropilot').update('access.environmentVariables', true);
+        async new(target?: vscode.ConfigurationTarget) {
+            const cfg = vscode.workspace.getConfiguration('neuropilot');
+            await cfg.update('access.dotFiles', true, target);
+            await cfg.update('access.externalFiles', true, target);
+            await cfg.update('access.environmentVariables', true, target);
         },
     },
 ];
@@ -47,26 +50,55 @@ const DEPRECATED_SETTINGS = [
 export async function checkDeprecatedSettings() {
     if (NEURO.context?.globalState.get('no-migration')) return;
     const cfg = vscode.workspace.getConfiguration('neuropilot');
-    const deprecatedSettings: Record<string, unknown> = {};
+    const deprecatedSettings: Record<string, { value: unknown; target: vscode.ConfigurationTarget }> = {};
+
     for (const setting of DEPRECATED_SETTINGS) {
-        const currentCFG = cfg.get(setting.old, undefined);
-        if (currentCFG) {
-            deprecatedSettings[setting.old] = currentCFG;
+        const inspection = cfg.inspect(setting.old);
+        let target: vscode.ConfigurationTarget | undefined;
+        let value: unknown;
+
+        // Determine the configuration target and value based on priority
+        if (inspection?.workspaceFolderValue !== undefined) {
+            target = vscode.ConfigurationTarget.WorkspaceFolder;
+            value = inspection.workspaceFolderValue;
+        } else if (inspection?.workspaceValue !== undefined) {
+            target = vscode.ConfigurationTarget.Workspace;
+            value = inspection.workspaceValue;
+        } else if (inspection?.globalValue !== undefined) {
+            target = vscode.ConfigurationTarget.Global;
+            value = inspection.globalValue;
+        }
+
+        if (target !== undefined && value !== undefined) {
+            deprecatedSettings[setting.old] = { value, target };
         }
     }
+
     const keys = Object.keys(deprecatedSettings);
     if (keys.length > 0) {
-        const notif = await vscode.window.showInformationMessage(`You have ${keys.length} deprecated configurations. Would you like to migrate them?`, 'Yes', 'No', 'Don\'t show again');
+        const notif = await vscode.window.showInformationMessage(
+            `You have ${keys.length} deprecated configurations. Would you like to migrate them?`,
+            'Yes', 'No', 'Don\'t show again',
+        );
+
         if (notif) {
             switch (notif) {
                 case 'Yes':
                     for (const key of keys) {
                         const updateObject = DEPRECATED_SETTINGS.find(o => o.old === key);
-                        if (updateObject && updateObject.old) {
+                        const settingInfo = deprecatedSettings[key];
+
+                        if (updateObject && updateObject.old && settingInfo) {
                             if (typeof updateObject.new === 'string') {
-                                await cfg.update(updateObject.new, deprecatedSettings[key]);
+                                // Update with the same configuration target
+                                await cfg.update(updateObject.new, settingInfo.value, settingInfo.target);
+                                // Remove the old setting
+                                await cfg.update(updateObject.old, undefined, settingInfo.target);
                             } else {
-                                updateObject.new();
+                                // For custom migration functions, pass the target info
+                                await updateObject.new(settingInfo.target);
+                                // Remove the old setting from the detected target
+                                await cfg.update(updateObject.old, undefined, settingInfo.target);
                             }
                         }
                     }
