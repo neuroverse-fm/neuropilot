@@ -83,8 +83,8 @@ jobs:
                 cache: 'pnpm'
                 cache-dependency-path: './pnpm-lock.yaml'
             - run: pnpm install --frozen-lockfile
-            - name: Install Playwright browsers
-              run: pnpm dlx playwright install --with-deps chromium-headless-shell firefox webkit
+            - name: Install browsers for vscode-test-web
+              run: pnpm exec vscode-test-web --install-browsers
             - name: Build web extension and test bundle (browser)
               run: pnpm run build:web && pnpm run test:web:browser:esbuild
             - name: Run web tests (headless)
