@@ -51,7 +51,6 @@ export async function checkDeprecatedSettings() {
     for (const setting of DEPRECATED_SETTINGS) {
         const currentCFG = cfg.get(setting.old, undefined);
         if (currentCFG) {
-            console.log(currentCFG);
             deprecatedSettings[setting.old] = currentCFG;
         }
     }
