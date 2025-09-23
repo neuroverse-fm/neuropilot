@@ -802,6 +802,7 @@
 		"test:web:browser": "pnpm run build:web && npm-run-all -s test:web:browser:*",
 		"test:web:browser:tsc": "tsc --noEmit --project test-tsconfigs/tsconfig.web.json",
 		"test:web:browser:esbuild": "node ./scripts/esbuild.mjs --mode web --test --web-browser-test",
+		"test:web:browser:vscode": "vscode-test-web --headless --extensionDevelopmentPath=. --extensionTestsPath=out/web/test/browser.js test-playground",
 		"test:web:browser:open": "npm-run-all -s test:web:browser:open:chromium --continue-on-error",
 		"test:web:browser:open:chromium": "vscode-test-web --headless --browser=chromium --extensionDevelopmentPath=. --extensionTestsPath=out/web/test/browser.js test-playground",
 		"test:web:browser:open:firefox": "vscode-test-web --headless --browser=firefox --extensionDevelopmentPath=. --extensionTestsPath=out/web/test/browser.js test-playground",
