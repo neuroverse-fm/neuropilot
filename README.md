@@ -71,8 +71,7 @@ Neuro also can't change the global git configuration, only the one local to the 
 
 Note that if Neuro has direct terminal access, you should assume all security features are pretty much out the window, since she can just rewrite the settings file and run whatever commands she wants.
 
-The same advice applies for ticking the [*Neuropilot: Allow Unsafe Paths*](vscode://settings/neuropilot.allowUnsafePaths) setting if you gave Autopilot-level permissions to Neuro for editing files.
-
+The same advice applies for ticking some of the *Access* settings if you gave Autopilot-level permissions to Neuro for editing files.
 You can find more security advice on the docs site, linked above. It also mentions how to customize the security settings.
 
 ## Commands/Actions

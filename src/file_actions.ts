@@ -2,7 +2,7 @@
 import * as vscode from 'vscode';
 
 import { NEURO } from '@/constants';
-import { combineGlobLines, filterFileContents, getFence, getVirtualCursor, getWorkspacePath, isBinary, isPathNeuroSafe, logOutput, normalizePath } from '@/utils';
+import { filterFileContents, getFence, getVirtualCursor, getWorkspacePath, isBinary, isPathNeuroSafe, logOutput, normalizePath, combineGlobLines } from '@/utils';
 import { ActionData, contextNoAccess, RCEAction, actionValidationFailure, actionValidationAccept, ActionValidationResult, stripToActions } from '@/neuro_client_helper';
 import { CONFIG, PERMISSIONS, getPermissionLevel, isActionEnabled } from '@/config';
 
@@ -18,12 +18,16 @@ async function validatePath(path: string, shouldExist: boolean, pathType: string
 		return actionValidationFailure('No file path specified.', true);
 	};
 	const relativePath = normalizePath(path).replace(/^\/|\/$/g, '');
-	const absolutePath = getWorkspacePath() + '/' + relativePath;
+	const absolutePath = (getWorkspacePath() ?? '') + '/' + relativePath;
 	if (!isPathNeuroSafe(absolutePath)) {
 		return actionValidationFailure(`You are not allowed to access this ${pathType}.`);
 	}
+	const base = vscode.workspace.workspaceFolders?.[0]?.uri;
+	if (!base) {
+		return actionValidationFailure('You are not in a workspace.');
+	}
 
-	const doesExist = await getPathExistence(relativePath);
+	const doesExist = await getUriExistence(vscode.Uri.joinPath(base, relativePath));
 	if (!shouldExist && doesExist) {
 		return actionValidationFailure(`${pathType} "${path}" already exists.`);
 	} else if (shouldExist && !doesExist) {
@@ -33,12 +37,9 @@ async function validatePath(path: string, shouldExist: boolean, pathType: string
 	return actionValidationAccept();
 };
 
-async function getPathExistence(relativePath: string): Promise<boolean> {
-	const base = vscode.workspace.workspaceFolders?.[0]?.uri;
-	if (!base) return false;
-	const pathAsUri = vscode.Uri.joinPath(base, relativePath);
+async function getUriExistence(uri: vscode.Uri): Promise<boolean> {
 	try {
-		await vscode.workspace.fs.stat(pathAsUri);
+		await vscode.workspace.fs.stat(uri);
 		return true;
 	} catch {
 		return false;
@@ -88,7 +89,9 @@ async function neuroSafeRenameValidation(actionData: ActionData): Promise<Action
 
 async function binaryFileValidation(actionData: ActionData): Promise<ActionValidationResult> {
 	const relativePath = actionData.params.filePath;
-	const base = vscode.workspace.workspaceFolders![0].uri;
+	const base = vscode.workspace.workspaceFolders?.[0]?.uri;
+	if (!base)
+		return actionValidationFailure('You are not in a workspace.');
 	const file = await vscode.workspace.fs.readFile(vscode.Uri.joinPath(base, normalizePath(relativePath).replace(/^\/|\/$/g, '')));
 	if (await isBinary(file)) {
 		return actionValidationFailure('You cannot open a binary file.');
@@ -346,7 +349,6 @@ export function handleRenameFileOrFolder(actionData: ActionData): string | undef
 		const oldUri = vscode.Uri.joinPath(base, oldRelativePath);
 		const newUri = vscode.Uri.joinPath(base, newRelativePath);
 
-
 		// Capture which editors reference the old path (file or within folder) before the rename
 		const activeBeforeUri = vscode.window.activeTextEditor?.document.uri ?? null;
 		const activeUriStr = activeBeforeUri?.toString().toLowerCase() ?? null;
@@ -357,8 +359,6 @@ export function handleRenameFileOrFolder(actionData: ActionData): string | undef
 				return p === oldPathLower || p.startsWith(oldPathLower + '/');
 			})
 			.map(ed => ({ uri: ed.document.uri, viewColumn: ed.viewColumn, wasActive: ed.document.uri.toString().toLowerCase() === activeUriStr }));
-
-
 
 		// Check if the new path already exists
 		try {
@@ -388,8 +388,6 @@ export function handleRenameFileOrFolder(actionData: ActionData): string | undef
 				const doc = await vscode.workspace.openTextDocument(targetUri);
 				await vscode.window.showTextDocument(doc, { preview: false, preserveFocus: !wasActive, viewColumn: viewColumn });
 			}
-
-
 
 			// Close any tabs that still reference the old paths after rename (do not close retargeted ones)
 			const oldPathLowerAfter = oldUri.path.toLowerCase();
@@ -593,10 +591,9 @@ export function handleReadFile(actionData: ActionData): string | undefined {
  * @private
  */
 export const _internals = {
-	validatePath,
-	getPathExistence,
-	neuroSafeValidation: neuroSafeValidation,
-	neuroSafeDeleteValidation: neuroSafeDeleteValidation,
-	neuroSafeRenameValidation: neuroSafeRenameValidation,
+    validatePath,
+    getUriExistence,
+    neuroSafeValidation,
+    neuroSafeDeleteValidation,
+    neuroSafeRenameValidation,
 };
-

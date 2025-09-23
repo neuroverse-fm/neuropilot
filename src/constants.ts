@@ -74,6 +74,8 @@ interface Neuro {
     highlightDecorationType: vscode.TextEditorDecorationType | null;
     /** Current name set as the API controller */
     currentController: string | null;
+    /** If this is `true`, all permissions return `Off`. */
+    killSwitch: boolean;
 }
 
 
@@ -105,6 +107,7 @@ export const NEURO: Neuro = {
     diffModifiedDecorationType: null,
     highlightDecorationType: null,
     currentController: null,
+    killSwitch: false,
 };
 
 // this will likely be transformed for a different use later when the API rolls around

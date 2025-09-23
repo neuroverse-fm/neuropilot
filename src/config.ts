@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { Action } from 'neuro-game-sdk';
+import { NEURO } from './constants';
 
 /** Permission level enums */
 export const enum PermissionLevel {
@@ -15,6 +16,10 @@ export const enum PermissionLevel {
  */
 export function get<T>(key: string): T | undefined {
     return vscode.workspace.getConfiguration('neuropilot').get<T>(key);
+}
+
+export function checkAccess<T>(key: string): T | undefined {
+    return vscode.workspace.getConfiguration('neuropilot').get<T>('access.' + key);
 }
 
 export function isActionEnabled(action: string | Action): boolean {
@@ -33,6 +38,9 @@ export function isActionEnabled(action: string | Action): boolean {
  * If used as a boolean, {@link PermissionLevel.OFF} is considered `false`, everything else is considered `true`.
  */
 export function getPermissionLevel(...permissions: Permission[]): PermissionLevel {
+    if (NEURO.killSwitch) {
+        return PermissionLevel.OFF;
+    }
     if (permissions.length === 0) {
         return PermissionLevel.COPILOT;
     }
@@ -89,11 +97,8 @@ class Config {
     get completionTrigger(): string { return get('completionTrigger')!; }
     get initialContext(): string { return get('initialContext')!; }
     get timeout(): number { return get('timeout')!; }
-    get includePattern(): string { return get('includePattern')!; }
-    get excludePattern(): string { return get('excludePattern')!; }
     get showTimeOnTerminalStart(): boolean { return get('showTimeOnTerminalStart')!; }
     get terminalContextDelay(): number { return get('terminalContextDelay')!; }
-    get allowUnsafePaths(): boolean { return get('allowUnsafePaths')!; }
     get allowRunningAllTasks(): boolean { return get('allowRunningAllTasks')!; }
     get sendNewLintingProblemsOn(): string { return get('sendNewLintingProblemsOn')!; }
     get sendSaveNotifications(): boolean { return get('sendSaveNotifications')!; }
@@ -112,3 +117,13 @@ class Config {
 }
 
 export const CONFIG = new Config();
+
+class Access {
+    get includePattern(): string[] { return checkAccess<string[]>('includePattern')!; }
+    get excludePattern(): string[] { return checkAccess<string[]>('excludePattern')!; }
+    get dotFiles(): boolean { return checkAccess<boolean>('dotFiles')!; }
+    get externalFiles(): boolean { return checkAccess<boolean>('externalFiles')!; }
+    get environmentVariables(): boolean { return checkAccess<boolean>('environmentVariables')!; }
+}
+
+export const ACCESS = new Access();
