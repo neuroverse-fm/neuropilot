@@ -624,10 +624,10 @@ export function handleGetContent(): string {
     const positionContext: NeuroPositionContext = {
         contextBefore: filterFileContents(document.getText(new vscode.Range(new vscode.Position(0, 0), cursor))),
         contextAfter: filterFileContents(document.getText(new vscode.Range(cursor, document.lineAt(document.lineCount - 1).rangeIncludingLineBreak.end))),
-        contextBetween: '',
         startLine: 0,
         endLine: document.lineCount - 1,
         totalLines: document.lineCount,
+        cursorDefined: true,
     };
 
     return `Contents of the file ${fileName}:\n\n${formatContext(positionContext)}`;
@@ -677,7 +677,7 @@ export function handleInsertText(actionData: ActionData): string | undefined {
                 range: new vscode.Range(insertStart, insertEnd),
                 type: DiffRangeType.Added,
             });
-            const cursorContext = getPositionContext(document, insertStart, insertEnd);
+            const cursorContext = getPositionContext(document, { cursorPosition: insertEnd, position: insertStart, position2: insertEnd });
             NEURO.client?.sendContext(`Inserted text into document and moved your cursor\n\n${formatContext(cursorContext)}`);
         }
         else {
@@ -725,7 +725,7 @@ export function handleInsertLines(actionData: ActionData): string | undefined {
                 range: new vscode.Range(insertStart, insertEnd),
                 type: DiffRangeType.Added,
             });
-            const cursorContext = getPositionContext(document, cursor, insertEnd);
+            const cursorContext = getPositionContext(document, { cursorPosition: insertEnd, position: insertStart, position2: insertEnd });
             NEURO.client?.sendContext(`Inserted text lines into document\n\n${formatContext(cursorContext)}`);
         }
         else {
@@ -778,7 +778,7 @@ export function handleReplaceText(actionData: ActionData): string | undefined {
                 setVirtualCursor(endPosition);
                 const diffRanges = getDiffRanges(document, startPosition, matches[0][0], document.getText(new vscode.Range(startPosition, endPosition)));
                 showDiffRanges(vscode.window.activeTextEditor!, ...diffRanges);
-                const cursorContext = getPositionContext(document, startPosition, endPosition);
+                const cursorContext = getPositionContext(document, { cursorPosition: endPosition, position: startPosition, position2: endPosition });
                 NEURO.client?.sendContext(`Replaced text in document\n\n${formatContext(cursorContext)}`);
             }
             else {
@@ -786,7 +786,8 @@ export function handleReplaceText(actionData: ActionData): string | undefined {
                 const document = vscode.window.activeTextEditor!.document;
                 const diffRanges = getDiffRanges(document, new vscode.Position(0, 0), originalText, document.getText());
                 showDiffRanges(vscode.window.activeTextEditor!, ...diffRanges);
-                NEURO.client?.sendContext(`Deleted ${matches.length} occurrences from the document\n\n${formatContext(getPositionContext(document), 'off')}`);
+                const cursorContext = getPositionContext(document, { cursorPosition: getVirtualCursor()! });
+                NEURO.client?.sendContext(`Deleted ${matches.length} occurrences from the document\n\n${formatContext(cursorContext)}`);
             }
         }
         else {
@@ -841,7 +842,8 @@ export function handleDeleteText(actionData: ActionData): string | undefined {
                 const document = vscode.window.activeTextEditor!.document;
                 const diffRanges = getDiffRanges(document, new vscode.Position(0, 0), originalText, document.getText());
                 showDiffRanges(vscode.window.activeTextEditor!, ...diffRanges);
-                NEURO.client?.sendContext(`Deleted ${matches.length} occurrences from the document\n\n${formatContext(getPositionContext(document), 'off')}`);
+                const cursorContext = getPositionContext(document, { cursorPosition: getVirtualCursor()! });
+                NEURO.client?.sendContext(`Deleted ${matches.length} occurrences from the document\n\n${formatContext(cursorContext)}`);
             }
         }
         else {
@@ -998,7 +1000,8 @@ export function handleRewriteAll(actionData: ActionData): string | undefined {
             const diffRanges = getDiffRanges(document, new vscode.Position(0, 0), originalText, document.getText());
             showDiffRanges(vscode.window.activeTextEditor!, ...diffRanges);
 
-            NEURO.client?.sendContext(`Rewrote entire file ${relativePath} with ${lineCount} line${lineCount === 1 ? '' : 's'} of content\n\n${formatContext(getPositionContext(document, startPosition))}`);
+            const cursorContext = getPositionContext(document, startPosition);
+            NEURO.client?.sendContext(`Rewrote entire file ${relativePath} with ${lineCount} line${lineCount === 1 ? '' : 's'} of content\n\n${formatContext(cursorContext)}`);
         } else {
             NEURO.client?.sendContext(contextFailure('Failed to rewrite document content'));
         }
@@ -1117,7 +1120,7 @@ export function handleRewriteLines(actionData: ActionData): string | undefined {
                 setVirtualCursor(cursorPosition);
                 const diffRanges = getDiffRanges(document, startPosition, originalText, document.getText(new vscode.Range(startPosition, cursorPosition)));
                 showDiffRanges(vscode.window.activeTextEditor!, ...diffRanges);
-                const cursorContext = getPositionContext(documentPost, cursorPosition);
+                const cursorContext = getPositionContext(documentPost, { cursorPosition: cursorPosition, position: startPosition, position2: cursorPosition });
                 logOutput('INFO', `Rewrote lines ${startLine}-${endLine} with ${logicalLines} line${logicalLines === 1 ? '' : 's'} of content and moved cursor to end of line ${lastInsertedLineZero + 1}`);
                 NEURO.client?.sendContext(`Rewrote lines ${startLine}-${endLine} in file ${relativePath}\n\n${formatContext(cursorContext)}`);
             }, 0);
