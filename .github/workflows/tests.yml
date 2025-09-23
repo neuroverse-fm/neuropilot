@@ -85,6 +85,8 @@ jobs:
             - run: pnpm install --frozen-lockfile
             - name: Install browsers for vscode-test-web
               run: pnpm exec vscode-test-web --install-browsers
+            - name: Ensure chromium-headless-shell is installed (Playwright)
+              run: pnpm dlx playwright install --with-deps chromium-headless-shell
             - name: Build web extension and test bundle (browser)
               run: pnpm run build:web && pnpm run test:web:browser:esbuild
             - name: Run web tests (headless)
