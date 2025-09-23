@@ -50,6 +50,19 @@ export function createClient() {
 
             showAPIMessage('connected');
 
+            NEURO.client.onClose = () => {
+                NEURO.connected = false;
+                logOutput('INFO', 'Disconnected from Neuro API');
+                showAPIMessage('disconnect');
+
+                retryConnection();
+            };
+
+            NEURO.client.onError = (erm: unknown) => {
+                logOutput('ERROR', 'Could not connect to Neuro API, error: ' + JSON.stringify(erm));
+                showAPIMessage('error');
+            };
+
             NEURO.client.sendContext(
                 vscode.workspace.getConfiguration('neuropilot').get('connection.initialContext', 'Something went wrong, blame Pasu4 and/or KTrain5369 and tell Vedal to file a bug report.'),
             );
@@ -59,30 +72,26 @@ export function createClient() {
             }
         });
 
-        NEURO.client.onClose = () => {
-            NEURO.connected = false;
-            logOutput('INFO', 'Disconnected from Neuro API');
-            showAPIMessage('disconnect');
+        NEURO.client.onError = () => {
+            logOutput('ERROR', 'Could not connect to Neuro API');
+            showAPIMessage('failed');
+            retryConnection();
+        };
+    }
 
-            if (configuredAttempts > 1) {
-                if (attempts < configuredAttempts) {
-                    attempts++;
-                    logOutput('INFO', `Attempting to reconnect (${attempts}/${configuredAttempts}) in ${configuredInterval}ms...`);
-                    setTimeout(() => {
-                        attemptConnection();
-                    }, configuredInterval);
-                } else {
-                    logOutput('WARN', `Failed to reconnect after ${configuredAttempts} attempts`);
-                    showAPIMessage('failed', `Failed to reconnect to the Neuro API after ${configuredAttempts} attempt(s).`);
-                }
+    function retryConnection() {
+        if (configuredAttempts > 1) {
+            if (attempts < configuredAttempts) {
+                attempts++;
+                logOutput('INFO', `Attempting to reconnect (${attempts}/${configuredAttempts}) in ${configuredInterval}ms...`);
+                setTimeout(() => {
+                    attemptConnection();
+                }, configuredInterval);
+            } else {
+                logOutput('WARN', `Failed to reconnect after ${configuredAttempts} attempts`);
+                showAPIMessage('failed', `Failed to reconnect to the Neuro API after ${configuredAttempts} attempt(s).`);
             }
-        };
-
-        NEURO.client.onError = (erm: unknown) => {
-            if (typeof erm === 'object' && erm && Object.keys(erm).length === 0) return; // ensures non-connects don't cause duplicated warnings
-            logOutput('ERROR', 'Could not connect to Neuro API, error: ' + JSON.stringify(erm));
-            showAPIMessage('error');
-        };
+        }
     }
 
     // Start the initial connection attempt

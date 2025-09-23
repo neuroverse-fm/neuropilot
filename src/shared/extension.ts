@@ -4,7 +4,7 @@ import { logOutput, createClient, onClientConnected, setVirtualCursor, showAPIMe
 import { completionsProvider, registerCompletionResultHandler } from '@/completions';
 import { giveCookie, registerRequestCookieAction, registerRequestCookieHandler, sendCurrentFile } from '@/context';
 import { registerChatResponseHandler } from '@/chat';
-import { ACCESS, CONFIG, CONNECTION } from '@/config';
+import { ACCESS, checkDeprecatedSettings, CONFIG, CONNECTION } from '@/config';
 import { explainWithNeuro, fixWithNeuro, NeuroCodeActionsProvider, sendDiagnosticsDiff } from '@/lint_problems';
 import { editorChangeHandler, fileSaveListener, moveNeuroCursorHere, toggleSaveAction, workspaceEditHandler } from '@/editing';
 import { emergencyDenyRequests, acceptRceRequest, denyRceRequest, revealRceNotification } from '@/rce';
@@ -90,6 +90,7 @@ export function initializeCommonState(context: vscode.ExtensionContext) {
     NEURO.cancelled = false;
     NEURO.outputChannel = vscode.window.createOutputChannel('NeuroPilot');
     NEURO.currentController = CONFIG.currentlyAsNeuroAPI;
+    checkDeprecatedSettings();
 }
 
 export function setupCommonProviders() {
