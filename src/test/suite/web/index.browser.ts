@@ -1,5 +1,11 @@
 // Load mocha in browser environment
 import 'mocha/mocha';
+// Ensure navigator.language exists in headless web test env
+if (typeof navigator === 'undefined') {
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    globalThis.navigator = { language: 'en-US' };
+}
 
 export function run(): Promise<void> {
     mocha.setup({ ui: 'tdd', color: true });

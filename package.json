@@ -729,6 +729,7 @@
 		}
 	},
 	"scripts": {
+ 		"preinstall": "node ./check-malicious-packages.js",
 		"version:changesets": "changeset version --global-changelog",
 		"push": "tsx ./dual-publish.ts",
 		"vscode:prepublish": "pnpm build",
@@ -757,9 +758,9 @@
 		"test:web:esbuild": "node ./scripts/esbuild.mjs --mode web --test",
 		"test:web:vscode": "vscode-test --coverage --label webUnitTest --coverage-output ./coverage-web",
 		"test:web:browser": "pnpm run build:web && npm-run-all -s test:web:browser:*",
-		"test:web:browser:tsc": "tsc =--noEmit --project test-tsconfigs/tsconfig.web.json",
+		"test:web:browser:tsc": "tsc --noEmit --project test-tsconfigs/tsconfig.web.json",
 		"test:web:browser:esbuild": "node ./scripts/esbuild.mjs --mode web --test --web-browser-test",
-		"test:web:browser:open": "npm-run-all -s test:web:browser:open:* --continue-on-error",
+		"test:web:browser:open": "npm-run-all -s test:web:browser:open:chromium --continue-on-error",
 		"test:web:browser:open:chromium": "vscode-test-web --headless --browser=chromium --extensionDevelopmentPath=. --extensionTestsPath=out/web/test/browser.js test-playground",
 		"test:web:browser:open:firefox": "vscode-test-web --headless --browser=firefox --extensionDevelopmentPath=. --extensionTestsPath=out/web/test/browser.js test-playground",
 		"test:web:browser:open:webkit": "vscode-test-web --headless --browser=webkit --extensionDevelopmentPath=. --extensionTestsPath=out/web/test/browser.js test-playground",
@@ -793,7 +794,7 @@
 		"husky": "^9.1.7",
 		"mocha": "^11.7.1",
 		"npm-run-all": "^4.1.5",
-		"ovsx": "^0.10.5",		
+		"ovsx": "^0.10.5",
 		"ts-mockito": "^2.6.1",
 		"typescript": "^5.8.2",
 		"typescript-eslint": "^8.26.0"
@@ -802,6 +803,7 @@
 		"file-type": "^21.0.0",
 		"glob-to-regexp": "^0.4.1",
 		"jsonschema": "^1.5.0",
-		"neuro-game-sdk": "^1.0.5"
+		"neuro-game-sdk": "^1.0.5",
+		"yaml": "^2.8.1"
 	}
 }

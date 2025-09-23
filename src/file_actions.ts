@@ -2,7 +2,7 @@
 import * as vscode from 'vscode';
 
 import { NEURO } from '@/constants';
-import { combineGlobLines, filterFileContents, getFence, getVirtualCursor, getWorkspacePath, isBinary, isPathNeuroSafe, logOutput, normalizePath } from '@/utils';
+import { filterFileContents, getFence, getVirtualCursor, getWorkspacePath, isBinary, isPathNeuroSafe, logOutput, normalizePath, combineGlobLines } from '@/utils';
 import { ActionData, contextNoAccess, RCEAction, actionValidationFailure, actionValidationAccept, ActionValidationResult, stripToActions } from '@/neuro_client_helper';
 import { CONFIG, PERMISSIONS, getPermissionLevel, isActionEnabled } from '@/config';
 
@@ -18,12 +18,16 @@ async function validatePath(path: string, shouldExist: boolean, pathType: string
 		return actionValidationFailure('No file path specified.', true);
 	};
 	const relativePath = normalizePath(path).replace(/^\/|\/$/g, '');
-	const absolutePath = getWorkspacePath() + '/' + relativePath;
+	const absolutePath = (getWorkspacePath() ?? '') + '/' + relativePath;
 	if (!isPathNeuroSafe(absolutePath)) {
 		return actionValidationFailure(`You are not allowed to access this ${pathType}.`);
 	}
+	const base = vscode.workspace.workspaceFolders?.[0]?.uri;
+	if (!base) {
+		return actionValidationFailure('You are not in a workspace.');
+	}
 
-	const doesExist = await getPathExistence(relativePath);
+	const doesExist = await getUriExistence(vscode.Uri.joinPath(base, relativePath));
 	if (!shouldExist && doesExist) {
 		return actionValidationFailure(`${pathType} "${path}" already exists.`);
 	} else if (shouldExist && !doesExist) {
@@ -33,12 +37,9 @@ async function validatePath(path: string, shouldExist: boolean, pathType: string
 	return actionValidationAccept();
 };
 
-async function getPathExistence(relativePath: string): Promise<boolean> {
-	const base = vscode.workspace.workspaceFolders?.[0]?.uri;
-	if (!base) return false;
-	const pathAsUri = vscode.Uri.joinPath(base, relativePath);
+async function getUriExistence(uri: vscode.Uri): Promise<boolean> {
 	try {
-		await vscode.workspace.fs.stat(pathAsUri);
+		await vscode.workspace.fs.stat(uri);
 		return true;
 	} catch {
 		return false;
@@ -88,7 +89,9 @@ async function neuroSafeRenameValidation(actionData: ActionData): Promise<Action
 
 async function binaryFileValidation(actionData: ActionData): Promise<ActionValidationResult> {
 	const relativePath = actionData.params.filePath;
-	const base = vscode.workspace.workspaceFolders![0].uri;
+	const base = vscode.workspace.workspaceFolders?.[0]?.uri;
+	if (!base)
+		return actionValidationFailure('You are not in a workspace.');
 	const file = await vscode.workspace.fs.readFile(vscode.Uri.joinPath(base, normalizePath(relativePath).replace(/^\/|\/$/g, '')));
 	if (await isBinary(file)) {
 		return actionValidationFailure('You cannot open a binary file.');
@@ -593,10 +596,11 @@ export function handleReadFile(actionData: ActionData): string | undefined {
  * @private
  */
 export const _internals = {
-	validatePath,
-	getPathExistence,
-	neuroSafeValidation: neuroSafeValidation,
-	neuroSafeDeleteValidation: neuroSafeDeleteValidation,
-	neuroSafeRenameValidation: neuroSafeRenameValidation,
+    validatePath,
+    getUriExistence,
+    neuroSafeValidation,
+    neuroSafeDeleteValidation,
+    neuroSafeRenameValidation,
 };
+
 

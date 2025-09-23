@@ -51,6 +51,9 @@ export async function webTest(_prodFlag, watchFlag) {
         platform: 'browser',
         outfile: 'out/web/test/index.js',
         tsconfig: './test-tsconfigs/tsconfig.web.json',
+        banner: {
+            js: 'if (typeof navigator === "undefined") { var navigator = { language: "en-US" }; } else if (!navigator.language) { navigator.language = "en-US"; }',
+        },
         external: [
             'vscode',
             'mocha',
@@ -98,6 +101,9 @@ export async function webTestBrowser(_prodFlag, watchFlag) {
         platform: 'browser',
         outfile: 'out/web/test/browser.js',
         tsconfig: './test-tsconfigs/tsconfig.web.json',
+        banner: {
+            js: 'if (typeof navigator === "undefined") { var navigator = { language: "en-US" }; } else if (!navigator.language) { navigator.language = "en-US"; }',
+        },
         external: [
             'vscode',
             '@vscode/test-web',

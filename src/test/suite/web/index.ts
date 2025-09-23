@@ -1,3 +1,13 @@
+// Shim missing browser globals for VS Code web test host
+// Ensure navigator.language exists to satisfy polyfills that read it early
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
+if (typeof globalThis !== 'undefined' && typeof globalThis.navigator === 'undefined') {
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    globalThis.navigator = { language: 'en-US' };
+}
+
 // Use the global Mocha provided by the web test runner
 
 import Mocha from 'mocha';
