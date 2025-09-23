@@ -54,7 +54,7 @@ jobs:
             - name: Package extension
               env:
                 NODE_ENV: ${{ inputs.prod || '0' }}
-              run: pnpm vsce package --allow-star-activation --no-dependencies
+              run: pnpm vsce package --no-dependencies
             
             - name: Upload builds
               uses: actions/upload-artifact@v4

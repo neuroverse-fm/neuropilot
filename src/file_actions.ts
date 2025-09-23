@@ -349,7 +349,6 @@ export function handleRenameFileOrFolder(actionData: ActionData): string | undef
 		const oldUri = vscode.Uri.joinPath(base, oldRelativePath);
 		const newUri = vscode.Uri.joinPath(base, newRelativePath);
 
-
 		// Capture which editors reference the old path (file or within folder) before the rename
 		const activeBeforeUri = vscode.window.activeTextEditor?.document.uri ?? null;
 		const activeUriStr = activeBeforeUri?.toString().toLowerCase() ?? null;
@@ -360,8 +359,6 @@ export function handleRenameFileOrFolder(actionData: ActionData): string | undef
 				return p === oldPathLower || p.startsWith(oldPathLower + '/');
 			})
 			.map(ed => ({ uri: ed.document.uri, viewColumn: ed.viewColumn, wasActive: ed.document.uri.toString().toLowerCase() === activeUriStr }));
-
-
 
 		// Check if the new path already exists
 		try {
@@ -391,8 +388,6 @@ export function handleRenameFileOrFolder(actionData: ActionData): string | undef
 				const doc = await vscode.workspace.openTextDocument(targetUri);
 				await vscode.window.showTextDocument(doc, { preview: false, preserveFocus: !wasActive, viewColumn: viewColumn });
 			}
-
-
 
 			// Close any tabs that still reference the old paths after rename (do not close retargeted ones)
 			const oldPathLowerAfter = oldUri.path.toLowerCase();
@@ -602,5 +597,3 @@ export const _internals = {
     neuroSafeDeleteValidation,
     neuroSafeRenameValidation,
 };
-
-

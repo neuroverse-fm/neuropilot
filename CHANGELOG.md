@@ -1,3 +1,5 @@
+<!-- markdownlint-disable -->
+
 # NeuroPilot changelog
 
 Since v2.1.0, we're keeping a changelog of each version's changes in NeuroPilot.
@@ -5,6 +7,19 @@ Since v2.1.0, we're keeping a changelog of each version's changes in NeuroPilot.
 Changes between each version before then will not be listed.
 
 ## 2.1.2
+
+### New settings
+
+- `neuropilot.includePattern`, `neuropilot.excludePattern` and `neuropilot.allowUnsafePaths` are now moved to their `neuropilot.access.*` variants. These old settings have been deprecated and will display a warning in VS Code.
+  - In addition, the settings have been changed:
+    - `neuropilot.access.includePatterns` and `neuropilot.access.excludePatterns` are now each an array of strings instead of a big string separated by newlines.
+    - `neuropilot.allowUnsafePaths` has been split into 3 separate settings for their respective uses: `neuropilot.access.dotFiles`, `neuropilot.access.externalFiles` and `neuropilot.access.environmentVariables`.
+
+### Added features
+
+- Changing permissions will now automatically reload permissions.
+  - This also applies if you change the list of disabled actions.
+  - The `Reload Permissions` command is still available in case you need to reload manually.
 
 ### Changes
 
@@ -19,6 +34,12 @@ Changes between each version before then will not be listed.
 - Added missing line range validator to `find_text` action.
 - Fixed Include and Exclude Patterns not working with uppercase characters.
   - Include and Exclude Patterns are now case-sensitive (except for drive letters).
+- Fixed actions that access the file system not working in virtual workspaces.
+- Direct terminal access cannot be enabled in untrusted workspaces now (didn't work before because of wrong setting ID).
+- "Disable All Permissions" kill switch command now unregisters all actions again.
+  - They were still being blocked before, just not unregistered.
+  - It will also spam Neuro with register/unregister commands but if you have to use this she probably deserves it.
+- "Disable All Permissions" kill switch command now blocks all permissions instantly.
 
 ## 2.1.1
 
