@@ -84,11 +84,11 @@ jobs:
                 cache-dependency-path: './pnpm-lock.yaml'
             - run: pnpm install --frozen-lockfile
             - name: Install Playwright browsers
-              run: pnpm dlx playwright install --with-deps
+              run: pnpm dlx playwright install --with-deps chromium-headless-shell firefox webkit
             - name: Build web extension and test bundle (browser)
               run: pnpm run build:web && pnpm run test:web:browser:esbuild
             - name: Run web tests (headless)
-              run: pnpm run test:web:browser:vscode -- --browser=${{ matrix.browser }}
+              run: pnpm exec vscode-test-web --headless --browser=${{ matrix.browser }} --extensionDevelopmentPath=. --extensionTestsPath=out/web/test/browser.js test-playground
     #test-web:
     #    name: Web tests
     #    strategy:
