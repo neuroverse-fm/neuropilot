@@ -24,6 +24,7 @@ Changes between each version before then will not be listed.
 ### Added features
 
 - A tooltip will now show when hovering over Neuro-highlighted text, indicating that Neuro highlighted it, and how (either through finding text or manually).
+- There is a new detector ran on startup to look for deprecated settings and if found, will ask you to migrate them. You can choose to not show that notice ever again by selecting the "Don't show again" option. This persists across sessions.
 
 ### Changes
 
