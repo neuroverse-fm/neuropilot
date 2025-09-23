@@ -89,6 +89,7 @@ class Permissions {
     get gitConfigs() { return { id: 'gitConfigs', infinitive: 'edit the Git configuration' }; }
     get terminalAccess() { return { id: 'terminalAccess', infinitive: 'access the terminal' }; }
     get accessLintingAnalysis() { return { id: 'accessLintingAnalysis', infinitive: 'view linting problems' }; }
+    get getUserSelection() { return { id: 'getUserSelection', infinitive: 'get Vedal\'s cursor' }; }
 }
 
 export const PERMISSIONS = new Permissions();

@@ -8,6 +8,10 @@ Changes between each version before then will not be listed.
 
 ## 2.2.0 <!-- Assuming we'll just put everything into the next minor release, change to 2.1.3 if we decide to release a patch first -->
 
+### Added settings
+
+- New permission for getting the user's cursor / selection: `neuropilot.permission.getUserSelection`
+
 ### Added features
 
 - A tooltip will now show when hovering over Neuro-highlighted text, indicating that Neuro highlighted it, and how (either through finding text or manually).

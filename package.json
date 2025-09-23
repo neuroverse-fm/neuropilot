@@ -694,6 +694,21 @@
 						],
 						"markdownDescription": "Allow Neuro to get access to linting problems within loaded files."
 					},
+					"neuropilot.permission.getUserSelection": {
+						"type": "string",
+						"default": "Off",
+						"enum": [
+							"Off",
+							"Copilot",
+							"Autopilot"
+						],
+						"enumDescriptions": [
+							"Disable this permission.",
+							"Require approval before execution.",
+							"Execute without oversight."
+						],
+						"markdownDescription": "Allow Neuro to see your cursor position and selection within Neuro-safe files."
+					},
 					"neuropilot.access.dotFiles": {
 						"type": "boolean",
 						"default": false,
