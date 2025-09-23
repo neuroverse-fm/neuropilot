@@ -96,6 +96,9 @@ importers:
       ovsx:
         specifier: ^0.10.5
         version: 0.10.5
+      playwright:
+        specifier: ^1.44.0
+        version: 1.55.0
       ts-mockito:
         specifier: ^2.6.1
         version: 2.6.1
