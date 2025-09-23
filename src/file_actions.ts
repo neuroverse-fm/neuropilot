@@ -4,7 +4,7 @@ import * as vscode from 'vscode';
 import { NEURO } from '@/constants';
 import { filterFileContents, getFence, getVirtualCursor, getWorkspacePath, isBinary, isPathNeuroSafe, logOutput, normalizePath, combineGlobLines } from '@/utils';
 import { ActionData, contextNoAccess, RCEAction, actionValidationFailure, actionValidationAccept, ActionValidationResult, stripToActions } from '@/neuro_client_helper';
-import { CONFIG, PERMISSIONS, getPermissionLevel, isActionEnabled } from '@/config';
+import { CONFIG, PERMISSIONS, getPermissionLevel, isActionEnabled, ACCESS } from '@/config';
 
 /**
  * The path validator.
@@ -498,8 +498,8 @@ export function handleDeleteFileOrFolder(actionData: ActionData): string | undef
 }
 
 export function handleGetFiles(_actionData: ActionData): string | undefined {
-	const includePattern = combineGlobLines(CONFIG.includePattern || '**'); // '**' works for vscode but not for glob-to-regexp
-	const excludePattern = combineGlobLines(CONFIG.excludePattern || '');
+	const includePattern = combineGlobLines(ACCESS.includePattern || ['**/*']);
+	const excludePattern = combineGlobLines(ACCESS.excludePattern || []);
 	vscode.workspace.findFiles(includePattern, excludePattern).then(
 		(uris) => {
 			const paths = uris
