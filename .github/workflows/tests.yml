@@ -29,9 +29,9 @@ jobs:
             - name: Cache VS Code test downloads
               uses: actions/cache@v4
               with:
-                key: neuropilot-tests-vscode-${{ github.repository }}-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+                key: neuropilot-tests-vscode-v2-${{ github.repository }}-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
                 restore-keys: |
-                  neuropilot-tests-vscode-${{ github.repository }}-${{ runner.os }}-
+                  neuropilot-tests-vscode-v2-${{ github.repository }}-${{ runner.os }}-
                 path: .vscode-test/
             - name: Setup pnpm
               uses: pnpm/action-setup@v4
@@ -65,12 +65,12 @@ jobs:
             - name: Cache VS Code web test downloads
               uses: actions/cache@v4
               with:
-                key: neuropilot-tests-vscode-web-${{ github.repository }}-${{ runner.os }}
+                key: neuropilot-tests-vscode-web-v2-${{ github.repository }}-${{ runner.os }}
                 path: .vscode-test-web/
             - name: Cache Playwright browsers
               uses: actions/cache@v4
               with:
-                key: neuropilot-playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+                key: neuropilot-playwright-v2-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
                 path: ~/.cache/ms-playwright
             - name: Setup pnpm
               uses: pnpm/action-setup@v4
@@ -83,10 +83,8 @@ jobs:
                 cache: 'pnpm'
                 cache-dependency-path: './pnpm-lock.yaml'
             - run: pnpm install --frozen-lockfile
-            - name: Install browsers for vscode-test-web
-              run: pnpm exec vscode-test-web --install-browsers
-            - name: Ensure chromium-headless-shell is installed (Playwright)
-              run: pnpm dlx playwright install --with-deps chromium-headless-shell
+            - name: Ensure Playwright browsers are installed (Chromium, Firefox, WebKit)
+              run: pnpm dlx playwright install --with-deps chromium-headless-shell firefox webkit
             - name: Build web extension and test bundle (browser)
               run: pnpm run build:web && pnpm run test:web:browser:esbuild
             - name: Run web tests (headless)
