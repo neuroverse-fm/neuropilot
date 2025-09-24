@@ -3,8 +3,13 @@ import { Action } from 'neuro-game-sdk';
 import { NEURO } from './constants';
 import { logOutput } from './utils';
 
+interface DeprecatedSetting {
+    old: string;
+    new: string | ((target?: vscode.ConfigurationTarget) => Promise<void>);
+}
+
 /** Array of deprecated settings */
-const DEPRECATED_SETTINGS = [
+const DEPRECATED_SETTINGS: DeprecatedSetting[] = [
     {
         old: 'websocketUrl',
         new: 'connection.websocketUrl',
