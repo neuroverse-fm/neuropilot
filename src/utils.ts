@@ -79,17 +79,16 @@ export function createClient() {
     }
 
     function retryConnection() {
-        if (configuredAttempts > 1) {
-            if (attempts < configuredAttempts) {
-                attempts++;
-                logOutput('INFO', `Attempting to reconnect (${attempts}/${configuredAttempts}) in ${configuredInterval}ms...`);
-                setTimeout(() => {
-                    attemptConnection();
-                }, configuredInterval);
-            } else {
-                logOutput('WARN', `Failed to reconnect after ${configuredAttempts} attempts`);
-                showAPIMessage('failed', `Failed to reconnect to the Neuro API after ${configuredAttempts} attempt(s).`);
-            }
+        if (attempts < configuredAttempts) {
+            attempts++;
+            logOutput('INFO', `Attempting to connect (${attempts}/${configuredAttempts}) in ${configuredInterval}ms...`);
+            retryTimeout = setTimeout(() => {
+                retryTimeout = null;
+                attemptConnection();
+            }, configuredInterval);
+        } else {
+            logOutput('WARN', `Failed to connect after ${configuredAttempts} attempt(s)`);
+            showAPIMessage('failed', `Failed to connect to the Neuro API after ${configuredAttempts} attempt(s).`);
         }
     }
 
