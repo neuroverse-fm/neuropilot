@@ -26,6 +26,9 @@ export function logOutput(tag: string, message: string) {
     }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+let retryTimeout: NodeJS.Timeout | null = null;
+
 export function createClient() {
     logOutput('INFO', 'Creating Neuro API client');
     if (NEURO.client)
@@ -38,8 +41,6 @@ export function createClient() {
     let attempts = 1;
     const configuredAttempts = CONNECTION.retryAmount + 1;
     const configuredInterval = CONNECTION.retryInterval;
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    let retryTimeout: NodeJS.Timeout | null = null;
 
     function attemptConnection() {
         // TODO: Check if this is a memory leak
