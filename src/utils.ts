@@ -74,7 +74,6 @@ export function createClient() {
 
         NEURO.client.onError = () => {
             logOutput('ERROR', 'Could not connect to Neuro API');
-            showAPIMessage('failed');
             retryConnection();
         };
     }
