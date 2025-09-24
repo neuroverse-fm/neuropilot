@@ -35,7 +35,7 @@ export function createClient() {
     NEURO.waiting = false;
     NEURO.cancelled = false;
     NEURO.waitingForCookie = false;
-    let attempts = 0;
+    let attempts = 1;
     const configuredAttempts = CONNECTION.retryAmount + 1;
     const configuredInterval = CONNECTION.retryInterval;
 
