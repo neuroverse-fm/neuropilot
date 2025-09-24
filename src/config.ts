@@ -46,7 +46,10 @@ const DEPRECATED_SETTINGS: DeprecatedSetting[] = [
             const cfg = vscode.workspace.getConfiguration('neuropilot');
             await cfg.update('access.dotFiles', true, target);
             await cfg.update('access.externalFiles', true, target);
-            await cfg.update('access.environmentVariables', true, target);
+            const config = getConfig<boolean>('allowUnsafePaths')!;
+            await cfg.update('access.dotFiles', config, target);
+            await cfg.update('access.externalFiles', config, target);
+            await cfg.update('access.environmentVariables', config, target);
         },
     },
 ];
