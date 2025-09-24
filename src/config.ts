@@ -26,7 +26,7 @@ const DEPRECATED_SETTINGS: DeprecatedSetting[] = [
         old: 'includePattern',
         async new(target?: vscode.ConfigurationTarget) {
             const cfg = vscode.workspace.getConfiguration('neuropilot');
-            const config = getConfig<string>(DEPRECATED_SETTINGS[3].old)!;
+            const config = getConfig<string>('includePattern')!;
             const newConfig = config.split('\n');
             await cfg.update('access.includePattern', newConfig, target);
         },
@@ -35,7 +35,7 @@ const DEPRECATED_SETTINGS: DeprecatedSetting[] = [
         old: 'excludePattern',
         async new(target?: vscode.ConfigurationTarget) {
             const cfg = vscode.workspace.getConfiguration('neuropilot');
-            const config = getConfig<string>(DEPRECATED_SETTINGS[4].old)!;
+            const config = getConfig<string>('excludePattern')!;
             const newConfig = config.split('\n');
             await cfg.update('access.excludePattern', newConfig, target);
         },
