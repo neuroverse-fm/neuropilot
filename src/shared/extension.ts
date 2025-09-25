@@ -11,6 +11,7 @@ import { emergencyDenyRequests, acceptRceRequest, denyRceRequest, revealRceNotif
 import type { GitExtension } from '@typing/git';
 import { getGitExtension } from '@/git';
 import { registerDocsCommands, registerDocsLink } from './docs';
+import { moveCursorEmitterDiposable } from '../events/cursor';
 
 // Shared commands
 export function registerCommonCommands() {
@@ -75,6 +76,7 @@ export function setupCommonEventHandlers() {
             }
         }),
         vscode.extensions.onDidChange(obtainExtensionState),
+        moveCursorEmitterDiposable,
     ];
 
     return handlers;
