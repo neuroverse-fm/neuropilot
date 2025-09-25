@@ -4,7 +4,7 @@ import type { Change, CommitOptions, Commit, Repository, API, GitExtension } fro
 import { ForcePushMode } from '@typing/git.d';
 import { StatusStrings, RefTypeStrings } from '@typing/git_status';
 import { logOutput, simpleFileName, isPathNeuroSafe, normalizePath, getWorkspacePath } from '@/utils';
-import { ActionData, ActionValidationResult, actionValidationAccept, actionValidationFailure, RCEAction, contextFailure, stripToActions, actionValidationRetry, CancelEventObject } from '@/neuro_client_helper';
+import { ActionData, ActionValidationResult, actionValidationAccept, actionValidationFailure, RCEAction, contextFailure, stripToActions, actionValidationRetry, CancelEvent } from '@/neuro_client_helper';
 import { PERMISSIONS, getPermissionLevel, isActionEnabled } from '@/config';
 import assert from 'node:assert';
 
@@ -117,7 +117,7 @@ function gitDiffValidator(actionData: ActionData): ActionValidationResult {
     }
 }
 
-function gitCancellationEvent(_actionData: ActionData): CancelEventObject {
+function gitCancellationEvent(_actionData: ActionData): CancelEvent {
     assert(git);
     const emitter = new vscode.EventEmitter<unknown>();
     const event = vscode.extensions.getExtension<GitExtension>('vscode.git')?.exports.onDidChangeEnablement(_ => {
@@ -130,14 +130,12 @@ function gitCancellationEvent(_actionData: ActionData): CancelEventObject {
     return {
         event: emitter.event,
         extraDisposables,
+        reason: 'the Git extension was disabled.',
     };
 }
 
-const commonCancelEvents = [
-    {
-        details: gitCancellationEvent,
-        reason: 'the Git extension was disabled.',
-    },
+const commonCancelEvents: ((actionData: ActionData) => CancelEvent | null)[] = [
+    gitCancellationEvent,
 ];
 
 export const gitActions = {

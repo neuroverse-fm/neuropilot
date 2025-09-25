@@ -36,12 +36,10 @@ export interface ActionValidationResult {
  * The object that defines a cancellation event.
  */
 export interface CancelEvent {
-    /** 
-     * The event to subscribe to.
-     * It is a callable function that returns an object that contains an event because sometimes the event isn't necessary, so we pass the actionData to find out.
-     * If the function returns `null`, the event will be skipped and won't cause a cancel event to be set up.
-     */
-    details: (actionData: ActionData) => CancelEventObject | null;
+    /** The event to subscribe to. */
+    event: Event<unknown>;
+    /** Any extra disposable resources. */
+    extraDisposables?: Disposable;
     /** 
      * The cancel reason that will be sent to Neuro.
      * This prompt should fit the phrasing scheme 'Your action was cancelled because [reason]'
@@ -52,16 +50,6 @@ export interface CancelEvent {
      * This prompt should fit the phrasing scheme 'The action was cancelled because [reason]'
      */
     logReason?: string | ((actionData: ActionData) => string);
-}
-
-/**
- * Returned by the cancellation event getter.
- */
-export interface CancelEventObject {
-    /** The actual event function to subscribe to. */
-    event: Event<unknown>;
-    /** Any extra disposable resources. */
-    extraDisposables?: Disposable;
 }
 
 /** ActionHandler to use with constants for records of actions and their corresponding handlers */
@@ -77,7 +65,7 @@ export interface RCEAction extends Action {
      * 
      * Following VS Code's pattern, Disposables will not be awaited if async.
      */
-    cancelEvents?: (CancelEvent)[];
+    cancelEvents?: ((actionData: ActionData) => CancelEvent | null)[];
     /** The function to handle the action. */
     handler: (actionData: ActionData) => string | undefined;
     /** 

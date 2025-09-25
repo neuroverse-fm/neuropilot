@@ -166,25 +166,25 @@ function createLineRangeValidator(path = '') {
     };
 }
 
-const commonCancelEvents: CancelEvent[] = [
-    {
-        details: () => { return { event: vscode.workspace.onDidChangeTextDocument }; },
+const commonCancelEvents: ((actionData: ActionData) => CancelEvent | null)[] = [
+    () => ({
+        event: vscode.workspace.onDidChangeTextDocument,
         reason: 'the active document was changed.',
-    },
-    {
-        details: () => { return { event: vscode.window.onDidChangeActiveTextEditor }; },
+    }),
+    () => ({
+        event: vscode.window.onDidChangeActiveTextEditor,
         reason: 'you\'ve switched files.',
         logReason: 'the active file was switched.',
-    },
+    }),
 ];
 
-const commonCancelEventsWithCursor: CancelEvent[] = [
+const commonCancelEventsWithCursor: ((actionData: ActionData) => CancelEvent | null)[] = [
     ...commonCancelEvents,
-    {
-        details: () => { return { event: onDidMoveCursor }; },
+    () => ({
+        event: onDidMoveCursor,
         reason: 'your cursor was moved.',
         logReason: 'Neuro\'s cursor was moved.',
-    },
+    }),
 ];
 
 export const editingActions = {
@@ -213,10 +213,10 @@ export const editingActions = {
         permissions: [PERMISSIONS.editActiveDocument],
         handler: handleGetContent,
         cancelEvents: [
-            {
-                details: () => { return { event: vscode.window.onDidChangeActiveTextEditor }; },
+            () => ({
+                event: vscode.window.onDidChangeActiveTextEditor,
                 reason: 'the active text editor has changed.',
-            },
+            }),
         ],
         promptGenerator: 'get the current file\'s contents.',
         validators: [checkCurrentFile],
@@ -242,15 +242,10 @@ export const editingActions = {
         handler: handleInsertText,
         cancelEvents: [
             ...commonCancelEvents,
-            {
-                details(actionData) {
-                    if (actionData.params.position) {
-                        return null;
-                    };
-                    return {
-                        event: onDidMoveCursor,
-                    };
-                },
+            (actionData: ActionData) => {
+                return actionData.params.position ? null : {
+                    event: onDidMoveCursor,
+                };
             },
         ],
         validators: [checkCurrentFile, createPositionValidator('position'), createStringValidator(['text'])],
@@ -297,15 +292,10 @@ export const editingActions = {
         handler: handleInsertLines,
         cancelEvents: [
             ...commonCancelEvents,
-            {
-                details(actionData) {
-                    if (actionData.params.insertUnder) {
-                        return null;
-                    }
-                    return {
-                        event: onDidMoveCursor,
-                    };
-                },
+            (actionData: ActionData) => {
+                return actionData.params.position ? null : {
+                    event: onDidMoveCursor,
+                };
             },
         ],
         validators: [checkCurrentFile, createStringValidator(['lines'])],
@@ -510,10 +500,10 @@ export const editingActions = {
         handler: handleSave,
         cancelEvents: [
             ...commonCancelEvents,
-            {
-                details: () => { return { event: vscode.workspace.onDidSaveTextDocument }; },
+            () => ({
+                event: vscode.workspace.onDidSaveTextDocument,
                 reason: 'the active document was saved.',
-            },
+            }),
         ],
         validators: [checkCurrentFile],
         promptGenerator: 'save.',
