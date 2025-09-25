@@ -17,6 +17,7 @@ import {
     getHighlightDecorationRenderOptions,
 } from '@shared/extension';
 import { registerUnsupervisedActions, registerUnsupervisedHandlers } from './unsupervised';
+import { registerSendSelectionToNeuro } from '@/file_actions';
 
 export function activate(context: vscode.ExtensionContext) {
     // Initialize common state
@@ -38,6 +39,11 @@ export function activate(context: vscode.ExtensionContext) {
 
     // Create status bar item
     createStatusBarItem();
+
+    // The "Send selection to Neuro" feature requires both a command and a code action provider.
+    // To keep related logic together and allow easy registration in both desktop and web, it is encapsulated
+    // in registerSendSelectionToNeuro instead of being registered inline like most single commands.
+    registerSendSelectionToNeuro(context);
 
     // We don't obtain extension state here automatically
 

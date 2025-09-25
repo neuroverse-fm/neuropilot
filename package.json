@@ -155,6 +155,11 @@
 				"command": "neuropilot.openSpecificDocsPage",
 				"title": "Open a specific page in the docs",
 				"category": "NeuroPilot"
+			},
+			{
+				"command": "neuropilot.sendSelectionToNeuro",
+				"title": "Send selection to Neuro",
+				"category": "NeuroPilot"
 			}
 		],
 		"configuration": [
@@ -749,6 +754,15 @@
 					"fontCharacter": "\\E901"
 				}
 			}
+		},
+		"menus": {
+			"editor/context": [
+				{
+					"command": "neuropilot.sendSelectionToNeuro",
+					"when": "editorHasSelection",
+					"group": "navigation"
+				}
+			]
 		}
 	},
 	"capabilities": {
