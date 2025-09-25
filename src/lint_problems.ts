@@ -4,6 +4,7 @@ import { normalizePath, getWorkspacePath, logOutput, isPathNeuroSafe, getWorkspa
 import { PERMISSIONS, getPermissionLevel, CONFIG, isActionEnabled } from '@/config';
 import { ActionData, actionValidationAccept, actionValidationFailure, ActionValidationResult, RCEAction, contextFailure, stripToActions } from '@/neuro_client_helper';
 import assert from 'node:assert';
+import { targetedFileLintingResolvedEvent, workspaceLintingResolvedEvent } from './events/linting';
 
 /**
  * The path validator.
@@ -75,6 +76,9 @@ export const lintActions = {
         },
         permissions: [PERMISSIONS.accessLintingAnalysis],
         handler: handleGetFileLintProblems,
+        cancelEvents: [
+            (actionData: ActionData) => targetedFileLintingResolvedEvent(actionData.params?.file),
+        ],
         validators: [validateDirectoryAccess],
         promptGenerator: (actionData: ActionData) => `get linting diagnostics for "${actionData.params.file}".`,
     },
@@ -91,6 +95,9 @@ export const lintActions = {
         },
         permissions: [PERMISSIONS.accessLintingAnalysis],
         handler: handleGetFolderLintProblems,
+        cancelEvents: [
+            (actionData: ActionData) => targetedFileLintingResolvedEvent(actionData.params?.folder),
+        ],
         validators: [validateDirectoryAccess],
         promptGenerator: (actionData: ActionData) => `get linting diagnostics for "${actionData.params.folder}".`,
     },
@@ -99,6 +106,9 @@ export const lintActions = {
         description: 'Gets linting diagnostics for the current workspace.',
         permissions: [PERMISSIONS.accessLintingAnalysis],
         handler: handleGetWorkspaceLintProblems,
+        cancelEvents: [
+            workspaceLintingResolvedEvent,
+        ],
         validators: [() => {
             const workspace = getWorkspacePath();
             if (!workspace) {
