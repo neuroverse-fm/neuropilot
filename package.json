@@ -489,7 +489,7 @@
 					"neuropilot.enableCancelEvents": {
 						"type": "boolean",
 						"default": true,
-						"markdownDescription": "Whether to enable cancellation events for RCE. See [this docs page](https://vsc-neuropilot.github.io/docs/references/rce#cancellation-events)"
+						"markdownDescription": "Whether to enable cancellation events for RCE. See [this docs page](https://vsc-neuropilot.github.io/docs/references/rce#cancellation-events)."
 					},
 					"neuropilot.permission.openFiles": {
 						"type": "string",
