@@ -533,7 +533,7 @@ export async function handleSendSelectionToNeuro(): Promise<void> {
     if (selection.isEmpty) {
         vscode.window.showInformationMessage('No text selected.');
         return;
-    }        
+    }
     const relativePath = vscode.workspace.asRelativePath(document.uri);
     const selectedText = document.getText(selection);
     const fence = getFence(selectedText);
@@ -542,7 +542,7 @@ export async function handleSendSelectionToNeuro(): Promise<void> {
     const endLine = selection.end.line + 1;
     const endCol = selection.end.character + 1;
     const message = `Vedal sent you his currently highlighted content from file ${relativePath}, lines ${startLine}:${startCol} to ${endLine}:${endCol} (line:column):\n\nContent:\n${fence}${document.languageId}\n${selectedText}\n${fence}`;
-    
+
     NEURO.client?.sendContext(message);
     vscode.window.showInformationMessage('Selection sent to Neuro.');
 }
