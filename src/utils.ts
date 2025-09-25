@@ -26,77 +26,117 @@ export function logOutput(tag: string, message: string) {
     }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 let retryTimeout: NodeJS.Timeout | null = null;
+let shouldAutoReconnect = true; // Flag to control auto-reconnection
 
 export function createClient() {
     logOutput('INFO', 'Creating Neuro API client');
-    if (NEURO.client)
+    if (NEURO.client) {
+        // Prevent auto-reconnection when manually disconnecting
+        shouldAutoReconnect = false;
         NEURO.client.disconnect();
+    }
 
     NEURO.connected = false;
     NEURO.waiting = false;
     NEURO.cancelled = false;
     NEURO.waitingForCookie = false;
-    let attempts = 1;
+
+    // Reset auto-reconnect flag for new connection
+    shouldAutoReconnect = true;
+
     const configuredAttempts = CONNECTION.retryAmount + 1;
     const configuredInterval = CONNECTION.retryInterval;
 
-    function attemptConnection() {
-        // TODO: Check if this is a memory leak
-        NEURO.client = new NeuroClient(NEURO.url, NEURO.gameName, () => {
-            assert(NEURO.client instanceof NeuroClient);
+    attemptConnection(1, configuredAttempts, configuredInterval);
+}
 
-            logOutput('INFO', 'Connected to Neuro API');
-            NEURO.connected = true;
-            attempts = 0; // Reset attempts on successful connection
-
-            showAPIMessage('connected');
-
-            NEURO.client.onClose = () => {
-                NEURO.connected = false;
-                logOutput('INFO', 'Disconnected from Neuro API');
-                showAPIMessage('disconnect');
-
-                retryConnection();
-            };
-
-            NEURO.client.onError = (erm: unknown) => {
-                logOutput('ERROR', 'Could not connect to Neuro API, error: ' + JSON.stringify(erm));
-                showAPIMessage('error');
-            };
-
-            NEURO.client.sendContext(
-                vscode.workspace.getConfiguration('neuropilot').get('connection.initialContext', 'Something went wrong, blame Pasu4 and/or KTrain5369 and tell Vedal to file a bug report.'),
-            );
-
-            for (const handler of clientConnectedHandlers) {
-                handler();
-            }
-        });
-
-        NEURO.client.onError = () => {
-            logOutput('ERROR', 'Could not connect to Neuro API');
-            retryConnection();
-        };
+function attemptConnection(currentAttempt: number, maxAttempts: number, interval: number) {
+    // Clear any existing timeout
+    if (retryTimeout) {
+        clearTimeout(retryTimeout);
+        retryTimeout = null;
     }
 
-    function retryConnection() {
-        if (attempts < configuredAttempts) {
-            attempts++;
-            logOutput('INFO', `Attempting to connect (${attempts}/${configuredAttempts}) in ${configuredInterval}ms...`);
+    logOutput('INFO', `Connection attempt ${currentAttempt}/${maxAttempts}`);
+
+    NEURO.client = new NeuroClient(NEURO.url, NEURO.gameName, () => {
+        assert(NEURO.client instanceof NeuroClient);
+
+        logOutput('INFO', 'Connected to Neuro API');
+        NEURO.connected = true;
+        shouldAutoReconnect = true; // Reset flag on successful connection
+
+        showAPIMessage('connected');
+
+        NEURO.client.onClose = () => {
+            NEURO.connected = false;
+            logOutput('INFO', 'Disconnected from Neuro API');
+
+            // Only auto-reconnect if it wasn't a manual disconnection
+            if (shouldAutoReconnect) {
+                if (currentAttempt < maxAttempts) {
+                    logOutput('INFO', `Attempting to reconnect (${currentAttempt + 1}/${maxAttempts}) in ${interval}ms...`);
+                    retryTimeout = setTimeout(() => {
+                        retryTimeout = null;
+                        attemptConnection(currentAttempt + 1, maxAttempts, interval);
+                    }, interval);
+                } else {
+                    logOutput('WARN', `Failed to reconnect after ${maxAttempts} attempts`);
+                    showAPIMessage('failed', `Failed to reconnect to the Neuro API after ${maxAttempts} attempt(s).`);
+                }
+            } else {
+                // Manual disconnection - show appropriate message
+                showAPIMessage('disconnect');
+            }
+        };
+
+        NEURO.client.onError = (erm: unknown) => {
+            logOutput('ERROR', 'Could not connect to Neuro API, error: ' + JSON.stringify(erm));
+            showAPIMessage('error');
+        };
+
+        NEURO.client.sendContext(
+            vscode.workspace.getConfiguration('neuropilot').get('connection.initialContext', 'Something went wrong, blame Pasu4 and/or KTrain5369 and tell Vedal to file a bug report.'),
+        );
+
+        for (const handler of clientConnectedHandlers) {
+            handler();
+        }
+    });
+
+    NEURO.client.onError = () => {
+        logOutput('ERROR', `Could not connect to Neuro API (attempt ${currentAttempt}/${maxAttempts})`);
+
+        if (currentAttempt < maxAttempts) {
+            logOutput('INFO', `Retrying connection (${currentAttempt + 1}/${maxAttempts}) in ${interval}ms...`);
             retryTimeout = setTimeout(() => {
                 retryTimeout = null;
-                attemptConnection();
-            }, configuredInterval);
+                attemptConnection(currentAttempt + 1, maxAttempts, interval);
+            }, interval);
         } else {
-            logOutput('WARN', `Failed to connect after ${configuredAttempts} attempt(s)`);
-            showAPIMessage('failed', `Failed to connect to the Neuro API after ${configuredAttempts} attempt(s).`);
+            logOutput('WARN', `Failed to connect after ${maxAttempts} attempts`);
+            showAPIMessage('failed', `Failed to connect to the Neuro API after ${maxAttempts} attempt(s).`);
         }
-    }
+    };
+}
 
-    // Start the initial connection attempt
-    attemptConnection();
+// Add a function to manually disconnect without auto-reconnection
+export function disconnectClient() {
+    shouldAutoReconnect = false;
+    if (NEURO.client) {
+        NEURO.client.disconnect();
+    }
+    if (retryTimeout) {
+        clearTimeout(retryTimeout);
+        retryTimeout = null;
+    }
+}
+
+// Add a function to manually reconnect
+export function reconnectClient() {
+    disconnectClient(); // Clean up existing connection
+    createClient(); // Start fresh connection
 }
 
 const clientConnectedHandlers: (() => void)[] = [];

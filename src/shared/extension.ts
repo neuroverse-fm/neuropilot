@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { NEURO, EXTENSIONS } from '@/constants';
-import { logOutput, createClient, onClientConnected, setVirtualCursor, showAPIMessage } from '@/utils';
+import { logOutput, createClient, onClientConnected, setVirtualCursor, showAPIMessage, disconnectClient, reconnectClient } from '@/utils';
 import { completionsProvider, registerCompletionResultHandler } from '@/completions';
 import { giveCookie, registerRequestCookieAction, registerRequestCookieHandler, sendCurrentFile } from '@/context';
 import { registerChatResponseHandler } from '@/chat';
@@ -144,7 +144,7 @@ export function startupCreateClient() {
 // Shared utility functions
 function reconnect() {
     logOutput('INFO', 'Attempting to reconnect to Neuro API');
-    createClient();
+    reconnectClient();
 }
 
 function disconnect() {
@@ -153,7 +153,7 @@ function disconnect() {
         return;
     }
     logOutput('INFO', 'Manually disconnecting from Neuro API');
-    NEURO.client.disconnect();
+    disconnectClient();
 }
 
 export function reloadPermissions(...extraFunctions: (() => void)[]) {
