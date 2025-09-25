@@ -226,6 +226,7 @@ export const editingActions = {
         description: 'Insert code at the specified position.'
             + ' Line and column numbers are one-based for "absolute" and zero-based for "relative".'
             + ' If no position is specified, your cursor\'s current position will be used.'
+            + ' Remember to add indents after newlines where appropriate.'
             + ' After inserting, your cursor will be placed at the end of the inserted text.'
             + ' Also make sure you use new lines and indentation appropriately.',
         schema: {
@@ -275,8 +276,9 @@ export const editingActions = {
         name: 'insert_lines',
         description: 'Insert code below a certain line.'
             + ' Defaults to your current cursor\'s location'
-            + ' Your cursor will be moved to the end of the inserted line.'
-            + ' The insertUnder parameter is one-based, not zero-based.',
+            + ' The insertUnder parameter is one-based, not zero-based.'
+            + ' Remember to add indents after newlines where appropriate.'
+            + ' Your cursor will be moved to the end of the inserted line.', // TODO: Clarify cursor stuff again
         schema: {
             type: 'object',
             properties: {
