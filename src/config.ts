@@ -54,38 +54,63 @@ const DEPRECATED_SETTINGS: DeprecatedSetting[] = [
     },
 ];
 
-/** Function to check deprecated messages */
+/** Function to check deprecated settings */
 export async function checkDeprecatedSettings() {
     if (NEURO.context?.globalState.get('no-migration')) return;
     const cfg = vscode.workspace.getConfiguration('neuropilot');
-    const deprecatedSettings: Record<string, { value: unknown; target: vscode.ConfigurationTarget }> = {};
+    const deprecatedSettings: Record<string, Map<vscode.ConfigurationTarget, unknown>> = {};
 
     for (const setting of DEPRECATED_SETTINGS) {
         const inspection = cfg.inspect(setting.old);
-        let target: vscode.ConfigurationTarget | undefined;
-        let value: unknown;
+        const targetValueMap = new Map<vscode.ConfigurationTarget, unknown>();
 
-        // Determine the configuration target and value based on priority
+        // Check all possible configuration targets
+        if (inspection?.globalValue !== undefined) {
+            targetValueMap.set(vscode.ConfigurationTarget.Global, inspection.globalValue);
+        }
+        if (inspection?.workspaceValue !== undefined) {
+            targetValueMap.set(vscode.ConfigurationTarget.Workspace, inspection.workspaceValue);
+        }
         if (inspection?.workspaceFolderValue !== undefined) {
-            target = vscode.ConfigurationTarget.WorkspaceFolder;
-            value = inspection.workspaceFolderValue;
-        } else if (inspection?.workspaceValue !== undefined) {
-            target = vscode.ConfigurationTarget.Workspace;
-            value = inspection.workspaceValue;
-        } else if (inspection?.globalValue !== undefined) {
-            target = vscode.ConfigurationTarget.Global;
-            value = inspection.globalValue;
+            targetValueMap.set(vscode.ConfigurationTarget.WorkspaceFolder, inspection.workspaceFolderValue);
         }
 
-        if (target !== undefined && value !== undefined) {
-            deprecatedSettings[setting.old] = { value, target };
+        if (targetValueMap.size > 0) {
+            deprecatedSettings[setting.old] = targetValueMap;
         }
     }
 
     const keys = Object.keys(deprecatedSettings);
     if (keys.length > 0) {
+        // Count total configurations across all targets
+        const totalConfigs = keys.reduce((sum, key) => sum + deprecatedSettings[key].size, 0);
+
+        // Collect all unique configuration targets that have deprecated settings
+        const targetsSet = new Set<vscode.ConfigurationTarget>();
+        for (const key of keys) {
+            for (const target of deprecatedSettings[key].keys()) {
+                targetsSet.add(target);
+            }
+        }
+
+        // Convert configuration targets to readable names
+        const targetNames: string[] = [];
+        if (targetsSet.has(vscode.ConfigurationTarget.Global)) {
+            targetNames.push('User');
+        }
+        if (targetsSet.has(vscode.ConfigurationTarget.Workspace)) {
+            targetNames.push('Workspace');
+        }
+        if (targetsSet.has(vscode.ConfigurationTarget.WorkspaceFolder)) {
+            targetNames.push('Workspace Folder');
+        }
+
+        const targetList = targetNames.length === 1
+            ? targetNames[0]
+            : targetNames.slice(0, -1).join(', ') + ', and ' + targetNames[targetNames.length - 1];
+
         const notif = await vscode.window.showInformationMessage(
-            `You have ${keys.length} deprecated configurations. Would you like to migrate them?`,
+            `You have ${totalConfigs} deprecated configuration${totalConfigs === 1 ? '' : 's'} in your ${targetList} setting${targetNames.length === 1 ? '' : 's'}. Would you like to migrate them?`,
             'Yes', 'No', 'Don\'t show again',
         );
 
@@ -94,22 +119,26 @@ export async function checkDeprecatedSettings() {
                 case 'Yes':
                     for (const key of keys) {
                         const updateObject = DEPRECATED_SETTINGS.find(o => o.old === key);
-                        const settingInfo = deprecatedSettings[key];
+                        const targetValueMap = deprecatedSettings[key];
 
-                        if (updateObject && updateObject.old && settingInfo) {
-                            if (typeof updateObject.new === 'string') {
-                                // Update with the same configuration target
-                                await cfg.update(updateObject.new, settingInfo.value, settingInfo.target);
-                                // Remove the old setting
-                                await cfg.update(updateObject.old, undefined, settingInfo.target);
-                            } else {
-                                // For custom migration functions, pass the target info
-                                await updateObject.new(settingInfo.target);
-                                // Remove the old setting from the detected target
-                                await cfg.update(updateObject.old, undefined, settingInfo.target);
+                        if (updateObject && targetValueMap) {
+                            // Process each configuration target for this setting
+                            for (const [target, value] of targetValueMap.entries()) {
+                                if (typeof updateObject.new === 'string') {
+                                    // Update with the specific configuration target
+                                    await cfg.update(updateObject.new, value, target);
+                                    // Remove the old setting from this target
+                                    await cfg.update(updateObject.old, undefined, target);
+                                } else {
+                                    // For custom migration functions, pass the target and value
+                                    await updateObject.new(target);
+                                    // Remove the old setting from this target
+                                    await cfg.update(updateObject.old, undefined, target);
+                                }
                             }
                         }
                     }
+                    vscode.window.showInformationMessage('Configuration migration completed successfully.');
                     break;
                 case 'No':
                     break;
