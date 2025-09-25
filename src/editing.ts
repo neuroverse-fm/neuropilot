@@ -4,13 +4,14 @@ import { NEURO } from '@/constants';
 import { DiffRangeType, escapeRegExp, getDiffRanges, getFence, getPositionContext, getProperty, getVirtualCursor, showDiffRanges, isPathNeuroSafe, logOutput, NeuroPositionContext, setVirtualCursor, simpleFileName, substituteMatch, clearDecorations } from '@/utils';
 import { ActionData, actionValidationAccept, actionValidationFailure, ActionValidationResult, RCEAction, contextFailure, stripToActions, actionValidationRetry, contextNoAccess } from '@/neuro_client_helper';
 import { PERMISSIONS, getPermissionLevel, CONFIG, isActionEnabled } from '@/config';
+import { JSONSchema7 } from 'json-schema';
 
 const CONTEXT_NO_ACCESS = 'You do not have permission to access this file.';
 const CONTEXT_NO_ACTIVE_DOCUMENT = 'No active document to edit.';
 
 type MatchOptions = 'firstInFile' | 'lastInFile' | 'firstAfterCursor' | 'lastBeforeCursor' | 'allInFile';
 const MATCH_OPTIONS: string[] = ['firstInFile', 'lastInFile', 'firstAfterCursor', 'lastBeforeCursor', 'allInFile'] as const;
-const POSITION_SCHEMA = {
+const POSITION_SCHEMA: JSONSchema7 = {
     type: 'object',
     properties: {
         line: { type: 'integer' },
@@ -28,7 +29,7 @@ interface Position {
     column: number;
     type: 'relative' | 'absolute';
 }
-const LINE_RANGE_SCHEMA = {
+const LINE_RANGE_SCHEMA: JSONSchema7 = {
     type: 'object',
     properties: {
         startLine: { type: 'integer', minimum: 1 },
@@ -480,7 +481,7 @@ export const editingActions = {
                 ...LINE_RANGE_SCHEMA.properties,
                 content: { type: 'string' },
             },
-            required: [...LINE_RANGE_SCHEMA.required, 'content'],
+            required: [...LINE_RANGE_SCHEMA.required!, 'content'],
             additionalProperties: false,
         },
         permissions: [PERMISSIONS.editActiveDocument],
