@@ -9,7 +9,7 @@ import { ACCESS, CONFIG, getPermissionLevel, PERMISSIONS } from '@/config';
 import { ActionValidationResult, ActionData, actionValidationAccept, actionValidationFailure } from '@/neuro_client_helper';
 import assert from 'node:assert';
 import { patienceDiff } from './patience_diff';
-import { fireMovedCursorEvent } from './events/cursor';
+import { fireCursorPositionChangedEvent } from '@events/cursor';
 
 export const REGEXP_ALWAYS = /^/;
 export const REGEXP_NEVER = /^\b$/;
@@ -373,7 +373,7 @@ export function setVirtualCursor(position?: vscode.Position | null) {
     }
 
     // reusing the same code here as in getVirtualCursor()
-    fireMovedCursorEvent(getVirtualCursor());
+    fireCursorPositionChangedEvent(getVirtualCursor());
 
     return;
 

@@ -2,9 +2,10 @@ import * as vscode from 'vscode';
 
 import { NEURO } from '@/constants';
 import { DiffRangeType, escapeRegExp, getDiffRanges, getFence, getPositionContext, getProperty, getVirtualCursor, showDiffRanges, isPathNeuroSafe, logOutput, NeuroPositionContext, setVirtualCursor, simpleFileName, substituteMatch, clearDecorations } from '@/utils';
-import { ActionData, actionValidationAccept, actionValidationFailure, ActionValidationResult, RCEAction, contextFailure, stripToActions, actionValidationRetry, contextNoAccess, CancelEvent } from '@/neuro_client_helper';
+import { ActionData, actionValidationAccept, actionValidationFailure, ActionValidationResult, RCEAction, contextFailure, stripToActions, actionValidationRetry, contextNoAccess } from '@/neuro_client_helper';
 import { PERMISSIONS, getPermissionLevel, CONFIG, isActionEnabled } from '@/config';
-import { onDidMoveCursor } from '@events/cursor';
+import { createCursorPositionChangedEvent } from '@events/cursor';
+import { RCECancelEvent } from '@events/utils';
 
 const CONTEXT_NO_ACCESS = 'You do not have permission to access this file.';
 const CONTEXT_NO_ACTIVE_DOCUMENT = 'No active document to edit.';
@@ -166,25 +167,24 @@ function createLineRangeValidator(path = '') {
     };
 }
 
-const commonCancelEvents: ((actionData: ActionData) => CancelEvent | null)[] = [
-    () => ({
-        event: vscode.workspace.onDidChangeTextDocument,
+const commonCancelEvents: (() => RCECancelEvent)[] = [
+    () => new RCECancelEvent({
         reason: 'the active document was changed.',
+        events: [
+            [vscode.workspace.onDidChangeTextDocument, null],
+        ],
     }),
-    () => ({
-        event: vscode.window.onDidChangeActiveTextEditor,
+    () => new RCECancelEvent({
         reason: 'you\'ve switched files.',
-        logReason: 'the active file was switched.',
+        events: [
+            [vscode.window.onDidChangeActiveTextEditor, null],
+        ],
     }),
 ];
 
-const commonCancelEventsWithCursor: ((actionData: ActionData) => CancelEvent | null)[] = [
+const commonCancelEventsWithCursor: (() => RCECancelEvent)[] = [
     ...commonCancelEvents,
-    () => ({
-        event: onDidMoveCursor,
-        reason: 'your cursor was moved.',
-        logReason: 'Neuro\'s cursor was moved.',
-    }),
+    createCursorPositionChangedEvent,
 ];
 
 export const editingActions = {
@@ -213,10 +213,7 @@ export const editingActions = {
         permissions: [PERMISSIONS.editActiveDocument],
         handler: handleGetContent,
         cancelEvents: [
-            () => ({
-                event: vscode.window.onDidChangeActiveTextEditor,
-                reason: 'the active text editor has changed.',
-            }),
+            commonCancelEvents[0],
         ],
         promptGenerator: 'get the current file\'s contents.',
         validators: [checkCurrentFile],
@@ -243,9 +240,7 @@ export const editingActions = {
         cancelEvents: [
             ...commonCancelEvents,
             (actionData: ActionData) => {
-                return actionData.params.position ? null : {
-                    event: onDidMoveCursor,
-                };
+                return actionData.params.position ? null : createCursorPositionChangedEvent();
             },
         ],
         validators: [checkCurrentFile, createPositionValidator('position'), createStringValidator(['text'])],
@@ -293,9 +288,7 @@ export const editingActions = {
         cancelEvents: [
             ...commonCancelEvents,
             (actionData: ActionData) => {
-                return actionData.params.position ? null : {
-                    event: onDidMoveCursor,
-                };
+                return actionData.params.position ? null : createCursorPositionChangedEvent();
             },
         ],
         validators: [checkCurrentFile, createStringValidator(['lines'])],
@@ -500,9 +493,11 @@ export const editingActions = {
         handler: handleSave,
         cancelEvents: [
             ...commonCancelEvents,
-            () => ({
-                event: vscode.workspace.onDidSaveTextDocument,
+            () => new RCECancelEvent({
                 reason: 'the active document was saved.',
+                events: [
+                    [vscode.workspace.onDidSaveTextDocument, null],
+                ],
             }),
         ],
         validators: [checkCurrentFile],

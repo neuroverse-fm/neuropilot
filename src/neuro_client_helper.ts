@@ -6,7 +6,7 @@ import { Action } from 'neuro-game-sdk';
 import { Permission, PermissionLevel } from '@/config';
 import { logOutput } from '@/utils';
 import { PromptGenerator } from '@/rce';
-import { Event, Disposable } from 'vscode';
+import { RCECancelEvent } from '@events/utils';
 
 /** Data used by an action handler. */
 export interface ActionData {
@@ -32,26 +32,6 @@ export interface ActionValidationResult {
     retry?: boolean;
 }
 
-/**
- * The object that defines a cancellation event.
- */
-export interface CancelEvent {
-    /** The event to subscribe to. */
-    event: Event<unknown>;
-    /** Any extra disposable resources. */
-    extraDisposables?: Disposable;
-    /** 
-     * The cancel reason that will be sent to Neuro.
-     * This prompt should fit the phrasing scheme 'Your action was cancelled because [reason]'
-     */
-    reason?: string | ((actionData: ActionData) => string);
-    /** 
-     * The cancel reason that will be logged.
-     * This prompt should fit the phrasing scheme 'The action was cancelled because [reason]'
-     */
-    logReason?: string | ((actionData: ActionData) => string);
-}
-
 /** ActionHandler to use with constants for records of actions and their corresponding handlers */
 export interface RCEAction extends Action {
     /** The permissions required to execute this action. */
@@ -65,7 +45,7 @@ export interface RCEAction extends Action {
      * 
      * Following VS Code's pattern, Disposables will not be awaited if async.
      */
-    cancelEvents?: ((actionData: ActionData) => CancelEvent | null)[];
+    cancelEvents?: ((actionData: ActionData) => RCECancelEvent | null)[];
     /** The function to handle the action. */
     handler: (actionData: ActionData) => string | undefined;
     /** 

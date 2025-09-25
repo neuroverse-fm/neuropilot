@@ -4,12 +4,13 @@
  */
 
 import * as vscode from 'vscode';
-import { ActionData, CancelEvent, RCEAction, stripToAction } from '@/neuro_client_helper';
+import { ActionData, RCEAction, stripToAction } from '@/neuro_client_helper';
 import { NEURO } from '@/constants';
 import { checkVirtualWorkspace, checkWorkspaceTrust, logOutput } from '@/utils';
 import { CONFIG, getPermissionLevel, isActionEnabled, PermissionLevel, PERMISSIONS } from '@/config';
 import { handleRunTask } from '@/tasks';
 import { validate } from 'jsonschema';
+import { RCECancelEvent } from '@events/utils';
 
 /**
  * A prompt parameter can either be a string or a function that converts ActionData into a prompt string.
@@ -309,7 +310,7 @@ export async function RCEActionHandler(actionData: ActionData, actionList: Recor
         const eventArray: vscode.Disposable[] = [];
 
         if (CONFIG.enableCancelEvents && action.cancelEvents) {
-            const eventListener = (eventObject: CancelEvent) => {
+            const eventListener = (eventObject: RCECancelEvent) => {
                 let createdReason: string;
                 let createdLogReason: string;
                 const reason = eventObject.reason;
@@ -335,10 +336,7 @@ export async function RCEActionHandler(actionData: ActionData, actionList: Recor
             for (const eventObject of action.cancelEvents) {
                 const eventDetails = eventObject(actionData);
                 if (eventDetails) {
-                    eventArray.push(eventDetails.event(() => eventListener(eventDetails)));
-                    if (eventDetails.extraDisposables) {
-                        eventArray.push(eventDetails.extraDisposables);
-                    }
+                    eventArray.push(eventDetails.event(() => eventListener(eventDetails)), eventDetails.disposable);
                 }
             }
         }

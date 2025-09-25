@@ -4,9 +4,10 @@ import type { Change, CommitOptions, Commit, Repository, API, GitExtension } fro
 import { ForcePushMode } from '@typing/git.d';
 import { StatusStrings, RefTypeStrings } from '@typing/git_status';
 import { logOutput, simpleFileName, isPathNeuroSafe, normalizePath, getWorkspacePath } from '@/utils';
-import { ActionData, ActionValidationResult, actionValidationAccept, actionValidationFailure, RCEAction, contextFailure, stripToActions, actionValidationRetry, CancelEvent } from '@/neuro_client_helper';
+import { ActionData, ActionValidationResult, actionValidationAccept, actionValidationFailure, RCEAction, contextFailure, stripToActions, actionValidationRetry } from '@/neuro_client_helper';
 import { PERMISSIONS, getPermissionLevel, isActionEnabled } from '@/config';
 import assert from 'node:assert';
+import { RCECancelEvent } from '@events/utils';
 
 /* All actions located in here requires neuropilot.permission.gitOperations to be enabled. */
 
@@ -116,26 +117,13 @@ function gitDiffValidator(actionData: ActionData): ActionValidationResult {
             return actionValidationFailure('Unknown diff type.');
     }
 }
-
-function gitCancellationEvent(_actionData: ActionData): CancelEvent {
-    assert(git);
-    const emitter = new vscode.EventEmitter<unknown>();
-    const event = vscode.extensions.getExtension<GitExtension>('vscode.git')?.exports.onDidChangeEnablement(_ => {
-        emitter.fire(undefined);
-    });
-    const extraDisposables = new vscode.Disposable(() => {
-        event?.dispose();
-        emitter.dispose();
-    });
-    return {
-        event: emitter.event,
-        extraDisposables,
+const commonCancelEvents: ((actionData: ActionData) => RCECancelEvent | null)[] = [
+    () => new RCECancelEvent({
         reason: 'the Git extension was disabled.',
-    };
-}
-
-const commonCancelEvents: ((actionData: ActionData) => CancelEvent | null)[] = [
-    gitCancellationEvent,
+        events: [
+            [vscode.extensions.getExtension<GitExtension>('vscode.git')!.exports.onDidChangeEnablement, null],
+        ],
+    }),
 ];
 
 export const gitActions = {

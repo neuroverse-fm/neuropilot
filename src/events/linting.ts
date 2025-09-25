@@ -1,6 +1,5 @@
 import * as vscode from 'vscode';
-import { fireEvent } from './utils';
-import { CancelEvent } from '../neuro_client_helper';
+import { RCECancelEvent } from './utils';
 
 /**
  * Wrapper event to check if a specific file no longer has any linting issues.
@@ -8,33 +7,29 @@ import { CancelEvent } from '../neuro_client_helper';
  * 
  * @param file An absolute path to the file.
  */
-export function targetedFileLintingResolvedEvent(file: string): CancelEvent {
+export function targetedFileLintingResolvedEvent(file: string): RCECancelEvent {
     const fileUri = vscode.Uri.file(file);
-    const eventEmitter = new vscode.EventEmitter<void>();
-    const disposableArray: vscode.Disposable[] = [];
 
     let previousDiagnostics = vscode.languages.getDiagnostics(fileUri);
 
-    disposableArray.push(
-        vscode.languages.onDidChangeDiagnostics((event) => {
-            if (event.uris.some(uri => uri.fsPath === fileUri.fsPath)) {
-                const currentDiagnostics = vscode.languages.getDiagnostics(fileUri);
+    return new RCECancelEvent({
+        reason: `the file ${file} no longer has linting issues.`,
+        events: [
+            [vscode.languages.onDidChangeDiagnostics, (event) => {
+                if ((event as vscode.DiagnosticChangeEvent).uris.some(uri => uri.fsPath === fileUri.fsPath)) {
+                    const currentDiagnostics = vscode.languages.getDiagnostics(fileUri);
 
-                // Check if we had issues before but now have none
-                if (previousDiagnostics.length > 0 && currentDiagnostics.length === 0) {
-                    fireEvent(eventEmitter, disposableArray);
+                    // Check if we had issues before but now have none
+                    if (previousDiagnostics.length > 0 && currentDiagnostics.length === 0) {
+                        return true;
+                    }
+
+                    previousDiagnostics = currentDiagnostics;
                 }
-
-                previousDiagnostics = currentDiagnostics;
-            }
-        }),
-    );
-
-    return {
-        event: eventEmitter.event,
-        extraDisposables: new vscode.Disposable(() => fireEvent(eventEmitter, disposableArray)),
-        reason: `the file ${file} no longer has any linting issues.`,
-    };
+                return false;
+            }],
+        ],
+    });
 }
 
 /**
@@ -43,10 +38,8 @@ export function targetedFileLintingResolvedEvent(file: string): CancelEvent {
  * 
  * @param folder An absolute path to the folder.
  */
-export function targetedFolderLintingResolvedEvent(folder: string): CancelEvent {
+export function targetedFolderLintingResolvedEvent(folder: string): RCECancelEvent {
     const folderUri = vscode.Uri.file(folder);
-    const eventEmitter = new vscode.EventEmitter<void>();
-    const disposableArray: vscode.Disposable[] = [];
 
     // Track diagnostics for files in this folder
     const previousDiagnosticsMap = new Map<string, vscode.Diagnostic[]>();
@@ -59,70 +52,64 @@ export function targetedFolderLintingResolvedEvent(folder: string): CancelEvent 
         }
     }
 
-    disposableArray.push(
-        vscode.languages.onDidChangeDiagnostics((event) => {
-            let folderNowClean = false;
+    return new RCECancelEvent({
+        reason: `the folder ${folder} no longer has any linting issues.`,
+        events: [
+            [vscode.languages.onDidChangeDiagnostics, (event) => {
+                let folderNowClean = false;
 
-            for (const uri of event.uris) {
-                if (uri.fsPath.startsWith(folderUri.fsPath)) {
-                    const currentDiagnostics = vscode.languages.getDiagnostics(uri);
-                    const previousDiagnostics = previousDiagnosticsMap.get(uri.fsPath) || [];
+                for (const uri of (event as vscode.DiagnosticChangeEvent).uris) {
+                    if (uri.fsPath.startsWith(folderUri.fsPath)) {
+                        const currentDiagnostics = vscode.languages.getDiagnostics(uri);
+                        const previousDiagnostics = previousDiagnosticsMap.get(uri.fsPath) || [];
 
-                    // Update our tracking
-                    if (currentDiagnostics.length === 0) {
-                        previousDiagnosticsMap.delete(uri.fsPath);
-                    } else {
-                        previousDiagnosticsMap.set(uri.fsPath, currentDiagnostics);
-                    }
+                        // Update our tracking
+                        if (currentDiagnostics.length === 0) {
+                            previousDiagnosticsMap.delete(uri.fsPath);
+                        } else {
+                            previousDiagnosticsMap.set(uri.fsPath, currentDiagnostics);
+                        }
 
-                    // Check if file was cleaned
-                    if (previousDiagnostics.length > 0 && currentDiagnostics.length === 0) {
-                        folderNowClean = true;
+                        // Check if file was cleaned
+                        if (previousDiagnostics.length > 0 && currentDiagnostics.length === 0) {
+                            folderNowClean = true;
+                        }
                     }
                 }
-            }
 
-            // Check if entire folder is now clean
-            if (folderNowClean && previousDiagnosticsMap.size === 0) {
-                fireEvent(eventEmitter, disposableArray);
-            }
-        }),
-    );
+                // Check if entire folder is now clean
+                if (folderNowClean && previousDiagnosticsMap.size === 0) {
+                    return true;
+                }
 
-    return {
-        event: eventEmitter.event,
-        extraDisposables: new vscode.Disposable(() => fireEvent(eventEmitter, disposableArray)),
-        reason: `the folder ${folder} no longer has any linting issues.`,
-    };
+                return false;
+            }],
+        ],
+    });
 }
 
 /**
  * Wrapper event to check if the current workspace no longer has any linting issues.
  * This creates the EventEmitter and returns the event, and will auto-fire if the workspace becomes clean.
  */
-export function workspaceLintingResolvedEvent(): CancelEvent {
-    const eventEmitter = new vscode.EventEmitter<void>();
-    const disposableArray: vscode.Disposable[] = [];
-
+export function workspaceLintingResolvedEvent(): RCECancelEvent {
     let hadDiagnostics = vscode.languages.getDiagnostics().length > 0;
 
-    disposableArray.push(
-        vscode.languages.onDidChangeDiagnostics(() => {
-            const currentDiagnostics = vscode.languages.getDiagnostics();
-            const hasDiagnostics = currentDiagnostics.length > 0;
-
-            // Fire if we had diagnostics before but now have none
-            if (hadDiagnostics && !hasDiagnostics) {
-                fireEvent(eventEmitter, disposableArray);
-            }
-
-            hadDiagnostics = hasDiagnostics;
-        }),
-    );
-
-    return {
-        event: eventEmitter.event,
-        extraDisposables: new vscode.Disposable(() => fireEvent(eventEmitter, disposableArray)),
+    return new RCECancelEvent({
         reason: 'the workspace no longer has any linting issues.',
-    };
+        events: [
+            [vscode.languages.onDidChangeDiagnostics, () => {
+                const currentDiagnostics = vscode.languages.getDiagnostics();
+                const hasDiagnostics = currentDiagnostics.length > 0;
+
+                // Fire if we had diagnostics before but now have none
+                if (hadDiagnostics && !hasDiagnostics) {
+                    return true;
+                }
+
+                hadDiagnostics = hasDiagnostics;
+                return false;
+            }],
+        ],
+    });
 }

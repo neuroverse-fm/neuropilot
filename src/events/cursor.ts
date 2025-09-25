@@ -1,25 +1,26 @@
 import * as vscode from 'vscode';
+import { RCECancelEvent } from './utils';
+import { CONFIG } from '../config';
 
-/** Cursor moved event - fires when Neuro's cursor is moved for any reason
- * Null typing is used if the cursor is not on the page.
- * Undefined is used when the text editor does not exist.
- */
 const _onDidMoveCursor = new vscode.EventEmitter<vscode.Position | null | undefined>();
-
-/** 
- * Disposable for the EventEmitter.
- * Used to push the Disposable into the extension context.
- */
-export const moveCursorEmitterDiposable = new vscode.Disposable(_onDidMoveCursor.dispose);
+const _onDidMoveCursorEvent = _onDidMoveCursor.event;
+export const moveCursorEmitterDiposable = vscode.Disposable.from(_onDidMoveCursor);
 
 /**
- * Subscribe to this event to be notified when Neuro's cursor position moved.
+ * Fires the cursor position changed event.
+ * @param position The new cursor position, or null if the cursor is not on the page, or undefined if the text editor does not exist.
  */
-export const onDidMoveCursor: vscode.Event<vscode.Position | null | undefined> = _onDidMoveCursor.event;
-
-/**
- * Event fire function.
- */
-export function fireMovedCursorEvent(position: vscode.Position | null | undefined) {
+export function fireCursorPositionChangedEvent(position: vscode.Position | null | undefined) {
+    // Fire the event
     _onDidMoveCursor.fire(position);
+}
+
+export function createCursorPositionChangedEvent() {
+    return new RCECancelEvent({
+        reason: 'your cursor position changed.',
+        logReason: (_data) => `${CONFIG.currentlyAsNeuroAPI}'s cursor position changed.`,
+        events: [
+            [_onDidMoveCursorEvent, null],
+        ],
+    });
 }

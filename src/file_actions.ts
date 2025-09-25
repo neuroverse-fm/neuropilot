@@ -2,9 +2,10 @@ import * as vscode from 'vscode';
 
 import { NEURO } from '@/constants';
 import { filterFileContents, getFence, getVirtualCursor, getWorkspacePath, getWorkspaceUri, isBinary, isPathNeuroSafe, logOutput, normalizePath } from '@/utils';
-import { ActionData, contextNoAccess, RCEAction, actionValidationFailure, actionValidationAccept, ActionValidationResult, stripToActions, CancelEvent } from '@/neuro_client_helper';
+import { ActionData, contextNoAccess, RCEAction, actionValidationFailure, actionValidationAccept, ActionValidationResult, stripToActions } from '@/neuro_client_helper';
 import { CONFIG, PERMISSIONS, PermissionLevel, getPermissionLevel, isActionEnabled } from '@/config';
-import { targetedFileCreateEvent, targetedFileDeleteEvent } from './events/files';
+import { targetedFileCreatedEvent, targetedFileDeletedEvent } from '@events/files';
+import { RCECancelEvent } from '@events/utils';
 
 /**
  * The path validator.
@@ -82,7 +83,7 @@ async function binaryFileValidation(actionData: ActionData): Promise<ActionValid
 
     const workspaceUri = getWorkspaceUri();
 
-    if(!workspaceUri)
+    if (!workspaceUri)
         return actionValidationFailure('You are not in a workspace.');
 
     const absolutePath = normalizePath(workspaceUri.fsPath + '/' + relativePath.replace(/^\/|\/$/g, ''));
@@ -93,9 +94,9 @@ async function binaryFileValidation(actionData: ActionData): Promise<ActionValid
     return actionValidationAccept();
 }
 
-const commonFileEvents: ((actionData: ActionData) => CancelEvent | null)[] = [
-    (actionData: ActionData) => targetedFileCreateEvent(actionData.params?.filePath),
-    (actionData: ActionData) => targetedFileDeleteEvent(actionData.params?.filePath),
+const commonFileEvents: ((actionData: ActionData) => RCECancelEvent | null)[] = [
+    (actionData: ActionData) => targetedFileCreatedEvent(actionData.params?.filePath),
+    (actionData: ActionData) => targetedFileDeletedEvent(actionData.params?.filePath),
 ];
 
 export const fileActions = {
@@ -178,7 +179,7 @@ export const fileActions = {
         permissions: [PERMISSIONS.create],
         handler: handleCreateFolder,
         cancelEvents: [
-            (actionData: ActionData) => targetedFileCreateEvent(actionData.params?.folderPath),
+            (actionData: ActionData) => targetedFileCreatedEvent(actionData.params?.folderPath),
         ],
         validators: [neuroSafeValidation],
         promptGenerator: (actionData: ActionData) => `create the folder "${actionData.params?.folderPath}".`,
@@ -198,8 +199,8 @@ export const fileActions = {
         permissions: [PERMISSIONS.rename],
         handler: handleRenameFileOrFolder,
         cancelEvents: [
-            (actionData: ActionData) => targetedFileCreateEvent(actionData.params?.newPath),
-            (actionData: ActionData) => targetedFileDeleteEvent(actionData.params?.oldPath),
+            (actionData: ActionData) => targetedFileCreatedEvent(actionData.params?.newPath),
+            (actionData: ActionData) => targetedFileDeletedEvent(actionData.params?.oldPath),
         ],
         validators: [neuroSafeRenameValidation],
         promptGenerator: (actionData: ActionData) => `rename "${actionData.params?.oldPath}" to "${actionData.params?.newPath}".`,
@@ -219,7 +220,7 @@ export const fileActions = {
         permissions: [PERMISSIONS.delete],
         handler: handleDeleteFileOrFolder,
         cancelEvents: [
-            (actionData: ActionData) => targetedFileDeleteEvent(actionData.params?.path),
+            (actionData: ActionData) => targetedFileDeletedEvent(actionData.params?.path),
         ],
         validators: [neuroSafeDeleteValidation],
         promptGenerator: (actionData: ActionData) => `delete "${actionData.params?.pathToDelete}".`,
@@ -453,7 +454,7 @@ export function handleGetFiles(_actionData: ActionData): string | undefined {
 
     async function recurseWorkspace(uri: vscode.Uri): Promise<vscode.Uri[]> {
         const entries = await vscode.workspace.fs.readDirectory(uri);
-        const uriEntries: [vscode.Uri, vscode.FileType][] = entries.map(entry => [uri.with({ path: uri.path + '/' + entry[0] }), entry[1] ]);
+        const uriEntries: [vscode.Uri, vscode.FileType][] = entries.map(entry => [uri.with({ path: uri.path + '/' + entry[0] }), entry[1]]);
 
         const result: vscode.Uri[] = [];
         for (const [childUri, fileType] of uriEntries) {
