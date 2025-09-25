@@ -7,6 +7,7 @@ import { Permission, PermissionLevel } from '@/config';
 import { logOutput } from '@/utils';
 import { PromptGenerator } from '@/rce';
 import { RCECancelEvent } from '@events/utils';
+import { JSONSchema7 } from 'json-schema';
 
 /** Data used by an action handler. */
 export interface ActionData {
@@ -32,8 +33,10 @@ export interface ActionValidationResult {
     retry?: boolean;
 }
 
+type TypedAction = Omit<Action, 'schema'> & { schema?: JSONSchema7 };
+
 /** ActionHandler to use with constants for records of actions and their corresponding handlers */
-export interface RCEAction extends Action {
+export interface RCEAction extends TypedAction {
     /** The permissions required to execute this action. */
     permissions: Permission[];
     /** The function to validate the action data *after* checking the schema. */
