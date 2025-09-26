@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { handleTerminateTask, reloadTasks, taskEndedHandler } from '@/tasks';
 import { emergencyTerminalShutdown } from '@/pseudoterminal';
-import { createClient, isPathNeuroSafe, setVirtualCursor } from '@/utils';
+import { isPathNeuroSafe, setVirtualCursor } from '@/utils';
 import { NEURO } from '@/constants';
 import {
     initializeCommonState,
@@ -18,6 +18,7 @@ import {
     obtainExtensionState,
     reloadPermissions,
     getHighlightDecorationRenderOptions,
+    startupCreateClient,
 } from '@shared/extension';
 import { registerChatParticipant } from '@/chat';
 import { registerUnsupervisedActions, registerUnsupervisedHandlers } from './unsupervised';
@@ -54,7 +55,7 @@ export function activate(context: vscode.ExtensionContext) {
     setTimeout(obtainExtensionState, 5000);
 
     // Create client
-    createClient();
+    startupCreateClient();
 
     // Create cursor decoration (desktop-specific)
     NEURO.cursorDecorationType = vscode.window.createTextEditorDecorationType(getCursorDecorationRenderOptions());
