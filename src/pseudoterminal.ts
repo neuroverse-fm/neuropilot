@@ -11,6 +11,7 @@ import { checkWorkspaceTrust, checkVirtualWorkspace } from '@/utils';
 import { logOutput, delayAsync, getFence } from '@/utils';
 import { ActionData, actionValidationAccept, actionValidationFailure, ActionValidationResult, RCEAction, contextFailure, stripToActions } from '@/neuro_client_helper';
 import { CONFIG, PERMISSIONS, getPermissionLevel, isActionEnabled } from '@/config';
+import { notifyOnTerminalClose } from '@events/shells';
 
 /*
  * Extended interface for terminal sessions.
@@ -50,6 +51,9 @@ export const terminalAccessHandlers = {
         },
         permissions: [PERMISSIONS.terminalAccess],
         handler: handleRunCommand,
+        cancelEvents: [
+            (actionData: ActionData) => notifyOnTerminalClose(actionData.params?.shell),
+        ],
         validators: [checkVirtualWorkspace, checkWorkspaceTrust],
         promptGenerator: (actionData: ActionData) => `run "${actionData.params?.command}" in the "${actionData.params?.shell}" shell.`,
     },
@@ -66,6 +70,9 @@ export const terminalAccessHandlers = {
         },
         permissions: [PERMISSIONS.terminalAccess],
         handler: handleKillTerminal,
+        cancelEvents: [
+            (actionData: ActionData) => notifyOnTerminalClose(actionData.params?.shell),
+        ],
         validators: [checkLiveTerminals, checkVirtualWorkspace, checkWorkspaceTrust],
         promptGenerator: (actionData: ActionData) => `kill the "${actionData.params?.shell}" shell.`,
     },

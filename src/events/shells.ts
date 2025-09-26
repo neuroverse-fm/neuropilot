@@ -1,9 +1,21 @@
-/**
- * Plan for shell events
- * 
- * These should store events for both tasks and terminals
- * 
- * Events list:
- * - onDidShellTerminate<TerminalSession> - Fires when a terminal is terminated
- * - onDidTaskFinish<void> - Fires when a task finished
- */
+import * as vscode from 'vscode';
+import { RCECancelEvent } from './utils';
+import { NEURO } from '../constants';
+
+export function notifyOnTerminalClose(terminal: string): RCECancelEvent {
+    const shell = NEURO.terminalRegistry.get(terminal);
+    const event = new RCECancelEvent({
+        reason: `the terminal ${terminal} was closed.`,
+    });
+    shell?.shellProcess?.on('close', event.fire);
+    return event;
+}
+
+export function notifyOnTaskFinish(): RCECancelEvent {
+    return new RCECancelEvent({
+        reason: 'the task finished.',
+        events: [
+            [vscode.tasks.onDidEndTask, null],
+        ],
+    });
+}
