@@ -5,7 +5,7 @@ import { logOutput } from './utils';
 
 interface DeprecatedSetting {
     old: string;
-    new: string | ((target?: vscode.ConfigurationTarget) => Promise<void>);
+    new: string | ((target: vscode.ConfigurationTarget) => Promise<void>);
 }
 
 /** Array of deprecated settings */
@@ -24,33 +24,46 @@ const DEPRECATED_SETTINGS: DeprecatedSetting[] = [
     },
     {
         old: 'includePattern',
-        async new(target?: vscode.ConfigurationTarget) {
+        async new(target: vscode.ConfigurationTarget) {
             const cfg = vscode.workspace.getConfiguration('neuropilot');
-            const config = getConfig<string>('includePattern')!;
+            const config = getTargetConfig<string>(cfg, 'includePattern', target)!;
             const newConfig = config.split('\n');
             await cfg.update('access.includePattern', newConfig, target);
         },
     },
     {
         old: 'excludePattern',
-        async new(target?: vscode.ConfigurationTarget) {
+        async new(target: vscode.ConfigurationTarget) {
             const cfg = vscode.workspace.getConfiguration('neuropilot');
-            const config = getConfig<string>('excludePattern')!;
+            const config = getTargetConfig<string>(cfg, 'excludePattern', target)!;
             const newConfig = config.split('\n');
             await cfg.update('access.excludePattern', newConfig, target);
         },
     },
     {
         old: 'allowUnsafePaths',
-        async new(target?: vscode.ConfigurationTarget) {
+        async new(target: vscode.ConfigurationTarget) {
             const cfg = vscode.workspace.getConfiguration('neuropilot');
-            const config = getConfig<boolean>('allowUnsafePaths')!;
+            const config = getTargetConfig<boolean>(cfg, 'allowUnsafePaths', target)!;
             await cfg.update('access.dotFiles', config, target);
             await cfg.update('access.externalFiles', config, target);
             await cfg.update('access.environmentVariables', config, target);
         },
     },
 ];
+
+function getTargetConfig<T>(config: vscode.WorkspaceConfiguration, key: string, target: vscode.ConfigurationTarget) {
+    switch (target) {
+        case vscode.ConfigurationTarget.Global:
+            return config.inspect(key)?.globalValue as T | undefined;
+        case vscode.ConfigurationTarget.Workspace:
+            return config.inspect(key)?.workspaceValue as T | undefined;
+        case vscode.ConfigurationTarget.WorkspaceFolder:
+            return config.inspect(key)?.workspaceFolderValue as T | undefined;
+        default:
+            return undefined;
+    }
+}
 
 /** Function to check deprecated settings */
 export async function checkDeprecatedSettings() {
