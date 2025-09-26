@@ -44,8 +44,6 @@ const DEPRECATED_SETTINGS: DeprecatedSetting[] = [
         old: 'allowUnsafePaths',
         async new(target?: vscode.ConfigurationTarget) {
             const cfg = vscode.workspace.getConfiguration('neuropilot');
-            await cfg.update('access.dotFiles', true, target);
-            await cfg.update('access.externalFiles', true, target);
             const config = getConfig<boolean>('allowUnsafePaths')!;
             await cfg.update('access.dotFiles', config, target);
             await cfg.update('access.externalFiles', config, target);
