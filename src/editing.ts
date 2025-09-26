@@ -1375,3 +1375,64 @@ export function moveNeuroCursorHere() {
 
     NEURO.client?.sendContext(`Vedal moved your cursor.\n\n${formatContext(cursorContext)}`);
 }
+
+/**
+ * Handler to send the currently selected text to Neuro.
+ */
+export async function handleSendSelectionToNeuro(): Promise<void> {
+    const editor = vscode.window.activeTextEditor;
+    if (!editor) {
+        vscode.window.showErrorMessage('No active text editor.');
+        return;
+    }
+    const document = editor.document;
+    if (!isPathNeuroSafe(document.fileName)) {
+        vscode.window.showErrorMessage(`${CONFIG.currentlyAsNeuroAPI} does not have permission to access this file.`);
+        return;
+    }
+    const selection = editor.selection;
+    if (selection.isEmpty) {
+        vscode.window.showInformationMessage('No text selected.');
+        return;
+    }
+    const relativePath = vscode.workspace.asRelativePath(document.uri);
+    const selectedText = document.getText(selection);
+    const fence = getFence(selectedText);
+    const startLine = selection.start.line + 1;
+    const startCol = selection.start.character + 1;
+    const endLine = selection.end.line + 1;
+    const endCol = selection.end.character + 1;
+    const message = `Vedal sent you his currently highlighted content from file ${relativePath}, lines ${startLine}:${startCol} to ${endLine}:${endCol} (line:column):\n\nContent:\n${fence}${document.languageId}\n${selectedText}\n${fence}`;
+
+    NEURO.client?.sendContext(message);
+    vscode.window.showInformationMessage('Selection sent to Neuro.');
+}
+
+/**
+ * Code action provider for sending selection to Neuro.
+ */
+class SendSelectionToNeuroCodeActionProvider implements vscode.CodeActionProvider {
+    provideCodeActions(document: vscode.TextDocument, range: vscode.Range | vscode.Selection): vscode.CodeAction[] | undefined {
+        if (range.isEmpty || !isPathNeuroSafe(document.fileName)) return;
+        const action = new vscode.CodeAction('Send selection to Neuro', vscode.CodeActionKind.QuickFix);
+        action.command = {
+            title: 'Send selection to Neuro',
+            command: 'neuropilot.sendSelectionToNeuro',
+        };
+        return [action];
+    }
+}
+
+/**
+ * Register the command and code action provider for sending selection to Neuro.
+ */
+export function registerSendSelectionToNeuro(context: vscode.ExtensionContext) {
+    context.subscriptions.push(
+        vscode.commands.registerCommand('neuropilot.sendSelectionToNeuro', handleSendSelectionToNeuro),
+        vscode.languages.registerCodeActionsProvider(
+            { scheme: 'file' },
+            new SendSelectionToNeuroCodeActionProvider(),
+            { providedCodeActionKinds: [vscode.CodeActionKind.QuickFix] },
+        ),
+    );
+}

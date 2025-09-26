@@ -21,7 +21,7 @@ import {
 } from '@shared/extension';
 import { registerChatParticipant } from '@/chat';
 import { registerUnsupervisedActions, registerUnsupervisedHandlers } from './unsupervised';
-import { registerSendSelectionToNeuro } from '@/file_actions';
+import { registerSendSelectionToNeuro } from '@/editing';
 
 export function activate(context: vscode.ExtensionContext) {
 

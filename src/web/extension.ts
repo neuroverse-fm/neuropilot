@@ -17,7 +17,7 @@ import {
     getHighlightDecorationRenderOptions,
 } from '@shared/extension';
 import { registerUnsupervisedActions, registerUnsupervisedHandlers } from './unsupervised';
-import { registerSendSelectionToNeuro } from '@/file_actions';
+import { registerSendSelectionToNeuro } from '@/editing';
 
 export function activate(context: vscode.ExtensionContext) {
     // Initialize common state
