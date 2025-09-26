@@ -330,6 +330,5 @@ export function getHighlightDecorationRenderOptions(): vscode.DecorationRenderOp
         overviewRulerColor: 'rgba(255, 85, 229, 1)',
         overviewRulerLane: vscode.OverviewRulerLane.Center,
         rangeBehavior: vscode.DecorationRangeBehavior.ClosedClosed,
-
     };
 }

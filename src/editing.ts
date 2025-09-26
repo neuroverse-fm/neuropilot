@@ -4,13 +4,14 @@ import { NEURO } from '@/constants';
 import { DiffRangeType, escapeRegExp, getDiffRanges, getFence, getPositionContext, getProperty, getVirtualCursor, showDiffRanges, isPathNeuroSafe, logOutput, NeuroPositionContext, setVirtualCursor, simpleFileName, substituteMatch, clearDecorations } from '@/utils';
 import { ActionData, actionValidationAccept, actionValidationFailure, ActionValidationResult, RCEAction, contextFailure, stripToActions, actionValidationRetry, contextNoAccess } from '@/neuro_client_helper';
 import { PERMISSIONS, getPermissionLevel, CONFIG, isActionEnabled } from '@/config';
+import type { JSONSchema7 } from 'json-schema';
 
 const CONTEXT_NO_ACCESS = 'You do not have permission to access this file.';
 const CONTEXT_NO_ACTIVE_DOCUMENT = 'No active document to edit.';
 
 type MatchOptions = 'firstInFile' | 'lastInFile' | 'firstAfterCursor' | 'lastBeforeCursor' | 'allInFile';
 const MATCH_OPTIONS: string[] = ['firstInFile', 'lastInFile', 'firstAfterCursor', 'lastBeforeCursor', 'allInFile'] as const;
-const POSITION_SCHEMA = {
+const POSITION_SCHEMA: JSONSchema7 = {
     type: 'object',
     properties: {
         line: { type: 'integer' },
@@ -28,7 +29,7 @@ interface Position {
     column: number;
     type: 'relative' | 'absolute';
 }
-const LINE_RANGE_SCHEMA = {
+const LINE_RANGE_SCHEMA: JSONSchema7 = {
     type: 'object',
     properties: {
         startLine: { type: 'integer', minimum: 1 },
@@ -196,6 +197,7 @@ export const editingActions = {
         description: 'Insert code at the specified position.'
             + ' Line and column numbers are one-based for "absolute" and zero-based for "relative".'
             + ' If no position is specified, your cursor\'s current position will be used.'
+            + ' Remember to add indents after newlines where appropriate.'
             + ' After inserting, your cursor will be placed at the end of the inserted text.'
             + ' Also make sure you use new lines and indentation appropriately.',
         schema: {
@@ -232,6 +234,7 @@ export const editingActions = {
         name: 'insert_lines',
         description: 'Insert code below a certain line.'
             + ' Defaults to your current cursor\'s location'
+            + ' Remember to add indents after newlines where appropriate.'
             + ' Your cursor will be moved to the end of the inserted line.', // TODO: Clarify cursor stuff again
         schema: {
             type: 'object',
@@ -478,7 +481,7 @@ export const editingActions = {
                 ...LINE_RANGE_SCHEMA.properties,
                 content: { type: 'string' },
             },
-            required: [...LINE_RANGE_SCHEMA.required, 'content'],
+            required: [...LINE_RANGE_SCHEMA.required!, 'content'],
             additionalProperties: false,
         },
         permissions: [PERMISSIONS.editActiveDocument],

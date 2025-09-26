@@ -835,6 +835,7 @@
 		"@stylistic/eslint-plugin": "^2.9.0",
 		"@types/eslint__js": "^8.42.3",
 		"@types/glob-to-regexp": "^0.4.4",
+		"@types/json-schema": "^7.0.15",
 		"@types/node": "^20",
 		"@types/vscode": "^1.95.0",
 		"@types/ws": "^8.18.0",
