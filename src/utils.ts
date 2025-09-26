@@ -122,10 +122,14 @@ function attemptConnection(currentAttempt: number, maxAttempts: number, interval
 }
 
 // Add a function to manually disconnect without auto-reconnection
-export function disconnectClient() {
+export async function disconnectClient() {
     shouldAutoReconnect = false;
     if (NEURO.client) {
         NEURO.client.disconnect();
+        if(!await waitFor(() => !NEURO.connected, 100, 5000)) {
+            logOutput('ERROR', 'Client took too long to disconnect');
+            vscode.window.showErrorMessage('Client could not disconnect.');
+        }
     }
     if (retryTimeout) {
         clearTimeout(retryTimeout);
@@ -135,8 +139,8 @@ export function disconnectClient() {
 
 // Add a function to manually reconnect
 export function reconnectClient() {
-    disconnectClient(); // Clean up existing connection
-    createClient(); // Start fresh connection
+    disconnectClient() // Clean up existing connection
+        .then(createClient); // Start fresh connection
 }
 
 const clientConnectedHandlers: (() => void)[] = [];
@@ -729,4 +733,13 @@ export async function showAPIMessage(type: 'disconnect' | 'failed' | 'connected'
         logOutput('ERROR', 'Error attempting to show an API connection message: ' + erm);
     }
     return;
+}
+
+export async function waitFor(predicate: () => boolean, interval: number, timeout?: number): Promise<boolean> {
+    const start = Date.now();
+    while (timeout === undefined || Date.now() - start < timeout) {
+        if (predicate()) return true;
+        await new Promise(resolve => setTimeout(resolve, interval));
+    }
+    return false;
 }
