@@ -10,7 +10,7 @@ import { checkVirtualWorkspace, checkWorkspaceTrust, logOutput } from '@/utils';
 import { CONFIG, getPermissionLevel, isActionEnabled, PermissionLevel, PERMISSIONS } from '@/config';
 import { handleRunTask } from '@/tasks';
 import { validate } from 'jsonschema';
-import { RCECancelEvent } from '@events/utils';
+import type { RCECancelEvent } from '@events/utils';
 
 /**
  * A prompt parameter can either be a string or a function that converts ActionData into a prompt string.

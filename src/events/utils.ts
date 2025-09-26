@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { ActionData } from '../neuro_client_helper';
+import { PromptGenerator } from '../rce';
 
 export function fireEvent(emitter: vscode.EventEmitter<unknown>, disposables: vscode.Disposable[]) {
     emitter.fire(undefined);
@@ -11,9 +11,9 @@ export function fireEvent(emitter: vscode.EventEmitter<unknown>, disposables: vs
 
 export interface RCECancelEventInitializer {
     /** The reason that will be used to send to Neuro-sama. */
-    reason?: string | ((data: ActionData) => string);
+    reason?: PromptGenerator;
     /** The reason that will be used to log the cancellation. */
-    logReason?: string | ((data: ActionData) => string);
+    logReason?: PromptGenerator;
     /** Events that will trigger the cancellation. If the predicate is null, the event will always trigger the cancellation. */
     events?: [vscode.Event<unknown>, ((data: unknown) => boolean) | null][];
 }
@@ -37,12 +37,12 @@ export class RCECancelEvent {
     /**
      * The reason that will be used to send to Neuro-sama.
      */
-    public readonly reason?: string | ((actionData: ActionData) => string);
+    public readonly reason?: PromptGenerator;
 
     /**
      * The reason that will be used to log the cancellation.
      */
-    public readonly logReason?: string | ((actionData: ActionData) => string);
+    public readonly logReason?: PromptGenerator;
 
     /**
      * Fires the event.
