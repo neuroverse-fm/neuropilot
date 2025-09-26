@@ -22,7 +22,7 @@ export class RCECancelEvent {
     /**
      * Private emitter constructed by the class constructor.
      */
-    private readonly _emitter: vscode.EventEmitter<unknown>;
+    private readonly emitter: vscode.EventEmitter<unknown>;
 
     /**
      * Publicly-exposed event.
@@ -49,7 +49,7 @@ export class RCECancelEvent {
      * @param data The data to provide in the fire.
      */
     public fire(data: unknown): void {
-        this._emitter.fire(data);
+        this.emitter.fire(data);
         this.disposable.dispose();
     }
 
@@ -58,8 +58,8 @@ export class RCECancelEvent {
      * @param init Initialization parameters.
      */
     constructor(init?: RCECancelEventInitializer) {
-        this._emitter = new vscode.EventEmitter<never>();
-        this.event = this._emitter.event;
+        this.emitter = new vscode.EventEmitter<never>();
+        this.event = this.emitter.event;
 
         // Subscribe to all events
         const disposables: vscode.Disposable[] = [];
@@ -74,7 +74,7 @@ export class RCECancelEvent {
         }
 
         // Clean up all disposables when this is disposed
-        this.disposable = vscode.Disposable.from(...disposables, this._emitter);
+        this.disposable = vscode.Disposable.from(...disposables, this.emitter);
 
         this.reason = init?.reason;
         this.logReason = init?.logReason;
