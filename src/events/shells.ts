@@ -7,7 +7,7 @@ export function notifyOnTerminalClose(terminal: string): RCECancelEvent {
     const event = new RCECancelEvent({
         reason: `the terminal ${terminal} was closed.`,
     });
-    shell?.shellProcess?.on('close', event.fire);
+    shell!.shellProcess!.on('close', event.fire);
     return event;
 }
 
