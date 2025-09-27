@@ -40,7 +40,8 @@ export function targetedFileLintingResolvedEvent(file: string): RCECancelEvent {
  * @param folder An absolute path to the folder.
  */
 export function targetedFolderLintingResolvedEvent(folder: string): RCECancelEvent {
-    const folderUri = vscode.Uri.file(folder);
+    const workspaceUri = getWorkspaceUri()!;
+    const folderUri = workspaceUri.with({ path: workspaceUri.path + '/' + folder });
 
     // Track diagnostics for files in this folder
     const previousDiagnosticsMap = new Map<string, vscode.Diagnostic[]>();
