@@ -517,7 +517,7 @@ export const editingActions = {
         },
         permissions: [PERMISSIONS.editActiveDocument],
         handler: handleRewriteAll,
-        cancelEvents: [commonCancelEvents[1]],
+        cancelEvents: [cancelOnDidChangeActiveTextEditor],
         validators: [checkCurrentFile, createStringValidator(['content'])],
         promptGenerator: (actionData: ActionData) => {
             const lineCount = actionData.params.content.trim().split('\n').length;
