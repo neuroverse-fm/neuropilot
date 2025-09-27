@@ -8,10 +8,24 @@ Changes between each version before then will not be listed.
 
 ## 2.2.0 <!-- Assuming we'll just put everything into the next minor release, change to 2.1.3 if we decide to release a patch first -->
 
+### New settings
+
+- `neuropilot.connection.*` category, which includes:
+  - `websocketUrl`, `gameName` and `initialContext` settings, which were moved from their `neuropilot.*` variants.
+    - The old settings have now been deprecated.
+  - `autoConnect`, which controls whether or not NeuroPilot will auto-connect to the Neuro API on startup.
+  - `retryAmount`, which dictates how many times NeuroPilot will attempt to *re*connect to the Neuro API. The _total_ amount of tries will be this value + 1. 
+  - `retryInterval`, which controls the amount of time to wait between each retry.
+
+### New commands
+
+- `neuropilot.disconnect` - Disconnects from the Neuro API without reconnecting.
+
 ### Added features
 
 - A tooltip will now show when hovering over Neuro-highlighted text, indicating that Neuro highlighted it, and how (either through finding text or manually).
 - There is now an option to send the current cursor selection to Neuro. This can be invoked either by command or through right-click context menu. These options will only appear when *your cursor* is highlighting code.
+- There is a new detector ran on startup to look for deprecated settings and if found, will ask you to migrate them. You can choose to not show that notice ever again by selecting the "Don't show again" option. This persists across sessions.
 
 ### Changes
 
@@ -19,6 +33,7 @@ Changes between each version before then will not be listed.
   - AHHHH MY EYES - Vedal
   - The specific colour used now is RGBA 202 22 175 1 as opposed to RGBA 255 255 0 1.
 - Some Copilot mode prompts for editing actions have been rewritten majorly to properly reflect the options available to Neuro.
+- Upon connection or disconnection from the API, the message that pops up now has extra buttons to either quickly re-/dis-connect or to change the Auto-Connect settings.
 
 ### Fixes
 
