@@ -4,13 +4,16 @@ import { NEURO } from '@/constants';
 import { DiffRangeType, escapeRegExp, getDiffRanges, getFence, getPositionContext, getProperty, getVirtualCursor, showDiffRanges, isPathNeuroSafe, logOutput, NeuroPositionContext, setVirtualCursor, simpleFileName, substituteMatch, clearDecorations, formatContext, filterFileContents } from '@/utils';
 import { ActionData, actionValidationAccept, actionValidationFailure, ActionValidationResult, RCEAction, contextFailure, stripToActions, actionValidationRetry, contextNoAccess } from '@/neuro_client_helper';
 import { PERMISSIONS, getPermissionLevel, CONFIG, isActionEnabled } from '@/config';
+import { createCursorPositionChangedEvent } from '@events/cursor';
+import { RCECancelEvent } from '@events/utils';
+import type { JSONSchema7 } from 'json-schema';
 
 const CONTEXT_NO_ACCESS = 'You do not have permission to access this file.';
 const CONTEXT_NO_ACTIVE_DOCUMENT = 'No active document to edit.';
 
 type MatchOptions = 'firstInFile' | 'lastInFile' | 'firstAfterCursor' | 'lastBeforeCursor' | 'allInFile';
-const MATCH_OPTIONS: string[] = ['firstInFile', 'lastInFile', 'firstAfterCursor', 'lastBeforeCursor', 'allInFile'] as const;
-const POSITION_SCHEMA = {
+const MATCH_OPTIONS: MatchOptions[] = ['firstInFile', 'lastInFile', 'firstAfterCursor', 'lastBeforeCursor', 'allInFile'] as const;
+const POSITION_SCHEMA: JSONSchema7 = {
     type: 'object',
     properties: {
         line: { type: 'integer' },
@@ -28,7 +31,7 @@ interface Position {
     column: number;
     type: 'relative' | 'absolute';
 }
-const LINE_RANGE_SCHEMA = {
+const LINE_RANGE_SCHEMA: JSONSchema7 = {
     type: 'object',
     properties: {
         startLine: { type: 'integer', minimum: 1 },
@@ -165,6 +168,29 @@ function createLineRangeValidator(path = '') {
     };
 }
 
+const cancelOnDidChangeTextDocument = () => new RCECancelEvent({
+    reason: 'the active document was changed.',
+    events: [
+        [vscode.workspace.onDidChangeTextDocument, null],
+    ],
+});
+const cancelOnDidChangeActiveTextEditor = () => new RCECancelEvent({
+    reason: 'you\'ve switched files.',
+    events: [
+        [vscode.window.onDidChangeActiveTextEditor, null],
+    ],
+});
+
+const commonCancelEvents: (() => RCECancelEvent)[] = [
+    cancelOnDidChangeTextDocument,
+    cancelOnDidChangeActiveTextEditor,
+];
+
+const commonCancelEventsWithCursor: (() => RCECancelEvent)[] = [
+    ...commonCancelEvents,
+    createCursorPositionChangedEvent,
+];
+
 export const editingActions = {
     place_cursor: {
         name: 'place_cursor',
@@ -172,7 +198,8 @@ export const editingActions = {
         schema: POSITION_SCHEMA,
         permissions: [PERMISSIONS.editActiveDocument],
         handler: handlePlaceCursor,
-        validator: [checkCurrentFile, createPositionValidator()],
+        validators: [checkCurrentFile, createPositionValidator()],
+        cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `${actionData.params.type === 'absolute' ? 'place her cursor at' : 'move her cursor by'} (${actionData.params.line}:${actionData.params.column}).`,
     },
     get_cursor: {
@@ -180,7 +207,8 @@ export const editingActions = {
         description: 'Get your current cursor position and the text surrounding it.',
         permissions: [PERMISSIONS.editActiveDocument],
         handler: handleGetCursor,
-        validator: [checkCurrentFile],
+        validators: [checkCurrentFile],
+        cancelEvents: commonCancelEventsWithCursor,
         promptGenerator: 'get her current cursor position and the text surrounding it.',
     },
     get_content: {
@@ -188,14 +216,18 @@ export const editingActions = {
         description: 'Get the contents of the current file.',
         permissions: [PERMISSIONS.editActiveDocument],
         handler: handleGetContent,
+        cancelEvents: [
+            cancelOnDidChangeTextDocument,
+        ],
         promptGenerator: 'get the current file\'s contents.',
-        validator: [checkCurrentFile],
+        validators: [checkCurrentFile],
     },
     insert_text: {
         name: 'insert_text',
         description: 'Insert code at the specified position.'
             + ' Line and column numbers are one-based for "absolute" and zero-based for "relative".'
             + ' If no position is specified, your cursor\'s current position will be used.'
+            + ' Remember to add indents after newlines where appropriate.'
             + ' After inserting, your cursor will be placed at the end of the inserted text.'
             + ' Also make sure you use new lines and indentation appropriately.',
         schema: {
@@ -209,7 +241,13 @@ export const editingActions = {
         },
         permissions: [PERMISSIONS.editActiveDocument],
         handler: handleInsertText,
-        validator: [checkCurrentFile, createPositionValidator('position'), createStringValidator(['text'])],
+        cancelEvents: [
+            ...commonCancelEvents,
+            (actionData: ActionData) => {
+                return actionData.params.position ? null : createCursorPositionChangedEvent();
+            },
+        ],
+        validators: [checkCurrentFile, createPositionValidator('position'), createStringValidator(['text'])],
         promptGenerator: (actionData: ActionData) => {
             const lineCount = actionData.params.text.trim().split('\n').length;
             let text = `insert ${lineCount} line${lineCount === 1 ? '' : 's'} of code`;
@@ -232,6 +270,8 @@ export const editingActions = {
         name: 'insert_lines',
         description: 'Insert code below a certain line.'
             + ' Defaults to your current cursor\'s location'
+            + ' The insertUnder parameter is one-based, not zero-based.'
+            + ' Remember to add indents after newlines where appropriate.'
             + ' Your cursor will be moved to the end of the inserted line.', // TODO: Clarify cursor stuff again
         schema: {
             type: 'object',
@@ -249,7 +289,13 @@ export const editingActions = {
         },
         permissions: [PERMISSIONS.editActiveDocument],
         handler: handleInsertLines,
-        validator: [checkCurrentFile, createStringValidator(['lines'])],
+        cancelEvents: [
+            ...commonCancelEvents,
+            (actionData: ActionData) => {
+                return actionData.params.position ? null : createCursorPositionChangedEvent();
+            },
+        ],
+        validators: [checkCurrentFile, createStringValidator(['lines'])],
         promptGenerator: (actionData: ActionData) => {
             const lines = actionData.params.text.trim().split('\n').length;
             const insertUnder = actionData.params.insertUnder;
@@ -275,7 +321,8 @@ export const editingActions = {
         },
         permissions: [PERMISSIONS.editActiveDocument],
         handler: handleReplaceText,
-        validator: [checkCurrentFile, createStringValidator(['find', 'replaceWith']), createLineRangeValidator('lineRange')],
+        cancelEvents: [cancelOnDidChangeActiveTextEditor],
+        validators: [checkCurrentFile, createStringValidator(['find', 'replaceWith']), createLineRangeValidator('lineRange')],
         promptGenerator: (actionData: ActionData) => {
             let text = 'replace ';
             const target = actionData.params.useRegex ? escapeRegExp(actionData.params.find) : actionData.params.find;
@@ -329,7 +376,8 @@ export const editingActions = {
         },
         permissions: [PERMISSIONS.editActiveDocument],
         handler: handleDeleteText,
-        validator: [checkCurrentFile, createStringValidator(['find']), createLineRangeValidator('lineRange')],
+        cancelEvents: [cancelOnDidChangeActiveTextEditor],
+        validators: [checkCurrentFile, createStringValidator(['find']), createLineRangeValidator('lineRange')],
         promptGenerator: (actionData: ActionData) => {
             let text = 'delete ';
             const target = actionData.params.useRegex ? escapeRegExp(actionData.params.find) : actionData.params.find;
@@ -389,7 +437,8 @@ export const editingActions = {
         },
         permissions: [PERMISSIONS.editActiveDocument],
         handler: handleFindText,
-        validator: [checkCurrentFile, createStringValidator(['find']), createLineRangeValidator('lineRange')],
+        cancelEvents: [cancelOnDidChangeActiveTextEditor],
+        validators: [checkCurrentFile, createStringValidator(['find']), createLineRangeValidator('lineRange')],
         promptGenerator: (actionData: ActionData) => {
             let text = 'find ';
             const target = actionData.params.useRegex ? escapeRegExp(actionData.params.find) : actionData.params.find;
@@ -437,7 +486,8 @@ export const editingActions = {
             + ' If this doesn\'t work, tell Vedal to focus your VS Code window.',
         permissions: [PERMISSIONS.editActiveDocument],
         handler: handleUndo,
-        validator: [checkCurrentFile],
+        cancelEvents: commonCancelEvents,
+        validators: [checkCurrentFile],
         promptGenerator: 'undo the last action.',
     },
     save: {
@@ -445,7 +495,16 @@ export const editingActions = {
         description: 'Manually save the currently open document.',
         permissions: [PERMISSIONS.editActiveDocument],
         handler: handleSave,
-        validator: [checkCurrentFile],
+        cancelEvents: [
+            ...commonCancelEvents,
+            () => new RCECancelEvent({
+                reason: 'the active document was saved.',
+                events: [
+                    [vscode.workspace.onDidSaveTextDocument, null],
+                ],
+            }),
+        ],
+        validators: [checkCurrentFile],
         promptGenerator: 'save.',
     },
     rewrite_all: {
@@ -461,7 +520,8 @@ export const editingActions = {
         },
         permissions: [PERMISSIONS.editActiveDocument],
         handler: handleRewriteAll,
-        validator: [checkCurrentFile, createStringValidator(['content'])],
+        cancelEvents: [cancelOnDidChangeActiveTextEditor],
+        validators: [checkCurrentFile, createStringValidator(['content'])],
         promptGenerator: (actionData: ActionData) => {
             const lineCount = actionData.params.content.trim().split('\n').length;
             return `rewrite the entire file with ${lineCount} line${lineCount === 1 ? '' : 's'} of content.`;
@@ -478,12 +538,13 @@ export const editingActions = {
                 ...LINE_RANGE_SCHEMA.properties,
                 content: { type: 'string' },
             },
-            required: [...LINE_RANGE_SCHEMA.required, 'content'],
+            required: [...LINE_RANGE_SCHEMA.required!, 'content'],
             additionalProperties: false,
         },
         permissions: [PERMISSIONS.editActiveDocument],
         handler: handleRewriteLines,
-        validator: [checkCurrentFile, createLineRangeValidator(), createStringValidator(['content'])],
+        cancelEvents: commonCancelEvents,
+        validators: [checkCurrentFile, createLineRangeValidator(), createStringValidator(['content'])],
         promptGenerator: (actionData: ActionData) => {
             const lineCount = actionData.params.content.trim().split('\n').length;
             return `rewrite lines ${actionData.params.startLine}-${actionData.params.endLine} with ${lineCount} line${lineCount === 1 ? '' : 's'} of content.`;
@@ -497,7 +558,8 @@ export const editingActions = {
         schema: LINE_RANGE_SCHEMA,
         permissions: [PERMISSIONS.editActiveDocument],
         handler: handleDeleteLines,
-        validator: [checkCurrentFile, createLineRangeValidator()],
+        cancelEvents: commonCancelEvents,
+        validators: [checkCurrentFile, createLineRangeValidator()],
         promptGenerator: (actionData: ActionData) => {
             return `delete lines ${actionData.params.startLine}-${actionData.params.endLine}.`;
         },
@@ -511,7 +573,8 @@ export const editingActions = {
         schema: LINE_RANGE_SCHEMA,
         permissions: [PERMISSIONS.editActiveDocument],
         handler: handleHighlightLines,
-        validator: [checkCurrentFile, createLineRangeValidator()],
+        cancelEvents: commonCancelEvents,
+        validators: [checkCurrentFile, createLineRangeValidator()],
         promptGenerator: (actionData: ActionData) => `highlight lines ${actionData.params.startLine}-${actionData.params.endLine}.`,
     },
     get_user_selection: {
@@ -520,7 +583,7 @@ export const editingActions = {
             + ' This will not move your own cursor.',
         permissions: [PERMISSIONS.getUserSelection, PERMISSIONS.editActiveDocument],
         handler: handleGetUserSelection,
-        validator: [checkCurrentFile],
+        validators: [checkCurrentFile],
         promptGenerator: 'get your cursor position and surrounding text.',
     },
 } satisfies Record<string, RCEAction>;
@@ -1371,4 +1434,70 @@ export function moveNeuroCursorHere() {
     const cursorContext = getPositionContext(editor.document, editor.selection.active);
 
     NEURO.client?.sendContext(`Vedal moved your cursor.\n\n${formatContext(cursorContext)}`);
+}
+
+/**
+ * Handler to send the currently selected text to Neuro.
+ */
+export async function handleSendSelectionToNeuro(): Promise<void> {
+    if (!NEURO.connected) {
+        logOutput('ERROR', `Attempted to send code selection to ${CONFIG.currentlyAsNeuroAPI} while disconnected.`);
+        vscode.window.showErrorMessage('Not connected to Neuro API.');
+        return;
+    }
+    const editor = vscode.window.activeTextEditor;
+    if (!editor) {
+        vscode.window.showErrorMessage('No active text editor.');
+        return;
+    }
+    const document = editor.document;
+    if (!isPathNeuroSafe(document.fileName)) {
+        vscode.window.showErrorMessage(`${CONFIG.currentlyAsNeuroAPI} does not have permission to access this file.`);
+        return;
+    }
+    const selection = editor.selection;
+    if (selection.isEmpty) {
+        vscode.window.showInformationMessage('No text selected.');
+        return;
+    }
+    const relativePath = vscode.workspace.asRelativePath(document.uri);
+    const selectedText = document.getText(selection);
+    const fence = getFence(selectedText);
+    const startLine = selection.start.line + 1;
+    const startCol = selection.start.character + 1;
+    const endLine = selection.end.line + 1;
+    const endCol = selection.end.character + 1;
+    const message = `Vedal sent you his currently highlighted content from file ${relativePath}, lines ${startLine}:${startCol} to ${endLine}:${endCol} (line:column):\n\nContent:\n${fence}${document.languageId}\n${selectedText}\n${fence}`;
+
+    NEURO.client?.sendContext(message);
+    vscode.window.showInformationMessage('Selection sent to Neuro.');
+}
+
+/**
+ * Code action provider for sending selection to Neuro.
+ */
+class SendSelectionToNeuroCodeActionProvider implements vscode.CodeActionProvider {
+    provideCodeActions(document: vscode.TextDocument, range: vscode.Range | vscode.Selection): vscode.CodeAction[] | undefined {
+        if (range.isEmpty || !isPathNeuroSafe(document.fileName)) return;
+        const action = new vscode.CodeAction('Send selection to Neuro', vscode.CodeActionKind.QuickFix);
+        action.command = {
+            title: 'Send selection to Neuro',
+            command: 'neuropilot.sendSelectionToNeuro',
+        };
+        return [action];
+    }
+}
+
+/**
+ * Register the command and code action provider for sending selection to Neuro.
+ */
+export function registerSendSelectionToNeuro(context: vscode.ExtensionContext) {
+    context.subscriptions.push(
+        vscode.commands.registerCommand('neuropilot.sendSelectionToNeuro', handleSendSelectionToNeuro),
+        vscode.languages.registerCodeActionsProvider(
+            { scheme: 'file' },
+            new SendSelectionToNeuroCodeActionProvider(),
+            { providedCodeActionKinds: [vscode.CodeActionKind.QuickFix] },
+        ),
+    );
 }

@@ -40,6 +40,8 @@
     "neuropilot.hideCopilotRequests": false,
     "neuropilot.currentlyAsNeuroAPI": "Neuro",
     "neuropilot.cursorFollowsNeuro": false,
+    "neuropilot.connection.autoConnect": true,
+    "neuropilot.connection.retryAmount": 1,
     // Debug engine override for GitHub Copilot
     "github.copilot.advanced": {
         "debug.overrideEngine": "someRandomString"
