@@ -1,11 +1,13 @@
 # Copilot Instructions for NeuroPilot
 
 ## Project Purpose
+
 - **NeuroPilot** is a Visual Studio Code extension that enables Neuro-sama (or compatible AI) to act as a coding copilot or take full control of the editor, with fine-grained, user-configurable permissions.
 - The extension is designed for both collaborative (Copilot) and autonomous (Autopilot) AI coding, with a strong emphasis on security, user control, and transparency.
 - All permissions are off by default except for cookie requests. Security is paramount: dotfiles and files outside the workspace are inaccessible unless explicitly allowed.
 
 ## Coding Style
+
 - **Language:** TypeScript (with some JS interop), targeting VS Code APIs.
 - **Formatting:**
   - 4-space indentation
@@ -35,6 +37,7 @@
   - Summarize only the final code diffs, not intermediate steps
 
 ## General Practices
+
 - Use TypeScript types and interfaces for safety and clarity
 - Separate desktop and web extension logic
 - All user-facing strings and prompts should be clear, friendly, and sometimes humorous
@@ -44,6 +47,7 @@
 - Code should be modular, with clear separation of concerns
 
 ## When in Doubt
+
 - Prefer explicitness and safety over cleverness
 - Ask for user approval for any potentially destructive or security-sensitive action
 - Follow the principle of least privilege: only enable what is necessary
