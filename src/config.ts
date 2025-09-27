@@ -165,6 +165,12 @@ export async function checkDeprecatedSettings() {
     }
 }
 
+//#region Types
+
+export type CursorPositionContextStyle = 'off' | 'inline' | 'lineAndColumn' | 'both';
+
+//#endregion
+
 /** Permission level enums */
 export const enum PermissionLevel {
     OFF = 0,
@@ -237,7 +243,7 @@ export interface Permission {
 /** Collection of strings for use in {@link actionResultNoPermission}. */
 class Permissions {
     get openFiles() { return { id: 'openFiles', infinitive: 'open files' }; }
-    get editActiveDocument() { return { id: 'editActiveDocument', infinitive: 'edit documents' }; }
+    get editActiveDocument() { return { id: 'editActiveDocument', infinitive: 'edit or view documents' }; }
     get create() { return { id: 'create', infinitive: 'create files or folders' }; }
     get rename() { return { id: 'rename', infinitive: 'rename files or folders' }; }
     get delete() { return { id: 'delete', infinitive: 'delete files or folders' }; }
@@ -250,6 +256,7 @@ class Permissions {
     get gitConfigs() { return { id: 'gitConfigs', infinitive: 'edit the Git configuration' }; }
     get terminalAccess() { return { id: 'terminalAccess', infinitive: 'access the terminal' }; }
     get accessLintingAnalysis() { return { id: 'accessLintingAnalysis', infinitive: 'view linting problems' }; }
+    get getUserSelection() { return { id: 'getUserSelection', infinitive: 'get Vedal\'s cursor' }; }
 }
 
 export const PERMISSIONS = new Permissions();
@@ -273,7 +280,7 @@ class Config {
     get defaultOpenDocsWindow(): string { return getConfig('defaultOpenDocsWindow')!; }
     get disabledActions(): string[] { return getConfig('disabledActions')!; }
     get sendContentsOnFileChange(): boolean { return getConfig('sendContentsOnFileChange')!; }
-    get cursorPositionContextStyle(): string { return getConfig('cursorPositionContextStyle')!; }
+    get cursorPositionContextStyle(): CursorPositionContextStyle { return getConfig('cursorPositionContextStyle')!; }
     get lineNumberContextFormat(): string { return getConfig('lineNumberContextFormat')!; }
     get enableCancelEvents(): boolean { return getConfig('enableCancelEvents')!; }
 

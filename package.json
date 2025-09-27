@@ -418,6 +418,7 @@
 								"get_files",
 								"get_folder_lint_problems",
 								"get_git_config",
+								"get_user_selection",
 								"get_workspace_lint_problems",
 								"git_blame",
 								"git_log",
@@ -440,6 +441,7 @@
 								"rename_file_or_folder",
 								"rename_git_remote",
 								"replace_text",
+								"replace_user_selection",
 								"request_cookie",
 								"rewrite_all",
 								"rewrite_lines",
@@ -706,6 +708,21 @@
 							"Execute without oversight."
 						],
 						"markdownDescription": "Allow Neuro to get access to linting problems within loaded files."
+					},
+					"neuropilot.permission.getUserSelection": {
+						"type": "string",
+						"default": "Off",
+						"enum": [
+							"Off",
+							"Copilot",
+							"Autopilot"
+						],
+						"enumDescriptions": [
+							"Disable this permission.",
+							"Require approval before execution.",
+							"Execute without oversight."
+						],
+						"markdownDescription": "Allow Neuro to see your cursor position and selection within Neuro-safe files."
 					},
 					"neuropilot.access.dotFiles": {
 						"type": "boolean",

@@ -17,6 +17,7 @@ Changes between each version before then will not be listed.
   - `retryAmount`, which dictates how many times NeuroPilot will attempt to *re*connect to the Neuro API. The _total_ amount of tries will be this value + 1. 
   - `retryInterval`, which controls the amount of time to wait between each retry.
 - `neuropilot.enableCancelEvents` - Whether or not to enable cancel events. See below for an explainer.
+- New permission for getting the user's cursor / selection: `neuropilot.permission.getUserSelection`
 
 ### New commands
 
@@ -33,6 +34,9 @@ Changes between each version before then will not be listed.
   - This automatically cancels Neuro's action requests if certain events happen.
   - Example: If Neuro wants to insert text, that request will auto-cancel if the active file is switched.
   - You can disable this with the new `Enable Cancel Events` setting (defaulted to on).
+- Neuro can now get and replace the user's current selection.
+  - This only works in Neuro-safe files.
+  - This requires the new permissions *Get User Selection* and *Edit Active Document*.
 
 ### Changes
 
@@ -41,12 +45,16 @@ Changes between each version before then will not be listed.
   - The specific colour used now is RGBA 202 22 175 1 as opposed to RGBA 255 255 0 1.
 - Some Copilot mode prompts for editing actions have been rewritten majorly to properly reflect the options available to Neuro.
 - Upon connection or disconnection from the API, the message that pops up now has extra buttons to either quickly re-/dis-connect or to change the Auto-Connect settings.
+- Clarified whose cursor will be moved in action descriptions and contexts.
+- Context returned from editing actions now uses a common format.
 
 ### Fixes
 
 - Fixed automatically opening files created by Neuro when she only has Copilot permission for opening files.
 - `rename_git_remote` now has a Git extension validator attached to it, matching all other Git actions.
 - Fixed Neuro not being able to create a terminal that was killed by the user before.
+- Usage of CRLF and LF in context was inconsistent across actions, and sometimes even inconsistent within the same context. This has now (hopefully) been fixed to only use LF.
+- Line numbers should now appear for all actions.
 
 ## 2.1.2
 

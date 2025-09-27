@@ -4,7 +4,7 @@ import globToRegExp from 'glob-to-regexp';
 import { fileTypeFromBuffer } from 'file-type';
 
 import { NEURO } from '@/constants';
-import { ACCESS, CONFIG, CONNECTION, getPermissionLevel, PERMISSIONS } from '@/config';
+import { ACCESS, CONFIG, CONNECTION, CursorPositionContextStyle, getPermissionLevel, PERMISSIONS } from '@/config';
 
 import { ActionValidationResult, ActionData, actionValidationAccept, actionValidationFailure } from '@/neuro_client_helper';
 import assert from 'node:assert';
@@ -169,54 +169,85 @@ export function filterFileContents(contents: string): string {
 }
 
 export interface NeuroPositionContext {
-    /** The context before the range. */
+    /** The context before the cursor, or the entire context if the cursor is not defined. */
     contextBefore: string;
-    /** The context after the range. */
+    /** The context after the range, or an empty string if the cursor is not defined. */
     contextAfter: string;
-    /** The context between the range. */
-    contextBetween: string;
     /** The zero-based line where {@link contextBefore} starts. */
     startLine: number;
     /** The zero-based line where {@link contextAfter} ends. */
     endLine: number;
     /** The number of total lines in the file. */
     totalLines: number;
+    /** `true` if the cursor is defined and inside the context, `false` otherwise. */
+    cursorDefined: boolean;
+}
+
+interface NeuroPositionContextOptions {
+    /** The position of the cursor in the document. */
+    cursorPosition?: vscode.Position;
+    /** The start of the range around which to get the context. Defaults to the start of the document if not provided. */
+    position?: vscode.Position;
+    /** The end of the range around which to get the context. If not provided, defaults to {@link position}, or the end of the document if {@link position} is not provided. */
+    position2?: vscode.Position;
 }
 
 /**
  * Gets the context around a specified range in a document.
+ * If no range is specified, gets the entire document.
+ * Do not use the result of this for position calculations, as the file is filtered to remove Windows-style line endings.
  * @param document The document to get the context from.
- * @param position The start of the range around which to get the context.
- * @param position2 The end of the range around which to get the context. If not provided, defaults to {@link position}.
+ * @param options The options for getting the context. If passed a {@link vscode.Position}, it is used as `cursorPosition`, `position` and `position2`.
  * @returns The context around the specified range. The amount of lines before and after the range is configurable in the settings.
  */
-export function getPositionContext(document: vscode.TextDocument, position: vscode.Position, position2?: vscode.Position): NeuroPositionContext {
+export function getPositionContext(document: vscode.TextDocument, options: NeuroPositionContextOptions | vscode.Position): NeuroPositionContext {
     const beforeContextLength = CONFIG.beforeContext;
     const afterContextLength = CONFIG.afterContext;
 
-    if (position2 === undefined) {
-        position2 = position;
+    if (options instanceof vscode.Position) {
+        options = { cursorPosition: options, position: options, position2: options };
     }
-    if (position2.isBefore(position)) {
+
+    if (options.position2 === undefined) {
+        options.position2 = options.position;
+    }
+    if (options.position === undefined || options.position2 === undefined) { // Second check is redundant but the compiler wants it
+        options.position = new vscode.Position(0, 0);
+        options.position2 = new vscode.Position(document.lineCount - 1, document.lineAt(document.lineCount - 1).text.length);
+    }
+    if (options.position2.isBefore(options.position)) {
         // Swap the positions if position2 is before position
-        const temp = position;
-        position = position2;
-        position2 = temp;
+        const temp = options.position;
+        options.position = options.position2;
+        options.position2 = temp;
     }
 
-    const startLine = Math.max(0, position.line - beforeContextLength);
-    const contextBefore = document.getText(new vscode.Range(new vscode.Position(startLine, 0), position));
-    const endLine = Math.min(document.lineCount - 1, position2.line + afterContextLength);
-    const contextAfter = document.getText(new vscode.Range(position2, new vscode.Position(endLine, document.lineAt(endLine).text.length))).replace(/\r\n/g, '\n');
-    const contextBetween = document.getText(new vscode.Range(position, position2));
+    const startLine = Math.max(0, options.position.line - beforeContextLength);
+    const endLine = Math.min(document.lineCount - 1, options.position2.line + afterContextLength);
 
+    // If the cursor is defined and inside the range, split the context into before and after the cursor
+    if (options.cursorPosition && options.cursorPosition.line >= startLine && options.cursorPosition.line <= endLine) {
+        const contextBefore = document.getText(new vscode.Range(new vscode.Position(startLine, 0), options.cursorPosition));
+        const contextAfter = document.getText(new vscode.Range(options.cursorPosition, new vscode.Position(endLine, document.lineAt(endLine).text.length)));
+        return {
+            contextBefore: filterFileContents(contextBefore),
+            contextAfter: filterFileContents(contextAfter),
+            startLine: startLine,
+            endLine: endLine,
+            totalLines: document.lineCount,
+            cursorDefined: true,
+        };
+    }
+
+    // If the cursor is not defined or not inside the range, return the entire context in contextBefore
+    const contextBefore = document.getText(new vscode.Range(new vscode.Position(startLine, 0), new vscode.Position(endLine, document.lineAt(endLine).text.length)));
     return {
         contextBefore: filterFileContents(contextBefore),
-        contextAfter: filterFileContents(contextAfter),
-        contextBetween: filterFileContents(contextBetween),
+        contextAfter: '',
         startLine: startLine,
         endLine: endLine,
         totalLines: document.lineCount,
+        cursorDefined: false,
     };
 }
 
@@ -746,4 +777,58 @@ export async function waitFor(predicate: () => boolean, interval: number, timeou
         await new Promise(resolve => setTimeout(resolve, interval));
     }
     return false;
+}
+
+/**
+ * Formats the context for sending to Neuro.
+ * Assumes the cursor is at the end of `contextBefore` + `contextBetween` and at the start of `contextAfter`.
+ * @param context The context to format.
+ * @param overrideCursorStyle If provided, overrides the cursor style setting for this context.
+ * @returns The formatted context.
+ */
+export function formatContext(context: NeuroPositionContext, overrideCursorStyle: CursorPositionContextStyle | undefined = undefined): string {
+    const fence = getFence(context.contextBefore + context.contextAfter);
+    const rawContextBefore = context.contextBefore;
+    const rawContextAfter = context.contextAfter;
+    const lineNumberContextFormat = CONFIG.lineNumberContextFormat;
+    const lineNumberNote = lineNumberContextFormat.includes('{n}') ? 'Note that line numbers are not part of the source code. ' : '';
+
+    let n = 1;
+    let contextArray = [];
+    for (const line of rawContextBefore.split(/\r?\n/)) {
+        contextArray.push(lineNumberContextFormat.replace('{n}', n.toString()) + line);
+        n++;
+    }
+    const contextBefore = contextArray.join('\n');
+    contextArray = [];
+
+    let first = true;
+    for (const line of rawContextAfter.split(/\r?\n/)) {
+        if (first) {
+            contextArray.push(line);
+            first = false;
+            continue;
+        }
+        contextArray.push(lineNumberContextFormat.replace('{n}', n.toString()) + line);
+        n++;
+    }
+    const contextAfter = contextArray.join('\n');
+
+    let effectiveCursorStyle = overrideCursorStyle ?? CONFIG.cursorPositionContextStyle;
+    if (!context.cursorDefined && effectiveCursorStyle === 'both')
+        effectiveCursorStyle = 'lineAndColumn';
+    if (!context.cursorDefined && effectiveCursorStyle === 'inline')
+        effectiveCursorStyle = 'off';
+
+    const cursor = getVirtualCursor()!;
+    const cursorText = ['inline', 'both'].includes(effectiveCursorStyle) && context.cursorDefined
+        ? '<<<|>>>'
+        : '';
+    const cursorNote =
+        effectiveCursorStyle === 'inline' ? 'Your cursor\'s position is denoted by `<<<|>>>`. '
+        : effectiveCursorStyle === 'lineAndColumn' ? `Your cursor is at ${cursor.line + 1}:${cursor.character + 1}. `
+        : effectiveCursorStyle === 'both' ? `Your cursor is at ${cursor.line + 1}:${cursor.character + 1}, denoted by \`<<<|>>>\`. `
+        : '';
+
+    return `File context for lines ${context.startLine + 1}-${context.endLine + 1} of ${context.totalLines}. ${cursorNote}${lineNumberNote}Content:\n\n${fence}\n${contextBefore}${cursorText}${contextAfter}\n${fence}`;
 }

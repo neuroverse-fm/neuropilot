@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 
 import { NEURO } from '@/constants';
-import { filterFileContents, getFence, getVirtualCursor, getWorkspacePath, getWorkspaceUri, isBinary, isPathNeuroSafe, logOutput, normalizePath } from '@/utils';
+import { formatContext, getFence, getPositionContext, getVirtualCursor, getWorkspacePath, getWorkspaceUri, isBinary, isPathNeuroSafe, logOutput, normalizePath } from '@/utils';
 import { ActionData, contextNoAccess, RCEAction, actionValidationFailure, actionValidationAccept, ActionValidationResult, stripToActions } from '@/neuro_client_helper';
 import { CONFIG, PERMISSIONS, PermissionLevel, getPermissionLevel, isActionEnabled } from '@/config';
 import { targetedFileCreatedEvent, targetedFileDeletedEvent } from '@events/files';
@@ -495,11 +495,9 @@ export function handleOpenFile(actionData: ActionData): string | undefined {
 
             // Usually handled by editorChangedHandler in editing.ts, except if this setting is off
             if (!CONFIG.sendContentsOnFileChange) {
-                const cursorOffset = document.offsetAt(getVirtualCursor() ?? new vscode.Position(0, 0));
-                let text = document.getText();
-                text = text.slice(0, cursorOffset) + '<<<|>>>' + text.slice(cursorOffset);
-                const fence = getFence(text);
-                NEURO.client?.sendContext(`Opened file ${relativePath}\n\nContent (cursor position denoted by \`<<<|>>>\`):\n\n${fence}${document.languageId}\n${filterFileContents(text)}\n${fence}`);
+                const cursor = getVirtualCursor()!;
+                const cursorContext = getPositionContext(document, cursor);
+                NEURO.client?.sendContext(formatContext(cursorContext));
             }
         }
         catch (erm: unknown) {
