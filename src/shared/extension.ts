@@ -7,10 +7,11 @@ import { registerChatResponseHandler } from '@/chat';
 import { ACCESS, checkDeprecatedSettings, CONFIG, CONNECTION } from '@/config';
 import { explainWithNeuro, fixWithNeuro, NeuroCodeActionsProvider, sendDiagnosticsDiff } from '@/lint_problems';
 import { editorChangeHandler, fileSaveListener, moveNeuroCursorHere, toggleSaveAction, workspaceEditHandler } from '@/editing';
-import { emergencyDenyRequests, acceptRceRequest, denyRceRequest, revealRceNotification } from '@/rce';
+import { emergencyDenyRequests, acceptRceRequest, denyRceRequest, revealRceNotification, clearRceRequest } from '@/rce';
 import type { GitExtension } from '@typing/git';
 import { getGitExtension } from '@/git';
 import { openDocsOnTarget, registerDocsCommands, registerDocsLink } from './docs';
+import { moveCursorEmitterDiposable } from '@events/cursor';
 
 // Shared commands
 export function registerCommonCommands() {
@@ -76,6 +77,7 @@ export function setupCommonEventHandlers() {
             }
         }),
         vscode.extensions.onDidChange(obtainExtensionState),
+        moveCursorEmitterDiposable,
     ];
 
     return handlers;
@@ -262,6 +264,7 @@ export function obtainExtensionState(): void {
 
 export function deactivate() {
     NEURO.client?.sendContext(`NeuroPilot is being deactivated, or ${CONNECTION.gameName} is closing. See you next time, ${NEURO.currentController}!`);
+    clearRceRequest();
 }
 
 export function getCursorDecorationRenderOptions(): vscode.DecorationRenderOptions {

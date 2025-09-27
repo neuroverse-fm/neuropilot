@@ -9,6 +9,7 @@ import { ACCESS, CONFIG, CONNECTION, getPermissionLevel, PERMISSIONS } from '@/c
 import { ActionValidationResult, ActionData, actionValidationAccept, actionValidationFailure } from '@/neuro_client_helper';
 import assert from 'node:assert';
 import { patienceDiff } from './patience_diff';
+import { fireCursorPositionChangedEvent } from '@events/cursor';
 
 export const REGEXP_ALWAYS = /^/;
 export const REGEXP_NEVER = /^\b$/;
@@ -442,6 +443,9 @@ export function setVirtualCursor(position?: vscode.Position | null) {
         editor.selection = new vscode.Selection(cursorPosition, cursorPosition);
         editor.revealRange(editor.selection, vscode.TextEditorRevealType.InCenterIfOutsideViewport);
     }
+
+    // reusing the same code here as in getVirtualCursor()
+    fireCursorPositionChangedEvent(getVirtualCursor());
 
     return;
 

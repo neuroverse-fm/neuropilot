@@ -4,6 +4,8 @@ import { NEURO } from '@/constants';
 import { filterFileContents, getFence, getVirtualCursor, getWorkspacePath, getWorkspaceUri, isBinary, isPathNeuroSafe, logOutput, normalizePath } from '@/utils';
 import { ActionData, contextNoAccess, RCEAction, actionValidationFailure, actionValidationAccept, ActionValidationResult, stripToActions } from '@/neuro_client_helper';
 import { CONFIG, PERMISSIONS, PermissionLevel, getPermissionLevel, isActionEnabled } from '@/config';
+import { targetedFileCreatedEvent, targetedFileDeletedEvent } from '@events/files';
+import { RCECancelEvent } from '@events/utils';
 
 /**
  * The path validator.
@@ -81,7 +83,7 @@ async function binaryFileValidation(actionData: ActionData): Promise<ActionValid
 
     const workspaceUri = getWorkspaceUri();
 
-    if(!workspaceUri)
+    if (!workspaceUri)
         return actionValidationFailure('You are not in a workspace.');
 
     const absolutePath = normalizePath(workspaceUri.fsPath + '/' + relativePath.replace(/^\/|\/$/g, ''));
@@ -92,13 +94,18 @@ async function binaryFileValidation(actionData: ActionData): Promise<ActionValid
     return actionValidationAccept();
 }
 
+const commonFileEvents: ((actionData: ActionData) => RCECancelEvent | null)[] = [
+    (actionData: ActionData) => targetedFileCreatedEvent(actionData.params?.filePath),
+    (actionData: ActionData) => targetedFileDeletedEvent(actionData.params?.filePath),
+];
+
 export const fileActions = {
     get_files: {
         name: 'get_files',
         description: 'Get a list of files in the workspace',
         permissions: [PERMISSIONS.openFiles],
         handler: handleGetFiles,
-        validator: [() => {
+        validators: [() => {
             const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
             if (workspaceFolder === undefined)
                 return actionValidationFailure('No open workspace to get files from.');
@@ -120,7 +127,8 @@ export const fileActions = {
         },
         permissions: [PERMISSIONS.openFiles],
         handler: handleOpenFile,
-        validator: [neuroSafeValidation, binaryFileValidation],
+        cancelEvents: commonFileEvents,
+        validators: [neuroSafeValidation, binaryFileValidation],
         promptGenerator: (actionData: ActionData) => `open the file "${actionData.params?.filePath}".`,
     },
     read_file: {
@@ -136,7 +144,8 @@ export const fileActions = {
         },
         permissions: [PERMISSIONS.openFiles],
         handler: handleReadFile,
-        validator: [neuroSafeValidation, binaryFileValidation],
+        cancelEvents: commonFileEvents,
+        validators: [neuroSafeValidation, binaryFileValidation],
         promptGenerator: (actionData: ActionData) => `read the file "${actionData.params?.filePath}" (without opening it).`,
     },
     create_file: {
@@ -152,7 +161,8 @@ export const fileActions = {
         },
         permissions: [PERMISSIONS.create],
         handler: handleCreateFile,
-        validator: [neuroSafeValidation],
+        cancelEvents: commonFileEvents,
+        validators: [neuroSafeValidation],
         promptGenerator: (actionData: ActionData) => `create the file "${actionData.params?.filePath}".`,
     },
     create_folder: {
@@ -168,7 +178,10 @@ export const fileActions = {
         },
         permissions: [PERMISSIONS.create],
         handler: handleCreateFolder,
-        validator: [neuroSafeValidation],
+        cancelEvents: [
+            (actionData: ActionData) => targetedFileCreatedEvent(actionData.params?.folderPath),
+        ],
+        validators: [neuroSafeValidation],
         promptGenerator: (actionData: ActionData) => `create the folder "${actionData.params?.folderPath}".`,
     },
     rename_file_or_folder: {
@@ -185,7 +198,11 @@ export const fileActions = {
         },
         permissions: [PERMISSIONS.rename],
         handler: handleRenameFileOrFolder,
-        validator: [neuroSafeRenameValidation],
+        cancelEvents: [
+            (actionData: ActionData) => targetedFileCreatedEvent(actionData.params?.newPath),
+            (actionData: ActionData) => targetedFileDeletedEvent(actionData.params?.oldPath),
+        ],
+        validators: [neuroSafeRenameValidation],
         promptGenerator: (actionData: ActionData) => `rename "${actionData.params?.oldPath}" to "${actionData.params?.newPath}".`,
     },
     delete_file_or_folder: {
@@ -202,7 +219,10 @@ export const fileActions = {
         },
         permissions: [PERMISSIONS.delete],
         handler: handleDeleteFileOrFolder,
-        validator: [neuroSafeDeleteValidation],
+        cancelEvents: [
+            (actionData: ActionData) => targetedFileDeletedEvent(actionData.params?.path),
+        ],
+        validators: [neuroSafeDeleteValidation],
         promptGenerator: (actionData: ActionData) => `delete "${actionData.params?.pathToDelete}".`,
     },
 } satisfies Record<string, RCEAction>;
