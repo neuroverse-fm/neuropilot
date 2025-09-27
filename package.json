@@ -441,6 +441,7 @@
 								"rename_file_or_folder",
 								"rename_git_remote",
 								"replace_text",
+								"replace_user_selection",
 								"request_cookie",
 								"rewrite_all",
 								"rewrite_lines",

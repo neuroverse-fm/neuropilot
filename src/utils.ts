@@ -226,7 +226,7 @@ export function getPositionContext(document: vscode.TextDocument, options: Neuro
     const endLine = Math.min(document.lineCount - 1, options.position2.line + afterContextLength);
 
     // If the cursor is defined and inside the range, split the context into before and after the cursor
-    if (options.cursorPosition && options.cursorPosition.line >= options.position.line && options.cursorPosition.line <= options.position2.line) {
+    if (options.cursorPosition && options.cursorPosition.line >= startLine && options.cursorPosition.line <= endLine) {
         const contextBefore = document.getText(new vscode.Range(new vscode.Position(startLine, 0), options.cursorPosition));
         const contextAfter = document.getText(new vscode.Range(options.cursorPosition, new vscode.Position(endLine, document.lineAt(endLine).text.length)));
         return {

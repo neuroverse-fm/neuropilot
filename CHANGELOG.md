@@ -34,6 +34,9 @@ Changes between each version before then will not be listed.
   - This automatically cancels Neuro's action requests if certain events happen.
   - Example: If Neuro wants to insert text, that request will auto-cancel if the active file is switched.
   - You can disable this with the new `Enable Cancel Events` setting (defaulted to on).
+- Neuro can now get and replace the user's current selection.
+  - This only works in Neuro-safe files.
+  - This requires the new permission *Get User Selection*, replacing the selection additionally requires *Edit Active Document*.
 
 ### Changes
 

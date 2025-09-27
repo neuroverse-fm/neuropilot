@@ -586,6 +586,50 @@ export const editingActions = {
         validators: [checkCurrentFile],
         promptGenerator: 'get your cursor position and surrounding text.',
     },
+    replace_user_selection: { // TODO: cancellation event
+        name: 'replace_user_selection',
+        description: 'Replace Vedal\'s current selection with the provided text.'
+            + ' If Vedal has no selection, this will insert the text at Vedal\'s current cursor position.'
+            + ' After replacing/inserting, your cursor will be placed at the end of the inserted text.'
+            + ' If "requireSelectionUnchanged" is true, the action will be canceled if Vedal\'s selection changes or has changed since it was last obtained.',
+        schema: {
+            type: 'object',
+            properties: {
+                content: { type: 'string' },
+                requireSelectionUnchanged: { type: 'boolean' },
+            },
+            required: ['content', 'requireSelectionUnchanged'],
+        },
+        permissions: [PERMISSIONS.getUserSelection, PERMISSIONS.editActiveDocument],
+        handler: handleReplaceUserSelection,
+        cancelEvents: [
+            ...commonCancelEvents,
+            (actionData: ActionData) => {
+                if (actionData.params.requireSelectionUnchanged)
+                    return new RCECancelEvent({
+                        reason: 'Vedal\'s selection changed.',
+                        logReason: 'Vedal\'s selection changed and requireSelectionUnchanged is set to true.',
+                        events: [[vscode.window.onDidChangeTextEditorSelection, null]],
+                    });
+                return null;
+            },
+        ],
+        validators: [
+            checkCurrentFile,
+            createStringValidator(['content']),
+            (actionData: ActionData) => { // Validate that the selection is known and unchanged if required
+                if (!actionData.params.requireSelectionUnchanged)
+                    return actionValidationAccept();
+                if (NEURO.lastKnownUserSelection === null || NEURO.lastKnownUserSelection !== vscode.window.activeTextEditor?.selection)
+                    return actionValidationFailure('Vedal\'s selection has changed since it was last obtained.');
+                return actionValidationAccept();
+            },
+        ],
+        promptGenerator: (actionData: ActionData) => {
+            const lineCount = actionData.params.content.trim().split('\n').length;
+            return `replace your current selection with ${lineCount} line${lineCount === 1 ? '' : 's'} of content.`;
+        },
+    },
 } satisfies Record<string, RCEAction>;
 
 export function registerEditingActions() {
@@ -605,6 +649,7 @@ export function registerEditingActions() {
             editingActions.delete_lines,
             editingActions.highlight_lines,
             editingActions.get_user_selection,
+            editingActions.replace_user_selection,
         ]).filter(isActionEnabled));
         if (vscode.workspace.getConfiguration('files').get<string>('autoSave') !== 'afterDelay') {
             NEURO.client?.registerActions(stripToActions([
@@ -1238,6 +1283,8 @@ function handleGetUserSelection(_actionData: ActionData): string | undefined {
     if (!isPathNeuroSafe(document.fileName))
         return contextFailure(CONTEXT_NO_ACCESS);
 
+    NEURO.lastKnownUserSelection = editor.selection;
+
     const cursorContext = getPositionContext(document, {
         position: editor.selection.start,
         position2: editor.selection.end,
@@ -1254,6 +1301,42 @@ function handleGetUserSelection(_actionData: ActionData): string | undefined {
         : `\n\nVedal's selection contains:\n\n${fence}\n${selectedText}\n${fence}`;
 
     return `${preamble}\n\n${formatContext(cursorContext)}${postamble}`;
+}
+
+export function handleReplaceUserSelection(actionData: ActionData): string | undefined {
+    const content: string = actionData.params.content;
+
+    const editor = vscode.window.activeTextEditor;
+    const document = editor?.document;
+    if (editor === undefined || document === undefined)
+        return contextFailure(CONTEXT_NO_ACTIVE_DOCUMENT);
+    if (!isPathNeuroSafe(document.fileName))
+        return contextFailure(CONTEXT_NO_ACCESS);
+
+    const edit = new vscode.WorkspaceEdit();
+    const selection = editor.selection;
+    const originalText = document.getText(selection);
+    edit.replace(document.uri, selection, content);
+
+    setVirtualCursor(selection.end);
+
+    vscode.workspace.applyEdit(edit).then(success => {
+        if (success) {
+            logOutput('INFO', 'Replaced user selection in document');
+            const diffRanges = getDiffRanges(document, selection.start, originalText, content);
+            showDiffRanges(editor, ...diffRanges);
+            const cursor = editor.selection.end;
+            setVirtualCursor(cursor);
+            const cursorContext = getPositionContext(document, {
+                cursorPosition: cursor,
+                position: selection.start,
+                position2: cursor,
+            });
+            NEURO.client?.sendContext(`Replaced Vedal's selection in the document\n\n${formatContext(cursorContext)}`);
+
+            NEURO.lastKnownUserSelection = editor.selection;
+        }
+    });
 }
 
 export function fileSaveListener(e: vscode.TextDocument) {
@@ -1339,6 +1422,9 @@ let editorChangeHandlerTimeout: NodeJS.Timeout | undefined;
 export function editorChangeHandler(editor: vscode.TextEditor | undefined) {
     if (editorChangeHandlerTimeout)
         clearTimeout(editorChangeHandlerTimeout);
+
+    // Remove last known selection
+    NEURO.lastKnownUserSelection = null;
 
     if (editor) {
         // Set cursor
@@ -1456,6 +1542,7 @@ export async function handleSendSelectionToNeuro(): Promise<void> {
         return;
     }
     const selection = editor.selection;
+    NEURO.lastKnownUserSelection = selection;
     if (selection.isEmpty) {
         vscode.window.showInformationMessage('No text selected.');
         return;
