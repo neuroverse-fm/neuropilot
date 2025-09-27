@@ -217,7 +217,7 @@ export const editingActions = {
         permissions: [PERMISSIONS.editActiveDocument],
         handler: handleGetContent,
         cancelEvents: [
-            commonCancelEvents[0],
+            cancelOnDidChangeTextDocument,
         ],
         promptGenerator: 'get the current file\'s contents.',
         validators: [checkCurrentFile],
