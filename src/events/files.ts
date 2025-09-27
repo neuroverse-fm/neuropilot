@@ -19,10 +19,14 @@ import { CONFIG } from '../config';
  */
 export function targetedFileCreatedEvent(file: string) {
     return new RCECancelEvent({
-        reason: `the file ${file} was created.`,
+        reason: `the file ${file} was created by Vedal.`,
         logReason: (_data) => `${CONFIG.currentlyAsNeuroAPI} created the file ${file}.`,
         events: [
-            [vscode.workspace.onDidCreateFiles, (data) => (data as vscode.FileCreateEvent).files.some(f => f.fsPath === vscode.Uri.file(file).fsPath)],
+            [vscode.workspace.onDidCreateFiles, (data) => {
+                const workspaceUri = getWorkspaceUri();
+                const fileUri = workspaceUri?.with({ path: workspaceUri.path + '/' + file });
+                return (data as vscode.FileCreateEvent).files.some(f => f.fsPath === fileUri?.fsPath);
+            }],
         ],
     });
 }
