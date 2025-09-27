@@ -11,6 +11,7 @@ Changes between each version before then will not be listed.
 ### Added features
 
 - A tooltip will now show when hovering over Neuro-highlighted text, indicating that Neuro highlighted it, and how (either through finding text or manually).
+- There is now an option to send the current cursor selection to Neuro. This can be invoked either by command or through right-click context menu. These options will only appear when *your cursor* is highlighting code.
 
 ### Changes
 
