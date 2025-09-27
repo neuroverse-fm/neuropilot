@@ -376,7 +376,7 @@ export const editingActions = {
         },
         permissions: [PERMISSIONS.editActiveDocument],
         handler: handleDeleteText,
-        cancelEvents: [commonCancelEvents[1]],
+        cancelEvents: [cancelOnDidChangeActiveTextEditor],
         validators: [checkCurrentFile, createStringValidator(['find']), createLineRangeValidator('lineRange')],
         promptGenerator: (actionData: ActionData) => {
             let text = 'delete ';
