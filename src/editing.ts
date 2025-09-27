@@ -1380,6 +1380,11 @@ export function moveNeuroCursorHere() {
  * Handler to send the currently selected text to Neuro.
  */
 export async function handleSendSelectionToNeuro(): Promise<void> {
+    if (!NEURO.connected) {
+        logOutput('ERROR', `Attempted to send code selection to ${CONFIG.currentlyAsNeuroAPI} while disconnected.`);
+        vscode.window.showErrorMessage('Not connected to Neuro API.');
+        return;
+    }
     const editor = vscode.window.activeTextEditor;
     if (!editor) {
         vscode.window.showErrorMessage('No active text editor.');
