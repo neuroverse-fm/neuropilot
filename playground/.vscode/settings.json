@@ -13,6 +13,7 @@
     "neuropilot.showTimeOnTerminalStart": true,
     "neuropilot.permission.terminalAccess": "Copilot",
     "neuropilot.permission.accessLintingAnalysis": "Copilot",
+    "neuropilot.permission.getUserSelection": "Copilot",
     "neuropilot.terminals": [
         {
             "name": "PowerShell",

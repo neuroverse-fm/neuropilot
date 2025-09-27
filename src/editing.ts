@@ -514,6 +514,15 @@ export const editingActions = {
         validator: [checkCurrentFile, createLineRangeValidator()],
         promptGenerator: (actionData: ActionData) => `highlight lines ${actionData.params.startLine}-${actionData.params.endLine}.`,
     },
+    get_user_selection: {
+        name: 'get_user_selection',
+        description: 'Get Vedal\'s current selection and the text surrounding it.'
+            + ' This will not move your own cursor.',
+        permissions: [PERMISSIONS.getUserSelection, PERMISSIONS.editActiveDocument],
+        handler: handleGetUserSelection,
+        validator: [checkCurrentFile],
+        promptGenerator: 'get your cursor position and surrounding text.',
+    },
 } satisfies Record<string, RCEAction>;
 
 export function registerEditingActions() {
@@ -532,6 +541,7 @@ export function registerEditingActions() {
             editingActions.rewrite_lines,
             editingActions.delete_lines,
             editingActions.highlight_lines,
+            editingActions.get_user_selection,
         ]).filter(isActionEnabled));
         if (vscode.workspace.getConfiguration('files').get<string>('autoSave') !== 'afterDelay') {
             NEURO.client?.registerActions(stripToActions([
@@ -1155,6 +1165,32 @@ export function handleHighlightLines(actionData: ActionData): string | undefined
     editor!.revealRange(range, vscode.TextEditorRevealType.InCenterIfOutsideViewport);
 
     return `Highlighted lines ${startLine}-${endLine}.`;
+}
+
+function handleGetUserSelection(_actionData: ActionData): string | undefined {
+    const editor = vscode.window.activeTextEditor;
+    const document = editor?.document;
+    if (editor === undefined || document === undefined)
+        return contextFailure(CONTEXT_NO_ACTIVE_DOCUMENT);
+    if (!isPathNeuroSafe(document.fileName))
+        return contextFailure(CONTEXT_NO_ACCESS);
+
+    const cursorContext = getPositionContext(document, {
+        position: editor.selection.start,
+        position2: editor.selection.end,
+        cursorPosition: getVirtualCursor() ?? undefined,
+    });
+    const preamble = editor.selection.isEmpty
+        ? `Vedal's cursor is at (${editor.selection.active.line + 1}:${editor.selection.active.character + 1}).`
+        : `Vedal's selection is from (${editor.selection.start.line + 1}:${editor.selection.start.character + 1}) to (${editor.selection.end.line + 1}:${editor.selection.end.character + 1}).`;
+
+    const selectedText = editor.document.getText(editor.selection);
+    const fence = getFence(selectedText);
+    const postamble = editor.selection.isEmpty
+        ? ''
+        : `\n\nVedal's selection contains:\n\n${fence}\n${selectedText}\n${fence}`;
+
+    return `${preamble}\n\n${formatContext(cursorContext)}${postamble}`;
 }
 
 export function fileSaveListener(e: vscode.TextDocument) {

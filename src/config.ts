@@ -76,7 +76,7 @@ export interface Permission {
 /** Collection of strings for use in {@link actionResultNoPermission}. */
 class Permissions {
     get openFiles() { return { id: 'openFiles', infinitive: 'open files' }; }
-    get editActiveDocument() { return { id: 'editActiveDocument', infinitive: 'edit documents' }; }
+    get editActiveDocument() { return { id: 'editActiveDocument', infinitive: 'edit or view documents' }; }
     get create() { return { id: 'create', infinitive: 'create files or folders' }; }
     get rename() { return { id: 'rename', infinitive: 'rename files or folders' }; }
     get delete() { return { id: 'delete', infinitive: 'delete files or folders' }; }

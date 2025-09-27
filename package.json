@@ -410,6 +410,7 @@
 								"get_files",
 								"get_folder_lint_problems",
 								"get_git_config",
+								"get_user_selection",
 								"get_workspace_lint_problems",
 								"git_blame",
 								"git_log",

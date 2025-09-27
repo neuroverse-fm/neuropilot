@@ -641,16 +641,20 @@ export function formatContext(context: NeuroPositionContext, overrideCursorStyle
     }
     const contextAfter = contextArray.join('\n');
 
-    const cursorStyle = overrideCursorStyle ?? CONFIG.cursorPositionContextStyle;
+    let effectiveCursorStyle = overrideCursorStyle ?? CONFIG.cursorPositionContextStyle;
+    if (!context.cursorDefined && effectiveCursorStyle === 'both')
+        effectiveCursorStyle = 'lineAndColumn';
+    if (!context.cursorDefined && effectiveCursorStyle === 'inline')
+        effectiveCursorStyle = 'off';
 
     const cursor = getVirtualCursor()!;
-    const cursorText = ['inline', 'both'].includes(cursorStyle) && context.cursorDefined
+    const cursorText = ['inline', 'both'].includes(effectiveCursorStyle) && context.cursorDefined
         ? '<<<|>>>'
         : '';
     const cursorNote =
-        cursorStyle === 'inline' ? 'Your cursor\'s position is denoted by `<<<|>>>`. '
-        : cursorStyle === 'lineAndColumn' ? `Your cursor is at ${cursor.line + 1}:${cursor.character + 1}. `
-        : cursorStyle === 'both' ? `Your cursor is at ${cursor.line + 1}:${cursor.character + 1}, denoted by \`<<<|>>>\`. `
+        effectiveCursorStyle === 'inline' ? 'Your cursor\'s position is denoted by `<<<|>>>`. '
+        : effectiveCursorStyle === 'lineAndColumn' ? `Your cursor is at ${cursor.line + 1}:${cursor.character + 1}. `
+        : effectiveCursorStyle === 'both' ? `Your cursor is at ${cursor.line + 1}:${cursor.character + 1}, denoted by \`<<<|>>>\`. `
         : '';
 
     return `File context for lines ${context.startLine + 1}-${context.endLine + 1} of ${context.totalLines}. ${cursorNote}${lineNumberNote}Content:\n\n${fence}\n${contextBefore}${cursorText}${contextAfter}\n${fence}`;
