@@ -46,7 +46,7 @@ Changes between each version before then will not be listed.
 
 - Fixed automatically opening files created by Neuro when she only has Copilot permission for opening files.
 - `rename_git_remote` now has a Git extension validator attached to it, matching all other Git actions.
-- Fixed Neuro not being ably to create a terminal that was killed by the user before.
+- Fixed Neuro not being able to create a terminal that was killed by the user before.
 
 ## 2.1.2
 
