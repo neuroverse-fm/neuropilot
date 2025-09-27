@@ -434,7 +434,7 @@ export const editingActions = {
         },
         permissions: [PERMISSIONS.editActiveDocument],
         handler: handleFindText,
-        cancelEvents: [commonCancelEvents[1]],
+        cancelEvents: [cancelOnDidChangeActiveTextEditor],
         validators: [checkCurrentFile, createStringValidator(['find']), createLineRangeValidator('lineRange')],
         promptGenerator: (actionData: ActionData) => {
             let text = 'find ';
