@@ -168,19 +168,22 @@ function createLineRangeValidator(path = '') {
     };
 }
 
+const cancelOnDidChangeTextDocument = () => new RCECancelEvent({
+    reason: 'the active document was changed.',
+    events: [
+        [vscode.workspace.onDidChangeTextDocument, null],
+    ],
+});
+const cancelOnDidChangeActiveTextEditor = () => new RCECancelEvent({
+    reason: 'you\'ve switched files.',
+    events: [
+        [vscode.window.onDidChangeActiveTextEditor, null],
+    ],
+});
+
 const commonCancelEvents: (() => RCECancelEvent)[] = [
-    () => new RCECancelEvent({
-        reason: 'the active document was changed.',
-        events: [
-            [vscode.workspace.onDidChangeTextDocument, null],
-        ],
-    }),
-    () => new RCECancelEvent({
-        reason: 'you\'ve switched files.',
-        events: [
-            [vscode.window.onDidChangeActiveTextEditor, null],
-        ],
-    }),
+    cancelOnDidChangeTextDocument,
+    cancelOnDidChangeActiveTextEditor,
 ];
 
 const commonCancelEventsWithCursor: (() => RCECancelEvent)[] = [
