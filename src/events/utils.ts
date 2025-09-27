@@ -7,7 +7,7 @@ export interface RCECancelEventInitializer {
     /** The reason that will be used to log the cancellation. */
     logReason?: PromptGenerator;
     /** Events that will trigger the cancellation. If the predicate is null, the event will always trigger the cancellation. */
-    events?: [vscode.Event<unknown>, ((data: unknown) => boolean) | null][];
+    events?: [vscode.Event<unknown>, ((data: unknown) => boolean | Promise<boolean>) | null][];
 }
 
 export class RCECancelEvent {
@@ -57,8 +57,8 @@ export class RCECancelEvent {
         const disposables: vscode.Disposable[] = [];
         for (const [event, predicate] of init?.events ?? []) {
             disposables.push(
-                event((data) => {
-                    if (predicate === null || predicate(data)) {
+                event(async (data) => {
+                    if (predicate === null || await predicate(data)) {
                         this.fire(data);
                     }
                 }),
