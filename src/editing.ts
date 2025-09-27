@@ -321,7 +321,7 @@ export const editingActions = {
         },
         permissions: [PERMISSIONS.editActiveDocument],
         handler: handleReplaceText,
-        cancelEvents: [commonCancelEvents[1]],
+        cancelEvents: [cancelOnDidChangeActiveTextEditor],
         validators: [checkCurrentFile, createStringValidator(['find', 'replaceWith']), createLineRangeValidator('lineRange')],
         promptGenerator: (actionData: ActionData) => {
             let text = 'replace ';
