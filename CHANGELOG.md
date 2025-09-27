@@ -36,7 +36,7 @@ Changes between each version before then will not be listed.
   - You can disable this with the new `Enable Cancel Events` setting (defaulted to on).
 - Neuro can now get and replace the user's current selection.
   - This only works in Neuro-safe files.
-  - This requires the new permission *Get User Selection*, replacing the selection additionally requires *Edit Active Document*.
+  - This requires the new permissions *Get User Selection* and *Edit Active Document*.
 
 ### Changes
 
