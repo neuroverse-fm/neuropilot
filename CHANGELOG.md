@@ -10,6 +10,7 @@ Changes between each version before then will not be listed.
 
 ### Added features
 
+- A popup reminder is now shown to users after each extension update, prompting them to check the changelog and documentation. The popup includes direct links to both resources and only appears once per version update.
 - A tooltip will now show when hovering over Neuro-highlighted text, indicating that Neuro highlighted it, and how (either through finding text or manually).
 
 ### Changes

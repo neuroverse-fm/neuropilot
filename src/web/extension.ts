@@ -15,10 +15,14 @@ import {
     getDiffAddedDecorationRenderOptions,
     reloadPermissions,
     getHighlightDecorationRenderOptions,
+    showUpdateReminder,
 } from '@shared/extension';
 import { registerUnsupervisedActions, registerUnsupervisedHandlers } from './unsupervised';
 
 export function activate(context: vscode.ExtensionContext) {
+    // Show update reminder if version changed
+    showUpdateReminder(context);
+
     // Initialize common state
     initializeCommonState(context);
 

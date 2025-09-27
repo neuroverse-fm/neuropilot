@@ -313,3 +313,38 @@ export function getHighlightDecorationRenderOptions(): vscode.DecorationRenderOp
         rangeBehavior: vscode.DecorationRangeBehavior.ClosedClosed,
     };
 }
+
+/**
+ * Shows a popup reminding the user to check the changelog and docs if the extension version has changed.
+ * Only shows once per version update, using memento storage.
+ */
+export function showUpdateReminder(context: vscode.ExtensionContext) {
+    const currentVersion = context.extension.packageJSON.version;
+    const mementoKey = 'lastVersionReminder';
+    const lastVersion = context.globalState.get<string>(mementoKey);
+    if (lastVersion !== currentVersion) {
+        const changelogUrl = 'https://github.com/VSC-NeuroPilot/neuropilot/blob/dev/CHANGELOG.md';
+        const docsUrl = 'https://vsc-neuropilot.github.io/docs';
+        // Helper to show the popup and allow both links to be visited
+        const showPopup = () => {
+            vscode.window.showInformationMessage(
+                'NeuroPilot updated! Please check the changelog and docs for important changes.',
+                'View Changelog',
+                'View Docs',
+            ).then(selection => {
+                if (selection === 'View Changelog') {
+                    vscode.env.openExternal(vscode.Uri.parse(changelogUrl));
+                    // Re-show popup to allow visiting both links
+                    showPopup();
+                } else if (selection === 'View Docs') {
+                    vscode.env.openExternal(vscode.Uri.parse(docsUrl));
+                    // Re-show popup to allow visiting both links
+                    showPopup();
+                }
+                // If dismissed, do nothing
+            });
+        };
+        showPopup();
+        context.globalState.update(mementoKey, currentVersion);
+    }
+}
