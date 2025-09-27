@@ -8,7 +8,8 @@ import { RCECancelEvent } from './utils';
  * @param file An absolute path to the file.
  */
 export function targetedFileLintingResolvedEvent(file: string): RCECancelEvent {
-    const fileUri = vscode.Uri.file(file);
+    const workspaceUri = getWorkspaceUri()!;
+    const fileUri = workspaceUri.with({ path: workspaceUri.path + '/' + file });
 
     let previousDiagnostics = vscode.languages.getDiagnostics(fileUri);
 
