@@ -1,10 +1,10 @@
 import * as vscode from 'vscode';
 import { NEURO, EXTENSIONS } from '@/constants';
-import { logOutput, createClient, onClientConnected, setVirtualCursor } from '@/utils';
+import { logOutput, createClient, onClientConnected, setVirtualCursor, showAPIMessage, disconnectClient, reconnectClient } from '@/utils';
 import { completionsProvider, registerCompletionResultHandler } from '@/completions';
 import { giveCookie, registerRequestCookieAction, registerRequestCookieHandler, sendCurrentFile } from '@/context';
 import { registerChatResponseHandler } from '@/chat';
-import { ACCESS, CONFIG } from '@/config';
+import { ACCESS, checkDeprecatedSettings, CONFIG, CONNECTION } from '@/config';
 import { explainWithNeuro, fixWithNeuro, NeuroCodeActionsProvider, sendDiagnosticsDiff } from '@/lint_problems';
 import { editorChangeHandler, fileSaveListener, moveNeuroCursorHere, toggleSaveAction, workspaceEditHandler } from '@/editing';
 import { emergencyDenyRequests, acceptRceRequest, denyRceRequest, revealRceNotification, clearRceRequest } from '@/rce';
@@ -17,6 +17,7 @@ import { moveCursorEmitterDiposable } from '@events/cursor';
 export function registerCommonCommands() {
     return [
         vscode.commands.registerCommand('neuropilot.reconnect', reconnect),
+        vscode.commands.registerCommand('neuropilot.disconnect', disconnect),
         vscode.commands.registerCommand('neuropilot.moveNeuroCursorHere', moveNeuroCursorHere),
         vscode.commands.registerCommand('neuropilot.sendCurrentFile', sendCurrentFile),
         vscode.commands.registerCommand('neuropilot.giveCookie', giveCookie),
@@ -84,13 +85,14 @@ export function setupCommonEventHandlers() {
 
 export function initializeCommonState(context: vscode.ExtensionContext) {
     NEURO.context = context;
-    NEURO.url = CONFIG.websocketUrl;
-    NEURO.gameName = CONFIG.gameName;
+    NEURO.url = CONNECTION.websocketUrl;
+    NEURO.gameName = CONNECTION.gameName;
     NEURO.connected = false;
     NEURO.waiting = false;
     NEURO.cancelled = false;
     NEURO.outputChannel = vscode.window.createOutputChannel('NeuroPilot');
     NEURO.currentController = CONFIG.currentlyAsNeuroAPI;
+    checkDeprecatedSettings();
 }
 
 export function setupCommonProviders() {
@@ -133,10 +135,27 @@ export function createStatusBarItem() {
     }
 }
 
+export function startupCreateClient() {
+    if (CONNECTION.autoConnect) {
+        createClient();
+    } else {
+        showAPIMessage('disabled');
+    }
+}
+
 // Shared utility functions
 function reconnect() {
     logOutput('INFO', 'Attempting to reconnect to Neuro API');
-    createClient();
+    reconnectClient();
+}
+
+function disconnect() {
+    if (!NEURO.client) {
+        vscode.window.showErrorMessage('Not connected to Neuro API.');
+        return;
+    }
+    logOutput('INFO', 'Manually disconnecting from Neuro API');
+    disconnectClient();
 }
 
 export function reloadPermissions(...extraFunctions: (() => void)[]) {
@@ -244,7 +263,7 @@ export function obtainExtensionState(): void {
 }
 
 export function deactivate() {
-    NEURO.client?.sendContext(`NeuroPilot is being deactivated, or ${CONFIG.gameName} is closing. See you next time, ${NEURO.currentController}!`);
+    NEURO.client?.sendContext(`NeuroPilot is being deactivated, or ${CONNECTION.gameName} is closing. See you next time, ${NEURO.currentController}!`);
     clearRceRequest();
 }
 
