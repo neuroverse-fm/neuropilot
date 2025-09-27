@@ -15,12 +15,16 @@ import {
     getDiffAddedDecorationRenderOptions,
     reloadPermissions,
     getHighlightDecorationRenderOptions,
+    showUpdateReminder,
     startupCreateClient,
 } from '@shared/extension';
 import { registerUnsupervisedActions, registerUnsupervisedHandlers } from './unsupervised';
 import { registerSendSelectionToNeuro } from '@/editing';
 
 export function activate(context: vscode.ExtensionContext) {
+    // Show update reminder if version changed
+    showUpdateReminder(context);
+
     // Initialize common state
     initializeCommonState(context);
 

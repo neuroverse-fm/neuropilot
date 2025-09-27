@@ -25,6 +25,7 @@ Changes between each version before then will not be listed.
 
 ### Added features
 
+- A popup reminder is now shown to users after each extension update, prompting them to check the changelog and documentation. The popup includes direct links to both resources and only appears once per version update.
 - A tooltip will now show when hovering over Neuro-highlighted text, indicating that Neuro highlighted it, and how (either through finding text or manually).
 - There is now an option to send the current cursor selection to Neuro. This can be invoked either by command or through right-click context menu. These options will only appear when *your cursor* is highlighting code.
 - There is a new detector ran on startup to look for deprecated settings and if found, will ask you to migrate them. You can choose to not show that notice ever again by selecting the "Don't show again" option. This persists across sessions.
@@ -45,6 +46,7 @@ Changes between each version before then will not be listed.
 
 - Fixed automatically opening files created by Neuro when she only has Copilot permission for opening files.
 - `rename_git_remote` now has a Git extension validator attached to it, matching all other Git actions.
+- Fixed Neuro not being ably to create a terminal that was killed by the user before.
 
 ## 2.1.2
 

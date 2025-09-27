@@ -18,6 +18,7 @@ import {
     obtainExtensionState,
     reloadPermissions,
     getHighlightDecorationRenderOptions,
+    showUpdateReminder,
     startupCreateClient,
 } from '@shared/extension';
 import { registerChatParticipant } from '@/chat';
@@ -28,6 +29,9 @@ export function activate(context: vscode.ExtensionContext) {
 
     // Initialize common state
     initializeCommonState(context);
+
+    // Show update reminder if version changed
+    showUpdateReminder(context);
 
     vscode.commands.registerCommand('neuropilot.reloadPermissions', reloadDesktopPermissions);
 
