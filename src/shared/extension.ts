@@ -10,7 +10,7 @@ import { editorChangeHandler, fileSaveListener, moveNeuroCursorHere, toggleSaveA
 import { emergencyDenyRequests, acceptRceRequest, denyRceRequest, revealRceNotification } from '@/rce';
 import type { GitExtension } from '@typing/git';
 import { getGitExtension } from '@/git';
-import { registerDocsCommands, registerDocsLink } from './docs';
+import { openDocsOnTarget, registerDocsCommands, registerDocsLink } from './docs';
 
 // Shared commands
 export function registerCommonCommands() {
@@ -331,4 +331,63 @@ export function getHighlightDecorationRenderOptions(): vscode.DecorationRenderOp
         overviewRulerLane: vscode.OverviewRulerLane.Center,
         rangeBehavior: vscode.DecorationRangeBehavior.ClosedClosed,
     };
+}
+
+/**
+ * Shows a popup reminding the user to check the changelog and docs if the extension version has changed.
+ * Only shows once per version update, using memento storage.
+ * Does NOT show on brand new installs (sets memento to current version instead).
+ */
+export function showUpdateReminder(context: vscode.ExtensionContext) {
+    const mementoKey = 'lastVersionReminder';
+    const lastVersion = context.globalState.get<string>(mementoKey);
+    const docsUrl = 'https://vsc-neuropilot.github.io/docs';
+    const manifest = context.extension.packageJSON;
+    const version = manifest.version as string;
+    const id = context.extension.id;
+    let showPopup = () => { }; // Exists so that showPopup isn't nullable, do not modify since if either of the if-else conditions are satisfied then this function will be called.
+    if (!lastVersion) {
+        showPopup = () => {
+            vscode.window.showInformationMessage(
+                `Welcome to NeuroPilot! You have just installed version ${version}.`,
+                'View Docs',
+                'Configure NeuroPilot',
+            ).then(async selection => {
+                if (selection === 'View Docs') {
+                    await openDocsOnTarget('NeuroPilot', docsUrl);
+                    // Re-show popup to allow visiting both links
+                    showPopup();
+                } else if (selection === 'Configure NeuroPilot') {
+                    await vscode.commands.executeCommand('workbench.action.openSettings', `@ext:${id}`);
+                    // Re-show popup to allow visiting both links
+                    showPopup();
+                }
+                // If dismissed, do nothing
+            });
+        };
+    } else if (lastVersion !== version) {
+        // Helper to show the popup and allow both links to be visited
+        showPopup = () => {
+            vscode.window.showInformationMessage(
+                'NeuroPilot updated! Please check the changelog and docs for important changes.',
+                'View Changelog',
+                'View Docs',
+            ).then(async selection => {
+                if (selection === 'View Changelog') {
+                    // Open local CHANGELOG.md in markdown preview
+                    const changelogUri = vscode.Uri.joinPath(context.extensionUri, 'CHANGELOG.md');
+                    await vscode.commands.executeCommand('markdown.showPreview', changelogUri);
+                    // Re-show popup to allow visiting both links
+                    showPopup();
+                } else if (selection === 'View Docs') {
+                    await openDocsOnTarget('NeuroPilot', docsUrl);
+                    // Re-show popup to allow visiting both links
+                    showPopup();
+                }
+                // If dismissed, do nothing
+            });
+        };
+    }
+    showPopup();
+    context.globalState.update(mementoKey, version);
 }
