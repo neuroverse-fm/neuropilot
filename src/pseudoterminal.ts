@@ -190,7 +190,7 @@ function createPseudoterminal(shellType: string, terminalName: string): Terminal
 */
 function getOrCreateTerminal(shellType: string, terminalName: string): TerminalSession {
     let session = NEURO.terminalRegistry.get(shellType);
-    if (!session) {
+    if (!session || session.shellProcess === undefined || session.shellProcess.killed) {
         session = createPseudoterminal(shellType, terminalName);
         NEURO.terminalRegistry.set(shellType, session);
         session.terminal.show();
