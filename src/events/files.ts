@@ -39,10 +39,14 @@ export function targetedFileCreatedEvent(file: string) {
  */
 export function targetedFileDeletedEvent(file: string) {
     return new RCECancelEvent({
-        reason: `the file ${file} was created.`,
+        reason: `the file ${file} was deleted by Vedal.`,
         logReason: (_data) => `${CONFIG.currentlyAsNeuroAPI} deleted the file ${file}.`,
         events: [
-            [vscode.workspace.onDidDeleteFiles, (data) => (data as vscode.FileDeleteEvent).files.some(f => f.fsPath === vscode.Uri.file(file).fsPath)],
+            [vscode.workspace.onDidDeleteFiles, (data) => {
+                const workspaceUri = getWorkspaceUri();
+                const fileUri = workspaceUri?.with({ path: workspaceUri.path + '/' + file });
+                return (data as vscode.FileDeleteEvent).files.some(f => f.fsPath === fileUri?.fsPath);
+            }],
         ],
     });
 }
