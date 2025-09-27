@@ -10,7 +10,7 @@ import { editorChangeHandler, fileSaveListener, moveNeuroCursorHere, toggleSaveA
 import { emergencyDenyRequests, acceptRceRequest, denyRceRequest, revealRceNotification } from '@/rce';
 import type { GitExtension } from '@typing/git';
 import { getGitExtension } from '@/git';
-import { registerDocsCommands, registerDocsLink } from './docs';
+import { registerDocsCommands, registerDocsLink, openDocsOnTarget } from './docs';
 
 // Shared commands
 export function registerCommonCommands() {
@@ -336,27 +336,34 @@ export function getHighlightDecorationRenderOptions(): vscode.DecorationRenderOp
 /**
  * Shows a popup reminding the user to check the changelog and docs if the extension version has changed.
  * Only shows once per version update, using memento storage.
+ * Does NOT show on brand new installs (sets memento to current version instead).
  */
 export function showUpdateReminder(context: vscode.ExtensionContext) {
     const currentVersion = context.extension.packageJSON.version;
     const mementoKey = 'lastVersionReminder';
     const lastVersion = context.globalState.get<string>(mementoKey);
+    // If memento is missing, treat as first install: set memento, do not show popup
+    if (!lastVersion) {
+        context.globalState.update(mementoKey, currentVersion);
+        return;
+    }
     if (lastVersion !== currentVersion) {
-        const changelogUrl = 'https://github.com/VSC-NeuroPilot/neuropilot/blob/dev/CHANGELOG.md';
-        const docsUrl = 'https://vsc-neuropilot.github.io/docs';
         // Helper to show the popup and allow both links to be visited
         const showPopup = () => {
             vscode.window.showInformationMessage(
                 'NeuroPilot updated! Please check the changelog and docs for important changes.',
                 'View Changelog',
                 'View Docs',
-            ).then(selection => {
+            ).then(async selection => {
                 if (selection === 'View Changelog') {
-                    vscode.env.openExternal(vscode.Uri.parse(changelogUrl));
+                    // Open local CHANGELOG.md in markdown preview
+                    const changelogUri = vscode.Uri.joinPath(context.extensionUri, 'CHANGELOG.md');
+                    await vscode.commands.executeCommand('markdown.showPreview', changelogUri);
                     // Re-show popup to allow visiting both links
                     showPopup();
                 } else if (selection === 'View Docs') {
-                    vscode.env.openExternal(vscode.Uri.parse(docsUrl));
+                    // Open docs using extension's preferred method (default target)
+                    await openDocsOnTarget('NeuroPilot', 'https://vsc-neuropilot.github.io/docs');
                     // Re-show popup to allow visiting both links
                     showPopup();
                 }
