@@ -433,8 +433,8 @@ export function handleGetFiles(_actionData: ActionData): string | undefined {
     return undefined;
 
     async function recurseWorkspace(uri: vscode.Uri): Promise<vscode.Uri[]> {
-        const entries = await vscode.workspace.fs.readDirectory(uri);
-        const uriEntries: [vscode.Uri, vscode.FileType][] = entries.map(entry => [uri.with({ path: uri.path + '/' + entry[0] }), entry[1] ]);
+        const entries: [string, vscode.FileType][] = await vscode.workspace.fs.readDirectory(uri);
+        const uriEntries: [vscode.Uri, vscode.FileType][] = entries.map((entry: [string, vscode.FileType]) => [uri.with({ path: uri.path + '/' + entry[0] }), entry[1] ]);
 
         const result: vscode.Uri[] = [];
         for (const [childUri, fileType] of uriEntries) {
@@ -501,16 +501,17 @@ export function handleReadFile(actionData: ActionData): string | undefined {
     try {
         vscode.workspace.fs.readFile(fileAsUri).then(
             (data: Uint8Array) => {
-                const decodedContent = Buffer.from(data).toString('utf8');
+                const decodedContent = new TextDecoder('utf-8').decode(data);
                 const fence = getFence(decodedContent);
                 NEURO.client?.sendContext(`Contents of the file ${file}:\n\n${fence}\n${decodedContent}\n${fence}`);
             },
-            (erm) => {
+            (erm: unknown) => {
                 logOutput('ERROR', `Couldn't read file ${absolute}: ${erm}`);
                 NEURO.client?.sendContext(`Couldn't read file ${file}.`);
             },
         );
-    } catch (erm) {
+    } catch (erm: unknown) {
         logOutput('ERROR', `Error occured while trying to access file ${file}: ${erm}`);
     }
 }
+

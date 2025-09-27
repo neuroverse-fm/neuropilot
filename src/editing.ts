@@ -4,7 +4,7 @@ import { NEURO } from '@/constants';
 import { DiffRangeType, escapeRegExp, getDiffRanges, getFence, getPositionContext, getProperty, getVirtualCursor, showDiffRanges, isPathNeuroSafe, logOutput, NeuroPositionContext, setVirtualCursor, simpleFileName, substituteMatch, clearDecorations } from '@/utils';
 import { ActionData, actionValidationAccept, actionValidationFailure, ActionValidationResult, RCEAction, contextFailure, stripToActions, actionValidationRetry, contextNoAccess } from '@/neuro_client_helper';
 import { PERMISSIONS, getPermissionLevel, CONFIG, isActionEnabled } from '@/config';
-import { JSONSchema7 } from 'json-schema';
+import type { JSONSchema7 } from 'json-schema';
 
 const CONTEXT_NO_ACCESS = 'You do not have permission to access this file.';
 const CONTEXT_NO_ACTIVE_DOCUMENT = 'No active document to edit.';
@@ -1374,4 +1374,70 @@ export function moveNeuroCursorHere() {
     const cursorContext = getPositionContext(editor.document, editor.selection.active);
 
     NEURO.client?.sendContext(`Vedal moved your cursor.\n\n${formatContext(cursorContext)}`);
+}
+
+/**
+ * Handler to send the currently selected text to Neuro.
+ */
+export async function handleSendSelectionToNeuro(): Promise<void> {
+    if (!NEURO.connected) {
+        logOutput('ERROR', `Attempted to send code selection to ${CONFIG.currentlyAsNeuroAPI} while disconnected.`);
+        vscode.window.showErrorMessage('Not connected to Neuro API.');
+        return;
+    }
+    const editor = vscode.window.activeTextEditor;
+    if (!editor) {
+        vscode.window.showErrorMessage('No active text editor.');
+        return;
+    }
+    const document = editor.document;
+    if (!isPathNeuroSafe(document.fileName)) {
+        vscode.window.showErrorMessage(`${CONFIG.currentlyAsNeuroAPI} does not have permission to access this file.`);
+        return;
+    }
+    const selection = editor.selection;
+    if (selection.isEmpty) {
+        vscode.window.showInformationMessage('No text selected.');
+        return;
+    }
+    const relativePath = vscode.workspace.asRelativePath(document.uri);
+    const selectedText = document.getText(selection);
+    const fence = getFence(selectedText);
+    const startLine = selection.start.line + 1;
+    const startCol = selection.start.character + 1;
+    const endLine = selection.end.line + 1;
+    const endCol = selection.end.character + 1;
+    const message = `Vedal sent you his currently highlighted content from file ${relativePath}, lines ${startLine}:${startCol} to ${endLine}:${endCol} (line:column):\n\nContent:\n${fence}${document.languageId}\n${selectedText}\n${fence}`;
+
+    NEURO.client?.sendContext(message);
+    vscode.window.showInformationMessage('Selection sent to Neuro.');
+}
+
+/**
+ * Code action provider for sending selection to Neuro.
+ */
+class SendSelectionToNeuroCodeActionProvider implements vscode.CodeActionProvider {
+    provideCodeActions(document: vscode.TextDocument, range: vscode.Range | vscode.Selection): vscode.CodeAction[] | undefined {
+        if (range.isEmpty || !isPathNeuroSafe(document.fileName)) return;
+        const action = new vscode.CodeAction('Send selection to Neuro', vscode.CodeActionKind.QuickFix);
+        action.command = {
+            title: 'Send selection to Neuro',
+            command: 'neuropilot.sendSelectionToNeuro',
+        };
+        return [action];
+    }
+}
+
+/**
+ * Register the command and code action provider for sending selection to Neuro.
+ */
+export function registerSendSelectionToNeuro(context: vscode.ExtensionContext) {
+    context.subscriptions.push(
+        vscode.commands.registerCommand('neuropilot.sendSelectionToNeuro', handleSendSelectionToNeuro),
+        vscode.languages.registerCodeActionsProvider(
+            { scheme: 'file' },
+            new SendSelectionToNeuroCodeActionProvider(),
+            { providedCodeActionKinds: [vscode.CodeActionKind.QuickFix] },
+        ),
+    );
 }

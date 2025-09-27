@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { handleTerminateTask, reloadTasks, taskEndedHandler } from '@/tasks';
 import { emergencyTerminalShutdown } from '@/pseudoterminal';
-import { createClient, isPathNeuroSafe, setVirtualCursor } from '@/utils';
+import { isPathNeuroSafe, setVirtualCursor } from '@/utils';
 import { NEURO } from '@/constants';
 import {
     initializeCommonState,
@@ -19,9 +19,11 @@ import {
     reloadPermissions,
     getHighlightDecorationRenderOptions,
     showUpdateReminder,
+    startupCreateClient,
 } from '@shared/extension';
 import { registerChatParticipant } from '@/chat';
 import { registerUnsupervisedActions, registerUnsupervisedHandlers } from './unsupervised';
+import { registerSendSelectionToNeuro } from '@/editing';
 
 export function activate(context: vscode.ExtensionContext) {
 
@@ -58,7 +60,7 @@ export function activate(context: vscode.ExtensionContext) {
     setTimeout(obtainExtensionState, 5000);
 
     // Create client
-    createClient();
+    startupCreateClient();
 
     // Create cursor decoration (desktop-specific)
     NEURO.cursorDecorationType = vscode.window.createTextEditorDecorationType(getCursorDecorationRenderOptions());
@@ -71,6 +73,11 @@ export function activate(context: vscode.ExtensionContext) {
     if (vscode.window.activeTextEditor && isPathNeuroSafe(vscode.window.activeTextEditor.document.fileName)) {
         setVirtualCursor(vscode.window.activeTextEditor.selection.active);
     }
+
+    // The "Send selection to Neuro" feature requires both a command and a code action provider.
+    // To keep related logic together and allow easy registration in both desktop and web, it is encapsulated
+    // in registerSendSelectionToNeuro instead of being registered inline like most single commands.
+    registerSendSelectionToNeuro(context);
 }
 
 export function deactivate() {
