@@ -16,24 +16,12 @@ const MATCH_OPTIONS: MatchOptions[] = ['firstInFile', 'lastInFile', 'firstAfterC
 const POSITION_SCHEMA: JSONSchema7 = {
     type: 'object',
     description: 'Position parameters if you want to move your cursor or use a location other than the current location.',
-    oneOf: [
-        {
-            properties: {
-                line: { type: 'integer', description: 'The zero-based line number from your cursor\'s current line position.' },
-                column: { type: 'integer', description: 'The zero-based column number from your cursor\'s current column position.' },
-                type: { type: 'string', const: 'relative' },
-            },
-            additionalProperties: false,
-        },
-        {
-            properties: {
-                line: { type: 'integer', minimum: 1, description: 'The one-based line number for the position in the file overall.' },
-                column: { type: 'integer', minimum: 1, description: 'The one-based column number for the position in the file overall.' },
-                type: { type: 'string', const: 'absolute' },
-            },
-            additionalProperties: false,
-        },
-    ],
+    properties: {
+        line: { type: 'integer', minimum: 1, description: 'The line number for the position to target.' },
+        column: { type: 'integer', minimum: 1, description: 'The column number for the position to target.' },
+        type: { type: 'string', enum: ['relative', 'absolute'], description: 'Whether or not to use the position relative to your cursor or the absolute position in the file. Additionally, if set to "relative", line & column numbers are zero-based, else if set to "absolute", they are one-based.' },
+    },
+    additionalProperties: false,
     required: ['line', 'column', 'type'],
 };
 interface Position {
@@ -325,28 +313,14 @@ export const editingActions = {
             + ' This will place your cursor at the end of the replaced text, unless you replaced multiple instances.',
         schema: {
             type: 'object',
-            oneOf: [
-                {
-                    properties: {
-                        find: { type: 'string', description: 'The glob pattern to search for text to replace.' },
-                        replaceWith: { type: 'string', description: 'The text to replace the pattern with.' },
-                        useRegex: { type: 'boolean', const: false },
-                        match: { type: 'string', enum: MATCH_OPTIONS, description: 'The method to match text to replace.' },
-                        lineRange: LINE_RANGE_SCHEMA,
-                    },
-                    additionalProperties: false,
-                },
-                {
-                    properties: {
-                        find: { type: 'string', description: 'The RegEx pattern to use to search for text to replace.' },
-                        replaceWith: { type: 'string', description: 'The text to replace the pattern with. You can use substitution patterns here.' },
-                        useRegex: { type: 'boolean', const: true },
-                        match: { type: 'string', enum: MATCH_OPTIONS, description: 'The method to match text to replace.' },
-                        lineRange: LINE_RANGE_SCHEMA,
-                    },
-                    additionalProperties: false,
-                },
-            ],
+            properties: {
+                find: { type: 'string', description: 'The glob/RegEx pattern to search for text to replace.' },
+                replaceWith: { type: 'string', description: 'The text to replace the search result(s) with. If using RegEx, you can use substitution patterns here.' },
+                useRegex: { type: 'boolean', description: 'Whether or not the pattern(s) are RegEx patterns.' },
+                match: { type: 'string', enum: MATCH_OPTIONS, description: 'The method to match text to replace.' },
+                lineRange: LINE_RANGE_SCHEMA,
+            },
+            additionalProperties: false,
             required: ['find', 'replaceWith', 'match'],
         },
         permissions: [PERMISSIONS.editActiveDocument],
