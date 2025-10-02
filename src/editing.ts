@@ -15,14 +15,22 @@ type MatchOptions = 'firstInFile' | 'lastInFile' | 'firstAfterCursor' | 'lastBef
 const MATCH_OPTIONS: MatchOptions[] = ['firstInFile', 'lastInFile', 'firstAfterCursor', 'lastBeforeCursor', 'allInFile'] as const;
 const POSITION_SCHEMA: JSONSchema7 = {
     type: 'object',
-    properties: {
-        line: { type: 'integer' },
-        column: { type: 'integer' },
-        type: {
-            type: 'string',
-            enum: ['relative', 'absolute'],
+    oneOf: [
+        {
+            properties: {
+                line: { type: 'integer' },
+                column: { type: 'integer' },
+                type: { type: 'string', const: 'relative' },
+            },
         },
-    },
+        {
+            properties: {
+                line: { type: 'integer', minimum: 1 },
+                column: { type: 'integer', minimum: 1 },
+                type: { type: 'string', const: 'absolute' },
+            },
+        },
+    ],
     additionalProperties: false,
     required: ['line', 'column', 'type'],
 };
