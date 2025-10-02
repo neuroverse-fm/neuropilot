@@ -120,7 +120,7 @@ export const fileActions = {
         schema: {
             type: 'object',
             properties: {
-                filePath: { type: 'string' },
+                filePath: { type: 'string', description: 'The relative path to the file.' },
             },
             required: ['filePath'],
             additionalProperties: false,
@@ -137,7 +137,7 @@ export const fileActions = {
         schema: {
             type: 'object',
             properties: {
-                filePath: { type: 'string' },
+                filePath: { type: 'string', description: 'The relative path to the file.' },
             },
             required: ['filePath'],
             additionalProperties: false,
@@ -154,7 +154,7 @@ export const fileActions = {
         schema: {
             type: 'object',
             properties: {
-                filePath: { type: 'string' },
+                filePath: { type: 'string', description: 'The relative path to the file.' },
             },
             required: ['filePath'],
             additionalProperties: false,
@@ -171,7 +171,7 @@ export const fileActions = {
         schema: {
             type: 'object',
             properties: {
-                folderPath: { type: 'string' },
+                folderPath: { type: 'string', description: 'The relative path to the folder.' },
             },
             required: ['folderPath'],
             additionalProperties: false,
@@ -190,8 +190,8 @@ export const fileActions = {
         schema: {
             type: 'object',
             properties: {
-                oldPath: { type: 'string' },
-                newPath: { type: 'string' },
+                oldPath: { type: 'string', description: 'The relative path to the old directory.' },
+                newPath: { type: 'string',description: 'The relative path to the new directory.' },
             },
             required: ['oldPath', 'newPath'],
             additionalProperties: false,
@@ -211,8 +211,8 @@ export const fileActions = {
         schema: {
             type: 'object',
             properties: {
-                path: { type: 'string' },
-                recursive: { type: 'boolean' },
+                path: { type: 'string', description: 'The relative path to the file/folder to delete.' },
+                recursive: { type: 'boolean', description: 'If set to true, allows you to delete folders.' },
             },
             required: ['path'],
             additionalProperties: false,
