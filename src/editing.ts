@@ -22,6 +22,7 @@ const POSITION_SCHEMA: JSONSchema7 = {
                 column: { type: 'integer' },
                 type: { type: 'string', const: 'relative' },
             },
+            additionalProperties: false,
         },
         {
             properties: {
@@ -29,9 +30,9 @@ const POSITION_SCHEMA: JSONSchema7 = {
                 column: { type: 'integer', minimum: 1 },
                 type: { type: 'string', const: 'absolute' },
             },
+            additionalProperties: false,
         },
     ],
-    additionalProperties: false,
     required: ['line', 'column', 'type'],
 };
 interface Position {
