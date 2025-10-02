@@ -15,19 +15,20 @@ type MatchOptions = 'firstInFile' | 'lastInFile' | 'firstAfterCursor' | 'lastBef
 const MATCH_OPTIONS: MatchOptions[] = ['firstInFile', 'lastInFile', 'firstAfterCursor', 'lastBeforeCursor', 'allInFile'] as const;
 const POSITION_SCHEMA: JSONSchema7 = {
     type: 'object',
+    description: 'Position parameters if you want to move your cursor or use a location other than the current location.',
     oneOf: [
         {
             properties: {
-                line: { type: 'integer' },
-                column: { type: 'integer' },
+                line: { type: 'integer', description: 'The zero-based line number from your cursor\'s current line position.' },
+                column: { type: 'integer', description: 'The zero-based column number from your cursor\'s current column position.' },
                 type: { type: 'string', const: 'relative' },
             },
             additionalProperties: false,
         },
         {
             properties: {
-                line: { type: 'integer', minimum: 1 },
-                column: { type: 'integer', minimum: 1 },
+                line: { type: 'integer', minimum: 1, description: 'The one-based line number for the position in the file overall.' },
+                column: { type: 'integer', minimum: 1, description: 'The one-based column number for the position in the file overall.' },
                 type: { type: 'string', const: 'absolute' },
             },
             additionalProperties: false,
@@ -42,9 +43,10 @@ interface Position {
 }
 const LINE_RANGE_SCHEMA: JSONSchema7 = {
     type: 'object',
+    description: 'The line range to target.',
     properties: {
-        startLine: { type: 'integer', minimum: 1 },
-        endLine: { type: 'integer', minimum: 1 },
+        startLine: { type: 'integer', minimum: 1, description: 'The line to start from.' },
+        endLine: { type: 'integer', minimum: 1, description: 'The line to end targeting.' },
     },
     additionalProperties: false,
     required: ['startLine', 'endLine'],
@@ -204,7 +206,10 @@ export const editingActions = {
     place_cursor: {
         name: 'place_cursor',
         description: 'Place your cursor in the current file at the specified position. Line and column numbers are one-based for "absolute" and zero-based for "relative".',
-        schema: POSITION_SCHEMA,
+        schema: {
+            ...POSITION_SCHEMA,
+            description: undefined,
+        },
         permissions: [PERMISSIONS.editActiveDocument],
         handler: handlePlaceCursor,
         validators: [checkCurrentFile, createPositionValidator()],
@@ -242,7 +247,7 @@ export const editingActions = {
         schema: {
             type: 'object',
             properties: {
-                text: { type: 'string' },
+                text: { type: 'string', description: 'The text to insert.' },
                 position: POSITION_SCHEMA,
             },
             required: ['text'],
@@ -287,10 +292,12 @@ export const editingActions = {
             properties: {
                 text: {
                     type: 'string',
+                    description: 'The text to insert',
                 },
                 insertUnder: {
                     type: 'integer',
                     minimum: 1,
+                    description: 'The one-based line number to insert under.',
                 },
             },
             additionalProperties: false,
@@ -318,15 +325,29 @@ export const editingActions = {
             + ' This will place your cursor at the end of the replaced text, unless you replaced multiple instances.',
         schema: {
             type: 'object',
-            properties: {
-                find: { type: 'string' },
-                replaceWith: { type: 'string' },
-                useRegex: { type: 'boolean' },
-                match: { type: 'string', enum: MATCH_OPTIONS },
-                lineRange: LINE_RANGE_SCHEMA,
-            },
+            oneOf: [
+                {
+                    properties: {
+                        find: { type: 'string', description: 'The glob pattern to search for text to replace.' },
+                        replaceWith: { type: 'string', description: 'The text to replace the pattern with.' },
+                        useRegex: { type: 'boolean', const: false },
+                        match: { type: 'string', enum: MATCH_OPTIONS, description: 'The method to match text to replace.' },
+                        lineRange: LINE_RANGE_SCHEMA,
+                    },
+                    additionalProperties: false,
+                },
+                {
+                    properties: {
+                        find: { type: 'string', description: 'The RegEx pattern to use to search for text to replace.' },
+                        replaceWith: { type: 'string', description: 'The text to replace the pattern with. You can use substitution patterns here.' },
+                        useRegex: { type: 'boolean', const: true },
+                        match: { type: 'string', enum: MATCH_OPTIONS, description: 'The method to match text to replace.' },
+                        lineRange: LINE_RANGE_SCHEMA,
+                    },
+                    additionalProperties: false,
+                },
+            ],
             required: ['find', 'replaceWith', 'match'],
-            additionalProperties: false,
         },
         permissions: [PERMISSIONS.editActiveDocument],
         handler: handleReplaceText,
