@@ -6,6 +6,12 @@ Since v2.1.0, we're keeping a changelog of each version's changes in NeuroPilot.
 
 Changes between each version before then will not be listed.
 
+## 2.2.1
+
+### Changes
+
+- Action schemas now have descriptions and examples. Descriptions are also marked as "probably unsupported", but the "probably" will be given a stretch.
+
 ## 2.2.0
 
 ### New settings
