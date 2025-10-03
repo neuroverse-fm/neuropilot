@@ -147,7 +147,8 @@ export const gitActions = {
             properties: {
                 filePath: {
                     type: 'array',
-                    items: { type: 'string' },
+                    description: 'Array of relative file paths to the files you want to add to staging.',
+                    items: { type: 'string', examples: ['src/index.js', './README.md'] },
                     minItems: 1,
                     uniqueItems: true,
                 },
@@ -167,9 +168,10 @@ export const gitActions = {
         schema: {
             type: 'object',
             properties: {
-                message: { type: 'string' },
+                message: { type: 'string', description: 'The commit message to add.' },
                 options: {
                     type: 'array',
+                    description: 'Extra options you can choose for committing.',
                     items: { type: 'string', enum: ['signoff', 'verbose', 'amend'] },
                 },
             },
@@ -188,7 +190,7 @@ export const gitActions = {
         schema: {
             type: 'object',
             properties: {
-                ref_to_merge: { type: 'string' },
+                ref_to_merge: { type: 'string', description: 'The branch name to merge into the current branch.' },
             },
             required: ['ref_to_merge'],
             additionalProperties: false,
@@ -216,7 +218,8 @@ export const gitActions = {
             properties: {
                 filePath: {
                     type: 'array',
-                    items: { type: 'string' },
+                    description: 'Array of relative file paths to remove from staging.',
+                    items: { type: 'string', examples: ['src/index.js', './README.md'] },
                     minItems: 1,
                     uniqueItems: true,
                 },
@@ -236,8 +239,8 @@ export const gitActions = {
         schema: {
             type: 'object',
             properties: {
-                branchName: { type: 'string' },
-                force: { type: 'boolean' },
+                branchName: { type: 'string', description: 'Which branch in the Git repository should be deleted?' },
+                force: { type: 'boolean', description: 'If true, forcibly deletes a branch.' },
             },
             required: ['branchName'],
             additionalProperties: false,
@@ -254,7 +257,7 @@ export const gitActions = {
         schema: {
             type: 'object',
             properties: {
-                branchName: { type: 'string' },
+                branchName: { type: 'string', description: 'Switch to what branch?' },
             },
             required: ['branchName'],
             additionalProperties: false,
@@ -271,7 +274,7 @@ export const gitActions = {
         schema: {
             type: 'object',
             properties: {
-                branchName: { type: 'string' },
+                branchName: { type: 'string', description: 'The name of the new branch.' },
             },
             required: ['branchName'],
             additionalProperties: false,
@@ -288,10 +291,10 @@ export const gitActions = {
         schema: {
             type: 'object',
             properties: {
-                ref1: { type: 'string' },
-                ref2: { type: 'string' },
-                filePath: { type: 'string' },
-                diffType: { type: 'string', enum: ['diffWithHEAD', 'diffWith', 'diffIndexWithHEAD', 'diffIndexWith', 'diffBetween', 'fullDiff'] },
+                ref1: { type: 'string', description: 'The first ref to use to diff with. May not be used in some diff types.' },
+                ref2: { type: 'string', description: 'The second ref to diff against the first ref. Will not be used in some diff types.' },
+                filePath: { type: 'string', description: 'For certain diff types, you can specify a file to diff. If omitted, will usually diff the entire ref.' },
+                diffType: { type: 'string', enum: ['diffWithHEAD', 'diffWith', 'diffIndexWithHEAD', 'diffIndexWith', 'diffBetween', 'fullDiff'], description: 'The type of diff to run. This will also affect what parameters are required.' },
             },
             additionalProperties: false,
         },
@@ -310,6 +313,7 @@ export const gitActions = {
                 log_limit: {
                     type: 'integer',
                     minimum: 1,
+                    description: 'How many items should be returned? If set, this will return from the most recent commits and goes back.',
                 },
             },
             additionalProperties: false,
@@ -326,7 +330,7 @@ export const gitActions = {
         schema: {
             type: 'object',
             properties: {
-                filePath: { type: 'string' },
+                filePath: { type: 'string', description: 'The file to get attributions on.' },
             },
             required: ['filePath'],
             additionalProperties: false,
@@ -345,8 +349,8 @@ export const gitActions = {
         schema: {
             type: 'object',
             properties: {
-                name: { type: 'string' },
-                upstream: { type: 'string' },
+                name: { type: 'string', description: 'The name of the tag.' },
+                upstream: { type: 'string', description: 'Whether to tag on upstream.' },
             },
             required: ['name', 'upstream'],
             additionalProperties: false,
@@ -363,7 +367,7 @@ export const gitActions = {
         schema: {
             type: 'object',
             properties: {
-                name: { type: 'string' },
+                name: { type: 'string', description: 'The name of the tag to delete.' },
             },
             required: ['name'],
             additionalProperties: false,
@@ -382,8 +386,8 @@ export const gitActions = {
         schema: {
             type: 'object',
             properties: {
-                key: { type: 'string' },
-                value: { type: 'string' },
+                key: { type: 'string', description: 'The config key to target.' },
+                value: { type: 'string', description: 'The new value for the config key.' },
             },
             required: ['key', 'value'],
             additionalProperties: false,
@@ -400,7 +404,7 @@ export const gitActions = {
         schema: {
             type: 'object',
             properties: {
-                key: { type: 'string' },
+                key: { type: 'string', description: 'The config key to get. If omitted, you will get the full list of config keys and their values.' },
             },
             additionalProperties: false,
         },
@@ -418,8 +422,8 @@ export const gitActions = {
         schema: {
             type: 'object',
             properties: {
-                remoteName: { type: 'string' },
-                branchName: { type: 'string' },
+                remoteName: { type: 'string', description: 'Which remote to fetch from. If omitted, will fetch from the default set repo.' },
+                branchName: { type: 'string', description: 'Which branch to fetch from. If omitted, will fetch from the set remote branch of the current branch.' },
             },
             additionalProperties: false,
         },
@@ -452,9 +456,9 @@ export const gitActions = {
         schema: {
             type: 'object',
             properties: {
-                remoteName: { type: 'string' },
-                branchName: { type: 'string' },
-                forcePush: { type: 'boolean' },
+                remoteName: { type: 'string', description: 'The remote to push to. If omitted, will push to the default remote.' },
+                branchName: { type: 'string', description: 'The branch to push to. If omitted, will push to the set remote branch.' },
+                forcePush: { type: 'boolean', description: 'If true, will forcibly push to remote.' },
             },
             additionalProperties: false,
         },
@@ -481,8 +485,8 @@ export const gitActions = {
         schema: {
             type: 'object',
             properties: {
-                remoteName: { type: 'string' },
-                remoteURL: { type: 'string' },
+                remoteName: { type: 'string', description: 'The nickname set for the remote. You will use this name for inputs to other remote-related actions if you wish to use their remote parameters.' },
+                remoteURL: { type: 'string', description: 'The URL that the remote name is aliased to. It must be either SSH (which will only work if SSH is properly set up) or HTTPS.' },
             },
             required: ['remoteName', 'remoteURL'],
             additionalProperties: false,
@@ -499,7 +503,7 @@ export const gitActions = {
         schema: {
             type: 'object',
             properties: {
-                remoteName: { type: 'string' },
+                remoteName: { type: 'string', description: 'The name set for the remote you want to remove.' },
             },
             required: ['remoteName'],
             additionalProperties: false,
@@ -516,8 +520,8 @@ export const gitActions = {
         schema: {
             type: 'object',
             properties: {
-                oldRemoteName: { type: 'string' },
-                newRemoteName: { type: 'string' },
+                oldRemoteName: { type: 'string', description: 'The current remote name.' },
+                newRemoteName: { type: 'string', description: 'The new remote name.' },
             },
             required: ['oldRemoteName', 'newRemoteName'],
             additionalProperties: false,
