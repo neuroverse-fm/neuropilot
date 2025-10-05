@@ -1,7 +1,7 @@
 /**
  * Helper functions and types for interacting with the Neuro Game SDK.
  */
-
+import { Disposable } from 'vscode';
 import { Action } from 'neuro-game-sdk';
 import { Permission, PermissionLevel } from '@/config';
 import { logOutput } from '@/utils';
@@ -33,6 +33,13 @@ export interface ActionValidationResult {
     retry?: boolean;
 }
 
+/** Preview functions enum */
+export const enum PreviewType {
+    CopilotRequest,
+    AutopilotLatency,
+    AsyncValidator,
+}
+
 type TypedAction = Omit<Action, 'schema'> & { schema?: JSONSchema7 };
 
 /** ActionHandler to use with constants for records of actions and their corresponding handlers */
@@ -60,6 +67,14 @@ export interface RCEAction extends TypedAction {
     promptGenerator: PromptGenerator;
     /** Default permission for actions like chat, cancel_request, etc */
     defaultPermission?: PermissionLevel;
+    /**
+     * Function that activates a preview effect.
+     * @param actionData {@link ActionData Neuro's action inputs}
+     * @param type See {@link PreviewType}.
+     * @returns A {@link Disposable} that, upon `dispose()` being called, removes the preview effect.
+     * @todo should we really make one function handle everything? wouldn't it be better to make an object for each separate condition? :clueless:
+     */
+    previewEffect?: (actionData: ActionData, type: PreviewType) => Disposable
 }
 
 /**
