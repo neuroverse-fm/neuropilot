@@ -296,7 +296,7 @@ export async function RCEActionHandler(actionData: ActionData, actionList: Recor
                     else messagesArray.push(errs.stack);
                 });
                 const schemaFailures = `- ${messagesArray.join('\n- ')}`;
-                const message = 'Action failed:\n\n' + schemaFailures + '\n\nPlease pay attention to the schema and the above schema errors if you choose to retry.';
+                const message = 'Action failed, your inputs did not pass schema validation due to these problems:\n\n' + schemaFailures + '\n\nPlease pay attention to the schema and the above errors if you choose to retry.';
                 NEURO.client?.sendActionResult(actionData.id, false, message);
                 return;
             }
