@@ -350,9 +350,9 @@ export const gitActions = {
             type: 'object',
             properties: {
                 name: { type: 'string', description: 'The name of the tag.' },
-                upstream: { type: 'string', description: 'Whether to tag on upstream.' },
+                upstream: { type: 'string', description: 'What commit/ref do you want to have this tag be applied to? If optional, will tag the current commit.' },
             },
-            required: ['name', 'upstream'],
+            required: ['name'],
             additionalProperties: false,
         },
         permissions: [PERMISSIONS.gitOperations, PERMISSIONS.gitTags],
@@ -1087,7 +1087,7 @@ export function handleGitBlame(actionData: ActionData): string | undefined {
 export function handleTagHEAD(actionData: ActionData): string | undefined {
     assert(repo);
     const name: string = actionData.params.name;
-    const upstream: string = actionData.params.upstream;
+    const upstream: string = actionData.params.upstream ?? 'HEAD';
 
     repo.tag(name, upstream).then(() => {
         NEURO.client?.sendContext(`Tag ${name} created for ${upstream} remote.`);
