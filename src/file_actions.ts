@@ -137,7 +137,7 @@ export const fileActions = {
         schema: {
             type: 'object',
             properties: {
-                filePath: { type: 'string', description: 'The relative path to the file.', examples: ['./index.html', 'public/dog.png'] },
+                filePath: { type: 'string', description: 'The relative path to the file.', examples: ['./index.html', 'style.css', 'src/main.js'] },
             },
             required: ['filePath'],
             additionalProperties: false,
