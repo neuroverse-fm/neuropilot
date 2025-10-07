@@ -314,7 +314,7 @@ export const editingActions = {
         schema: {
             type: 'object',
             properties: {
-                find: { type: 'string', description: 'The glob/RegEx pattern to search for text to replace.' },
+                find: { type: 'string', description: 'The search text or RegEx pattern to search for text to replace.' },
                 replaceWith: { type: 'string', description: 'The text to replace the search result(s) with. If using RegEx, you can use substitution patterns here.' },
                 useRegex: { type: 'boolean', description: 'Whether or not the pattern(s) are RegEx patterns.' },
                 match: { type: 'string', enum: MATCH_OPTIONS, description: 'The method to match text to replace.' },
