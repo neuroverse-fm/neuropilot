@@ -429,8 +429,8 @@ export const editingActions = {
         schema: {
             type: 'object',
             properties: {
-                find: { type: 'string', description: 'The glob/RegEx pattern to search for text to find.' },
-                useRegex: { type: 'boolean', description: 'Whether or not the find pattern is RegEx patterns.' },
+                find: { type: 'string', description: 'The search text or RegEx pattern to search for text to replace.' },
+                useRegex: { type: 'boolean', description: 'Whether or not the find pattern is a RegEx pattern.' },
                 match: { type: 'string', enum: MATCH_OPTIONS, description: 'The method to find matching texts.' },
                 lineRange: LINE_RANGE_SCHEMA,
                 moveCursor: { type: 'string', enum: ['start', 'end'], description: 'If there is only one match, where should your cursor move relative to that match?' },
