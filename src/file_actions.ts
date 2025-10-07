@@ -191,7 +191,7 @@ export const fileActions = {
             type: 'object',
             properties: {
                 oldPath: { type: 'string', description: 'The relative path to the old directory.', examples: ['src', './main.py'] },
-                newPath: { type: 'string', description: 'The relative path to the new directory.', examples: ['wip', './old.py'] },
+                newPath: { type: 'string', description: 'The relative path to the new directory.', examples: ['wip', './new.py'] },
             },
             required: ['oldPath', 'newPath'],
             additionalProperties: false,
