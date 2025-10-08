@@ -1090,7 +1090,7 @@ export function handleTagHEAD(actionData: ActionData): string | undefined {
     const upstream: string = actionData.params.upstream ?? 'HEAD';
 
     repo.tag(name, upstream).then(() => {
-        NEURO.client?.sendContext(`Tag ${name} created for ${upstream} remote.`);
+        NEURO.client?.sendContext(`Tag ${name} created for ${upstream}.`);
     }, (erm: string) => {
         NEURO.client?.sendContext('There was an error during tagging.');
         logOutput('ERROR', `Error trying to tag: ${erm}`);
