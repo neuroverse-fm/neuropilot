@@ -50,6 +50,22 @@ const DEPRECATED_SETTINGS: DeprecatedSetting[] = [
             await cfg.update('access.environmentVariables', config, target);
         },
     },
+    {
+        old: 'disabledActions',
+        new: 'actions.disabledActions',
+    },
+    {
+        old: 'hideCopilotRequests',
+        new: 'actions.hideCopilotRequests',
+    },
+    {
+        old: 'allowRunningAllTasks',
+        new: 'actions.allowRunningAllTasks',
+    },
+    {
+        old: 'enableCancelRequests',
+        new: 'actions.enableCancelRequests',
+    },
 ];
 
 function getTargetConfig<T>(config: vscode.WorkspaceConfiguration, key: string, target: vscode.ConfigurationTarget) {
