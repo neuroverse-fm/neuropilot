@@ -8,6 +8,11 @@ Changes between each version before then will not be listed.
 
 ## 2.2.1
 
+### New settings
+
+- `neuropilot.disabledActions`, `neuropilot.hideCopilotRequests`, `neuropilot.enableCancelRequests`, `neuropilot.allowRunningAllTasks` were moved to `neuropilot.actions.*`.
+  - The deprecation checker will check for this upon update.
+
 ### Changes
 
 - Action schemas now have descriptions and examples. Descriptions are also marked as "probably unsupported", but the "probably" will be given a stretch.
