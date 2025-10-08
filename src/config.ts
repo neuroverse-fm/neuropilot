@@ -183,22 +183,26 @@ export const enum PermissionLevel {
  * @param key The config key to get
  * @returns The value of the config, or `undefined` if it doesn't exist
  */
-export function getConfig<T>(key: string): T | undefined {
+function getConfig<T>(key: string): T | undefined {
     return vscode.workspace.getConfiguration('neuropilot').get<T>(key);
 }
 
-export function getAccess<T>(key: string): T | undefined {
+function getAccess<T>(key: string): T | undefined {
     return vscode.workspace.getConfiguration('neuropilot').get<T>('access.' + key);
 }
 
-export function getConnection<T>(key: string): T | undefined {
+function getConnection<T>(key: string): T | undefined {
     return vscode.workspace.getConfiguration('neuropilot').get<T>('connection.' + key);
+}
+
+function getActions<T>(key: string): T | undefined {
+    return vscode.workspace.getConfiguration('neuropilot').get<T>('actions.' + key);
 }
 
 export function isActionEnabled(action: string | Action): boolean {
     if (typeof action === 'string')
-        return !CONFIG.disabledActions.includes(action);
-    return !CONFIG.disabledActions.includes(action.name);
+        return !ACTIONS.disabledActions.includes(action);
+    return !ACTIONS.disabledActions.includes(action.name);
 }
 
 /**
@@ -269,20 +273,16 @@ class Config {
     get timeout(): number { return getConfig('timeout')!; }
     get showTimeOnTerminalStart(): boolean { return getConfig('showTimeOnTerminalStart')!; }
     get terminalContextDelay(): number { return getConfig('terminalContextDelay')!; }
-    get allowRunningAllTasks(): boolean { return getConfig('allowRunningAllTasks')!; }
     get sendNewLintingProblemsOn(): string { return getConfig('sendNewLintingProblemsOn')!; }
     get sendSaveNotifications(): boolean { return getConfig('sendSaveNotifications')!; }
     get requestExpiryTimeout(): number { return getConfig('requestExpiryTimeout')!; }
-    get hideCopilotRequests(): boolean { return getConfig('hideCopilotRequests')!; }
     get cursorFollowsNeuro(): boolean { return getConfig('cursorFollowsNeuro')!; }
     get currentlyAsNeuroAPI(): string { return getConfig('currentlyAsNeuroAPI')!; }
     get docsURL(): string { return getConfig('docsURL')!; }
     get defaultOpenDocsWindow(): string { return getConfig('defaultOpenDocsWindow')!; }
-    get disabledActions(): string[] { return getConfig('disabledActions')!; }
     get sendContentsOnFileChange(): boolean { return getConfig('sendContentsOnFileChange')!; }
     get cursorPositionContextStyle(): CursorPositionContextStyle { return getConfig('cursorPositionContextStyle')!; }
     get lineNumberContextFormat(): string { return getConfig('lineNumberContextFormat')!; }
-    get enableCancelEvents(): boolean { return getConfig('enableCancelEvents')!; }
 
     get terminals(): { name: string; path: string; args?: string[]; }[] { return getConfig('terminals')!; }
 }
@@ -309,3 +309,12 @@ class Connection {
 }
 
 export const CONNECTION = new Connection();
+
+class Actions {
+    get disabledActions(): string[] { return getActions<string[]>('disabledActions')!; }
+    get hideCopilotRequests(): boolean { return getActions<boolean>('hideCopilotRequests')!; }
+    get allowRunningAllTasks(): boolean { return getActions<boolean>('allowRunningAllTasks')!; }
+    get enableCancelEvents(): boolean { return getActions<boolean>('enableCancelEvents')!; }
+}
+
+export const ACTIONS = new Actions();

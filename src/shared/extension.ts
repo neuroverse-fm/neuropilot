@@ -4,7 +4,7 @@ import { logOutput, createClient, onClientConnected, setVirtualCursor, showAPIMe
 import { completionsProvider, registerCompletionResultHandler } from '@/completions';
 import { giveCookie, registerRequestCookieAction, registerRequestCookieHandler, sendCurrentFile } from '@/context';
 import { registerChatResponseHandler } from '@/chat';
-import { ACCESS, checkDeprecatedSettings, CONFIG, CONNECTION } from '@/config';
+import { ACCESS, ACTIONS, checkDeprecatedSettings, CONFIG, CONNECTION } from '@/config';
 import { explainWithNeuro, fixWithNeuro, NeuroCodeActionsProvider, sendDiagnosticsDiff } from '@/lint_problems';
 import { editorChangeHandler, fileSaveListener, moveNeuroCursorHere, toggleSaveAction, workspaceEditHandler } from '@/editing';
 import { emergencyDenyRequests, acceptRceRequest, denyRceRequest, revealRceNotification, clearRceRequest } from '@/rce';
@@ -57,7 +57,7 @@ export function setupCommonEventHandlers() {
         vscode.workspace.onDidChangeTextDocument(workspaceEditHandler),
         vscode.workspace.onDidChangeConfiguration(event => {
             if (event.affectsConfiguration('neuropilot.hideCopilotRequests')) {
-                if (CONFIG.hideCopilotRequests) {
+                if (ACTIONS.hideCopilotRequests) {
                     NEURO.statusBarItem?.show();
                 } else {
                     NEURO.statusBarItem?.hide();
@@ -130,7 +130,7 @@ export function createStatusBarItem() {
     NEURO.statusBarItem.color = new vscode.ThemeColor('statusBarItem.foreground');
     NEURO.statusBarItem.backgroundColor = new vscode.ThemeColor('statusBarItem.background');
 
-    if (CONFIG.hideCopilotRequests) {
+    if (ACTIONS.hideCopilotRequests) {
         NEURO.statusBarItem.show();
     }
 }
