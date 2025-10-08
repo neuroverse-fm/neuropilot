@@ -17,7 +17,8 @@ Changes between each version before then will not be listed.
 ### Changes
 
 - Action schemas now have descriptions and examples. Descriptions are also marked as "probably unsupported" on API specs, but the "probably" will be given a stretch.
-  - Additionally, we are experimenting with using more "probably not supported" schema items. These will be on separate schema objects in our actions. 
+  - Additionally, we are experimenting with using more "probably not supported" schema items. These will be on separate schema objects in our actions.
+  - The first of these is `oneOf` keys for `git_diff` and editing actions' position parameters.
   - If your Neuro (or Jippity) starts getting super confused, you can disable the `neuropilot.actions.experimentalSchemas` setting to use more compliant schemas.
 
 ## 2.2.0
