@@ -12,10 +12,13 @@ Changes between each version before then will not be listed.
 
 - `neuropilot.disabledActions`, `neuropilot.hideCopilotRequests`, `neuropilot.enableCancelRequests`, `neuropilot.allowRunningAllTasks` were moved to `neuropilot.actions.*`.
   - The deprecation checker will check for this upon update.
+- Experimental schemas can be toggled with `neuropilot.actions.experimentalSchemas`. Read the Changes section for more info.
 
 ### Changes
 
-- Action schemas now have descriptions and examples. Descriptions are also marked as "probably unsupported", but the "probably" will be given a stretch.
+- Action schemas now have descriptions and examples. Descriptions are also marked as "probably unsupported" on API specs, but the "probably" will be given a stretch.
+  - Additionally, we are experimenting with using more "probably not supported" schema items. These will be on separate schema objects in our actions. 
+  - If your Neuro (or Jippity) starts getting super confused, you can disable the `neuropilot.actions.experimentalSchemas` setting to use more compliant schemas.
 
 ## 2.2.0
 
