@@ -17,8 +17,8 @@ const POSITION_SCHEMA: JSONSchema7 = {
     type: 'object',
     description: 'Position parameters if you want to move your cursor or use a location other than the current location.',
     properties: {
-        line: { type: 'integer', minimum: 1, description: 'The line number for the position to target.' },
-        column: { type: 'integer', minimum: 1, description: 'The column number for the position to target.' },
+        line: { type: 'integer', description: 'The line number for the position to target.' },
+        column: { type: 'integer', description: 'The column number for the position to target.' },
         type: { type: 'string', enum: ['relative', 'absolute'], description: 'Whether or not to use the position relative to your cursor or the absolute position in the file. Additionally, if set to "relative", line & column numbers are zero-based, else if set to "absolute", they are one-based.' },
     },
     additionalProperties: false,
