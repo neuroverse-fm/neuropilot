@@ -9,7 +9,7 @@ suite('delete_text Action', () => {
         const prompt = editingActions.delete_text.promptGenerator({
             params: { find: 'a+b', useRegex: true },
         } as ActionData);
-        
+
         // === Assert ===
         assert.ok(typeof prompt === 'string' && prompt.length > 0);
         assert.ok(prompt.includes('a\\+b'));
@@ -20,9 +20,9 @@ suite('delete_text Action', () => {
         const prompt = editingActions.delete_text.promptGenerator({
             params: { find: 'hello', useRegex: false },
         } as ActionData);
-        
+
         // === Act ===
-        
+
         // === Assert ===
         assert.ok(typeof prompt === 'string' && prompt.length > 0);
         assert.ok(prompt.includes('hello'));

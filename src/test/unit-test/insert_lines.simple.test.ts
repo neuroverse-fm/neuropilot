@@ -9,7 +9,7 @@ suite('insert_lines Action', () => {
         const prompt = editingActions.insert_lines.promptGenerator({
             params: { text: 'a\nb' },
         } as ActionData);
-        
+
         // === Assert ===
         assert.ok(typeof prompt === 'string' && prompt.length > 0);
         assert.ok(prompt.includes('2'));
@@ -20,7 +20,7 @@ suite('insert_lines Action', () => {
         const prompt = editingActions.insert_lines.promptGenerator({
             params: { text: 'one line', insertUnder: 7 },
         } as ActionData);
-        
+
         // === Assert ===
         assert.ok(typeof prompt === 'string' && prompt.length > 0);
         assert.ok(prompt.includes('1'));

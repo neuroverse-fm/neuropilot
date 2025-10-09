@@ -7,7 +7,7 @@ suite('lint Actions', () => {
     test('get_file_lint_problems formats file', () => {
         // === Arrange & Act ===
         const prompt = lintActions.get_file_lint_problems.promptGenerator({ params: { file: 'src/a.ts' } } as ActionData);
-        
+
         // === Assert ===
         assert.ok(typeof prompt === 'string' && prompt.length > 0);
         assert.ok(prompt.includes('src/a.ts'));
@@ -16,7 +16,7 @@ suite('lint Actions', () => {
     test('get_folder_lint_problems formats folder', () => {
         // === Arrange & Act ===
         const prompt = lintActions.get_folder_lint_problems.promptGenerator({ params: { folder: 'src' } } as ActionData);
-        
+
         // === Assert ===
         assert.ok(typeof prompt === 'string' && prompt.length > 0);
         assert.ok(prompt.includes('src'));
@@ -25,7 +25,7 @@ suite('lint Actions', () => {
     test('get_workspace_lint_problems fixed prompt', () => {
         // === Arrange & Act ===
         const prompt = (lintActions.get_workspace_lint_problems.promptGenerator as () => string)();
-        
+
         // === Assert ===
         assert.ok(typeof prompt === 'string' && prompt.length > 0);
     });

@@ -9,7 +9,7 @@ suite('delete_lines Action', () => {
         const prompt = editingActions.delete_lines.promptGenerator({
             params: { startLine: 3, endLine: 7 },
         } as ActionData);
-        
+
         // === Assert ===
         assert.ok(typeof prompt === 'string' && prompt.length > 0, 'prompt should be a non-empty string');
         assert.ok(prompt.includes('3'), 'prompt should include the start line');
@@ -21,7 +21,7 @@ suite('delete_lines Action', () => {
         const prompt = editingActions.delete_lines.promptGenerator({
             params: { startLine: 5, endLine: 5 },
         } as ActionData);
-        
+
         // === Assert ===
         assert.ok(typeof prompt === 'string' && prompt.length > 0, 'prompt should be a non-empty string');
         assert.ok(prompt.includes('5'), 'prompt should include the line number');
@@ -33,7 +33,7 @@ suite('delete_lines Action', () => {
             params: { startLine: 7, endLine: 3 },
         } as ActionData);
         // Prompt generator formats only; validation handles correctness elsewhere        
-        
+
         // === Assert ===
         assert.ok(typeof prompt === 'string' && prompt.length > 0, 'prompt should be a non-empty string');
         assert.ok(prompt.includes('7') && prompt.includes('3'), 'prompt should include both provided numbers');

@@ -9,7 +9,7 @@ suite('place_cursor Action', () => {
         const prompt = editingActions.place_cursor.promptGenerator({
             params: { line: 10, column: 5, type: 'absolute' },
         } as ActionData);
-        
+
         // === Assert ===
         assert.ok(typeof prompt === 'string' && prompt.length > 0);
         assert.ok(prompt.includes('10'));
@@ -21,7 +21,7 @@ suite('place_cursor Action', () => {
         const prompt = editingActions.place_cursor.promptGenerator({
             params: { line: 2, column: -1, type: 'relative' },
         } as ActionData);
-        
+
         // === Assert ===
         assert.ok(typeof prompt === 'string' && prompt.length > 0);
         assert.ok(prompt.includes('2'));

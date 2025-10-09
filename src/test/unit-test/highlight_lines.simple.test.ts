@@ -9,7 +9,7 @@ suite('highlight_lines Action', () => {
         const prompt = editingActions.highlight_lines.promptGenerator({
             params: { startLine: 1, endLine: 3 },
         } as ActionData);
-        
+
         // === Assert ===
         assert.ok(typeof prompt === 'string' && prompt.length > 0);
         assert.ok(prompt.includes('1'));

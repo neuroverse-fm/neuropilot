@@ -7,7 +7,7 @@ suite('git Actions', () => {
     test('init_git_repo has non-empty fixed prompt', () => {
         // === Arrange & Act ===
         const prompt = gitActions.init_git_repo.promptGenerator as string;
-        
+
         // === Assert ===
         assert.ok(typeof prompt === 'string' && prompt.length > 0);
     });
@@ -15,7 +15,7 @@ suite('git Actions', () => {
     test('add_file_to_git formats array of files', () => {
         // === Arrange & Act ===
         const prompt = gitActions.add_file_to_git.promptGenerator({ params: { filePath: ['a.ts', 'b.ts'] } } as ActionData);
-        
+
         // === Assert ===
         assert.ok(typeof prompt === 'string' && prompt.length > 0);
         assert.ok(prompt.includes('a.ts'));
@@ -25,7 +25,7 @@ suite('git Actions', () => {
     test('make_git_commit formats message', () => {
         // === Arrange & Act ===
         const prompt = gitActions.make_git_commit.promptGenerator({ params: { message: 'feat: hello' } } as ActionData);
-        
+
         // === Assert ===
         assert.ok(typeof prompt === 'string' && prompt.length > 0);
         assert.ok(prompt.includes('feat: hello'));
@@ -34,7 +34,7 @@ suite('git Actions', () => {
     test('merge_to_current_branch formats ref', () => {
         // === Arrange & Act ===
         const prompt = gitActions.merge_to_current_branch.promptGenerator({ params: { ref_to_merge: 'feature' } } as ActionData);
-        
+
         // === Assert ===
         assert.ok(typeof prompt === 'string' && prompt.length > 0);
         assert.ok(prompt.includes('feature'));
@@ -43,7 +43,7 @@ suite('git Actions', () => {
     test('git_status has non-empty fixed prompt', () => {
         // === Arrange & Act ===
         const prompt = gitActions.git_status.promptGenerator as string;
-        
+
         // === Assert ===
         assert.ok(typeof prompt === 'string' && prompt.length > 0);
     });
@@ -51,7 +51,7 @@ suite('git Actions', () => {
     test('remove_file_from_git formats array', () => {
         // === Arrange & Act ===
         const prompt = gitActions.remove_file_from_git.promptGenerator({ params: { filePath: ['a.ts'] } } as ActionData);
-        
+
         // === Assert ===
         assert.ok(typeof prompt === 'string' && prompt.length > 0);
         assert.ok(prompt.includes('a.ts'));
@@ -60,7 +60,7 @@ suite('git Actions', () => {
     test('delete_git_branch formats name', () => {
         // === Arrange & Act ===
         const prompt = gitActions.delete_git_branch.promptGenerator({ params: { branchName: 'old' } } as ActionData);
-        
+
         // === Assert ===
         assert.ok(typeof prompt === 'string' && prompt.length > 0);
         assert.ok(prompt.includes('old'));
@@ -69,7 +69,7 @@ suite('git Actions', () => {
     test('switch_git_branch formats name', () => {
         // === Arrange & Act ===
         const prompt = gitActions.switch_git_branch.promptGenerator({ params: { branchName: 'main' } } as ActionData);
-        
+
         // === Assert ===
         assert.ok(typeof prompt === 'string' && prompt.length > 0);
         assert.ok(prompt.includes('main'));
@@ -78,7 +78,7 @@ suite('git Actions', () => {
     test('new_git_branch formats name', () => {
         // === Arrange & Act ===
         const prompt = gitActions.new_git_branch.promptGenerator({ params: { branchName: 'feat' } } as ActionData);
-        
+
         // === Assert ===
         assert.ok(typeof prompt === 'string' && prompt.length > 0);
         assert.ok(prompt.includes('feat'));
@@ -87,7 +87,7 @@ suite('git Actions', () => {
     test('diff_files only filePath', () => {
         // === Arrange & Act ===
         const prompt = gitActions.diff_files.promptGenerator({ params: { filePath: 'src/a.ts' } } as ActionData);
-        
+
         // === Assert ===
         assert.ok(typeof prompt === 'string' && prompt.length > 0);
         assert.ok(prompt.includes('src/a.ts'));
@@ -96,7 +96,7 @@ suite('git Actions', () => {
     test('diff_files with ref1 only', () => {
         // === Arrange & Act ===
         const prompt = gitActions.diff_files.promptGenerator({ params: { ref1: 'HEAD~1' } } as ActionData);
-        
+
         // === Assert ===
         assert.ok(typeof prompt === 'string' && prompt.length > 0);
         assert.ok(prompt.includes('HEAD~1'));
@@ -105,7 +105,7 @@ suite('git Actions', () => {
     test('diff_files between refs and with type', () => {
         // === Arrange & Act ===
         const prompt = gitActions.diff_files.promptGenerator({ params: { ref1: 'A', ref2: 'B', diffType: 'diffBetween' } } as ActionData);
-        
+
         // === Assert ===
         assert.ok(typeof prompt === 'string' && prompt.length > 0);
         assert.ok(prompt.includes('A'));
@@ -116,7 +116,7 @@ suite('git Actions', () => {
     test('git_log without limit', () => {
         // === Arrange & Act ===
         const prompt = gitActions.git_log.promptGenerator({ params: {} } as ActionData);
-        
+
         // === Assert ===
         assert.ok(typeof prompt === 'string' && prompt.length > 0);
     });
@@ -124,7 +124,7 @@ suite('git Actions', () => {
     test('git_log with limit', () => {
         // === Arrange & Act ===
         const prompt = gitActions.git_log.promptGenerator({ params: { log_limit: 5 } } as ActionData);
-        
+
         // === Assert ===
         assert.ok(typeof prompt === 'string' && prompt.length > 0);
         assert.ok(prompt.includes('5'));
@@ -133,7 +133,7 @@ suite('git Actions', () => {
     test('git_blame formats file', () => {
         // === Arrange & Act ===
         const prompt = gitActions.git_blame.promptGenerator({ params: { filePath: 'src/x.ts' } } as ActionData);
-        
+
         // === Assert ===
         assert.ok(typeof prompt === 'string' && prompt.length > 0);
         assert.ok(prompt.includes('src/x.ts'));
@@ -142,7 +142,7 @@ suite('git Actions', () => {
     test('tag_head formats name and upstream', () => {
         // === Arrange & Act ===
         const prompt = gitActions.tag_head.promptGenerator({ params: { name: 'v1.0.0', upstream: 'origin' } } as ActionData);
-        
+
         // === Assert ===
         assert.ok(typeof prompt === 'string' && prompt.length > 0);
         assert.ok(prompt.includes('v1.0.0'));
@@ -152,7 +152,7 @@ suite('git Actions', () => {
     test('delete_tag formats name', () => {
         // === Arrange & Act ===
         const prompt = gitActions.delete_tag.promptGenerator({ params: { name: 'v1.0.0' } } as ActionData);
-        
+
         // === Assert ===
         assert.ok(typeof prompt === 'string' && prompt.length > 0);
         assert.ok(prompt.includes('v1.0.0'));
@@ -161,7 +161,7 @@ suite('git Actions', () => {
     test('set_git_config formats key/value', () => {
         // === Arrange & Act ===
         const prompt = gitActions.set_git_config.promptGenerator({ params: { key: 'user.name', value: 'Alice' } } as ActionData);
-        
+
         // === Assert ===
         assert.ok(typeof prompt === 'string' && prompt.length > 0);
         assert.ok(prompt.includes('user.name'));
@@ -171,7 +171,7 @@ suite('git Actions', () => {
     test('get_git_config without key', () => {
         // === Arrange & Act ===
         const prompt = gitActions.get_git_config.promptGenerator({ params: {} } as ActionData);
-        
+
         // === Assert ===
         assert.ok(typeof prompt === 'string' && prompt.length > 0);
     });
@@ -179,7 +179,7 @@ suite('git Actions', () => {
     test('get_git_config with key', () => {
         // === Arrange & Act ===
         const prompt = gitActions.get_git_config.promptGenerator({ params: { key: 'core.editor' } } as ActionData);
-        
+
         // === Assert ===
         assert.ok(typeof prompt === 'string' && prompt.length > 0);
         assert.ok(prompt.includes('core.editor'));
@@ -188,7 +188,7 @@ suite('git Actions', () => {
     test('fetch_git_commits remote+branch', () => {
         // === Arrange & Act ===
         const prompt = gitActions.fetch_git_commits.promptGenerator({ params: { remoteName: 'origin', branchName: 'main' } } as ActionData);
-        
+
         // === Assert ===
         assert.ok(typeof prompt === 'string' && prompt.length > 0);
         assert.ok(prompt.includes('origin'));
@@ -198,7 +198,7 @@ suite('git Actions', () => {
     test('fetch_git_commits remote only', () => {
         // === Arrange & Act ===
         const prompt = gitActions.fetch_git_commits.promptGenerator({ params: { remoteName: 'origin' } } as ActionData);
-        
+
         // === Assert ===
         assert.ok(typeof prompt === 'string' && prompt.length > 0);
         assert.ok(prompt.includes('origin'));
@@ -207,7 +207,7 @@ suite('git Actions', () => {
     test('fetch_git_commits branch only', () => {
         // === Arrange & Act ===
         const prompt = gitActions.fetch_git_commits.promptGenerator({ params: { branchName: 'dev' } } as ActionData);
-        
+
         // === Assert ===
         assert.ok(typeof prompt === 'string' && prompt.length > 0);
         assert.ok(prompt.includes('dev'));
@@ -216,7 +216,7 @@ suite('git Actions', () => {
     test('pull_git_commits fixed prompt', () => {
         // === Arrange & Act ===
         const prompt = gitActions.pull_git_commits.promptGenerator as string;
-        
+
         // === Assert ===
         assert.ok(typeof prompt === 'string' && prompt.length > 0);
     });
@@ -224,7 +224,7 @@ suite('git Actions', () => {
     test('push_git_commits remote+branch', () => {
         // === Arrange & Act ===
         const prompt = gitActions.push_git_commits.promptGenerator({ params: { remoteName: 'origin', branchName: 'main', forcePush: false } } as ActionData);
-        
+
         // === Assert ===
         assert.ok(typeof prompt === 'string' && prompt.length > 0);
         assert.ok(prompt.includes('origin'));
@@ -234,7 +234,7 @@ suite('git Actions', () => {
     test('push_git_commits remote only forced', () => {
         // === Arrange & Act ===
         const prompt = gitActions.push_git_commits.promptGenerator({ params: { remoteName: 'origin', forcePush: true } } as ActionData);
-        
+
         // === Assert ===
         assert.ok(typeof prompt === 'string' && prompt.length > 0);
         assert.ok(prompt.toLowerCase().includes('force'));
@@ -244,7 +244,7 @@ suite('git Actions', () => {
     test('push_git_commits no remote/branch forced', () => {
         // === Arrange & Act ===
         const prompt = gitActions.push_git_commits.promptGenerator({ params: { forcePush: true } } as ActionData);
-        
+
         // === Assert ===
         assert.ok(typeof prompt === 'string' && prompt.length > 0);
         assert.ok(prompt.toLowerCase().includes('force'));
@@ -253,7 +253,7 @@ suite('git Actions', () => {
     test('add_git_remote formats remote and URL', () => {
         // === Arrange & Act ===
         const prompt = gitActions.add_git_remote.promptGenerator({ params: { remoteName: 'origin', remoteURL: 'git@x:y.git' } } as ActionData);
-        
+
         // === Assert ===
         assert.ok(typeof prompt === 'string' && prompt.length > 0);
         assert.ok(prompt.includes('origin'));
@@ -263,7 +263,7 @@ suite('git Actions', () => {
     test('remove_git_remote formats remote', () => {
         // === Arrange & Act ===
         const prompt = gitActions.remove_git_remote.promptGenerator({ params: { remoteName: 'origin' } } as ActionData);
-        
+
         // === Assert ===
         assert.ok(typeof prompt === 'string' && prompt.length > 0);
         assert.ok(prompt.includes('origin'));
@@ -272,7 +272,7 @@ suite('git Actions', () => {
     test('rename_git_remote formats old/new names', () => {
         // === Arrange & Act ===
         const prompt = gitActions.rename_git_remote.promptGenerator({ params: { oldRemoteName: 'origin', newRemoteName: 'upstream' } } as ActionData);
-        
+
         // === Assert ===
         assert.ok(typeof prompt === 'string' && prompt.length > 0);
         assert.ok(prompt.includes('origin'));
@@ -282,7 +282,7 @@ suite('git Actions', () => {
     test('abort_merge fixed prompt', () => {
         // === Arrange & Act ===
         const prompt = gitActions.abort_merge.promptGenerator as string;
-        
+
         // === Assert ===
         assert.ok(typeof prompt === 'string' && prompt.length > 0);
     });

@@ -9,7 +9,7 @@ suite('replace_text Action', () => {
         const prompt = editingActions.replace_text.promptGenerator({
             params: { find: 'a+b', replaceWith: 'x', useRegex: true },
         } as ActionData);
-        
+
         // === Assert ===
         assert.ok(typeof prompt === 'string' && prompt.length > 0);
         assert.ok(prompt.includes('a\\+b'));
@@ -21,7 +21,7 @@ suite('replace_text Action', () => {
         const prompt = editingActions.replace_text.promptGenerator({
             params: { find: 'hello', replaceWith: 'world', useRegex: false },
         } as ActionData);
-        
+
         // === Assert ===
         assert.ok(typeof prompt === 'string' && prompt.length > 0);
         assert.ok(prompt.includes('hello'));

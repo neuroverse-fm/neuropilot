@@ -37,6 +37,7 @@ export default tseslint.config(
         'src/types/**/*.d.ts',
         'project-files/**/*',
         '.vscode-test.mjs',
+        'check-malicious-packages.js',
     ]),
     js.configs.recommended,
     ...tseslint.configs.recommended,

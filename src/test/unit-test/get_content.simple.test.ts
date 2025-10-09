@@ -6,7 +6,7 @@ suite('get_content Action', () => {
     test('returns a non-empty fixed prompt', () => {
         // === Arrange & Act ===
         const prompt = editingActions.get_content.promptGenerator as string;
-        
+
         // === Assert ===
         assert.ok(typeof prompt === 'string' && prompt.length > 0);
     });

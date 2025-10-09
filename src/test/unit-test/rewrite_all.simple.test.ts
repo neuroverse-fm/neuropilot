@@ -9,7 +9,7 @@ suite('rewrite_all Action (unit)', () => {
         const prompt = editingActions.rewrite_all.promptGenerator({
             params: { content: 'Single line content' },
         } as ActionData);
-        
+
         // === Assert ===
         assert.ok(typeof prompt === 'string' && prompt.length > 0);
         assert.ok(prompt.includes('1'));
@@ -20,7 +20,7 @@ suite('rewrite_all Action (unit)', () => {
         const prompt = editingActions.rewrite_all.promptGenerator({
             params: { content: 'Line 1\nLine 2\nLine 3' },
         } as ActionData);
-        
+
         // === Assert ===
         assert.ok(typeof prompt === 'string' && prompt.length > 0);
         assert.ok(prompt.includes('3'));
@@ -31,7 +31,7 @@ suite('rewrite_all Action (unit)', () => {
         const prompt = editingActions.rewrite_all.promptGenerator({
             params: { content: '' },
         } as ActionData);
-        
+
         // === Assert ===
         assert.ok(typeof prompt === 'string' && prompt.length > 0);
         // Implementation trims and splits; empty content yields 1 due to split on [''] after trim, but we only require non-empty prompt

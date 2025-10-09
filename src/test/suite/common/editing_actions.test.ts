@@ -98,8 +98,8 @@ suite('Integration: Editing actions', () => {
         const moved = handlePlaceCursor({ id: 't', name: 'place_cursor', params: { line: 1, column: 1, type: 'relative' } });
 
         // === Assert ===
-        assert.ok(moved && moved.includes('(3:2)'));        
-        
+        assert.ok(moved && moved.includes('(3:2)'));
+
         // === Act & Assert ===
         const restored = handlePlaceCursor({ id: 't', name: 'place_cursor', params: { line: 2, column: 1, type: 'absolute' } });
         assert.ok(restored && restored.includes('(2:1)'));
@@ -108,7 +108,7 @@ suite('Integration: Editing actions', () => {
     test('get_content returns full file content context', () => {
         // === Act ===
         const result = handleGetContent();
-        
+
         // === Assert ===
         assert.ok(result.includes('Alpha'));
         assert.ok(result.includes('Delta'));
@@ -120,7 +120,7 @@ suite('Integration: Editing actions', () => {
 
         // === Act ===
         handleInsertText(actionData);
-        
+
         // === Assert ===
         await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); }, 3000, 100);
         const [ctx] = capture(mockedClient.sendContext).last();
@@ -130,10 +130,10 @@ suite('Integration: Editing actions', () => {
     test('insert_text defaults to current cursor when no position provided', async () => {
         // === Arrange ===
         reset(mockedClient);
-        
+
         // === Act ===
         handleInsertText({ id: 't', name: 'insert_text', params: { text: 'Q' } });
-        
+
         // === Assert ===
         await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); }, 3000, 100);
         const text = (await vscode.workspace.openTextDocument(docUri)).getText();
@@ -150,10 +150,10 @@ suite('Integration: Editing actions', () => {
         reset(mockedClient);
         handlePlaceCursor({ id: 't', name: 'place_cursor', params: { line: 1, column: 1, type: 'absolute' } });
         const ad: ActionData = { id: 't', name: 'insert_text', params: { text: '-', position: { line: 1, column: 2, type: 'relative' } } };
-        
+
         // === Act ===
         handleInsertText(ad);
-        
+
         // === Assert ===
         await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); }, 3000, 100);
         const text = (await vscode.workspace.openTextDocument(docUri)).getText();
@@ -167,7 +167,7 @@ suite('Integration: Editing actions', () => {
 
         // === Act ===
         handleInsertLines(actionData);
-        
+
         // === Assert ===
         await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); }, 3000, 100);
         const text = (await vscode.workspace.openTextDocument(docUri)).getText();
@@ -181,10 +181,10 @@ suite('Integration: Editing actions', () => {
         handleRewriteAll({ id: 't', name: 'rewrite_all', params: { content: ['A', 'B'].join('\n') } } as ActionData);
         await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); }, 3000, 100);
         reset(mockedClient);
-        
+
         // === Act ===
         handleInsertLines({ id: 't', name: 'insert_lines', params: { text: 'C', insertUnder: 6 } } as ActionData);
-        
+
         // === Assert ===
         await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); }, 3000, 100);
         const doc = await vscode.workspace.openTextDocument(docUri);
@@ -196,10 +196,10 @@ suite('Integration: Editing actions', () => {
     test('replace_text single match replaces and sends context', async function () {
         // === Arrange ===
         const actionData: ActionData = { id: 't', name: 'replace_text', params: { find: 'Alpha', replaceWith: 'A', match: 'firstInFile', useRegex: false } };
-        
+
         // === Act ===
         handleReplaceText(actionData);
-        
+
         // === Assert ===
         await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); }, 5000, 100);
         const text = (await vscode.workspace.openTextDocument(docUri)).getText();
@@ -213,10 +213,10 @@ suite('Integration: Editing actions', () => {
         await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); }, 5000, 100);
         reset(mockedClient);
         const actionData: ActionData = { id: 't', name: 'replace_text', params: { find: '(foo)(\\d)', replaceWith: '$1X', match: 'allInFile', useRegex: true } };
-        
+
         // === Act ===
         handleReplaceText(actionData);
-        
+
         // === Assert ===
         await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); }, 5000, 100);
         const text = (await vscode.workspace.openTextDocument(docUri)).getText();
@@ -229,10 +229,10 @@ suite('Integration: Editing actions', () => {
         handleRewriteAll({ id: 't', name: 'rewrite_all', params: { content } } as ActionData);
         await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); }, 3000, 100);
         reset(mockedClient);
-        
+
         // === Act ===
         handleReplaceText({ id: 't', name: 'replace_text', params: { find: 'a', replaceWith: 'b', match: 'allInFile', useRegex: false, lineRange: { startLine: 2, endLine: 3 } } });
-        
+
         // === Assert ===
         await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); }, 5000, 100);
         const text = (await vscode.workspace.openTextDocument(docUri)).getText();

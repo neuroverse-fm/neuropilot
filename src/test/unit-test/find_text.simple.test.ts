@@ -9,7 +9,7 @@ suite('find_text Action', () => {
         const prompt = editingActions.find_text.promptGenerator({
             params: { find: 'foo(bar)', useRegex: true },
         } as ActionData);
-        
+
         // === Assert ===
         assert.ok(typeof prompt === 'string' && prompt.length > 0);
         assert.ok(prompt.includes('foo\\(bar\\)'));
@@ -20,7 +20,7 @@ suite('find_text Action', () => {
         const prompt = editingActions.find_text.promptGenerator({
             params: { find: 'baz', useRegex: false },
         } as ActionData);
-        
+
         // === Assert ===
         assert.ok(typeof prompt === 'string' && prompt.length > 0);
         assert.ok(prompt.includes('baz'));
