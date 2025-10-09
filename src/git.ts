@@ -293,8 +293,6 @@ export const gitActions = {
             oneOf: [
                 {
                     properties: {
-                        ref1: { type: 'null', default: null, description: 'This field is not used for these diff types.' },
-                        ref2: { type: 'null', default: null, description: 'This field is not used for these diff types.' },
                         filePath: { type: 'string', description: 'A file to run diffs against. If omitted, will diff the entire ref.' },
                         diffType: { type: 'string', enum: ['diffWithHEAD', 'diffIndexWithHEAD', 'fullDiff'], description: 'The type of diff to run.' },
                     },
@@ -304,7 +302,6 @@ export const gitActions = {
                 {
                     properties: {
                         ref1: { type: 'string', description: 'The ref to diff with.' },
-                        ref2: { type: 'null', default: null, description: 'This field is not used for these diff types.' },
                         filePath: { type: 'string', description: 'A file to run diffs against. If omitted, will diff the entire ref.' },
                         diffType: { type: 'string', enum: ['diffWith', 'diffIndexWith'], description: 'The type of diff to run.'},
                     },
@@ -316,11 +313,12 @@ export const gitActions = {
                         ref1: { type: 'string', description: 'The ref to diff with.' },
                         ref2: { type: 'string', description: 'The ref to diff ref1 against.' },
                         filePath: { type: 'string', description: 'A file to run diffs against. If omitted, will diff the entire ref.' },
-                        diffType: { type: 'string', enum: ['diffBetween'], description: 'The type of diff to run.' },
+                        diffType: { type: 'string', const: 'diffBetween', description: 'The type of diff to run.' },
                     },
                     required: ['ref1', 'ref2', 'diffType'],
                     additionalProperties: false,
                 },
+            ] as JSONSchema7Definition[],
             ],
         },
         schemaFallback: {
