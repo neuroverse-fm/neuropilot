@@ -8,6 +8,7 @@ import { ActionData, ActionValidationResult, actionValidationAccept, actionValid
 import { PERMISSIONS, getPermissionLevel, isActionEnabled } from '@/config';
 import assert from 'node:assert';
 import { RCECancelEvent } from '@events/utils';
+import { JSONSchema7Definition } from 'json-schema';
 
 /* All actions located in here requires neuropilot.permission.gitOperations to be enabled. */
 
@@ -319,7 +320,6 @@ export const gitActions = {
                     additionalProperties: false,
                 },
             ] as JSONSchema7Definition[],
-            ],
         },
         schemaFallback: {
             type: 'object',
