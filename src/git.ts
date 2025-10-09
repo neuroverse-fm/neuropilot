@@ -290,6 +290,41 @@ export const gitActions = {
         description: 'Get the differences between two versions of a file in the Git repository',
         schema: {
             type: 'object',
+            oneOf: [
+                {
+                    properties: {
+                        ref1: { type: 'null', default: null, description: 'This field is not used for these diff types.' },
+                        ref2: { type: 'null', default: null, description: 'This field is not used for these diff types.' },
+                        filePath: { type: 'string', description: 'A file to run diffs against. If omitted, will diff the entire ref.' },
+                        diffType: { type: 'string', enum: ['diffWithHEAD', 'diffIndexWithHEAD', 'fullDiff'], description: 'The type of diff to run.' },
+                    },
+                    required: ['diffType'],
+                    additionalProperties: false,
+                },
+                {
+                    properties: {
+                        ref1: { type: 'string', description: 'The ref to diff with.' },
+                        ref2: { type: 'null', default: null, description: 'This field is not used for these diff types.' },
+                        filePath: { type: 'string', description: 'A file to run diffs against. If omitted, will diff the entire ref.' },
+                        diffType: { type: 'string', enum: ['diffWith', 'diffIndexWith'], description: 'The type of diff to run.'},
+                    },
+                    required: ['ref1', 'diffType'],
+                    additionalProperties: false,
+                },
+                {
+                    properties: {
+                        ref1: { type: 'string', description: 'The ref to diff with.' },
+                        ref2: { type: 'string', description: 'The ref to diff ref1 against.' },
+                        filePath: { type: 'string', description: 'A file to run diffs against. If omitted, will diff the entire ref.' },
+                        diffType: { type: 'string', enum: ['diffBetween'], description: 'The type of diff to run.' },
+                    },
+                    required: ['ref1', 'ref2', 'diffType'],
+                    additionalProperties: false,
+                },
+            ],
+        },
+        schemaFallback: {
+            type: 'object',
             properties: {
                 ref1: { type: 'string', description: 'The first ref to use to diff with. May not be used in some diff types.' },
                 ref2: { type: 'string', description: 'The second ref to diff against the first ref. Will not be used in some diff types.' },
