@@ -33,8 +33,8 @@ const LINE_RANGE_SCHEMA: JSONSchema7 = {
     type: 'object',
     description: 'The line range to target.',
     properties: {
-        startLine: { type: 'integer', minimum: 1, description: 'The line to start from.' },
-        endLine: { type: 'integer', minimum: 1, description: 'The line to end targeting.' },
+        startLine: { type: 'integer', minimum: 1, description: 'The one-based line number to start from.' },
+        endLine: { type: 'integer', minimum: 1, description: 'The one-based line number to end at.' },
     },
     additionalProperties: false,
     required: ['startLine', 'endLine'],
@@ -540,7 +540,7 @@ export const editingActions = {
             type: 'object',
             properties: {
                 ...LINE_RANGE_SCHEMA.properties,
-                content: { type: 'string', description: 'The content to rewrite those lines with.' },
+                content: { type: 'string', description: 'The content to replace the selected range of lines with.' },
             },
             required: [...LINE_RANGE_SCHEMA.required!, 'content'],
             additionalProperties: false,

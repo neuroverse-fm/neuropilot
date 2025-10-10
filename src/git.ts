@@ -258,7 +258,7 @@ export const gitActions = {
         schema: {
             type: 'object',
             properties: {
-                branchName: { type: 'string', description: 'Switch to what branch?' },
+                branchName: { type: 'string', description: 'The name of the branch to switch to.' },
             },
             required: ['branchName'],
             additionalProperties: false,
@@ -346,7 +346,7 @@ export const gitActions = {
                 log_limit: {
                     type: 'integer',
                     minimum: 1,
-                    description: 'How many items should be returned? If set, this will return from the most recent commits and goes back.',
+                    description: 'Limits the number of items returned, starting from the latest commit.',
                 },
             },
             additionalProperties: false,
@@ -383,7 +383,7 @@ export const gitActions = {
             type: 'object',
             properties: {
                 name: { type: 'string', description: 'The name of the tag.' },
-                upstream: { type: 'string', description: 'What commit/ref do you want to have this tag be applied to? If optional, will tag the current commit.' },
+                upstream: { type: 'string', description: 'What commit/ref do you want to tag? If not set, will tag the current commit.' },
             },
             required: ['name'],
             additionalProperties: false,
@@ -536,7 +536,7 @@ export const gitActions = {
         schema: {
             type: 'object',
             properties: {
-                remoteName: { type: 'string', description: 'The name set for the remote you want to remove.' },
+                remoteName: { type: 'string', description: 'Name of the remote Git repository to remove.' },
             },
             required: ['remoteName'],
             additionalProperties: false,

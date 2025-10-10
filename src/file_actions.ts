@@ -212,7 +212,7 @@ export const fileActions = {
             type: 'object',
             properties: {
                 path: { type: 'string', description: 'The relative path to the file/folder to delete.', examples: ['src/index.ts', './utils'] },
-                recursive: { type: 'boolean', description: 'If set to true, allows you to delete folders.' },
+                recursive: { type: 'boolean', description: 'If set to true, enables you to delete a folder and all its sub-folders.' },
             },
             required: ['path'],
             additionalProperties: false,
