@@ -37,6 +37,8 @@ export function setupCommonEventHandlers() {
     const handlers = [
         vscode.languages.onDidChangeDiagnostics(sendDiagnosticsDiff),
         vscode.workspace.onDidSaveTextDocument(fileSaveListener),
+        vscode.window.onDidChangeActiveTextEditor(editorChangeHandler),
+        vscode.workspace.onDidChangeTextDocument(workspaceEditHandler),
         vscode.workspace.onDidChangeConfiguration(event => {
             if (event.affectsConfiguration('files.autoSave')) {
                 NEURO.client?.sendContext('The Auto-Save setting has been modified.');
@@ -46,17 +48,11 @@ export function setupCommonEventHandlers() {
                 logOutput('INFO', 'NeuroPilot Docs URL changed.');
                 registerDocsLink('NeuroPilot', CONFIG.docsURL);
             }
-        }),
-        vscode.workspace.onDidChangeConfiguration(event => {
             if (event.affectsConfiguration('neuropilot.currentlyAsNeuroAPI')) {
                 NEURO.currentController = CONFIG.currentlyAsNeuroAPI;
                 logOutput('DEBUG', `Changed current controller name to ${NEURO.currentController}.`);
             }
-        }),
-        vscode.window.onDidChangeActiveTextEditor(editorChangeHandler),
-        vscode.workspace.onDidChangeTextDocument(workspaceEditHandler),
-        vscode.workspace.onDidChangeConfiguration(event => {
-            if (event.affectsConfiguration('neuropilot.hideCopilotRequests')) {
+            if (event.affectsConfiguration('neuropilot.actions.hideCopilotRequests')) {
                 if (ACTIONS.hideCopilotRequests) {
                     NEURO.statusBarItem?.show();
                 } else {
@@ -72,7 +68,7 @@ export function setupCommonEventHandlers() {
             ) {
                 setVirtualCursor();
             }
-            if (event.affectsConfiguration('neuropilot.permission') || event.affectsConfiguration('neuropilot.disabledActions')) {
+            if (event.affectsConfiguration('neuropilot.permission') || event.affectsConfiguration('neuropilot.actions.disabledActions')) {
                 vscode.commands.executeCommand('neuropilot.reloadPermissions');
             }
         }),
