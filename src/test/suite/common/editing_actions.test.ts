@@ -75,13 +75,13 @@ suite('Integration: Editing actions', () => {
 
     test('place_cursor (absolute)', () => {
         // === Arrange ===
-        const actionData: ActionData = { id: 't', name: 'place_cursor', params: { line: 2, column: 1, type: 'absolute' } };
+        const actionData: ActionData = { id: 't', name: 'place_cursor', params: { line: 4, column: 3, type: 'absolute' } };
 
         // === Act ===
         const result = handlePlaceCursor(actionData);
 
         // === Assert ===
-        assert.ok(result && result.includes('(2:1)'));
+        assert.ok(result && result.includes('(4:3)'));
     });
 
     test('get_cursor returns current position and context', () => {
