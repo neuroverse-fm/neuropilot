@@ -574,28 +574,41 @@ export function handleOpenFile(actionData: ActionData): string | undefined {
     const relativePath = actionData.params.filePath;
 
     const workspaceUri = getWorkspaceUri()!;
-    const uri = workspaceUri.with({ path: getWorkspacePath() + '/' + normalizePath(relativePath) });
-    if (!isPathNeuroSafe(uri.fsPath))
-        return contextNoAccess(uri.fsPath);
+    const relative = normalizePath(relativePath).replace(/^\/|\/$/g, '');
+    const absolutePath = getWorkspacePath() + '/' + relative;
+    if (!isPathNeuroSafe(absolutePath))
+        return contextNoAccess(absolutePath);
+
+    const fileUri = vscode.Uri.joinPath(workspaceUri, relative);
 
     openFileAsync();
     return;
 
     async function openFileAsync() {
         try {
-            const document = await vscode.workspace.openTextDocument(uri);
+			// Open via URI (not fsPath) to work across both file: and virtual workspace schemes
+			const document = await vscode.workspace.openTextDocument(fileUri);
             await vscode.window.showTextDocument(document);
 
             logOutput('INFO', `Opened file ${relativePath}`);
 
-            // Usually handled by editorChangedHandler in editing.ts, except if this setting is off
-            if (!CONFIG.sendContentsOnFileChange) {
-                const cursor = getVirtualCursor()!;
-                const cursorContext = getPositionContext(document, cursor);
-                NEURO.client?.sendContext(formatContext(cursorContext));
-            }
-        }
-        catch (erm: unknown) {
+			// Usually handled by editorChangedHandler in editing.ts. If disabled, send content now.
+			// Right after opening there may be no virtual cursor yet; in that case, send full file contents
+			// so consumers (and tests) receive deterministic context.
+			if (!CONFIG.sendContentsOnFileChange) {
+				const cursor = getVirtualCursor();
+				if (cursor === undefined || cursor === null) {
+					// No cursor available yet: send entire document
+					const decodedContent = document.getText();
+					const fence = getFence(decodedContent);
+					NEURO.client?.sendContext(`Contents of the file ${relativePath}:\n\n${fence}\n${decodedContent}\n${fence}`);
+				} else {
+					// Cursor available: send contextual snippet around the cursor
+					const cursorContext = getPositionContext(document, cursor);
+					NEURO.client?.sendContext(formatContext(cursorContext));
+				}
+			}
+        } catch (erm: unknown) {
             logOutput('ERROR', `Failed to open file ${relativePath}: ${erm}`);
             NEURO.client?.sendContext(`Failed to open file ${relativePath}`);
         }

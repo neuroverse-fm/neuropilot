@@ -232,16 +232,22 @@ suite('File Actions', () => {
     });
 
     test('handleOpenFile', async function() {
-        this.timeout(5000);
         // === Arrange ===
         const fileContent = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.\n68043cf7-01af-43cb-a9ac-6feeec7cdcc1\n';
         const fileUri = await createTestFile('file.js', fileContent);
         const filePath = vscode.workspace.asRelativePath(fileUri, false);
 
+        // Open, show, and save the file to ensure VSCode text model provider tracks it
+        const doc = await vscode.workspace.openTextDocument(fileUri);
+        await vscode.window.showTextDocument(doc);
+        await doc.save();
+
         // Ensure contents are sent on open in this test scenario
         const config = vscode.workspace.getConfiguration('neuropilot');
         const originalSetting = config.get<boolean>('sendContentsOnFileChange');
         await config.update('sendContentsOnFileChange', false, vscode.ConfigurationTarget.Workspace);
+        // Fix issue with mock client not being correctly set at this point
+        NEURO.client = instance(mockedClient);
 
         // === Act ===
         fileActions.handleOpenFile({ id: 'abc', name: 'open_file', params: { filePath: filePath } });

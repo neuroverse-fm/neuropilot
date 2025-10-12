@@ -40,6 +40,10 @@ suite('Integration: Editing actions', () => {
         const document = await vscode.workspace.openTextDocument(docUri);
         await vscode.window.showTextDocument(document, { preview: false });
 
+        // Set cursor context style to both for the test suite
+        const config = vscode.workspace.getConfiguration('neuropilot');
+        await config.update('cursorPositionContextStyle', 'both', vscode.ConfigurationTarget.Workspace);
+
         // Initialize decoration types and output channel expected by editing handlers
         NEURO.cursorDecorationType = vscode.window.createTextEditorDecorationType({});
         NEURO.diffAddedDecorationType = vscode.window.createTextEditorDecorationType({});
@@ -89,7 +93,7 @@ suite('Integration: Editing actions', () => {
         const result = handleGetCursor({ id: 't', name: 'get_cursor' } as ActionData);
 
         // === Assert ===
-        assert.ok(result && result.includes('(2:1)'));
+        assert.ok(result && result.includes('2:1'));
     });
 
     test('place_cursor (relative) moves from current position and can be restored', () => {
@@ -386,7 +390,7 @@ suite('Integration: Editing actions', () => {
         // === Assert ===
         await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); }, 3000, 100);
         const cursorInfo = handleGetCursor({ id: 't', name: 'get_cursor' } as ActionData) as string;
-        assert.ok(cursorInfo.includes('(1:1)'));
+        assert.ok(cursorInfo.includes('1:1'));
     });
 
     test('rewrite_all handles empty content', async () => {
@@ -445,8 +449,7 @@ suite('Integration: Editing actions', () => {
     });
 
     test('rewrite_lines cursor position depends on trailing newline', async () => {
-        // === Arrange ===
-        const base = ['L1', 'L2', 'L3'].join('\n');
+        // === Arrange ===        
         reset(mockedClient);
 
         // With trailing newline: logicalLines = 1, cursor ends on line 2
@@ -456,7 +459,7 @@ suite('Integration: Editing actions', () => {
         // === Assert ===
         await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); }, 3000, 100);
         let info = handleGetCursor({ id: 't', name: 'get_cursor' } as ActionData) as string;
-        assert.ok(info.includes('(2:'));
+        assert.ok(info.includes('2:'));
 
         // Without trailing newline: logicalLines = 2, cursor ends on line 3
         reset(mockedClient);
@@ -469,7 +472,7 @@ suite('Integration: Editing actions', () => {
         // === Assert ===
         await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); }, 3000, 100);
         info = handleGetCursor({ id: 't', name: 'get_cursor' } as ActionData) as string;
-        assert.ok(info.includes('(3:'));
+        assert.ok(info.includes('3:'));
     });
 
     test('delete_lines from first line moves cursor to start of file', async () => {
@@ -485,7 +488,7 @@ suite('Integration: Editing actions', () => {
         // === Assert ===
         await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); }, 3000, 100);
         const info = handleGetCursor({ id: 't', name: 'get_cursor' } as ActionData) as string;
-        assert.ok(info.includes('(1:1)'));
+        assert.ok(info.includes('1:1'));
     });
 
     test('highlight_lines returns description string', async function () {

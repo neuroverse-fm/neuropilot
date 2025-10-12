@@ -21,6 +21,8 @@ export default tseslint.config(
             'esbuild.{m,c,}js',
             'src/types/**/*.d.ts',
             'project-files/**/*',
+            'coverage-desktop/**',
+            'coverage-web/**',
             '**/dist/**',
         ],
     },
@@ -37,6 +39,8 @@ export default tseslint.config(
         'project-files/**/*',
         '.vscode-test.mjs',
         'check-malicious-packages.js',
+        'coverage-desktop/**',
+        'coverage-web/**',
     ]),
     js.configs.recommended,
     ...tseslint.configs.recommended,
@@ -85,7 +89,18 @@ export default tseslint.config(
         languageOptions: {
             parserOptions: {
                 tsconfigRootDir: import.meta.dirname,
-                project: './tsconfig.json',
+                project: [
+                    './tsconfig.json',
+                ],
+            },
+        },
+    },
+    {
+        files: ['src/test/**/*.ts'],
+        languageOptions: {
+            globals: {
+                ...globals.node,
+                ...globals.mocha,
             },
         },
     },
@@ -121,10 +136,7 @@ export default tseslint.config(
                 ...globals.node,
                 ...globals.browser,
             },
-            parserOptions: {
-                tsconfigRootDir: '.',
-                project: './tsconfig.json', // Disable TypeScript project for JS files
-            },
+            // Do not provide a TypeScript project for JS files to avoid parser errors
         },
     },
 );
