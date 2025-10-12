@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 
 import { NEURO } from '@/constants';
-import { DiffRangeType, escapeRegExp, getDiffRanges, getFence, getPositionContext, getProperty, getVirtualCursor, showDiffRanges, isPathNeuroSafe, logOutput, NeuroPositionContext, setVirtualCursor, simpleFileName, substituteMatch, clearDecorations, formatContext, filterFileContents } from '@/utils';
+import { DiffRangeType, escapeRegExp, getDiffRanges, getFence, getPositionContext, getProperty, getVirtualCursor, showDiffRanges, isPathNeuroSafe, logOutput, NeuroPositionContext, setVirtualCursor, simpleFileName, substituteMatch, clearDecorations, formatContext, filterFileContents, positionFromIndex, indexFromPosition } from '@/utils';
 import { ActionData, actionValidationAccept, actionValidationFailure, ActionValidationResult, RCEAction, contextFailure, stripToActions, actionValidationRetry, contextNoAccess } from '@/neuro_client_helper';
 import { PERMISSIONS, getPermissionLevel, CONFIG, isActionEnabled } from '@/config';
 import { createCursorPositionChangedEvent } from '@events/cursor';
@@ -181,12 +181,12 @@ const cancelOnDidChangeActiveTextEditor = () => new RCECancelEvent({
     ],
 });
 
-const commonCancelEvents: (() => RCECancelEvent)[] = [
+const commonCancelEvents: ((actionData: ActionData) => RCECancelEvent)[] = [
     cancelOnDidChangeTextDocument,
     cancelOnDidChangeActiveTextEditor,
 ];
 
-const commonCancelEventsWithCursor: (() => RCECancelEvent)[] = [
+const commonCancelEventsWithCursor: ((actionData: ActionData) => RCECancelEvent)[] = [
     ...commonCancelEvents,
     createCursorPositionChangedEvent,
 ];
@@ -630,6 +630,45 @@ export const editingActions = {
             return `replace your current selection with ${lineCount} line${lineCount === 1 ? '' : 's'} of content.`;
         },
     },
+    diff_patch: {
+        name: 'diff_patch',
+        description: 'Write a diff patch to apply to the file. ' +
+            'The diff patch must be written in a pseudo-search-replace-diff format. ' +
+            '>>>>>> SEARCH and <<<<<< REPLACE will be used to tell what to search and what to replace, ' +
+            'with ====== delimiting between the two. ' +
+            'Read the schema for an example.',
+        schema: {
+            type: 'object',
+            properties: {
+                diff: { type: 'string', description: 'The diff patch to apply. Must follow a pseudo-search-replace-diff format.', examples: ['>>>>>> SEARCH\ndef turtle():\n    return "Vedal"\n======\ndef turtle():\n    "insert_turtle_here"\n<<<<<< REPLACE'] },
+                moveCursor: { type: 'boolean', description: 'Whether or not to move the cursor to the end of the patch replacement.', default: false },
+            },
+            required: ['diff'],
+            additionalProperties: false,
+        },
+        permissions: [PERMISSIONS.editActiveDocument],
+        handler: handleDiffPatch,
+        validators: [checkCurrentFile, (actionData: ActionData) => {
+            const patch = parseDiffPatch(actionData.params.diff);
+            if (!patch) {
+                return actionValidationFailure('Invalid diff format. Expected format:\n\n```\n>>>>>> SEARCH\n[code to find]\n======\n[replacement code]\n<<<<<< REPLACE\n```');
+            }
+
+            const { search } = patch;
+
+            if (search.length === 0) {
+                return actionValidationFailure('Search content cannot be empty.');
+            }
+
+            return actionValidationAccept();
+        }],
+        cancelEvents: commonCancelEvents,
+        promptGenerator: (actionData: ActionData) => {
+            const patch = parseDiffPatch(actionData.params.diff)!;
+            const { linesAdded, linesRemoved } = countLineDifferences(patch.search, patch.replace);
+            return `apply a diff patch ( +${linesAdded} | -${linesRemoved} ).`;
+        },
+    },
 } satisfies Record<string, RCEAction>;
 
 export function registerEditingActions() {
@@ -650,6 +689,7 @@ export function registerEditingActions() {
             editingActions.highlight_lines,
             editingActions.get_user_selection,
             editingActions.replace_user_selection,
+            editingActions.diff_patch,
         ]).filter(isActionEnabled));
         if (vscode.workspace.getConfiguration('files').get<string>('autoSave') !== 'afterDelay') {
             NEURO.client?.registerActions(stripToActions([
@@ -867,11 +907,11 @@ export function handleReplaceText(actionData: ActionData): string | undefined {
     if (!isPathNeuroSafe(document.fileName))
         return contextFailure(CONTEXT_NO_ACCESS);
 
-    const originalText = document.getText();
+    const originalText = filterFileContents(document.getText());
     const regex = new RegExp(useRegex ? find : escapeRegExp(find), 'g');
-    const cursorOffset = document.offsetAt(getVirtualCursor()!);
+    const cursorOffset = indexFromPosition(originalText, getVirtualCursor()!);
 
-    const matches = findAndFilter(regex, document, cursorOffset, match, lineRange);
+    const matches = findAndFilter(regex, originalText, cursorOffset, match, lineRange);
     if (matches.length === 0)
         return 'No matches found for the given parameters.';
 
@@ -879,7 +919,7 @@ export function handleReplaceText(actionData: ActionData): string | undefined {
     for (const m of matches) {
         try {
             const replacement = useRegex ? substituteMatch(m, replaceWith) : replaceWith;
-            edit.replace(document.uri, new vscode.Range(document.positionAt(m.index), document.positionAt(m.index + m[0].length)), replacement);
+            edit.replace(document.uri, new vscode.Range(positionFromIndex(originalText, m.index), positionFromIndex(originalText, m.index + m[0].length)), replacement);
         } catch (erm) {
             logOutput('ERROR', `Error while substituting match: ${erm}`);
             return contextFailure(erm instanceof Error ? erm.message : 'Unknown error while substituting match');
@@ -888,21 +928,21 @@ export function handleReplaceText(actionData: ActionData): string | undefined {
     vscode.workspace.applyEdit(edit).then(success => {
         if (success) {
             logOutput('INFO', 'Replacing text in document');
+            const document = vscode.window.activeTextEditor!.document;
+            const newText = filterFileContents(document.getText());
             if (matches.length === 1) {
                 // Single match
-                const document = vscode.window.activeTextEditor!.document;
-                const startPosition = document.positionAt(matches[0].index);
-                const endPosition = document.positionAt(matches[0].index + substituteMatch(matches[0], replaceWith).length);
+                const startPosition = positionFromIndex(newText, matches[0].index);
+                const endPosition = positionFromIndex(newText, matches[0].index + substituteMatch(matches[0], replaceWith).length);
                 setVirtualCursor(endPosition);
-                const diffRanges = getDiffRanges(document, startPosition, matches[0][0], document.getText(new vscode.Range(startPosition, endPosition)));
+                const diffRanges = getDiffRanges(startPosition, matches[0][0], filterFileContents(document.getText(new vscode.Range(startPosition, endPosition))));
                 showDiffRanges(vscode.window.activeTextEditor!, ...diffRanges);
                 const cursorContext = getPositionContext(document, { cursorPosition: endPosition, position: startPosition, position2: endPosition });
                 NEURO.client?.sendContext(`Replaced text in document\n\n${formatContext(cursorContext)}`);
             }
             else {
                 // Multiple matches
-                const document = vscode.window.activeTextEditor!.document;
-                const diffRanges = getDiffRanges(document, new vscode.Position(0, 0), originalText, document.getText());
+                const diffRanges = getDiffRanges(new vscode.Position(0, 0), originalText, newText);
                 showDiffRanges(vscode.window.activeTextEditor!, ...diffRanges);
                 const cursorContext = getPositionContext(document, { cursorPosition: getVirtualCursor()! });
                 NEURO.client?.sendContext(`Deleted ${matches.length} occurrences from the document\n\n${formatContext(cursorContext)}`);
@@ -926,26 +966,27 @@ export function handleDeleteText(actionData: ActionData): string | undefined {
     if (!isPathNeuroSafe(document.fileName))
         return contextFailure(CONTEXT_NO_ACCESS);
 
-    const originalText = document.getText();
+    const originalText = filterFileContents(document.getText());
 
     const regex = new RegExp(useRegex ? find : escapeRegExp(find), 'g');
-    const cursorOffset = document.offsetAt(getVirtualCursor()!);
+    const cursorOffset = indexFromPosition(originalText, getVirtualCursor()!);
 
-    const matches = findAndFilter(regex, document, cursorOffset, match, lineRange);
+    const matches = findAndFilter(regex, originalText, cursorOffset, match, lineRange);
     if (matches.length === 0)
         return 'No matches found for the given parameters.';
 
     const edit = new vscode.WorkspaceEdit();
     for (const m of matches) {
-        edit.delete(document.uri, new vscode.Range(document.positionAt(m.index), document.positionAt(m.index + m[0].length)));
+        edit.delete(document.uri, new vscode.Range(positionFromIndex(originalText, m.index), positionFromIndex(originalText, m.index + m[0].length)));
     }
     vscode.workspace.applyEdit(edit).then(success => {
         if (success) {
             logOutput('INFO', 'Deleting text from document');
+            const document = vscode.window.activeTextEditor!.document;
+            const newText = filterFileContents(document.getText());
             if (matches.length === 1) {
                 // Single match
-                const document = vscode.window.activeTextEditor!.document;
-                const position = document.positionAt(matches[0].index);
+                const position = positionFromIndex(newText, matches[0].index);
                 setVirtualCursor(position);
                 showDiffRanges(vscode.window.activeTextEditor!, {
                     range: new vscode.Range(position, position),
@@ -957,8 +998,7 @@ export function handleDeleteText(actionData: ActionData): string | undefined {
             }
             else {
                 // Multiple matches
-                const document = vscode.window.activeTextEditor!.document;
-                const diffRanges = getDiffRanges(document, new vscode.Position(0, 0), originalText, document.getText());
+                const diffRanges = getDiffRanges(new vscode.Position(0, 0), originalText, newText);
                 showDiffRanges(vscode.window.activeTextEditor!, ...diffRanges);
                 const cursorContext = getPositionContext(document, { cursorPosition: getVirtualCursor()! });
                 NEURO.client?.sendContext(`Deleted ${matches.length} occurrences from the document\n\n${formatContext(cursorContext)}`);
@@ -984,17 +1024,19 @@ export function handleFindText(actionData: ActionData): string | undefined {
     if (!isPathNeuroSafe(document.fileName))
         return contextFailure(CONTEXT_NO_ACCESS);
 
-    const regex = new RegExp(useRegex ? find : escapeRegExp(find), 'g');
-    const cursorOffset = document.offsetAt(getVirtualCursor()!);
+    const documentText = filterFileContents(document.getText());
 
-    const matches = findAndFilter(regex, document, cursorOffset, match, lineRange);
+    const regex = new RegExp(useRegex ? find : escapeRegExp(find), 'g');
+    const cursorOffset = indexFromPosition(documentText, getVirtualCursor()!);
+
+    const matches = findAndFilter(regex, documentText, cursorOffset, match, lineRange);
     if (matches.length === 0)
         return 'No matches found for the given parameters.';
 
     if (matches.length === 1) {
         // Single match
-        const startPosition = document.positionAt(matches[0].index);
-        const endPosition = document.positionAt(matches[0].index + matches[0][0].length);
+        const startPosition = positionFromIndex(documentText, matches[0].index);
+        const endPosition = positionFromIndex(documentText, matches[0].index + matches[0][0].length);
         setVirtualCursor(moveCursor === 'before' ? startPosition : endPosition);
         if (highlight) {
             const range = new vscode.Range(startPosition, endPosition);
@@ -1010,7 +1052,7 @@ export function handleFindText(actionData: ActionData): string | undefined {
     }
     else {
         // Multiple matches
-        const positions = matches.map(m => document.positionAt(m.index));
+        const positions = matches.map(m => positionFromIndex(documentText, m.index));
         const lines = positions.map(p => document.lineAt(p.line).text);
         // max(1, ...) because log10(0) is -Infinity
         // const padding = Math.max(1, Math.log10(positions[positions.length - 1].line + 1) + 1); // Space for the line number
@@ -1018,7 +1060,7 @@ export function handleFindText(actionData: ActionData): string | undefined {
         // const text = lines.map((line, i) => `L. ${(positions[i].line + 1).toString().padStart(padding)}: ${line}`).join('\n');
         if (highlight) {
             vscode.window.activeTextEditor!.setDecorations(NEURO.highlightDecorationType!, matches.map((match, i) => ({
-                range: new vscode.Range(positions[i], document.positionAt(match.index + match[0].length)),
+                range: new vscode.Range(positions[i], positionFromIndex(documentText, match.index + match[0].length)),
                 hoverMessage: `**Highlighted by ${CONFIG.currentlyAsNeuroAPI} via finding text**`,
             })));
         }
@@ -1115,7 +1157,8 @@ export function handleRewriteAll(actionData: ActionData): string | undefined {
             const startPosition = new vscode.Position(0, 0);
             setVirtualCursor(startPosition);
 
-            const diffRanges = getDiffRanges(document, new vscode.Position(0, 0), originalText, document.getText());
+            // No need to filter content here, as both texts are directly from the document
+            const diffRanges = getDiffRanges(new vscode.Position(0, 0), originalText, document.getText());
             showDiffRanges(vscode.window.activeTextEditor!, ...diffRanges);
 
             const cursorContext = getPositionContext(document, startPosition);
@@ -1216,7 +1259,7 @@ export function handleRewriteLines(actionData: ActionData): string | undefined {
     const startPosition = new vscode.Position(startLine - 1, 0);
     const endLineZero = endLine - 1;
     // Preserve the following line's newline by ending at the end of endLine
-    const endPosition = new vscode.Position(endLineZero, document.lineAt(endLineZero).text.length);
+    const endPosition = document.lineAt(endLineZero).range.end;
     const originalText = document.getText(new vscode.Range(startPosition, endPosition));
     edit.replace(document.uri, new vscode.Range(startPosition, endPosition), content);
 
@@ -1236,7 +1279,8 @@ export function handleRewriteLines(actionData: ActionData): string | undefined {
                 );
                 const cursorPosition = new vscode.Position(lastInsertedLineZero, documentPost.lineAt(lastInsertedLineZero).text.length);
                 setVirtualCursor(cursorPosition);
-                const diffRanges = getDiffRanges(document, startPosition, originalText, document.getText(new vscode.Range(startPosition, cursorPosition)));
+                // No need to filter content here, as both texts are directly from the document
+                const diffRanges = getDiffRanges(startPosition, originalText, document.getText(new vscode.Range(startPosition, cursorPosition)));
                 showDiffRanges(vscode.window.activeTextEditor!, ...diffRanges);
                 const cursorContext = getPositionContext(documentPost, { cursorPosition: cursorPosition, position: startPosition, position2: cursorPosition });
                 logOutput('INFO', `Rewrote lines ${startLine}-${endLine} with ${logicalLines} line${logicalLines === 1 ? '' : 's'} of content and moved cursor to end of line ${lastInsertedLineZero + 1}`);
@@ -1273,6 +1317,79 @@ export function handleHighlightLines(actionData: ActionData): string | undefined
     editor!.revealRange(range, vscode.TextEditorRevealType.InCenterIfOutsideViewport);
 
     return `Highlighted lines ${startLine}-${endLine}.`;
+}
+
+export function handleDiffPatch(actionData: ActionData): string | undefined {
+    const diff = actionData.params.diff;
+
+    const document = vscode.window.activeTextEditor?.document;
+    if (document === undefined)
+        return contextFailure(CONTEXT_NO_ACTIVE_DOCUMENT);
+    if (!isPathNeuroSafe(document.fileName))
+        return contextFailure(CONTEXT_NO_ACCESS);
+
+    // Parse the diff patch
+    const parsedDiff = parseDiffPatch(diff)!;
+    parsedDiff.search = filterFileContents(parsedDiff.search);
+    parsedDiff.replace = filterFileContents(parsedDiff.replace);
+    const { search, replace } = parsedDiff;
+
+    // Find the search text in the document
+    const filteredText = filterFileContents(document.getText());
+    const searchIndex = filteredText.indexOf(search);
+    const startPosition = positionFromIndex(filteredText, searchIndex);
+    const endPosition = positionFromIndex(filteredText, searchIndex + search.length);
+
+    if (searchIndex === -1) {
+        return contextFailure(`Search text not found in the document:\n\n${getFence(search)}\n${search}\n${getFence(search)}`);
+    }
+
+    // Check for multiple occurrences
+    const secondOccurrence = filteredText.indexOf(search, searchIndex + 1);
+    if (secondOccurrence !== -1) {
+        return contextFailure(`Multiple occurrences of search text found. Please use a longer search term for a unique match:\n\n${getFence(search)}\n${search}\n${getFence(search)}`);
+    }
+
+    // Perform the replacement
+    const range = new vscode.Range(startPosition, endPosition);
+
+    const edit = new vscode.WorkspaceEdit();
+    edit.replace(document.uri, range, replace);
+
+    vscode.workspace.applyEdit(edit).then(success => {
+        if (success) {
+            logOutput('INFO', 'Applied diff patch to document');
+
+            const newEndPosition = positionFromIndex(filteredText, searchIndex + replace.length);
+            let cursorPosition: vscode.Position;
+
+            if (actionData.params.moveCursor === true) {
+                // Update cursor position to the end of the replaced text
+                cursorPosition = newEndPosition;
+                setVirtualCursor(cursorPosition);
+            } else {
+                // Keep current cursor position for context
+                cursorPosition = getVirtualCursor()!;
+            }
+
+            // Show diff highlighting
+            const diffRanges = getDiffRanges(startPosition, search, replace);
+            showDiffRanges(vscode.window.activeTextEditor!, ...diffRanges);
+
+            // Provide context feedback
+            const cursorContext = getPositionContext(document, {
+                cursorPosition: cursorPosition,
+                position: startPosition,
+                position2: newEndPosition,
+            });
+
+            NEURO.client?.sendContext(`Applied diff patch successfully\n\n${formatContext(cursorContext)}`);
+        } else {
+            NEURO.client?.sendContext(contextFailure('Failed to apply diff patch'));
+        }
+    });
+
+    return undefined;
 }
 
 function handleGetUserSelection(_actionData: ActionData): string | undefined {
@@ -1315,7 +1432,7 @@ export function handleReplaceUserSelection(actionData: ActionData): string | und
 
     const edit = new vscode.WorkspaceEdit();
     const selection = editor.selection;
-    const originalText = document.getText(selection);
+    const originalText = filterFileContents(document.getText(selection));
     edit.replace(document.uri, selection, content);
 
     setVirtualCursor(selection.end);
@@ -1323,7 +1440,7 @@ export function handleReplaceUserSelection(actionData: ActionData): string | und
     vscode.workspace.applyEdit(edit).then(success => {
         if (success) {
             logOutput('INFO', 'Replaced user selection in document');
-            const diffRanges = getDiffRanges(document, selection.start, originalText, content);
+            const diffRanges = getDiffRanges(selection.start, originalText, content);
             showDiffRanges(editor, ...diffRanges);
             const cursor = editor.selection.end;
             setVirtualCursor(cursor);
@@ -1354,25 +1471,27 @@ export function fileSaveListener(e: vscode.TextDocument) {
 }
 
 /**
- * Find matches in the document and filter based on the match option.
+ * Find matches in the provided text and filter based on the match option.
  * @param regex The regular expression to search for.
- * @param document The document to search in.
+ * @param text The text to search within.
  * @param cursorOffset The current cursor offset in the text.
  * @param match The match option from the {@link MATCH_OPTIONS} array.
- * @param lineRange The line range to limit results to. If not specified, defaults to the entire file.
+ * @param lineRange The line range to limit results to. If not specified, defaults to the entire text.
  * @returns The matches found in the text based on the match option.
  */
-function findAndFilter(regex: RegExp, document: vscode.TextDocument, cursorOffset: number, match: string, lineRange: LineRange | undefined = undefined): RegExpExecArray[] {
-    const matchIterator = document.getText().matchAll(regex);
+function findAndFilter(regex: RegExp, text: string, cursorOffset: number, match: string, lineRange: LineRange | undefined = undefined): RegExpExecArray[] {
+    const matchIterator = text.matchAll(regex);
     let matches: RegExpStringIterator<RegExpExecArray> | RegExpExecArray[];
 
     if (lineRange) {
-        const minOffset = document.offsetAt(document.lineAt(lineRange.startLine - 1).range.start);
-        const maxOffset = document.offsetAt(document.lineAt(lineRange.endLine - 1).range.end);
+        const startPosition = new vscode.Position(lineRange.startLine - 1, 0);
+        const endPosition = new vscode.Position(lineRange.endLine - 1, text.split(/\r?\n/g)[lineRange.endLine - 1].length);
+        const minIndex = indexFromPosition(text, startPosition);
+        const maxIndex = indexFromPosition(text, endPosition);
         matches = [];
         for (const m of matchIterator)
             matches.push(m);
-        matches = matches.filter(m => m.index >= minOffset && m.index <= maxOffset);
+        matches = matches.filter(m => m.index >= minIndex && m.index <= maxIndex);
     }
     else {
         matches = matchIterator;
@@ -1587,4 +1706,91 @@ export function registerSendSelectionToNeuro(context: vscode.ExtensionContext) {
             { providedCodeActionKinds: [vscode.CodeActionKind.QuickFix] },
         ),
     );
+}
+
+interface DiffPatch {
+    search: string;
+    replace: string;
+}
+
+function parseDiffPatch(diff: string): DiffPatch | null {
+    // Remove the outer code block markers if present
+    const cleanDiff = diff.replace(/^```[\s\S]*?\n/, '').replace(/\n```$/, '').trim();
+
+    // Look for the pattern: >>>>>> SEARCH ... ======= ... <<<<<< REPLACE
+    const searchStartPattern = /^>>>>>> SEARCH\s*?\r?\n/m;
+    const delimiterPattern = /^======\s*?\r?\n/m;
+    const replaceEndPattern = /^<<<<<< REPLACE\s*$/m;
+
+    const searchStartMatch = searchStartPattern.exec(cleanDiff);
+    const delimiterMatch = delimiterPattern.exec(cleanDiff);
+    const replaceEndMatch = replaceEndPattern.exec(cleanDiff);
+
+    if (!searchStartMatch || !delimiterMatch || !replaceEndMatch) {
+        return null;
+    }
+
+    // Ensure they appear in the correct order
+    if (searchStartMatch.index >= delimiterMatch.index ||
+        delimiterMatch.index >= replaceEndMatch.index) {
+        return null;
+    }
+
+    // Extract the search and replace content
+    const searchStart = searchStartMatch.index + searchStartMatch[0].length;
+    const searchEnd = Math.max(delimiterMatch.index - 1, searchStart); // -1 to remove the newline before ======
+    const replaceStart = delimiterMatch.index + delimiterMatch[0].length;
+    const replaceEnd = Math.max(replaceEndMatch.index - 1, replaceStart); // -1 to remove the newline before <<<<<< REPLACE
+
+    const search = cleanDiff.substring(searchStart, searchEnd);
+    const replace = cleanDiff.substring(replaceStart, replaceEnd);
+
+    return { search, replace };
+}
+
+/**
+ * Count the line differences between search and replace text in a diff patch.
+ * @param search The text to be replaced
+ * @param replace The replacement text
+ * @returns Object containing lines added, removed, and a description string
+ */
+function countLineDifferences(search: string, replace: string): {
+    linesAdded: number;
+    linesRemoved: number;
+    description: string;
+} {
+    // Split into lines, handling empty strings
+    const searchLines = search ? search.split('\n') : [];
+    const replaceLines = replace ? replace.split('\n') : [];
+
+    const linesRemoved = searchLines.length;
+    const linesAdded = replaceLines.length;
+
+    // Generate description
+    let description = '';
+
+    if (linesAdded === 0 && linesRemoved === 0) {
+        description = 'no changes';
+    } else if (linesAdded === 0) {
+        description = `${linesRemoved} line${linesRemoved === 1 ? '' : 's'} removed`;
+    } else if (linesRemoved === 0) {
+        description = `${linesAdded} line${linesAdded === 1 ? '' : 's'} added`;
+    } else if (linesAdded === linesRemoved) {
+        description = `${linesAdded} line${linesAdded === 1 ? '' : 's'} modified`;
+    } else {
+        const parts: string[] = [];
+        if (linesRemoved > 0) {
+            parts.push(`${linesRemoved} line${linesRemoved === 1 ? '' : 's'} removed`);
+        }
+        if (linesAdded > 0) {
+            parts.push(`${linesAdded} line${linesAdded === 1 ? '' : 's'} added`);
+        }
+        description = parts.join(', ');
+    }
+
+    return {
+        linesAdded,
+        linesRemoved,
+        description,
+    };
 }
