@@ -523,13 +523,12 @@ export interface DiffRange {
 
 /**
  * Calculates the difference between the original and modified text. The ranges are based on the modified text.
- * @param document The text document to calculate the difference for, used to calculate positions from offsets.
  * @param startPosition The position where the diff starts, used to calculate positions from offsets.
- * @param original The original text.
- * @param modified The modified text.
+ * @param original The original text. Must have consistent line endings with `modified`.
+ * @param modified The modified text. Must have consistent line endings with `original`.
  */
-export function getDiffRanges(document: vscode.TextDocument, startPosition: vscode.Position, original: string, modified: string): DiffRange[] {
-    const tokenRegExp = /\w+|\s+|./g;
+export function getDiffRanges(startPosition: vscode.Position, original: string, modified: string): DiffRange[] {
+    const tokenRegExp = /\w+|\r?\n|\s+|./g;
     const originalTokens = original.match(tokenRegExp) ?? [];
     const modifiedTokens = modified.match(tokenRegExp) ?? [];
 
@@ -537,7 +536,7 @@ export function getDiffRanges(document: vscode.TextDocument, startPosition: vsco
 
     const result: DiffRange[] = [];
     let currentType: DiffRangeType | undefined = undefined;
-    let currentStartOffset = document.offsetAt(startPosition);
+    let currentStartOffset = 0;
     let currentLength = 0;
     let currentRemovedText = '';
 
@@ -546,8 +545,10 @@ export function getDiffRanges(document: vscode.TextDocument, startPosition: vsco
         if (token.aIndex !== -1 && token.bIndex !== -1) {
             // If this is the end of a change
             if (currentType !== undefined) {
+                const currentStartPosition = positionFromIndex(modified, currentStartOffset);
+                const currentEndPosition = positionFromIndex(modified, currentStartOffset + currentLength);
                 result.push({
-                    range: new vscode.Range(document.positionAt(currentStartOffset), document.positionAt(currentStartOffset + currentLength)),
+                    range: new vscode.Range(translatePosition(startPosition, currentStartPosition), translatePosition(startPosition, currentEndPosition)),
                     type: currentType,
                     removedText: currentRemovedText,
                 });
@@ -587,8 +588,10 @@ export function getDiffRanges(document: vscode.TextDocument, startPosition: vsco
 
     // Add last change if it exists
     if (currentType !== undefined) {
+        const currentStartPosition = positionFromIndex(modified, currentStartOffset);
+        const currentEndPosition = positionFromIndex(modified, currentStartOffset + currentLength);
         result.push({
-            range: new vscode.Range(document.positionAt(currentStartOffset), document.positionAt(currentStartOffset + currentLength)),
+            range: new vscode.Range(translatePosition(startPosition, currentStartPosition), translatePosition(startPosition, currentEndPosition)),
             type: currentType,
             removedText: currentRemovedText,
         });
@@ -831,4 +834,54 @@ export function formatContext(context: NeuroPositionContext, overrideCursorStyle
         : '';
 
     return `File context for lines ${context.startLine + 1}-${context.endLine + 1} of ${context.totalLines}. ${cursorNote}${lineNumberNote}Content:\n\n${fence}\n${contextBefore}${cursorText}${contextAfter}\n${fence}`;
+}
+
+/**
+ * Get the position (line and column) in a string from a character index.
+ * May sometimes be necessary if different line endings are a concern.
+ * @param text The text to get the position from.
+ * @param index The character index.
+ * @returns The position (line and column) in the text.
+ */
+export function positionFromIndex(text: string, index: number): vscode.Position {
+    const lineCount = text.slice(0, index).match(/\r?\n/g)?.length ?? 0;
+    const lastLineBreak = text.slice(0, index).lastIndexOf('\n');
+    const character = lastLineBreak === -1 ? index : index - lastLineBreak - 1;
+    return new vscode.Position(lineCount, character);
+}
+
+/**
+ * Get the index of a position (line and column) in a string.
+ * May sometimes be necessary if different line endings are a concern.
+ * @param text The text to get the index from.
+ * @param position The position (line and column).
+ * @returns The character index in the text.
+ */
+export function indexFromPosition(text: string, position: vscode.Position): number {
+    const lines = text.split(/(?<=\r?\n)/);
+    let index = 0;
+    for (let i = 0; i < position.line; i++) {
+        index += lines[i].length;
+    }
+    index += position.character;
+    return index;
+}
+
+/**
+ * Offsets a position by a given delta.
+ * Only positive deltas are supported.
+ * If the line number of the delta is greater than 0, the character number of the delta is used as-is,
+ * otherwise it is added to the character number of the original position.
+ * @param pos The original position.
+ * @param delta The delta to add to the position.
+ * @returns The new position.
+ */
+export function translatePosition(pos: vscode.Position, delta: vscode.Position): vscode.Position {
+    if (delta.line < 0 || delta.character < 0) {
+        throw new Error('Only positive deltas are supported.');
+    }
+    return new vscode.Position(
+        pos.line + delta.line,
+        delta.line > 0 ? delta.character : pos.character + delta.character
+    );
 }
