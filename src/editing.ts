@@ -661,6 +661,7 @@ export const editingActions = {
 
             return actionValidationAccept();
         }],
+        cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => {
             const patch = parseDiffPatch(actionData.params.diff)!;
             const { linesAdded, linesRemoved } = countLineDifferences(patch.search, patch.replace);
