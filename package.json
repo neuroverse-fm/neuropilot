@@ -408,6 +408,7 @@
 								"delete_tag",
 								"delete_text",
 								"diff_files",
+								"diff_patch",
 								"execute_in_terminal",
 								"fetch_git_commits",
 								"find_text",

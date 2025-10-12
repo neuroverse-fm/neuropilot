@@ -630,6 +630,43 @@ export const editingActions = {
             return `replace your current selection with ${lineCount} line${lineCount === 1 ? '' : 's'} of content.`;
         },
     },
+    diff_patch: {
+        name: 'diff_patch',
+        description: 'Write a diff patch to apply to the file. ' +
+            'The diff patch must be written in a pseudo-search-replace-diff format. ' +
+            '>>>>>> SEARCH and <<<<<< REPLACE will be used to tell what to search and what to replace, ' +
+            'with ====== delimiting between the two. ' +
+            'Read the schema for an example.',
+        schema: {
+            type: 'object',
+            properties: {
+                diff: { type: 'string', description: 'The diff patch to apply. Must follow a pseudo-search-replace-diff format.', examples: ['>>>>>> SEARCH\ndef turtle():\n    return "Vedal"\n======\ndef turtle():\n    "insert_turtle_here"\n<<<<< REPLACE'] },
+            },
+            required: ['diff'],
+            additionalProperties: false,
+        },
+        permissions: [PERMISSIONS.editActiveDocument],
+        handler: handleDiffPatch,
+        validators: [checkCurrentFile, (actionData: ActionData) => {
+            const patch = parseDiffPatch(actionData.params.diff);
+            if (!patch) {
+                return actionValidationFailure('Invalid diff format. Expected format:\n\n```\n>>>>>> SEARCH\n[code to find]\n======\n[replacement code]\n<<<<<< REPLACE\n```');
+            }
+
+            const { search } = patch;
+
+            if (search.length === 0) {
+                return actionValidationFailure('Search content cannot be empty.');
+            }
+
+            return actionValidationAccept();
+        }],
+        promptGenerator: (actionData: ActionData) => {
+            const patch = parseDiffPatch(actionData.params.diff)!;
+            const { linesAdded, linesRemoved } = countLineDifferences(patch.search, patch.replace);
+            return `apply a diff patch ( +${linesAdded} | -${linesRemoved} ).`;
+        },
+    },
 } satisfies Record<string, RCEAction>;
 
 export function registerEditingActions() {
@@ -650,6 +687,7 @@ export function registerEditingActions() {
             editingActions.highlight_lines,
             editingActions.get_user_selection,
             editingActions.replace_user_selection,
+            editingActions.diff_patch,
         ]).filter(isActionEnabled));
         if (vscode.workspace.getConfiguration('files').get<string>('autoSave') !== 'afterDelay') {
             NEURO.client?.registerActions(stripToActions([
@@ -1275,6 +1313,68 @@ export function handleHighlightLines(actionData: ActionData): string | undefined
     return `Highlighted lines ${startLine}-${endLine}.`;
 }
 
+export function handleDiffPatch(actionData: ActionData): string | undefined {
+    const diff = actionData.params.diff;
+
+    const document = vscode.window.activeTextEditor?.document;
+    if (document === undefined)
+        return contextFailure(CONTEXT_NO_ACTIVE_DOCUMENT);
+    if (!isPathNeuroSafe(document.fileName))
+        return contextFailure(CONTEXT_NO_ACCESS);
+
+    // Parse the diff patch
+    const { search, replace } = parseDiffPatch(diff)!;
+
+    // Find the search text in the document
+    const documentText = document.getText();
+    const searchIndex = documentText.indexOf(search);
+
+    if (searchIndex === -1) {
+        return contextFailure(`Search text not found in the document:\n\n${getFence(search)}\n${search}\n${getFence(search)}`);
+    }
+
+    // Check for multiple occurrences
+    const secondOccurrence = documentText.indexOf(search, searchIndex + 1);
+    if (secondOccurrence !== -1) {
+        return contextFailure(`Multiple occurrences of search text found. Please be more specific:\n\n${getFence(search)}\n${search}\n${getFence(search)}`);
+    }
+
+    // Perform the replacement
+    const startPosition = document.positionAt(searchIndex);
+    const endPosition = document.positionAt(searchIndex + search.length);
+    const range = new vscode.Range(startPosition, endPosition);
+
+    const edit = new vscode.WorkspaceEdit();
+    edit.replace(document.uri, range, replace);
+
+    vscode.workspace.applyEdit(edit).then(success => {
+        if (success) {
+            logOutput('INFO', 'Applied diff patch to document');
+
+            // Update cursor position to the end of the replaced text
+            const newEndPosition = document.positionAt(searchIndex + replace.length);
+            setVirtualCursor(newEndPosition);
+
+            // Show diff highlighting
+            const diffRanges = getDiffRanges(document, startPosition, search, replace);
+            showDiffRanges(vscode.window.activeTextEditor!, ...diffRanges);
+
+            // Provide context feedback
+            const cursorContext = getPositionContext(document, {
+                cursorPosition: newEndPosition,
+                position: startPosition,
+                position2: newEndPosition,
+            });
+
+            NEURO.client?.sendContext(`Applied diff patch successfully\n\n${formatContext(cursorContext)}`);
+        } else {
+            NEURO.client?.sendContext(contextFailure('Failed to apply diff patch'));
+        }
+    });
+
+    return undefined;
+}
+
 function handleGetUserSelection(_actionData: ActionData): string | undefined {
     const editor = vscode.window.activeTextEditor;
     const document = editor?.document;
@@ -1587,4 +1687,91 @@ export function registerSendSelectionToNeuro(context: vscode.ExtensionContext) {
             { providedCodeActionKinds: [vscode.CodeActionKind.QuickFix] },
         ),
     );
+}
+
+interface DiffPatch {
+    search: string;
+    replace: string;
+}
+
+function parseDiffPatch(diff: string): DiffPatch | null {
+    // Remove the outer code block markers if present
+    const cleanDiff = diff.replace(/^```[\s\S]*?\n/, '').replace(/\n```$/, '').trim();
+
+    // Look for the pattern: >>>>>>> SEARCH ... ======= ... <<<<<<< REPLACE
+    const searchStartPattern = /^>>>>>> SEARCH\s*$/m;
+    const delimiterPattern = /^======\s*$/m;
+    const replaceEndPattern = /^<<<<<< REPLACE\s*$/m;
+
+    const searchStartMatch = searchStartPattern.exec(cleanDiff);
+    const delimiterMatch = delimiterPattern.exec(cleanDiff);
+    const replaceEndMatch = replaceEndPattern.exec(cleanDiff);
+
+    if (!searchStartMatch || !delimiterMatch || !replaceEndMatch) {
+        return null;
+    }
+
+    // Ensure they appear in the correct order
+    if (searchStartMatch.index >= delimiterMatch.index ||
+        delimiterMatch.index >= replaceEndMatch.index) {
+        return null;
+    }
+
+    // Extract the search and replace content
+    const searchStart = searchStartMatch.index + searchStartMatch[0].length;
+    const searchEnd = delimiterMatch.index;
+    const replaceStart = delimiterMatch.index + delimiterMatch[0].length;
+    const replaceEnd = replaceEndMatch.index;
+
+    const search = cleanDiff.substring(searchStart, searchEnd).trim();
+    const replace = cleanDiff.substring(replaceStart, replaceEnd).trim();
+
+    return { search, replace };
+}
+
+/**
+ * Count the line differences between search and replace text in a diff patch.
+ * @param search The text to be replaced
+ * @param replace The replacement text
+ * @returns Object containing lines added, removed, and a description string
+ */
+function countLineDifferences(search: string, replace: string): {
+    linesAdded: number;
+    linesRemoved: number;
+    description: string;
+} {
+    // Split into lines, handling empty strings
+    const searchLines = search ? search.split('\n') : [];
+    const replaceLines = replace ? replace.split('\n') : [];
+
+    const linesRemoved = searchLines.length;
+    const linesAdded = replaceLines.length;
+
+    // Generate description
+    let description = '';
+
+    if (linesAdded === 0 && linesRemoved === 0) {
+        description = 'no changes';
+    } else if (linesAdded === 0) {
+        description = `${linesRemoved} line${linesRemoved === 1 ? '' : 's'} removed`;
+    } else if (linesRemoved === 0) {
+        description = `${linesAdded} line${linesAdded === 1 ? '' : 's'} added`;
+    } else if (linesAdded === linesRemoved) {
+        description = `${linesAdded} line${linesAdded === 1 ? '' : 's'} modified`;
+    } else {
+        const parts: string[] = [];
+        if (linesRemoved > 0) {
+            parts.push(`${linesRemoved} line${linesRemoved === 1 ? '' : 's'} removed`);
+        }
+        if (linesAdded > 0) {
+            parts.push(`${linesAdded} line${linesAdded === 1 ? '' : 's'} added`);
+        }
+        description = parts.join(', ');
+    }
+
+    return {
+        linesAdded,
+        linesRemoved,
+        description,
+    };
 }
