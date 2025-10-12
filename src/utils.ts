@@ -882,6 +882,6 @@ export function translatePosition(pos: vscode.Position, delta: vscode.Position):
     }
     return new vscode.Position(
         pos.line + delta.line,
-        delta.line > 0 ? delta.character : pos.character + delta.character
+        delta.line > 0 ? delta.character : pos.character + delta.character,
     );
 }
