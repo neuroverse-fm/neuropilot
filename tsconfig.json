@@ -22,6 +22,9 @@
 			"@test/*": [
 				"./src/test/*"
 			],
+			"@events/*": [
+				"./src/events/*"
+			]
 		}
 	},
 	"exclude": [
