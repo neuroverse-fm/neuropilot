@@ -354,98 +354,43 @@ export function handleCreateFolder(actionData: ActionData): string | undefined {
 }
 
 export function handleRenameFileOrFolder(actionData: ActionData): string | undefined {
-	const oldRelativePathParam = actionData.params.oldPath;
-	const newRelativePathParam = actionData.params.newPath;
+    const oldRelativePathParam = actionData.params.oldPath;
+    const newRelativePathParam = actionData.params.newPath;
 
-	const oldRelativePath = normalizePath(oldRelativePathParam).replace(/^\/|\/$/g, '');
-	const newRelativePath = normalizePath(newRelativePathParam).replace(/^\/|\/$/g, '');
-	const oldAbsolutePath = getWorkspacePath() + '/' + oldRelativePath;
-	const newAbsolutePath = getWorkspacePath() + '/' + newRelativePath;
+    const oldRelativePath = normalizePath(oldRelativePathParam).replace(/^\/|\/$/g, '');
+    const newRelativePath = normalizePath(newRelativePathParam).replace(/^\/|\/$/g, '');
+    const oldAbsolutePath = getWorkspacePath() + '/' + oldRelativePath;
+    const newAbsolutePath = getWorkspacePath() + '/' + newRelativePath;
 
-	checkAndRenameAsync(oldAbsolutePath, oldRelativePath, newAbsolutePath, newRelativePath);
+    checkAndRenameAsync(oldAbsolutePath, oldRelativePath, newAbsolutePath, newRelativePath);
 
-	return;
+    return;
 
-	// Function to avoid pyramid of doom
-	async function checkAndRenameAsync(oldAbsolutePath: string, oldRelativePath: string, newAbsolutePath: string, newRelativePath: string) {
-		const base = vscode.workspace.workspaceFolders![0].uri;
-		const oldUri = vscode.Uri.joinPath(base, oldRelativePath);
-		const newUri = vscode.Uri.joinPath(base, newRelativePath);
+    // Function to avoid pyramid of doom
+    async function checkAndRenameAsync(oldAbsolutePath: string, oldRelativePath: string, newAbsolutePath: string, newRelativePath: string) {
+        const oldUri = getWorkspaceUri()!.with({ path: oldAbsolutePath });
+        const newUri = getWorkspaceUri()!.with({ path: newAbsolutePath });
 
-		// Capture which editors reference the old path (file or within folder) before the rename
-		const activeBeforeUri = vscode.window.activeTextEditor?.document.uri ?? null;
-		const activeUriStr = activeBeforeUri?.toString().toLowerCase() ?? null;
-		const oldPathLower = oldUri.path.toLowerCase();
-		const visibleEditorsPointingToOld = vscode.window.visibleTextEditors
-			.filter(ed => {
-				const p = ed.document.uri.path.toLowerCase();
-				return p === oldPathLower || p.startsWith(oldPathLower + '/');
-			})
-			.map(ed => ({ uri: ed.document.uri, viewColumn: ed.viewColumn, wasActive: ed.document.uri.toString().toLowerCase() === activeUriStr }));
+        // Check if the new path already exists
+        try {
+            await vscode.workspace.fs.stat(newUri);
+            // If no error is thrown, the new path already exists
+            NEURO.client?.sendContext(`Could not rename: ${newRelativePath} already exists`);
+            return;
+        } catch { /* New path does not exist, continue */ }
 
-		// Check if the new path already exists
-		try {
-			await vscode.workspace.fs.stat(newUri);
-			// If no error is thrown, the new path already exists
-			NEURO.client?.sendContext(`Could not rename: ${newRelativePath} already exists`);
-			return;
-		} catch { /* New path does not exist, continue */ }
+        // Rename the file/folder
+        try {
+            await vscode.workspace.fs.rename(oldUri, newUri);
+        } catch (erm: unknown) {
+            logOutput('ERROR', `Failed to rename ${oldRelativePath} to ${newRelativePath}: ${erm}`);
+            NEURO.client?.sendContext(`Failed to rename ${oldRelativePath} to ${newRelativePath}`);
+            return;
+        }
 
-		// Rename the file/folder
-		try {
-			await vscode.workspace.fs.rename(oldUri, newUri);
-		} catch (erm: unknown) {
-			logOutput('ERROR', `Failed to rename ${oldRelativePath} to ${newRelativePath}: ${erm}`);
-			NEURO.client?.sendContext(`Failed to rename ${oldRelativePath} to ${newRelativePath}`);
-			return;
-		}
-
-		logOutput('INFO', `Renamed ${oldRelativePath} to ${newRelativePath}`);
-
-		// Re-target any open editors that pointed to the old location
-		try {
-			for (const { uri, viewColumn, wasActive } of visibleEditorsPointingToOld) {
-				const suffix = uri.path.substring(oldUri.path.length);
-				const segments = suffix.replace(/^\//, '').split('/').filter(Boolean);
-				const targetUri = segments.length ? vscode.Uri.joinPath(newUri, ...segments) : newUri;
-				const doc = await vscode.workspace.openTextDocument(targetUri);
-				await vscode.window.showTextDocument(doc, { preview: false, preserveFocus: !wasActive, viewColumn: viewColumn });
-			}
-
-			// Close any tabs that still reference the old paths after rename (do not close retargeted ones)
-			const oldPathLowerAfter = oldUri.path.toLowerCase();
-			for (const group of vscode.window.tabGroups.all) {
-				for (const tab of group.tabs) {
-					if (tab.input instanceof vscode.TabInputText) {
-						const p = tab.input.uri.path.toLowerCase();
-						if (p === oldPathLowerAfter || p.startsWith(oldPathLowerAfter + '/')) {
-							try { await vscode.window.tabGroups.close(tab, true); } catch { /* best-effort */ }
-						}
-					}
-				}
-			}
-
-			// Restore focus to the previously active editor:
-			// - If it belonged to the renamed path, activate its new mapped URI
-			// - Otherwise, ensure it remains the active editor
-			if (activeBeforeUri) {
-				const activePathLower = activeBeforeUri.path.toLowerCase();
-				let targetForActive = activeBeforeUri;
-				if (activePathLower === oldPathLower || activePathLower.startsWith(oldPathLower + '/')) {
-					const suffix = activeBeforeUri.path.substring(oldUri.path.length);
-					const segments = suffix.replace(/^\//, '').split('/').filter(Boolean);
-					targetForActive = segments.length ? vscode.Uri.joinPath(newUri, ...segments) : newUri;
-				}
-				try {
-					const doc = await vscode.workspace.openTextDocument(targetForActive);
-					await vscode.window.showTextDocument(doc, { preview: false, preserveFocus: false });
-				} catch { /* best-effort */ }
-			}
-		} catch { /* best-effort remediation */ }
-
-		// Notify after all UI retargeting is complete so tests can await this point
-		NEURO.client?.sendContext(`Renamed ${oldRelativePath} to ${newRelativePath}`);
-	}
+        logOutput('INFO', `Renamed ${oldRelativePath} to ${newRelativePath}`);
+        NEURO.client?.sendContext(`Renamed ${oldRelativePath} to ${newRelativePath}`);
+    }
 }
 
 export function handleDeleteFileOrFolder(actionData: ActionData): string | undefined {
