@@ -640,7 +640,7 @@ export const editingActions = {
         schema: {
             type: 'object',
             properties: {
-                diff: { type: 'string', description: 'The diff patch to apply. Must follow a pseudo-search-replace-diff format.', examples: ['>>>>>> SEARCH\ndef turtle():\n    return "Vedal"\n======\ndef turtle():\n    "insert_turtle_here"\n<<<<< REPLACE'] },
+                diff: { type: 'string', description: 'The diff patch to apply. Must follow a pseudo-search-replace-diff format.', examples: ['>>>>>> SEARCH\ndef turtle():\n    return "Vedal"\n======\ndef turtle():\n    "insert_turtle_here"\n<<<<<< REPLACE'] },
             },
             required: ['diff'],
             additionalProperties: false,
@@ -1698,7 +1698,7 @@ function parseDiffPatch(diff: string): DiffPatch | null {
     // Remove the outer code block markers if present
     const cleanDiff = diff.replace(/^```[\s\S]*?\n/, '').replace(/\n```$/, '').trim();
 
-    // Look for the pattern: >>>>>>> SEARCH ... ======= ... <<<<<<< REPLACE
+    // Look for the pattern: >>>>>> SEARCH ... ======= ... <<<<<< REPLACE
     const searchStartPattern = /^>>>>>> SEARCH\s*$/m;
     const delimiterPattern = /^======\s*$/m;
     const replaceEndPattern = /^<<<<<< REPLACE\s*$/m;
