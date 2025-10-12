@@ -1338,7 +1338,7 @@ export function handleDiffPatch(actionData: ActionData): string | undefined {
     // Check for multiple occurrences
     const secondOccurrence = documentText.indexOf(search, searchIndex + 1);
     if (secondOccurrence !== -1) {
-        return contextFailure(`Multiple occurrences of search text found. Please be more specific:\n\n${getFence(search)}\n${search}\n${getFence(search)}`);
+        return contextFailure(`Multiple occurrences of search text found. Please use a longer search term for a unique match:\n\n${getFence(search)}\n${search}\n${getFence(search)}`);
     }
 
     // Perform the replacement
