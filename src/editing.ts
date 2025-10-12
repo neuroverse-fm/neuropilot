@@ -181,12 +181,12 @@ const cancelOnDidChangeActiveTextEditor = () => new RCECancelEvent({
     ],
 });
 
-const commonCancelEvents: (() => RCECancelEvent)[] = [
+const commonCancelEvents: ((actionData: ActionData) => RCECancelEvent)[] = [
     cancelOnDidChangeTextDocument,
     cancelOnDidChangeActiveTextEditor,
 ];
 
-const commonCancelEventsWithCursor: (() => RCECancelEvent)[] = [
+const commonCancelEventsWithCursor: ((actionData: ActionData) => RCECancelEvent)[] = [
     ...commonCancelEvents,
     createCursorPositionChangedEvent,
 ];
@@ -641,6 +641,7 @@ export const editingActions = {
             type: 'object',
             properties: {
                 diff: { type: 'string', description: 'The diff patch to apply. Must follow a pseudo-search-replace-diff format.', examples: ['>>>>>> SEARCH\ndef turtle():\n    return "Vedal"\n======\ndef turtle():\n    "insert_turtle_here"\n<<<<<< REPLACE'] },
+                moveCursor: { type: 'string', description: 'Whether or not to move the cursor to the end of the patch replacement.', default: false },
             },
             required: ['diff'],
             additionalProperties: false,
@@ -1352,9 +1353,16 @@ export function handleDiffPatch(actionData: ActionData): string | undefined {
         if (success) {
             logOutput('INFO', 'Applied diff patch to document');
 
-            // Update cursor position to the end of the replaced text
-            const newEndPosition = document.positionAt(searchIndex + replace.length);
-            setVirtualCursor(newEndPosition);
+            let newEndPosition: vscode.Position;
+
+            if (actionData.params.moveCursor === true) {
+                // Update cursor position to the end of the replaced text
+                newEndPosition = document.positionAt(searchIndex + replace.length);
+                setVirtualCursor(newEndPosition);
+            } else {
+                // Keep current cursor position for context
+                newEndPosition = getVirtualCursor() || startPosition;
+            }
 
             // Show diff highlighting
             const diffRanges = getDiffRanges(document, startPosition, search, replace);
@@ -1364,7 +1372,7 @@ export function handleDiffPatch(actionData: ActionData): string | undefined {
             const cursorContext = getPositionContext(document, {
                 cursorPosition: newEndPosition,
                 position: startPosition,
-                position2: newEndPosition,
+                position2: document.positionAt(searchIndex + replace.length),
             });
 
             NEURO.client?.sendContext(`Applied diff patch successfully\n\n${formatContext(cursorContext)}`);
