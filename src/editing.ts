@@ -1718,8 +1718,8 @@ function parseDiffPatch(diff: string): DiffPatch | null {
     const cleanDiff = diff.replace(/^```[\s\S]*?\n/, '').replace(/\n```$/, '').trim();
 
     // Look for the pattern: >>>>>> SEARCH ... ======= ... <<<<<< REPLACE
-    const searchStartPattern = /^>>>>>> SEARCH\s*$/m;
-    const delimiterPattern = /^======\s*$/m;
+    const searchStartPattern = /^>>>>>> SEARCH\s*?\r?\n/m;
+    const delimiterPattern = /^======\s*?\r?\n/m;
     const replaceEndPattern = /^<<<<<< REPLACE\s*$/m;
 
     const searchStartMatch = searchStartPattern.exec(cleanDiff);
@@ -1738,12 +1738,12 @@ function parseDiffPatch(diff: string): DiffPatch | null {
 
     // Extract the search and replace content
     const searchStart = searchStartMatch.index + searchStartMatch[0].length;
-    const searchEnd = delimiterMatch.index;
+    const searchEnd = Math.max(delimiterMatch.index - 1, searchStart); // -1 to remove the newline before ======
     const replaceStart = delimiterMatch.index + delimiterMatch[0].length;
-    const replaceEnd = replaceEndMatch.index;
+    const replaceEnd = Math.max(replaceEndMatch.index - 1, replaceStart); // -1 to remove the newline before <<<<<< REPLACE
 
-    const search = cleanDiff.substring(searchStart, searchEnd).trim();
-    const replace = cleanDiff.substring(replaceStart, replaceEnd).trim();
+    const search = cleanDiff.substring(searchStart, searchEnd);
+    const replace = cleanDiff.substring(replaceStart, replaceEnd);
 
     return { search, replace };
 }
