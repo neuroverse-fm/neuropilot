@@ -30,7 +30,7 @@ esbuild-configs/
 tony/
 
 # Coverage
-/*coverage
+/coverage-*
 
 # Integration testing
 test-playground/
