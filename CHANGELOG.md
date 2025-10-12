@@ -6,6 +6,14 @@ Since v2.1.0, we're keeping a changelog of each version's changes in NeuroPilot.
 
 Changes between each version before then will not be listed.
 
+## 2.2.1
+
+### New actions
+
+- Added `diff_patch` which acts as a general action to allow Neuro to write diffs to change the file instead of using other tools.
+  - The action only accepts diffs in a pseudo-search-replace-diff format, as described by OpenAI [in this article](https://cookbook.openai.com/examples/gpt4-1_prompting_guide#other-effective-diff-formats)
+  - More diff formats may be supported later.
+
 ## 2.2.0
 
 ### New settings
