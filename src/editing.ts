@@ -675,6 +675,13 @@ export const editingActions = {
                 return actionValidationFailure('Search content cannot be empty.');
             }
 
+            const document = vscode.window.activeTextEditor?.document;
+            if (document === undefined)
+                return actionValidationFailure(CONTEXT_NO_ACTIVE_DOCUMENT);
+            const fileContent = filterFileContents(document.getText());
+            if (!fileContent.includes(filterFileContents(search)))
+                return actionValidationFailure('The search content was not found in the current document.');
+
             return actionValidationAccept();
         }],
         cancelEvents: commonCancelEvents,
@@ -1352,12 +1359,11 @@ export function handleDiffPatch(actionData: ActionData): string | undefined {
     // Find the search text in the document
     const filteredText = filterFileContents(document.getText());
     const searchIndex = filteredText.indexOf(search);
-    const startPosition = positionFromIndex(filteredText, searchIndex);
-    const endPosition = positionFromIndex(filteredText, searchIndex + search.length);
-
     if (searchIndex === -1) {
         return contextFailure(`Search text not found in the document:\n\n${getFence(search)}\n${search}\n${getFence(search)}`);
     }
+    const startPosition = positionFromIndex(filteredText, searchIndex);
+    const endPosition = positionFromIndex(filteredText, searchIndex + search.length);
 
     // Check for multiple occurrences
     const secondOccurrence = filteredText.indexOf(search, searchIndex + 1);
