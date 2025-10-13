@@ -69,7 +69,7 @@ export const lintActions = {
         schema: {
             type: 'object',
             properties: {
-                file: { type: 'string' },
+                file: { type: 'string', description: 'The relative file path to scan for diagnostics.', examples: ['src/index.ts', './main.py'] },
             },
             required: ['file'],
             additionalProperties: false,
@@ -95,7 +95,7 @@ export const lintActions = {
         schema: {
             type: 'object',
             properties: {
-                folder: { type: 'string' },
+                folder: { type: 'string', description: 'The relative folder path to scan for diagnostics.', examples: ['./src', 'test'] },
             },
             required: ['folder'],
             additionalProperties: false,
