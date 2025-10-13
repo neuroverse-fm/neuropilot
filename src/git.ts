@@ -321,6 +321,9 @@ export const gitActions = {
                 },
             ] as JSONSchema7Definition[],
         },
+        // TODO: This fallback contains descriptions, which is not officially supported.
+        //       I don't think it will be used in the next dev stream, so I'll leave it for now.
+        //       Remove this comment once it is confirmed that descriptions are stable, or remove the descriptions if they are not.
         schemaFallback: {
             type: 'object',
             properties: {

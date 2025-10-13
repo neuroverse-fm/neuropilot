@@ -371,7 +371,7 @@ export const editingActions = {
             type: 'object',
             properties: {
                 find: { type: 'string', description: 'The glob/RegEx pattern to search for text to delete.' },
-                useRegex: { type: 'boolean', description: 'Whether or not the find pattern is RegEx patterns.' },
+                useRegex: { type: 'boolean', description: 'Whether or not the find pattern is a RegEx pattern.' },
                 match: { type: 'string', enum: MATCH_OPTIONS, description: 'The method to match text to delete.' },
                 lineRange: LINE_RANGE_SCHEMA,
             },
