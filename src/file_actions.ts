@@ -120,7 +120,7 @@ export const fileActions = {
         schema: {
             type: 'object',
             properties: {
-                filePath: { type: 'string' },
+                filePath: { type: 'string', description: 'The relative path to the file.', examples: ['src/index.ts', './main.py'] },
             },
             required: ['filePath'],
             additionalProperties: false,
@@ -137,7 +137,7 @@ export const fileActions = {
         schema: {
             type: 'object',
             properties: {
-                filePath: { type: 'string' },
+                filePath: { type: 'string', description: 'The relative path to the file.', examples: ['./index.html', 'style.css', 'src/main.js'] },
             },
             required: ['filePath'],
             additionalProperties: false,
@@ -154,7 +154,7 @@ export const fileActions = {
         schema: {
             type: 'object',
             properties: {
-                filePath: { type: 'string' },
+                filePath: { type: 'string', description: 'The relative path to the new file.', examples: ['./newfile.py', 'src/module.js'] },
             },
             required: ['filePath'],
             additionalProperties: false,
@@ -171,7 +171,7 @@ export const fileActions = {
         schema: {
             type: 'object',
             properties: {
-                folderPath: { type: 'string' },
+                folderPath: { type: 'string', description: 'The relative path to the folder.', examples: ['./src', 'public'] },
             },
             required: ['folderPath'],
             additionalProperties: false,
@@ -190,8 +190,8 @@ export const fileActions = {
         schema: {
             type: 'object',
             properties: {
-                oldPath: { type: 'string' },
-                newPath: { type: 'string' },
+                oldPath: { type: 'string', description: 'The relative path to the old directory.', examples: ['src', './main.py'] },
+                newPath: { type: 'string', description: 'The relative path to the new directory.', examples: ['wip', './new.py'] },
             },
             required: ['oldPath', 'newPath'],
             additionalProperties: false,
@@ -211,8 +211,8 @@ export const fileActions = {
         schema: {
             type: 'object',
             properties: {
-                path: { type: 'string' },
-                recursive: { type: 'boolean' },
+                path: { type: 'string', description: 'The relative path to the file/folder to delete.', examples: ['src/index.ts', './utils'] },
+                recursive: { type: 'boolean', description: 'If set to true, enables you to delete a folder and all its sub-folders.' },
             },
             required: ['path'],
             additionalProperties: false,

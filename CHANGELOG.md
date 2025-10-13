@@ -8,11 +8,24 @@ Changes between each version before then will not be listed.
 
 ## 2.2.1
 
+### New settings
+
+- `neuropilot.disabledActions`, `neuropilot.hideCopilotRequests`, `neuropilot.enableCancelRequests`, `neuropilot.allowRunningAllTasks` were moved to `neuropilot.actions.*`.
+  - The deprecation checker will check for this upon update.
+- Experimental schemas can be toggled with `neuropilot.actions.experimentalSchemas`. Read the Changes section for more info.
+
 ### New actions
 
 - Added `diff_patch` which acts as a general action to allow Neuro to write diffs to change the file instead of using other tools.
   - The action only accepts diffs in a pseudo-search-replace-diff format, as described by OpenAI [in this article](https://cookbook.openai.com/examples/gpt4-1_prompting_guide#other-effective-diff-formats)
   - More diff formats may be supported later.
+
+### Changes
+
+- Action schemas now have descriptions and examples. Descriptions are also marked as "probably unsupported" on API specs, but the "probably" will be given a stretch.
+  - Additionally, we are experimenting with using more "probably not supported" schema items. These will be on separate schema objects in our actions.
+  - The first of these is `oneOf` keys for the `diff_files` action.
+  - If your Neuro (or Jippity) starts getting super confused, you can disable the `neuropilot.actions.experimentalSchemas` setting to use more compliant schemas.
 
 ### Fixes
 

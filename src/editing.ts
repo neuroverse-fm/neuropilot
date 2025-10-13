@@ -15,13 +15,11 @@ type MatchOptions = 'firstInFile' | 'lastInFile' | 'firstAfterCursor' | 'lastBef
 const MATCH_OPTIONS: MatchOptions[] = ['firstInFile', 'lastInFile', 'firstAfterCursor', 'lastBeforeCursor', 'allInFile'] as const;
 const POSITION_SCHEMA: JSONSchema7 = {
     type: 'object',
+    description: 'Position parameters if you want to move your cursor or use a location other than the current location.',
     properties: {
-        line: { type: 'integer' },
-        column: { type: 'integer' },
-        type: {
-            type: 'string',
-            enum: ['relative', 'absolute'],
-        },
+        line: { type: 'integer', description: 'The line number for the position to target.' },
+        column: { type: 'integer', description: 'The column number for the position to target.' },
+        type: { type: 'string', enum: ['relative', 'absolute'], description: 'Whether or not to use the position relative to your cursor or the absolute position in the file. Additionally, if set to "relative", line & column numbers are zero-based, else if set to "absolute", they are one-based.' },
     },
     additionalProperties: false,
     required: ['line', 'column', 'type'],
@@ -33,9 +31,10 @@ interface Position {
 }
 const LINE_RANGE_SCHEMA: JSONSchema7 = {
     type: 'object',
+    description: 'The line range to target.',
     properties: {
-        startLine: { type: 'integer', minimum: 1 },
-        endLine: { type: 'integer', minimum: 1 },
+        startLine: { type: 'integer', minimum: 1, description: 'The one-based line number to start from.' },
+        endLine: { type: 'integer', minimum: 1, description: 'The one-based line number to end at.' },
     },
     additionalProperties: false,
     required: ['startLine', 'endLine'],
@@ -195,7 +194,10 @@ export const editingActions = {
     place_cursor: {
         name: 'place_cursor',
         description: 'Place your cursor in the current file at the specified position. Line and column numbers are one-based for "absolute" and zero-based for "relative".',
-        schema: POSITION_SCHEMA,
+        schema: {
+            ...POSITION_SCHEMA,
+            description: undefined,
+        },
         permissions: [PERMISSIONS.editActiveDocument],
         handler: handlePlaceCursor,
         validators: [checkCurrentFile, createPositionValidator()],
@@ -233,7 +235,7 @@ export const editingActions = {
         schema: {
             type: 'object',
             properties: {
-                text: { type: 'string' },
+                text: { type: 'string', description: 'The text to insert.' },
                 position: POSITION_SCHEMA,
             },
             required: ['text'],
@@ -278,10 +280,12 @@ export const editingActions = {
             properties: {
                 text: {
                     type: 'string',
+                    description: 'The text to insert',
                 },
                 insertUnder: {
                     type: 'integer',
                     minimum: 1,
+                    description: 'The one-based line number to insert under.',
                 },
             },
             additionalProperties: false,
@@ -310,14 +314,14 @@ export const editingActions = {
         schema: {
             type: 'object',
             properties: {
-                find: { type: 'string' },
-                replaceWith: { type: 'string' },
-                useRegex: { type: 'boolean' },
-                match: { type: 'string', enum: MATCH_OPTIONS },
+                find: { type: 'string', description: 'The search text or RegEx pattern to search for text to replace.' },
+                replaceWith: { type: 'string', description: 'The text to replace the search result(s) with. If using RegEx, you can use substitution patterns here.' },
+                useRegex: { type: 'boolean', description: 'Whether or not the pattern(s) are RegEx patterns.' },
+                match: { type: 'string', enum: MATCH_OPTIONS, description: 'The method to match text to replace.' },
                 lineRange: LINE_RANGE_SCHEMA,
             },
-            required: ['find', 'replaceWith', 'match'],
             additionalProperties: false,
+            required: ['find', 'replaceWith', 'match'],
         },
         permissions: [PERMISSIONS.editActiveDocument],
         handler: handleReplaceText,
@@ -366,9 +370,9 @@ export const editingActions = {
         schema: {
             type: 'object',
             properties: {
-                find: { type: 'string' },
-                useRegex: { type: 'boolean' },
-                match: { type: 'string', enum: MATCH_OPTIONS },
+                find: { type: 'string', description: 'The glob/RegEx pattern to search for text to delete.' },
+                useRegex: { type: 'boolean', description: 'Whether or not the find pattern is a RegEx pattern.' },
+                match: { type: 'string', enum: MATCH_OPTIONS, description: 'The method to match text to delete.' },
                 lineRange: LINE_RANGE_SCHEMA,
             },
             required: ['find', 'match'],
@@ -425,12 +429,12 @@ export const editingActions = {
         schema: {
             type: 'object',
             properties: {
-                find: { type: 'string' },
-                useRegex: { type: 'boolean' },
-                match: { type: 'string', enum: MATCH_OPTIONS },
+                find: { type: 'string', description: 'The search text or RegEx pattern to search for text to replace.' },
+                useRegex: { type: 'boolean', description: 'Whether or not the find pattern is a RegEx pattern.' },
+                match: { type: 'string', enum: MATCH_OPTIONS, description: 'The method to find matching texts.' },
                 lineRange: LINE_RANGE_SCHEMA,
-                moveCursor: { type: 'string', enum: ['start', 'end'] },
-                highlight: { type: 'boolean' },
+                moveCursor: { type: 'string', enum: ['start', 'end'], description: 'If there is only one match, where should your cursor move relative to that match?' },
+                highlight: { type: 'boolean', description: 'Set to true to highlight all matches.' },
             },
             required: ['find', 'match'],
             additionalProperties: false,
@@ -513,7 +517,7 @@ export const editingActions = {
         schema: {
             type: 'object',
             properties: {
-                content: { type: 'string' },
+                content: { type: 'string', description: 'The content to rewrite the file with.' },
             },
             required: ['content'],
             additionalProperties: false,
@@ -536,7 +540,7 @@ export const editingActions = {
             type: 'object',
             properties: {
                 ...LINE_RANGE_SCHEMA.properties,
-                content: { type: 'string' },
+                content: { type: 'string', description: 'The content to replace the selected range of lines with.' },
             },
             required: [...LINE_RANGE_SCHEMA.required!, 'content'],
             additionalProperties: false,
@@ -591,12 +595,12 @@ export const editingActions = {
         description: 'Replace Vedal\'s current selection with the provided text.'
             + ' If Vedal has no selection, this will insert the text at Vedal\'s current cursor position.'
             + ' After replacing/inserting, your cursor will be placed at the end of the inserted text.'
-            + ' If "requireSelectionUnchanged" is true, the action will be canceled if Vedal\'s selection changes or has changed since it was last obtained.',
+            + ' If "requireSelectionUnchanged" is true, the action will be automatically canceled if Vedal\'s selection changes or has changed since it was last obtained.',
         schema: {
             type: 'object',
             properties: {
-                content: { type: 'string' },
-                requireSelectionUnchanged: { type: 'boolean' },
+                content: { type: 'string', description: 'The content to replace Vedal\'s selection with.' },
+                requireSelectionUnchanged: { type: 'boolean', description: 'Does your change require that Vedal keeps his selection unchanged?' },
             },
             required: ['content', 'requireSelectionUnchanged'],
         },
@@ -632,16 +636,27 @@ export const editingActions = {
     },
     diff_patch: {
         name: 'diff_patch',
-        description: 'Write a diff patch to apply to the file. ' +
-            'The diff patch must be written in a pseudo-search-replace-diff format. ' +
-            '>>>>>> SEARCH and <<<<<< REPLACE will be used to tell what to search and what to replace, ' +
-            'with ====== delimiting between the two. ' +
-            'Read the schema for an example.',
+        description: 'Write a diff patch to apply to the file.' +
+            ' The diff patch must be written in a pseudo-search-replace-diff format.' +
+            ' `>>>>>> SEARCH` and `<<<<<< REPLACE` will be used to tell what to search and what to replace,' +
+            ' with `======` delimiting between the two.' +
+            ' `>>>>>> SEARCH`, `<<<<<< REPLACE` and `======` must be on a separate line, and be the only content on that line.' +
+            ' You can only specify **one** search/replace pair per diff patch.*' +
+            ' Read the schema for an example.',
         schema: {
             type: 'object',
             properties: {
                 diff: { type: 'string', description: 'The diff patch to apply. Must follow a pseudo-search-replace-diff format.', examples: ['>>>>>> SEARCH\ndef turtle():\n    return "Vedal"\n======\ndef turtle():\n    "insert_turtle_here"\n<<<<<< REPLACE'] },
                 moveCursor: { type: 'boolean', description: 'Whether or not to move the cursor to the end of the patch replacement.', default: false },
+            },
+            required: ['diff'],
+            additionalProperties: false,
+        },
+        schemaFallback: {
+            type: 'object',
+            properties: {
+                diff: { type: 'string', examples: ['>>>>>> SEARCH\ndef turtle():\n    return "Vedal"\n======\ndef turtle():\n    "insert_turtle_here"\n<<<<<< REPLACE'] },
+                moveCursor: { type: 'boolean', default: false },
             },
             required: ['diff'],
             additionalProperties: false,
