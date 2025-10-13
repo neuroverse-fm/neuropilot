@@ -1054,8 +1054,8 @@ export function handleFindText(actionData: ActionData): string | undefined {
             vscode.window.activeTextEditor!.revealRange(range, vscode.TextEditorRevealType.InCenterIfOutsideViewport);
         }
         const cursorContext = getPositionContext(document, startPosition);
-        logOutput('INFO', `Placed cursor at (${startPosition.line + 1}:${startPosition.character + 1})`);
-        return `Found match and placed your cursor at (${startPosition.line + 1}:${startPosition.character + 1})\n\n${formatContext(cursorContext)}`;
+        logOutput('INFO', `Placed cursor at (${endPosition.line + 1}:${endPosition.character + 1})`);
+        return `Found match and placed your cursor at (${endPosition.line + 1}:${endPosition.character + 1})\n\n${formatContext(cursorContext)}`;
     }
     else {
         // Multiple matches

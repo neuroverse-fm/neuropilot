@@ -18,6 +18,7 @@ Changes between each version before then will not be listed.
 
 - Fixed multiple actions not being line ending agnostic, resulting in multiline searches failing if the line endings were different.
   - This was a problem because context sent to Neuro is normalized to use Unix-style LF, while the text that was searched was not normalized.
+- `find_text` used to always return the cursor's start position instead of end position, if Neuro chose to move her cursor. This has been fixed.
 
 ## 2.2.0
 
