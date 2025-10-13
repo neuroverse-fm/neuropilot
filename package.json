@@ -878,7 +878,7 @@
 					"neuropilot.actions.experimentalSchemas": {
 						"type": "boolean",
 						"default": true,
-						"markdownDescription": "Whether or not to toggle schemas that may use \"unsupported\" schema properties."
+						"markdownDescription": "Whether or not to toggle schemas that may use \"unsupported\" schema properties.\n\nRequires reloading permissions if changed."
 					}
 				}
 			}
