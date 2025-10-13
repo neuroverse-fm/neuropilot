@@ -78,6 +78,12 @@ async function neuroSafeRenameValidation(actionData: ActionData): Promise<Action
     return actionValidationAccept();
 }
 
+/**
+ * Validate if the file is a binary file.
+ * Always fails for folders.
+ * @param actionData The action data.
+ * @returns The validation result.
+ */
 async function binaryFileValidation(actionData: ActionData): Promise<ActionValidationResult> {
     const relativePath = actionData.params.filePath;
 
@@ -87,7 +93,17 @@ async function binaryFileValidation(actionData: ActionData): Promise<ActionValid
         return actionValidationFailure('You are not in a workspace.');
 
     const absolutePath = normalizePath(workspaceUri.fsPath + '/' + relativePath.replace(/^\/|\/$/g, ''));
-    const file = await vscode.workspace.fs.readFile(workspaceUri.with({ path: absolutePath }));
+    const uri = workspaceUri.with({ path: absolutePath });
+
+    try {
+        const stat = await vscode.workspace.fs.stat(uri);
+        if (stat.type !== vscode.FileType.File)
+            return actionValidationFailure('The specified path is not a file.');
+    } catch {
+        return actionValidationFailure('Specified file does not exist.');
+    }
+
+    const file = await vscode.workspace.fs.readFile(uri);
     if (await isBinary(file)) {
         return actionValidationFailure('You cannot open a binary file.');
     }
