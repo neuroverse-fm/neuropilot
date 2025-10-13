@@ -636,16 +636,27 @@ export const editingActions = {
     },
     diff_patch: {
         name: 'diff_patch',
-        description: 'Write a diff patch to apply to the file. ' +
-            'The diff patch must be written in a pseudo-search-replace-diff format. ' +
-            '>>>>>> SEARCH and <<<<<< REPLACE will be used to tell what to search and what to replace, ' +
-            'with ====== delimiting between the two. ' +
-            'Read the schema for an example.',
+        description: 'Write a diff patch to apply to the file.' +
+            ' The diff patch must be written in a pseudo-search-replace-diff format.' +
+            ' `>>>>>> SEARCH` and `<<<<<< REPLACE` will be used to tell what to search and what to replace,' +
+            ' with `======` delimiting between the two.' +
+            ' `>>>>>> SEARCH`, `<<<<<< REPLACE` and `======` must be on a separate line, and be the only content on that line.' +
+            ' You can only specify **one** search/replace pair per diff patch.*' +
+            ' Read the schema for an example.',
         schema: {
             type: 'object',
             properties: {
                 diff: { type: 'string', description: 'The diff patch to apply. Must follow a pseudo-search-replace-diff format.', examples: ['>>>>>> SEARCH\ndef turtle():\n    return "Vedal"\n======\ndef turtle():\n    "insert_turtle_here"\n<<<<<< REPLACE'] },
                 moveCursor: { type: 'boolean', description: 'Whether or not to move the cursor to the end of the patch replacement.', default: false },
+            },
+            required: ['diff'],
+            additionalProperties: false,
+        },
+        schemaFallback: {
+            type: 'object',
+            properties: {
+                diff: { type: 'string', examples: ['>>>>>> SEARCH\ndef turtle():\n    return "Vedal"\n======\ndef turtle():\n    "insert_turtle_here"\n<<<<<< REPLACE'] },
+                moveCursor: { type: 'boolean', default: false },
             },
             required: ['diff'],
             additionalProperties: false,
