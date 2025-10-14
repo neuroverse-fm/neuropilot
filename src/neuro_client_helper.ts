@@ -36,7 +36,7 @@ export interface ActionValidationResult {
 type TypedAction = Omit<Action, 'schema'> & { schema?: JSONSchema7 };
 
 /** ActionHandler to use with constants for records of actions and their corresponding handlers */
-export interface RCEAction extends TypedAction {
+export interface RCEAction<T = unknown> extends TypedAction {
     schemaFallback?: JSONSchema7;
     /** The permissions required to execute this action. */
     permissions: Permission[];
@@ -49,7 +49,7 @@ export interface RCEAction extends TypedAction {
      * 
      * Following VS Code's pattern, Disposables will not be awaited if async.
      */
-    cancelEvents?: ((actionData: ActionData) => RCECancelEvent | null)[];
+    cancelEvents?: ((actionData: ActionData) => RCECancelEvent<T> | null)[];
     /** The function to handle the action. */
     handler: (actionData: ActionData) => string | undefined;
     /** 
