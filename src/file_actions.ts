@@ -78,6 +78,12 @@ async function neuroSafeRenameValidation(actionData: ActionData): Promise<Action
     return actionValidationAccept();
 }
 
+/**
+ * Validate if the file is a binary file.
+ * Always fails for folders.
+ * @param actionData The action data.
+ * @returns The validation result.
+ */
 async function binaryFileValidation(actionData: ActionData): Promise<ActionValidationResult> {
     const relativePath = actionData.params.filePath;
 
@@ -87,7 +93,17 @@ async function binaryFileValidation(actionData: ActionData): Promise<ActionValid
         return actionValidationFailure('You are not in a workspace.');
 
     const absolutePath = normalizePath(workspaceUri.fsPath + '/' + relativePath.replace(/^\/|\/$/g, ''));
-    const file = await vscode.workspace.fs.readFile(workspaceUri.with({ path: absolutePath }));
+    const uri = workspaceUri.with({ path: absolutePath });
+
+    try {
+        const stat = await vscode.workspace.fs.stat(uri);
+        if (stat.type !== vscode.FileType.File)
+            return actionValidationFailure('The specified path is not a file.');
+    } catch {
+        return actionValidationFailure('Specified file does not exist.');
+    }
+
+    const file = await vscode.workspace.fs.readFile(uri);
     if (await isBinary(file)) {
         return actionValidationFailure('You cannot open a binary file.');
     }
@@ -120,7 +136,7 @@ export const fileActions = {
         schema: {
             type: 'object',
             properties: {
-                filePath: { type: 'string' },
+                filePath: { type: 'string', description: 'The relative path to the file.', examples: ['src/index.ts', './main.py'] },
             },
             required: ['filePath'],
             additionalProperties: false,
@@ -137,7 +153,7 @@ export const fileActions = {
         schema: {
             type: 'object',
             properties: {
-                filePath: { type: 'string' },
+                filePath: { type: 'string', description: 'The relative path to the file.', examples: ['./index.html', 'style.css', 'src/main.js'] },
             },
             required: ['filePath'],
             additionalProperties: false,
@@ -154,7 +170,7 @@ export const fileActions = {
         schema: {
             type: 'object',
             properties: {
-                filePath: { type: 'string' },
+                filePath: { type: 'string', description: 'The relative path to the new file.', examples: ['./newfile.py', 'src/module.js'] },
             },
             required: ['filePath'],
             additionalProperties: false,
@@ -171,7 +187,7 @@ export const fileActions = {
         schema: {
             type: 'object',
             properties: {
-                folderPath: { type: 'string' },
+                folderPath: { type: 'string', description: 'The relative path to the folder.', examples: ['./src', 'public'] },
             },
             required: ['folderPath'],
             additionalProperties: false,
@@ -190,8 +206,8 @@ export const fileActions = {
         schema: {
             type: 'object',
             properties: {
-                oldPath: { type: 'string' },
-                newPath: { type: 'string' },
+                oldPath: { type: 'string', description: 'The relative path to the old directory.', examples: ['src', './main.py'] },
+                newPath: { type: 'string', description: 'The relative path to the new directory.', examples: ['wip', './new.py'] },
             },
             required: ['oldPath', 'newPath'],
             additionalProperties: false,
@@ -211,8 +227,8 @@ export const fileActions = {
         schema: {
             type: 'object',
             properties: {
-                path: { type: 'string' },
-                recursive: { type: 'boolean' },
+                path: { type: 'string', description: 'The relative path to the file/folder to delete.', examples: ['src/index.ts', './utils'] },
+                recursive: { type: 'boolean', description: 'If set to true, enables you to delete a folder and all its sub-folders.' },
             },
             required: ['path'],
             additionalProperties: false,
