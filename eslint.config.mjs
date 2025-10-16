@@ -99,7 +99,24 @@ export default tseslint.config(
         files: ['src/test/**/*.ts'],
         languageOptions: {
             globals: {
+                ...globals.mocha,
+            },
+        },
+    },
+    {
+        files: ['src/test/suite/desktop/**/*.ts', 'src/test/test_utils.ts'],
+        languageOptions: {
+            globals: {
                 ...globals.node,
+                ...globals.mocha,
+            },
+        },
+    },
+    {
+        files: ['src/test/suite/web/**/*.ts'],
+        languageOptions: {
+            globals: {
+                ...globals.browser,
                 ...globals.mocha,
             },
         },

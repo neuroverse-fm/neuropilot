@@ -35,7 +35,8 @@ import '../../unit-test/place_cursor.simple.test';
 import '../../unit-test/replace_text.simple.test';
 import '../../unit-test/rewrite_all.simple.test';
 import '../../unit-test/rewrite_lines.simple.test';
-import '../../unit-test/tasks_and_rce.simple.test';
+import '../../unit-test/tasks.simple.test';
+import '../../unit-test/rce.simple.test';
 import '../../unit-test/undo_and_save.simple.test';
 
 // Testing the meta stuff

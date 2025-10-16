@@ -29,9 +29,9 @@ jobs:
             - name: Cache VS Code test downloads
               uses: actions/cache@v4
               with:
-                key: neuropilot-tests-vscode-v2-${{ github.repository }}-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+                key: neuropilot-tests-vscode-${{ github.repository }}-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
                 restore-keys: |
-                  neuropilot-tests-vscode-v2-${{ github.repository }}-${{ runner.os }}-
+                  neuropilot-tests-vscode-${{ github.repository }}-${{ runner.os }}-
                 path: .vscode-test/
             - name: Setup pnpm
               uses: pnpm/action-setup@v4
@@ -50,8 +50,6 @@ jobs:
             - name: Run desktop tests (macOS/Windows)
               run: pnpm run test:desktop
               if: runner.os != 'Linux'
-            # for now we'll stop with this
-            # VSC-NeuroPilot/actions/send-test-repo-action will be added later
 
     web-tests:
         name: Web tests (browser matrix)
@@ -89,16 +87,3 @@ jobs:
               run: pnpm run build:web && pnpm run test:web:browser:esbuild
             - name: Run web tests (headless)
               run: pnpm exec vscode-test-web --headless --browser=${{ matrix.browser }} --extensionDevelopmentPath=. --extensionTestsPath=out/web/test/browser.js test-playground
-    #test-web:
-    #    name: Web tests
-    #    strategy:
-    #      fail-fast: false
-    #      matrix:
-    #        include:
-    #            - engine: webkit
-    #              browser: Safari
-    #            - engine: firefox
-    #              browser: Firefox
-    #            - engine: chromium
-    #              browser: Chrome
-    #    runs-on: ubuntu-latest
