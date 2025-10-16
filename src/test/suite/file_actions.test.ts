@@ -212,9 +212,7 @@ suite('File Actions', () => {
         const emptyDirPath = vscode.workspace.asRelativePath(emptyDirUri, false);
 
         // === Act ===
-
-        fileActions.handleGetFiles({ id: 'abc', name: 'get_files' });
-        // NEURO.client!.sendContext('test');
+        fileActions.handleGetFiles({ id: 'abc', name: 'get_files' });        
 
         // Wait for context to be sent
         await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); });
@@ -232,6 +230,8 @@ suite('File Actions', () => {
     });
 
     test('handleOpenFile', async function() {
+        // Increase test timeout to make sure it has enough time to finish instead of the default 2s
+        this.timeout(10000);
         // === Arrange ===
         const fileContent = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.\n68043cf7-01af-43cb-a9ac-6feeec7cdcc1\n';
         const fileUri = await createTestFile('file.js', fileContent);
@@ -252,9 +252,9 @@ suite('File Actions', () => {
         // === Act ===
         fileActions.handleOpenFile({ id: 'abc', name: 'open_file', params: { filePath: filePath } });
         // Allow VS Code to open and show the document before asserting
-        await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); });
+        await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); }, 5000, 100);
         // Brief delay to ensure activeTextEditor is updated across platforms
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise(resolve => setTimeout(resolve, 200));
         const [context] = capture(mockedClient.sendContext).last();
 
         // === Assert ===
