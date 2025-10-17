@@ -597,11 +597,13 @@
 						"default": "Copilot",
 						"enum": [
 							"Off",
-							"Copilot"
+							"Copilot",
+							"Autopilot"
 						],
 						"enumDescriptions": [
 							"Disable this permission.",
-							"Require approval before execution."
+							"Require approval before execution.",
+							"Execute without oversight."
 						],
 						"markdownDescription": "Neuro may ask for cookies while coding."
 					},

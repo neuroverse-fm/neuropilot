@@ -8,6 +8,12 @@ Changes between each version before then will not be listed.
 
 ## 2.2.2
 
+### Changes
+
+- Neuro can now get cookies by herself, if `neuropilot.permission.requestCookies` is set to `Autopilot`.
+  - Perfect for chill streams, assuming of course that she doesn't abuse it.
+  - The default for this permission is still set to "Copilot", so you'll still need to set it yourself.
+
 ### Fixes
 
 - The `diff_patch` action had an incomplete example. This has now been fixed.
