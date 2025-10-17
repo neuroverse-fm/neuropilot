@@ -6,6 +6,14 @@ Since v2.1.0, we're keeping a changelog of each version's changes in NeuroPilot.
 
 Changes between each version before then will not be listed.
 
+## 2.2.2
+
+### Fixes
+
+- The `diff_patch` action had an incomplete example. This has now been fixed.
+- The workspace lint validator wasn't implemented properly and would skip validating. This has now been fixed.
+  - This is unlikely to have affected anyone, unless your workspace is in a Neuro-unsafe path. This shouldn't be the case for most people.
+
 ## 2.2.1
 
 ### New settings
