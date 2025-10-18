@@ -885,3 +885,25 @@ export function translatePosition(pos: vscode.Position, delta: vscode.Position):
         delta.line > 0 ? delta.character : pos.character + delta.character,
     );
 }
+
+/**
+ * Log a caught exception and surface an error to report to GitHub.
+ */
+export function notifyOnCaughtException(name: string, error: Error | unknown): void {
+    logOutput('INFO', `Error occured while executing action ${name}: ${error}`);
+    vscode.window.showErrorMessage(`${CONFIG.currentlyAsNeuroAPI} tried to run ${name}, but an exception was thrown!`, 'View Logs', 'Disable Action in Workspace', 'Report on GitHub').then(
+        async (v) => {
+            switch (v) {
+                case 'View Logs':
+                    NEURO.outputChannel?.show();
+                    break;
+                case 'Report on GitHub':
+                    vscode.env.openExternal(await vscode.env.asExternalUri(vscode.Uri.parse('https://github.com/VSC-NeuroPilot/neuropilot/issues/new', true)));
+                    break;
+                case 'Disable Action in Workspace':
+                    await vscode.workspace.getConfiguration('neuropilot').update('actions.disabledActions', name, vscode.ConfigurationTarget.Workspace);
+                    break;
+            }
+        },
+    );
+}

@@ -87,6 +87,7 @@ export function initializeCommonState(context: vscode.ExtensionContext) {
     NEURO.waiting = false;
     NEURO.cancelled = false;
     NEURO.outputChannel = vscode.window.createOutputChannel('NeuroPilot');
+    NEURO.context.subscriptions.push(NEURO.outputChannel);
     NEURO.currentController = CONFIG.currentlyAsNeuroAPI;
     checkDeprecatedSettings();
 }
