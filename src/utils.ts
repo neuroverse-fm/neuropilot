@@ -890,7 +890,7 @@ export function translatePosition(pos: vscode.Position, delta: vscode.Position):
  * Log a caught exception and surface an error to report to GitHub.
  */
 export function notifyOnCaughtException(name: string, error: Error | unknown): void {
-    logOutput('WARN', `Error occurred while executing action ${name}: ${error}`);
+    logOutput('ERROR', `Error occurred while executing action ${name}: ${error}`);
     vscode.window.showErrorMessage(`${CONFIG.currentlyAsNeuroAPI} tried to run the action "${name}", but an exception was thrown!`, 'View Logs', 'Disable Action for...', 'Report on GitHub').then(
         async (v) => {
             switch (v) {
