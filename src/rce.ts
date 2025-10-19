@@ -7,7 +7,7 @@ import * as vscode from 'vscode';
 import { ActionData, RCEAction, stripToAction } from '@/neuro_client_helper';
 import { NEURO } from '@/constants';
 import { checkVirtualWorkspace, checkWorkspaceTrust, logOutput } from '@/utils';
-import { CONFIG, getPermissionLevel, isActionEnabled, PermissionLevel, PERMISSIONS } from '@/config';
+import { ACTIONS, CONFIG, getPermissionLevel, isActionEnabled, PermissionLevel, PERMISSIONS } from '@/config';
 import { handleRunTask } from '@/tasks';
 import { validate } from 'jsonschema';
 import type { RCECancelEvent } from '@events/utils';
@@ -315,7 +315,7 @@ export async function RCEActionHandler(actionData: ActionData, actionList: Recor
 
         const eventArray: vscode.Disposable[] = [];
 
-        if (CONFIG.enableCancelEvents && action.cancelEvents) {
+        if (ACTIONS.enableCancelEvents && action.cancelEvents) {
             const eventListener = (eventObject: RCECancelEvent) => {
                 let createdReason: string;
                 let createdLogReason: string;
@@ -375,7 +375,7 @@ export async function RCEActionHandler(actionData: ActionData, actionList: Recor
             NEURO.statusBarItem!.color = new vscode.ThemeColor('statusBarItem.warningForeground');
 
             // Show the RCE dialog immediately if the config says so
-            if (!CONFIG.hideCopilotRequests)
+            if (!ACTIONS.hideCopilotRequests)
                 revealRceNotification();
 
             // End of added code.

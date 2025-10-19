@@ -6,6 +6,48 @@ Since v2.1.0, we're keeping a changelog of each version's changes in NeuroPilot.
 
 Changes between each version before then will not be listed.
 
+## 2.2.2
+
+### Changes
+
+- Neuro can now get cookies by herself, if `neuropilot.permission.requestCookies` is set to `Autopilot`.
+  - Perfect for chill streams, assuming of course that she doesn't abuse it.
+  - The default for this permission is still set to "Copilot", so you'll still need to set it yourself.
+
+### Fixes
+
+- The `diff_patch` action had an incomplete example. This has now been fixed.
+- The workspace lint validator wasn't implemented properly and would skip validating. This has now been fixed.
+  - This is unlikely to have affected anyone, unless your workspace is in a Neuro-unsafe path. This shouldn't be the case for most people.
+
+## 2.2.1
+
+### New settings
+
+- `neuropilot.disabledActions`, `neuropilot.hideCopilotRequests`, `neuropilot.enableCancelRequests`, `neuropilot.allowRunningAllTasks` were moved to `neuropilot.actions.*`.
+  - The deprecation checker will check for this upon update.
+- Experimental schemas can be toggled with `neuropilot.actions.experimentalSchemas`. Read the Changes section for more info.
+
+### New actions
+
+- Added `diff_patch` which acts as a general action to allow Neuro to write diffs to change the file instead of using other tools.
+  - The action only accepts diffs in a pseudo-search-replace-diff format, as described by OpenAI [in this article](https://cookbook.openai.com/examples/gpt4-1_prompting_guide#other-effective-diff-formats)
+  - More diff formats may be supported later.
+
+### Changes
+
+- Action schemas now have descriptions and examples. Descriptions are also marked as "probably unsupported" on API specs, but the "probably" will be given a stretch.
+  - Additionally, we are experimenting with using more "probably not supported" schema items. These will be on separate schema objects in our actions.
+  - The first of these is `oneOf` keys for the `diff_files` action.
+  - If your Neuro (or Jippity) starts getting super confused, you can disable the `neuropilot.actions.experimentalSchemas` setting to use more compliant schemas.
+
+### Fixes
+
+- Fixed multiple actions not being line ending agnostic, resulting in multiline searches failing if the line endings were different.
+  - This was a problem because context sent to Neuro is normalized to use Unix-style LF, while the text that was searched was not normalized.
+- `find_text` used to always return the cursor's start position instead of end position, if Neuro chose to move her cursor. This has been fixed.
+- Fixed `read_file` and `open_file` silently failing if a folder is specified.
+
 ## 2.2.0
 
 ### New settings
