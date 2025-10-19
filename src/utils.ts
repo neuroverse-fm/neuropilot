@@ -891,7 +891,7 @@ export function translatePosition(pos: vscode.Position, delta: vscode.Position):
  */
 export function notifyOnCaughtException(name: string, error: Error | unknown): void {
     logOutput('INFO', `Error occured while executing action ${name}: ${error}`);
-    vscode.window.showErrorMessage(`${CONFIG.currentlyAsNeuroAPI} tried to run ${name}, but an exception was thrown!`, 'View Logs', 'Disable Action in Workspace', 'Report on GitHub').then(
+    vscode.window.showErrorMessage(`${CONFIG.currentlyAsNeuroAPI} tried to run the action "${name}", but an exception was thrown!`, 'View Logs', 'Disable Action for...', 'Report on GitHub').then(
         async (v) => {
             switch (v) {
                 case 'View Logs':
@@ -900,9 +900,28 @@ export function notifyOnCaughtException(name: string, error: Error | unknown): v
                 case 'Report on GitHub':
                     vscode.env.openExternal(await vscode.env.asExternalUri(vscode.Uri.parse('https://github.com/VSC-NeuroPilot/neuropilot/issues/new', true)));
                     break;
-                case 'Disable Action in Workspace':
-                    await vscode.workspace.getConfiguration('neuropilot').update('actions.disabledActions', name, vscode.ConfigurationTarget.Workspace);
+                case 'Disable Action for...': {
+                    const disableFor = await vscode.window.showQuickPick(
+                        ['this session', 'the first workspace folder listed', 'this entire workspace', 'this user'],
+                        { title: 'Disable action for...' },
+                    );
+                    switch (disableFor) {
+                        case 'this session':
+                            NEURO.tempDisabledActions.push(name);
+                            break;
+                        case 'the first workspace folder listed':
+                            await vscode.workspace.getConfiguration('neuropilot').update('actions.disabledActions', name, vscode.ConfigurationTarget.WorkspaceFolder);
+                            break;
+                        case 'this entire workspace':
+                            await vscode.workspace.getConfiguration('neuropilot').update('actions.disabledActions', name, vscode.ConfigurationTarget.Workspace);
+                            break;
+                        case 'this user':
+                            await vscode.workspace.getConfiguration('neuropilot').update('actions.disabledActions', name, vscode.ConfigurationTarget.Global);
+                            break;
+                    }
+                    if (disableFor) logOutput('INFO', `Disabled action "${name}" for ${disableFor} due to a caught exception.`);
                     break;
+                }
             }
         },
     );

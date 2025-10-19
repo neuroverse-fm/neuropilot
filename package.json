@@ -162,6 +162,11 @@
 				"category": "NeuroPilot"
 			},
 			{
+				"command": "neuropilot.resetTemporarilyDisabledActions",
+				"title": "Reset temporarily disabled actions",
+				"category": "NeuroPilot"
+			},
+			{
 				"command": "neuropilot.sendSelectionToNeuro",
 				"title": "Send selection to Neuro",
 				"category": "NeuroPilot",

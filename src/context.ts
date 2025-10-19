@@ -95,7 +95,7 @@ export function registerRequestCookieHandler() {
             } catch (erm) {
                 const actionName = actionData.name;
                 notifyOnCaughtException(actionName, erm);
-                NEURO.client?.sendActionResult(actionData.id, true, `An error occured while executing ${actionName}. You may retry if you like, but it may be better to ask Vedal to check what's up.`);
+                NEURO.client?.sendActionResult(actionData.id, true, `An error occured while executing the action "${actionName}". You may retry if you like, but it may be better to ask Vedal to check what's up.`);
                 return;
             }
         }
