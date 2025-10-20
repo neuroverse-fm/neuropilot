@@ -212,7 +212,7 @@ suite('File Actions', () => {
         const emptyDirPath = vscode.workspace.asRelativePath(emptyDirUri, false);
 
         // === Act ===
-        fileActions.handleGetFiles({ id: 'abc', name: 'get_files' });        
+        fileActions.handleGetFiles({ id: 'abc', name: 'get_files' });
 
         // Wait for context to be sent
         await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); });
