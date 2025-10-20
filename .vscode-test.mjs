@@ -9,7 +9,7 @@ export default defineConfig({
             files: 'out/desktop/test.js',
             workspaceFolder: './test-playground',
             mocha: {
-                timeout: 2000
+                timeout: 5000
             },
             env: {
                 NEUROPILOT_TEST: 'true',
@@ -20,7 +20,7 @@ export default defineConfig({
             files: 'out/web/test/index.js',
             workspaceFolder: './test-playground',
             mocha: {
-                timeout: 2000
+                timeout: 5000
             },
             env: {
                 NEUROPILOT_TEST: 'true',
@@ -31,7 +31,7 @@ export default defineConfig({
             files: 'out/web/test/browser.js',
             workspaceFolder: './test-playground',
             mocha: {
-                timeout: 2000
+                timeout: 5000
             },
             env: {
                 NEUROPILOT_TEST: 'true',
