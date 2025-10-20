@@ -16,11 +16,6 @@ on:
           - 'minor'
           - 'patch'
           - 'none'
-      update_docs:
-        type: boolean
-        description: 'Docs are up to date'
-        required: true
-        default: false
 
 jobs:
   build:
@@ -62,22 +57,22 @@ jobs:
         NODE_ENV: 1
       run: |
         echo VERSION=$(pnpm show ./ version) >> $GITHUB_OUTPUT
-        pnpm vsce package --allow-star-activation --no-dependencies
+        pnpm vsce package --no-dependencies
     
     - name: Upload VSIX file
       uses: actions/upload-artifact@v4
       with:
         name: NeuroPilot ${{ steps.build.outputs.VERSION }}
-        path: neuropilot-${{ steps.build.outputs.VERSION }}.vsix
+        path: neuropilot-base-${{ steps.build.outputs.VERSION }}.vsix
 
     - name: Commit and push version change
       run: |
         git push --follow-tags https://VSC-NeuroPilot:${{secrets.GITHUB_TOKEN}}:@github.com/VSC-NeuroPilot/neuropilot
     
-    - name: Rebuild docs site
-      env: 
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: gh workflow run bump.yml -f check=${{ inputs.update_docs }} --repo VSC-NeuroPilot/docs
+    - name: Update docs
+      env:
+        GH_TOKEN: ${{ secrets.DOCUMENTATION_WORKFLOW_TOKEN }}
+      run: gh workflow run bump.yml -f version=${{ inputs.version }} -R VSC-NeuroPilot/docs
   
   vsce-publish:
     name: Publish to VS Marketplace
@@ -85,7 +80,7 @@ jobs:
     needs: build
     environment:
       name: Visual Studio Marketplace
-      url: https://marketplace.visualstudio.com/item?itemName=Pasu4.neuropilot
+      url: https://marketplace.visualstudio.com/item?itemName=vsc-neuropilot.neuropilot-base
     steps:
       - name: Checkout repo # why
         uses: actions/checkout@v4
@@ -105,7 +100,7 @@ jobs:
           node-version: 'latest'
       
       - name: Publish VSIX to VS Marketplace
-        run: ls && pnpm dlx @vscode/vsce publish -p ${{ secrets.MARKETPLACE_TOKEN }} --packagePath "${{ steps.vsce-vsix-down.outputs.download-path }}/NeuroPilot ${{ needs.build.outputs.VERSION }}/neuropilot-${{ needs.build.outputs.VERSION }}.vsix"
+        run: ls && pnpm dlx @vscode/vsce publish -p ${{ secrets.MARKETPLACE_TOKEN }} --packagePath "${{ steps.vsce-vsix-down.outputs.download-path }}/NeuroPilot ${{ needs.build.outputs.VERSION }}/neuropilot-base-${{ needs.build.outputs.VERSION }}.vsix"
   
   ovsx-publish:
     name: Publish to Open VSX
@@ -113,7 +108,7 @@ jobs:
     needs: build
     environment:
       name: Open VSX Registry
-      url: https://open-vsx.org/extension/pasu4/neuropilot
+      url: https://open-vsx.org/extension/vsc-neuropilot/neuropilot-base
     steps:
       - name: Checkout repo # why
         uses: actions/checkout@v4
@@ -133,4 +128,4 @@ jobs:
           node-version: 'latest'
       
       - name: Publish VSIX to Open VSX
-        run: ls && pnpm dlx ovsx publish -p ${{ secrets.REGISTRY_TOKEN }} --packagePath "${{ steps.ovsx-vsix-down.outputs.download-path }}/NeuroPilot ${{ needs.build.outputs.VERSION }}/neuropilot-${{ needs.build.outputs.VERSION }}.vsix"
+        run: ls && pnpm dlx ovsx publish -p ${{ secrets.REGISTRY_TOKEN }} --packagePath "${{ steps.ovsx-vsix-down.outputs.download-path }}/NeuroPilot ${{ needs.build.outputs.VERSION }}/neuropilot-base-${{ needs.build.outputs.VERSION }}.vsix"

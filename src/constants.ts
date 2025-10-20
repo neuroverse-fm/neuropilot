@@ -74,6 +74,10 @@ interface Neuro {
     highlightDecorationType: vscode.TextEditorDecorationType | null;
     /** Current name set as the API controller */
     currentController: string | null;
+    /** If this is `true`, all permissions return `Off`. */
+    killSwitch: boolean;
+    /** The last known user selection, or null if there is none or it is in a non-Neuro-safe file. */
+    lastKnownUserSelection: vscode.Selection | null;
 }
 
 
@@ -105,6 +109,8 @@ export const NEURO: Neuro = {
     diffModifiedDecorationType: null,
     highlightDecorationType: null,
     currentController: null,
+    killSwitch: false,
+    lastKnownUserSelection: null,
 };
 
 // this will likely be transformed for a different use later when the API rolls around

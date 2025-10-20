@@ -1,8 +1,144 @@
+<!-- markdownlint-disable -->
+
 # NeuroPilot changelog
 
 Since v2.1.0, we're keeping a changelog of each version's changes in NeuroPilot.
 
 Changes between each version before then will not be listed.
+
+## 2.2.2
+
+### Changes
+
+- Neuro can now get cookies by herself, if `neuropilot.permission.requestCookies` is set to `Autopilot`.
+  - Perfect for chill streams, assuming of course that she doesn't abuse it.
+  - The default for this permission is still set to "Copilot", so you'll still need to set it yourself.
+
+### Fixes
+
+- The `diff_patch` action had an incomplete example. This has now been fixed.
+- The workspace lint validator wasn't implemented properly and would skip validating. This has now been fixed.
+  - This is unlikely to have affected anyone, unless your workspace is in a Neuro-unsafe path. This shouldn't be the case for most people.
+
+## 2.2.1
+
+### New settings
+
+- `neuropilot.disabledActions`, `neuropilot.hideCopilotRequests`, `neuropilot.enableCancelRequests`, `neuropilot.allowRunningAllTasks` were moved to `neuropilot.actions.*`.
+  - The deprecation checker will check for this upon update.
+- Experimental schemas can be toggled with `neuropilot.actions.experimentalSchemas`. Read the Changes section for more info.
+
+### New actions
+
+- Added `diff_patch` which acts as a general action to allow Neuro to write diffs to change the file instead of using other tools.
+  - The action only accepts diffs in a pseudo-search-replace-diff format, as described by OpenAI [in this article](https://cookbook.openai.com/examples/gpt4-1_prompting_guide#other-effective-diff-formats)
+  - More diff formats may be supported later.
+
+### Changes
+
+- Action schemas now have descriptions and examples. Descriptions are also marked as "probably unsupported" on API specs, but the "probably" will be given a stretch.
+  - Additionally, we are experimenting with using more "probably not supported" schema items. These will be on separate schema objects in our actions.
+  - The first of these is `oneOf` keys for the `diff_files` action.
+  - If your Neuro (or Jippity) starts getting super confused, you can disable the `neuropilot.actions.experimentalSchemas` setting to use more compliant schemas.
+
+### Fixes
+
+- Fixed multiple actions not being line ending agnostic, resulting in multiline searches failing if the line endings were different.
+  - This was a problem because context sent to Neuro is normalized to use Unix-style LF, while the text that was searched was not normalized.
+- `find_text` used to always return the cursor's start position instead of end position, if Neuro chose to move her cursor. This has been fixed.
+- Fixed `read_file` and `open_file` silently failing if a folder is specified.
+
+## 2.2.0
+
+### New settings
+
+- `neuropilot.connection.*` category, which includes:
+  - `websocketUrl`, `gameName` and `initialContext` settings, which were moved from their `neuropilot.*` variants.
+    - The old settings have now been deprecated.
+  - `autoConnect`, which controls whether or not NeuroPilot will auto-connect to the Neuro API on startup.
+  - `retryAmount`, which dictates how many times NeuroPilot will attempt to *re*connect to the Neuro API. The _total_ amount of tries will be this value + 1. 
+  - `retryInterval`, which controls the amount of time to wait between each retry.
+- `neuropilot.enableCancelEvents` - Whether or not to enable cancel events. See below for an explainer.
+- New permission for getting the user's cursor / selection: `neuropilot.permission.getUserSelection`
+
+### New commands
+
+- `neuropilot.disconnect` - Disconnects from the Neuro API without reconnecting.
+- `neuropilot.sendSelectionToNeuro` - Sends the current cursor selection to Neuro.
+
+### Added features
+
+- A popup reminder is now shown to users after each extension update, prompting them to check the changelog and documentation. The popup includes direct links to both resources and only appears once per version update.
+- A tooltip will now show when hovering over Neuro-highlighted text, indicating that Neuro highlighted it, and how (either through finding text or manually).
+- There is now an option to send the current cursor selection to Neuro. This can be invoked either by command or through right-click context menu. These options will only appear when *your cursor* is highlighting code.
+- There is a new detector ran on startup to look for deprecated settings and if found, will ask you to migrate them. You can choose to not show that notice ever again by selecting the "Don't show again" option. This persists across sessions.
+- The RCE framework now has a new component: **cancellation events**.
+  - This automatically cancels Neuro's action requests if certain events happen.
+  - Example: If Neuro wants to insert text, that request will auto-cancel if the active file is switched.
+  - You can disable this with the new `Enable Cancel Events` setting (defaulted to on).
+- Neuro can now get and replace the user's current selection.
+  - This only works in Neuro-safe files.
+  - This requires the new permissions *Get User Selection* and *Edit Active Document*.
+
+### Changes
+
+- Changed the colour of Neuro's highlight.
+  - AHHHH MY EYES - Vedal
+  - The specific colour used now is RGBA 202 22 175 1 as opposed to RGBA 255 255 0 1.
+- Some Copilot mode prompts for editing actions have been rewritten majorly to properly reflect the options available to Neuro.
+- Upon connection or disconnection from the API, the message that pops up now has extra buttons to either quickly re-/dis-connect or to change the Auto-Connect settings.
+- Clarified whose cursor will be moved in action descriptions and contexts.
+- Context returned from editing actions now uses a common format.
+
+### Fixes
+
+- Fixed automatically opening files created by Neuro when she only has Copilot permission for opening files.
+- `rename_git_remote` now has a Git extension validator attached to it, matching all other Git actions.
+- Fixed Neuro not being able to create a terminal that was killed by the user before.
+- Usage of CRLF and LF in context was inconsistent across actions, and sometimes even inconsistent within the same context. This has now (hopefully) been fixed to only use LF.
+- Line numbers should now appear for all actions.
+
+## 2.1.2
+
+### New settings
+
+- `neuropilot.includePattern`, `neuropilot.excludePattern` and `neuropilot.allowUnsafePaths` are now moved to their `neuropilot.access.*` variants. These old settings have been deprecated and will display a warning in VS Code.
+  - In addition, the settings have been changed:
+    - `neuropilot.access.includePatterns` and `neuropilot.access.excludePatterns` are now each an array of strings instead of a big string separated by newlines.
+    - `neuropilot.allowUnsafePaths` has been split into 3 separate settings for their respective uses: `neuropilot.access.dotFiles`, `neuropilot.access.externalFiles` and `neuropilot.access.environmentVariables`.
+
+### Added features
+
+- Changing permissions will now automatically reload permissions.
+  - This also applies if you change the list of disabled actions.
+  - The `Reload Permissions` command is still available in case you need to reload manually.
+
+### Changes
+
+- Further clarified when line and column numbers are one-based and zero-based for editing actions.
+
+### Fixes
+
+- Added missing entries to the 2.1.0 changelog.
+  - (I forgot to push them before publishing)
+  - Look at [dd06c39](https://github.com/VSC-NeuroPilot/neuropilot/commit/dd06c393a8b37d13db08189c30f95bee8fb4b356) for what exactly was added.
+- Fixed line range validator not working correctly.
+- Added missing line range validator to `find_text` action.
+- Fixed Include and Exclude Patterns not working with uppercase characters.
+  - Include and Exclude Patterns are now case-sensitive (except for drive letters).
+- Fixed actions that access the file system not working in virtual workspaces.
+- Direct terminal access cannot be enabled in untrusted workspaces now (didn't work before because of wrong setting ID).
+- "Disable All Permissions" kill switch command now unregisters all actions again.
+  - They were still being blocked before, just not unregistered.
+  - It will also spam Neuro with register/unregister commands but if you have to use this she probably deserves it.
+- "Disable All Permissions" kill switch command now blocks all permissions instantly.
+
+## 2.1.1
+
+### Meta changes
+
+We have now consolidated back to using `NeuroPilot` as the display name on both VS Marketplace and Open VSX.
+The namespace will remain on `vsc-neuropilot.neuropilot-base` to ensure parity across both registries.
 
 ## 2.1.0
 
@@ -29,7 +165,7 @@ This update was made in response to the Evil dev stream on 2025-08-28. [Here's t
 ### Added features
 
 - We now have a changelog! These changelogs should appear inside VS Code.
-- The extension is now with esbuild.
+- The extension is now bundled with esbuild.
 - Added support for web environments.
 - `CNAME` (the file usually used to set a custom domain name) has now been added to the default list of Exclude Patterns that the connected Neuro twin cannot access.
 - Actions `replace_text`, `delete_text` and `find_text` now allow specifying a line range to search in.

@@ -11,6 +11,7 @@ import { checkWorkspaceTrust, checkVirtualWorkspace } from '@/utils';
 import { logOutput, delayAsync, getFence } from '@/utils';
 import { ActionData, actionValidationAccept, actionValidationFailure, ActionValidationResult, RCEAction, contextFailure, stripToActions } from '@/neuro_client_helper';
 import { CONFIG, PERMISSIONS, getPermissionLevel, isActionEnabled } from '@/config';
+import { notifyOnTerminalClose } from '@events/shells';
 
 /*
  * Extended interface for terminal sessions.
@@ -42,15 +43,18 @@ export const terminalAccessHandlers = {
         schema: {
             type: 'object',
             properties: {
-                command: { type: 'string' },
-                shell: { type: 'string', enum: getAvailableShellProfileNames() },
+                command: { type: 'string', description: 'The command to run in the terminal.', examples: ['echo Hello world!', 'node dist/index.js'] },
+                shell: { type: 'string', enum: getAvailableShellProfileNames(), description: 'The shell to run the command in.' },
             },
             required: ['command', 'shell'],
             additionalProperties: false,
         },
         permissions: [PERMISSIONS.terminalAccess],
         handler: handleRunCommand,
-        validator: [checkVirtualWorkspace, checkWorkspaceTrust],
+        cancelEvents: [
+            (actionData: ActionData) => notifyOnTerminalClose(actionData.params?.shell),
+        ],
+        validators: [checkVirtualWorkspace, checkWorkspaceTrust],
         promptGenerator: (actionData: ActionData) => `run "${actionData.params?.command}" in the "${actionData.params?.shell}" shell.`,
     },
     'kill_terminal_process': {
@@ -59,14 +63,17 @@ export const terminalAccessHandlers = {
         schema: {
             type: 'object',
             properties: {
-                shell: { type: 'string' },
+                shell: { type: 'string', description: 'The shell to kill.', enum: getAvailableShellProfileNames() },
             },
             required: ['shell'],
             additionalProperties: false,
         },
         permissions: [PERMISSIONS.terminalAccess],
         handler: handleKillTerminal,
-        validator: [checkLiveTerminals, checkVirtualWorkspace, checkWorkspaceTrust],
+        cancelEvents: [
+            (actionData: ActionData) => notifyOnTerminalClose(actionData.params?.shell),
+        ],
+        validators: [checkLiveTerminals, checkVirtualWorkspace, checkWorkspaceTrust],
         promptGenerator: (actionData: ActionData) => `kill the "${actionData.params?.shell}" shell.`,
     },
     'get_currently_running_shells': {
@@ -74,7 +81,7 @@ export const terminalAccessHandlers = {
         description: 'Get the list of terminal processes that are spawned.',
         permissions: [PERMISSIONS.terminalAccess],
         handler: handleGetCurrentlyRunningShells,
-        validator: [checkVirtualWorkspace, checkWorkspaceTrust],
+        validators: [checkVirtualWorkspace, checkWorkspaceTrust],
         promptGenerator: 'get the list of currently running shells.',
     },
 } satisfies Record<string, RCEAction>;
@@ -183,7 +190,7 @@ function createPseudoterminal(shellType: string, terminalName: string): Terminal
 */
 function getOrCreateTerminal(shellType: string, terminalName: string): TerminalSession {
     let session = NEURO.terminalRegistry.get(shellType);
-    if (!session) {
+    if (!session || session.shellProcess === undefined || session.shellProcess.killed) {
         session = createPseudoterminal(shellType, terminalName);
         NEURO.terminalRegistry.set(shellType, session);
         session.terminal.show();

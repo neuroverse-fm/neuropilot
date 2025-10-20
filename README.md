@@ -2,6 +2,13 @@
 
 As seen on TV (dev stream)!
 
+> [!WARNING]
+> We recently migrated our extension namespace from `pasu4` to `vsc-neuropilot`, and the extension ID from `neuropilot` to `neuropilot-base`.
+> Please uninstall `pasu4.neuropilot`, as all updates will be published to `vsc-neuropilot.neuropilot-base`.
+> This applies to both VS Marketplace and Open VSX (even though there weren't many install on Open VSX in the first place).
+>
+> `pasu4.neuropilot` is being kept around for historical reasons on VS Marketplace. All versions prior to v2.1.0 are published exclusively on that namespace on VS Marketplace.
+
 **Disclaimer: For simplicity, all mentions of Neuro also apply to Evil unless otherwise stated.**
 
 This extension enables Neuro-sama to write code in Visual Studio Code, either together with a programmer or on her own.
@@ -64,8 +71,7 @@ Neuro also can't change the global git configuration, only the one local to the 
 
 Note that if Neuro has direct terminal access, you should assume all security features are pretty much out the window, since she can just rewrite the settings file and run whatever commands she wants.
 
-The same advice applies for ticking the [*Neuropilot: Allow Unsafe Paths*](vscode://settings/neuropilot.allowUnsafePaths) setting if you gave Autopilot-level permissions to Neuro for editing files.
-
+The same advice applies for ticking some of the *Access* settings if you gave Autopilot-level permissions to Neuro for editing files.
 You can find more security advice on the docs site, linked above. It also mentions how to customize the security settings.
 
 ## Commands/Actions

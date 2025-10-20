@@ -9,7 +9,8 @@ import * as vscode from 'vscode';
 import { NEURO } from '@/constants';
 import { logOutput, formatActionID, getFence, checkWorkspaceTrust, checkVirtualWorkspace } from '@/utils';
 import { ActionData, RCEAction, actionValidationAccept, actionValidationFailure, stripToActions } from '@/neuro_client_helper';
-import { CONFIG, PERMISSIONS, getPermissionLevel, isActionEnabled } from '@/config';
+import { ACTIONS, PERMISSIONS, getPermissionLevel, isActionEnabled } from '@/config';
+import { notifyOnTaskFinish } from '@events/shells';
 
 export const taskHandlers = {
     // handleRunTask is used separately and not on this list
@@ -18,8 +19,11 @@ export const taskHandlers = {
         description: 'Terminate the currently running task',
         permissions: [PERMISSIONS.runTasks],
         handler: handleTerminateTask,
+        cancelEvents: [
+            notifyOnTaskFinish,
+        ],
         promptGenerator: 'terminate the currently running task.',
-        validator: [checkVirtualWorkspace, checkWorkspaceTrust, () => NEURO.currentTaskExecution !== null
+        validators: [checkVirtualWorkspace, checkWorkspaceTrust, () => NEURO.currentTaskExecution !== null
             ? actionValidationAccept()
             : actionValidationFailure('No task to terminate.')],
     },
@@ -92,7 +96,7 @@ export function reloadTasks() {
 
     vscode.tasks.fetchTasks().then((tasks) => {
         for (const task of tasks) {
-            if (CONFIG.allowRunningAllTasks === true && vscode.workspace.isTrusted) {
+            if (ACTIONS.allowRunningAllTasks === true && vscode.workspace.isTrusted) {
                 let taskdesc: string = task.detail ?? '';
                 if (taskdesc.toLowerCase().startsWith('[neuro]')) {
                     taskdesc = taskdesc.substring(7).trim();
