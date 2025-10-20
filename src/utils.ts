@@ -902,15 +902,12 @@ export function notifyOnCaughtException(name: string, error: Error | unknown): v
                     break;
                 case 'Disable Action for...': {
                     const disableFor = await vscode.window.showQuickPick(
-                        ['this session', 'the first workspace folder listed', 'this entire workspace', 'this user'],
+                        ['this session', 'this entire workspace', 'this user'],
                         { title: 'Disable action for...' },
                     );
                     switch (disableFor) {
                         case 'this session':
                             NEURO.tempDisabledActions.push(name);
-                            break;
-                        case 'the first workspace folder listed':
-                            await vscode.workspace.getConfiguration('neuropilot').update('actions.disabledActions', name, vscode.ConfigurationTarget.WorkspaceFolder);
                             break;
                         case 'this entire workspace':
                             await vscode.workspace.getConfiguration('neuropilot').update('actions.disabledActions', name, vscode.ConfigurationTarget.Workspace);
