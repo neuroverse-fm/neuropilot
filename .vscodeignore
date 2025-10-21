@@ -12,7 +12,6 @@ node_modules/
 project-files/
 
 # Build files
-esbuild.{m,c,}js
 esbuild-configs/
 
 # Other meta scripts

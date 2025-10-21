@@ -843,7 +843,7 @@
 		}
 	},
 	"scripts": {
- 		"preinstall": "node ./check-malicious-packages.js",
+ 		"preinstall": "node ./scripts/check-malicious-packages.js",
 		"version:changesets": "changeset version --global-changelog",
 		"push": "tsx ./dual-publish.ts",
 		"vscode:prepublish": "pnpm build",
