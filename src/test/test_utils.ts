@@ -1,5 +1,6 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
+import { setVirtualCursor } from '../utils';
 
 /**
  * Asserts that an object has the same properties as the expected object,
@@ -77,4 +78,33 @@ export function checkNoErrorWithTimeout(check: () => void, timeoutMs = 1000, int
             return false;
         }
     }, timeoutMs, interval);
+}
+
+interface SetupDocumentOptions {
+    /** The document to setup, defaults to the active document. */
+    document?: vscode.TextDocument;
+    /** The cursor position to set after setup, defaults to (0,0). */
+    cursorPosition?: vscode.Position;
+}
+
+export async function setupDocument(text: string, options: SetupDocumentOptions = {}): Promise<void> {
+    let { document, cursorPosition } = options;
+    document ??= vscode.window.activeTextEditor?.document;
+    cursorPosition ??= new vscode.Position(0, 0);
+
+    if (!document)
+        throw new Error('No active document to setup');
+    const edit = new vscode.WorkspaceEdit();
+    const fullRange = new vscode.Range(
+        document.positionAt(0),
+        document.positionAt(document.getText().length),
+    );
+    edit.replace(document.uri, fullRange, text);
+    if (!await vscode.workspace.applyEdit(edit))
+        throw new Error('Failed to apply edit to document');
+    if (cursorPosition) {
+        const editor = vscode.window.activeTextEditor!;
+        editor.selection = new vscode.Selection(cursorPosition, cursorPosition);
+        setVirtualCursor(cursorPosition);
+    }
 }
