@@ -238,7 +238,8 @@ export function isActionEnabled(action: string | Action): boolean {
  *
  * @param permissions The permission(s) to query.
  * @returns The lowest permission level in the list of permissions.
- * If no permissions are specified, this function assumes Copilot
+ * If no permissions are specified, this function assumes {@link PermissionLevel.COPILOT}.
+ * If used as a boolean, {@link PermissionLevel.OFF} is considered `false`, everything else is considered `true`.
  */
 export function getPermissionLevel(...permissions: Permission[]): PermissionLevel {
     if (NEURO.killSwitch) {
