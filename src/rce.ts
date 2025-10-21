@@ -291,10 +291,11 @@ export async function RCEActionHandler(actionData: ActionData, actionList: Recor
             const schemaValidationResult = validate(actionData.params, action.schema, { required: true });
             if (!schemaValidationResult.valid) {
                 const messagesArray: string[] = [];
-                schemaValidationResult.errors.map((errs) => {
-                    if (errs.stack.startsWith('instance.')) messagesArray.push(errs.stack.substring(9));
-                    else messagesArray.push(errs.stack);
+                schemaValidationResult.errors.map((erm) => {
+                    if (erm.stack.startsWith('instance.')) messagesArray.push(erm.stack.substring(9));
+                    else messagesArray.push(erm.stack);
                 });
+                if (messagesArray.length === 0) messagesArray.push('Unknown schema validation error.');
                 const schemaFailures = `- ${messagesArray.join('\n- ')}`;
                 const message = 'Action failed, your inputs did not pass schema validation due to these problems:\n\n' + schemaFailures + '\n\nPlease pay attention to the schema and the above errors if you choose to retry.';
                 NEURO.client?.sendActionResult(actionData.id, false, message);
