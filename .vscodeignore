@@ -12,11 +12,10 @@ node_modules/
 project-files/
 
 # Build files
-esbuild.{m,c,}js
 esbuild-configs/
 
 # Other meta scripts
-sort-enums.ts
+/scripts
 
 # Krita
 *.kra
@@ -30,7 +29,7 @@ sort-enums.ts
 tony/
 
 # Coverage
-/coverage
+/coverage-*
 
 # Integration testing
 test-playground/

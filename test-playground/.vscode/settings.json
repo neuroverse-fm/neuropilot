@@ -14,4 +14,6 @@
     "neuropilot.showTimeOnTerminalStart": true,
     "neuropilot.permission.terminalAccess": "Autopilot",
     "neuropilot.permission.accessLintingAnalysis": "Autopilot",
+    "neuropilot.sendContentsOnFileChange": false,
+    "neuropilot.cursorPositionContextStyle": "both",
 }

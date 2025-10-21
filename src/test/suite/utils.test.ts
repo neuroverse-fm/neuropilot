@@ -1,9 +1,22 @@
 import * as assert from 'assert';
+import * as vscode from 'vscode';
 import * as utils from '../../utils';
 import { NEURO } from '../../constants';
 import { anyString, capture, reset, spy, verify } from 'ts-mockito';
 
 suite('Utils Tests', async function() {
+    let channel: vscode.OutputChannel | null = null;
+
+    suiteSetup(() => {
+        channel = vscode.window.createOutputChannel('Neuropilot Test');
+        NEURO.outputChannel = channel;
+    });
+
+    suiteTeardown(() => {
+        channel?.dispose();
+        NEURO.outputChannel = null;
+        channel = null;
+    });
     test('logOutput: Log single lines', async function() {
         // === Arrange ===
         const outputChannelSpy = spy(NEURO.outputChannel);
@@ -18,8 +31,9 @@ suite('Utils Tests', async function() {
         const [message1] = capture(outputChannelSpy.appendLine).first();
         const [message2] = capture(outputChannelSpy.appendLine).second();
 
-        assert.match(message1, /^\d{2}:\d{2}:\d{2}\.\d{3} \[DEBUG\] Lorem ipsum$/);
-        assert.match(message2, /^\d{2}:\d{2}:\d{2}\.\d{3} \[INFO\] dolor sit amet$/);
+        // Node's assert.match may be unavailable in browser polyfills; use RegExp#test instead
+        assert.ok(/^\d{2}:\d{2}:\d{2}\.\d{3} \[DEBUG\] Lorem ipsum$/.test(message1));
+        assert.ok(/^\d{2}:\d{2}:\d{2}\.\d{3} \[INFO\] dolor sit amet$/.test(message2));
 
         reset(outputChannelSpy);
     });
