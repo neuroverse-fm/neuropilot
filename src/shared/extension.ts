@@ -48,7 +48,7 @@ export function setupCommonEventHandlers() {
                 logOutput('INFO', 'NeuroPilot Docs URL changed.');
                 registerDocsLink('NeuroPilot', CONFIG.docsURL);
             }
-            if (event.affectsConfiguration('neuropilot.currentlyAsNeuroAPI')) {
+            if (event.affectsConfiguration('neuropilot.connection.nameOfAPI')) {
                 NEURO.currentController = CONNECTION.nameOfAPI;
                 logOutput('DEBUG', `Changed current controller name to ${NEURO.currentController}.`);
             }
@@ -237,7 +237,7 @@ function switchCurrentNeuroAPIUser() {
             quickPick.hide();
             return;
         }
-        vscode.workspace.getConfiguration('neuropilot').update('currentlyAsNeuroAPI', selected, vscode.ConfigurationTarget.Global);
+        vscode.workspace.getConfiguration('neuropilot').update('connection.nameOfAPI', selected, vscode.ConfigurationTarget.Global);
         quickPick.hide();
     });
     quickPick.show();
