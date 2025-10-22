@@ -8,6 +8,13 @@ Changes between each version before then will not be listed.
 
 ## 2.2.2
 
+### Added features
+
+- If an exception was thrown while executing an action, it will be caught and you will be notified about it.
+  - Neuro will also receive an action result telling her that an error occured.
+  - Obviously under normal circumstances, this shouldn't be useful. If it does occur, please report it! There is a button to open to our GitHub issues page to report it.
+    - There are also buttons to disable the attempted action and to view logs.
+
 ### Changes
 
 - Neuro can now get cookies by herself, if `neuropilot.permission.requestCookies` is set to `Autopilot`.
