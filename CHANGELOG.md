@@ -13,6 +13,7 @@ Changes between each version before then will not be listed.
 - Neuro can now get cookies by herself, if `neuropilot.permission.requestCookies` is set to `Autopilot`.
   - Perfect for chill streams, assuming of course that she doesn't abuse it.
   - The default for this permission is still set to "Copilot", so you'll still need to set it yourself.
+- Neuro will now be told about all schema validation errors at once, as opposed to only being able to see one validation error at a time.
 
 ### Fixes
 
