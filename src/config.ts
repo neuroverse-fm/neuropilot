@@ -225,9 +225,8 @@ function getActions<T>(key: string): T | undefined {
 }
 
 export function isActionEnabled(action: string | Action): boolean {
-    if (typeof action === 'string')
-        return !ACTIONS.disabledActions.includes(action);
-    return !ACTIONS.disabledActions.includes(action.name);
+    const name = typeof action === 'string' ? action : action.name;
+    return !ACTIONS.disabledActions.includes(name) && !NEURO.tempDisabledActions.includes(name);
 }
 
 //#endregion
