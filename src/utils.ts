@@ -98,7 +98,7 @@ function attemptConnection(currentAttempt: number, maxAttempts: number, interval
         };
 
         NEURO.client.sendContext(
-            vscode.workspace.getConfiguration('neuropilot').get('connection.initialContext', 'Something went wrong, blame Pasu4 and/or KTrain5369 and tell Vedal to file a bug report.'),
+            turtleSafari(vscode.workspace.getConfiguration('neuropilot').get('connection.initialContext', 'Someone tell the NeuroPilot devs that there\'s a problem with their extension.')),
         );
 
         for (const handler of clientConnectedHandlers) {
@@ -127,7 +127,7 @@ export async function disconnectClient() {
     shouldAutoReconnect = false;
     if (NEURO.client) {
         NEURO.client.disconnect();
-        if(!await waitFor(() => !NEURO.connected, 100, 5000)) {
+        if (!await waitFor(() => !NEURO.connected, 100, 5000)) {
             logOutput('ERROR', 'Client took too long to disconnect');
             vscode.window.showErrorMessage('Client could not disconnect.');
         }
@@ -611,7 +611,7 @@ export function showDiffRanges(editor: vscode.TextEditor, ...ranges: DiffRange[]
     const removedRanges = ranges.filter(r => r.type === DiffRangeType.Removed);
 
     const languageId = editor.document.languageId;
-    const user = CONFIG.currentlyAsNeuroAPI;
+    const user = CONNECTION.nameOfAPI;
 
     editor.setDecorations(NEURO.diffAddedDecorationType!, addedRanges.map(range => ({
         range: range.range,
@@ -890,3 +890,9 @@ export function translatePosition(pos: vscode.Position, delta: vscode.Position):
         delta.line > 0 ? delta.character : pos.character + delta.character,
     );
 }
+
+/**
+ * Replaces all instances of `insert_turtle_here` in the input string with the User Name setting.
+ * @param input String input to check.
+ */
+export const turtleSafari = (input: string) => input.replace(/(?<!\\)insert_turtle_here/g, CONNECTION.userName).replace(/\\insert_turtle_here/g, 'insert_turtle_here');

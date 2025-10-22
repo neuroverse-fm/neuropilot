@@ -49,7 +49,7 @@ export function setupCommonEventHandlers() {
                 registerDocsLink('NeuroPilot', CONFIG.docsURL);
             }
             if (event.affectsConfiguration('neuropilot.currentlyAsNeuroAPI')) {
-                NEURO.currentController = CONFIG.currentlyAsNeuroAPI;
+                NEURO.currentController = CONNECTION.nameOfAPI;
                 logOutput('DEBUG', `Changed current controller name to ${NEURO.currentController}.`);
             }
             if (event.affectsConfiguration('neuropilot.actions.hideCopilotRequests')) {
@@ -87,7 +87,7 @@ export function initializeCommonState(context: vscode.ExtensionContext) {
     NEURO.waiting = false;
     NEURO.cancelled = false;
     NEURO.outputChannel = vscode.window.createOutputChannel('NeuroPilot');
-    NEURO.currentController = CONFIG.currentlyAsNeuroAPI;
+    NEURO.currentController = CONNECTION.nameOfAPI;
     checkDeprecatedSettings();
 }
 
@@ -212,7 +212,7 @@ function disableAllPermissions() {
 
     Promise.all(promises).then(() => {
         vscode.commands.executeCommand('neuropilot.reloadPermissions'); // Reload permissions to unregister all actions
-        NEURO.client?.sendContext('Vedal has turned off all permissions.');
+        NEURO.client?.sendContext(`${CONNECTION.userName} has turned off all permissions.`);
         vscode.window.showInformationMessage('All permissions, all unsafe path rules and linting auto-context have been turned off, all actions have been unregistered and any terminal shells have been killed.');
         NEURO.killSwitch = false;
     });

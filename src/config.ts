@@ -66,6 +66,10 @@ const DEPRECATED_SETTINGS: DeprecatedSetting[] = [
         old: 'enableCancelRequests',
         new: 'actions.enableCancelRequests',
     },
+    {
+        old: 'currentlyAsNeuroAPI',
+        new: 'connection.nameOfAPI',
+    },
 ];
 
 function getTargetConfig<T>(config: vscode.WorkspaceConfiguration, key: string, target: vscode.ConfigurationTarget) {
@@ -277,7 +281,7 @@ class Permissions {
     get gitConfigs() { return { id: 'gitConfigs', infinitive: 'edit the Git configuration' }; }
     get terminalAccess() { return { id: 'terminalAccess', infinitive: 'access the terminal' }; }
     get accessLintingAnalysis() { return { id: 'accessLintingAnalysis', infinitive: 'view linting problems' }; }
-    get getUserSelection() { return { id: 'getUserSelection', infinitive: 'get Vedal\'s cursor' }; }
+    get getUserSelection() { return { id: 'getUserSelection', infinitive: `get ${CONNECTION.userName}'s cursor` }; }
 }
 
 export const PERMISSIONS = new Permissions();
@@ -294,7 +298,6 @@ class Config {
     get sendSaveNotifications(): boolean { return getConfig('sendSaveNotifications')!; }
     get requestExpiryTimeout(): number { return getConfig('requestExpiryTimeout')!; }
     get cursorFollowsNeuro(): boolean { return getConfig('cursorFollowsNeuro')!; }
-    get currentlyAsNeuroAPI(): string { return getConfig('currentlyAsNeuroAPI')!; }
     get docsURL(): string { return getConfig('docsURL')!; }
     get defaultOpenDocsWindow(): string { return getConfig('defaultOpenDocsWindow')!; }
     get sendContentsOnFileChange(): boolean { return getConfig('sendContentsOnFileChange')!; }
@@ -323,6 +326,8 @@ class Connection {
     get autoConnect(): boolean { return getConnection<boolean>('autoConnect')!; }
     get retryInterval(): number { return getConnection<number>('retryInterval')!; }
     get retryAmount(): number { return getConnection<number>('retryAmount')!; }
+    get userName(): string { return getConnection<string>('userName')!; }
+    get nameOfAPI(): string { return getConnection<string>('nameOfAPI')!; }
 }
 
 export const CONNECTION = new Connection();

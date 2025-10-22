@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 
 import { getFence, logOutput, simpleFileName } from '@/utils';
 import { NEURO } from '@/constants';
-import { PERMISSIONS, PermissionLevel, getPermissionLevel, isActionEnabled } from '@/config';
+import { CONNECTION, PERMISSIONS, PermissionLevel, getPermissionLevel, isActionEnabled } from '@/config';
 
 export function sendCurrentFile() {
     const editor = vscode.window.activeTextEditor;
@@ -24,7 +24,7 @@ export function sendCurrentFile() {
 
     logOutput('INFO', 'Sending current file to Neuro API');
     const fence = getFence(text);
-    NEURO.client?.sendContext(`Vedal sent you the contents of the file ${fileName}.\n\nContent:\n\n${fence}${language}\n${text}\n${fence}`);
+    NEURO.client?.sendContext(`${CONNECTION.userName} sent you the contents of the file ${fileName}.\n\nContent:\n\n${fence}${language}\n${text}\n${fence}`);
 }
 
 export function registerRequestCookieAction() {
@@ -36,7 +36,7 @@ export function registerRequestCookieAction() {
     NEURO.client?.registerActions([
         {
             name: 'request_cookie',
-            description: "Ask Vedal for a cookie. You can request a specific flavor, but it's up to Vedal to decide.",
+            description: `Ask ${CONNECTION.userName} for a cookie. You can request a specific flavor, but it's up to ${CONNECTION.userName} to decide.`,
             schema: {
                 type: 'object',
                 properties: {
@@ -80,7 +80,7 @@ export function registerRequestCookieHandler() {
                         }
                         NEURO.waitingForCookie = false;
                     });
-                    NEURO.client?.sendActionResult(actionData.id, true, 'Vedal has been asked for a cookie.');
+                    NEURO.client?.sendActionResult(actionData.id, true, `${CONNECTION.userName} has been asked for a cookie.`);
                     break;
                 case PermissionLevel.AUTOPILOT:
                     if (!actionData.params?.flavor) {
@@ -112,11 +112,11 @@ export function giveCookie(isRequested = false, defaultFlavor = 'Chocolate Chip'
         if (!flavor) {
             logOutput('INFO', 'No flavor given, canceling cookie');
             if (isRequested)
-                NEURO.client?.sendContext("Vedal couldn't decide on a flavor for your cookie.");
+                NEURO.client?.sendContext(`${CONNECTION.userName} couldn't decide on a flavor for your cookie.`);
             return;
         }
         logOutput('INFO', 'Giving cookie to Neuro');
-        NEURO.client?.sendContext(`Vedal gave you a ${flavor} cookie!`);
+        NEURO.client?.sendContext(`${CONNECTION.userName} gave you a ${flavor} cookie!`);
     });
 }
 
@@ -129,5 +129,5 @@ export function denyCookie() {
     }
 
     logOutput('INFO', 'Denying cookie to Neuro');
-    NEURO.client?.sendContext('Vedal denied you the cookie.');
+    NEURO.client?.sendContext(`${CONNECTION.userName} denied you the cookie.`);
 }
