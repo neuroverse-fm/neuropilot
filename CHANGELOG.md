@@ -18,7 +18,7 @@ Changes between each version before then will not be listed.
 
 - The `diff_patch` action had an incomplete example. This has now been fixed.
 - The workspace lint validator wasn't implemented properly and would skip validating. This has now been fixed.
-  - This is unlikely to have affected anyone, unless your workspace is in a Neuro-unsafe path. This shouldn't be the case for most people.
+  - This is unlikely to have affected anyone, unless your workspace is in (or is itself) a  Neuro-unsafe path. This shouldn't be the case for most people.
 - Cancellation events weren't properly handled for Autopilot flows, resulting in a memory leak. This has been patched to properly dispose of events.
 
 ## 2.2.1
