@@ -342,6 +342,7 @@ export async function RCEActionHandler(actionData: ActionData, actionList: Recor
         }
 
         if (effectivePermission === PermissionLevel.AUTOPILOT) {
+            for (const d of eventArray) d.dispose();
             const result = action.handler(actionData);
             NEURO.client?.sendActionResult(actionData.id, true, result);
         }
