@@ -250,7 +250,7 @@ export const fileActions = {
             (actionData: ActionData) => targetedFileDeletedEvent(actionData.params?.path),
         ],
         validators: [neuroSafeDeleteValidation],
-        promptGenerator: (actionData: ActionData) => `delete "${actionData.params?.pathToDelete}".`,
+        promptGenerator: (actionData: ActionData) => `delete "${actionData.params?.path}".`,
     },
 } satisfies Record<string, RCEAction>;
 

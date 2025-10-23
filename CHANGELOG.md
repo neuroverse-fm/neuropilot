@@ -11,6 +11,7 @@ Changes between each version before then will not be listed.
 ### Fixes
 
 - Fixed error catching not working in Copilot mode.
+- Fixed Delete File not displaying the targeted file in Copilot mode (used to return `undefined`)
 
 ## 2.2.2
 
