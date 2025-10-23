@@ -12,6 +12,13 @@ Changes between each version before then will not be listed.
 
 - `neuropilot.connection.userName` - Your name, to be used where Vedal would be used in the extension. This will not be logged, but it will be sent to the connected API server, so do be mindful of what you put there.
 
+### Added features
+
+- If an exception was thrown while executing an action, it will be caught and you will be notified about it.
+  - Neuro will also receive an action result telling her that an error occured.
+  - Obviously under normal circumstances, this shouldn't be useful. If it does occur, please report it! There is a button to open to our GitHub issues page to report it.
+    - There are also buttons to disable the attempted action and to view logs.
+
 ### Changes
 
 - Neuro can now get cookies by herself, if `neuropilot.permission.requestCookies` is set to `Autopilot`.
@@ -19,7 +26,7 @@ Changes between each version before then will not be listed.
   - The default for this permission is still set to "Copilot", so you'll still need to set it yourself.
 - Your name, according to the `neuropilot.connection.userName` setting, will be used in areas where it used to say Vedal.
   - If you want to use your name in the `neuropilot.connection.initialContext` setting, use the `insert_turtle_here` placeholder.
-  
+- Neuro will now be told about all schema validation errors at once, as opposed to only being able to see one validation error at a time.
 
 ### Fixes
 

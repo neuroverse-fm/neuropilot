@@ -3,10 +3,23 @@ import { Action } from 'neuro-game-sdk';
 import { NEURO } from './constants';
 import { logOutput } from './utils';
 
+//#region Types
+
+export type CursorPositionContextStyle = 'off' | 'inline' | 'lineAndColumn' | 'both';
+
+export interface Permission {
+    /** The ID of the permission in package.json, without the `neuropilot.permission.` prefix. */
+    id: string;
+    /** The infinitive of the permission to construct sentences (should fit the scheme "permission to {something}"). */
+    infinitive: string;
+}
+
 interface DeprecatedSetting {
     old: string;
     new: string | ((target: vscode.ConfigurationTarget) => Promise<void>);
 }
+
+//#endregion
 
 /** Array of deprecated settings */
 const DEPRECATED_SETTINGS: DeprecatedSetting[] = [
@@ -185,18 +198,14 @@ export async function checkDeprecatedSettings() {
     }
 }
 
-//#region Types
-
-export type CursorPositionContextStyle = 'off' | 'inline' | 'lineAndColumn' | 'both';
-
-//#endregion
-
 /** Permission level enums */
 export const enum PermissionLevel {
     OFF = 0,
     COPILOT = 1,
     AUTOPILOT = 2,
 }
+
+//#region Config get functions
 
 /**
  * Gets the value of the config
@@ -220,10 +229,11 @@ function getActions<T>(key: string): T | undefined {
 }
 
 export function isActionEnabled(action: string | Action): boolean {
-    if (typeof action === 'string')
-        return !ACTIONS.disabledActions.includes(action);
-    return !ACTIONS.disabledActions.includes(action.name);
+    const name = typeof action === 'string' ? action : action.name;
+    return !ACTIONS.disabledActions.includes(name) && !NEURO.tempDisabledActions.includes(name);
 }
+
+//#endregion
 
 /**
  * Checks the configured permission level for each provided permission and returns 
@@ -256,13 +266,6 @@ export function getPermissionLevel(...permissions: Permission[]): PermissionLeve
             }
         })
         .reduce((lowest, level) => level < lowest ? level : lowest, PermissionLevel.AUTOPILOT);
-}
-
-export interface Permission {
-    /** The ID of the permission in package.json, without the `neuropilot.permission.` prefix. */
-    id: string;
-    /** The infinitive of the permission to construct sentences (should fit the scheme "permission to {something}"). */
-    infinitive: string;
 }
 
 /** Collection of strings for use in {@link actionResultNoPermission}. */

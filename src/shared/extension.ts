@@ -29,6 +29,7 @@ export function registerCommonCommands() {
         vscode.commands.registerCommand('neuropilot.explainWithNeuro', explainWithNeuro),
         vscode.commands.registerCommand('neuropilot.switchNeuroAPIUser', switchCurrentNeuroAPIUser),
         vscode.commands.registerCommand('neuropilot.refreshExtensionDependencyState', obtainExtensionState),
+        vscode.commands.registerCommand('neuropilot.resetTemporarilyDisabledActions', () => NEURO.tempDisabledActions = []),
         ...registerDocsCommands(),
     ];
 }
@@ -88,6 +89,7 @@ export function initializeCommonState(context: vscode.ExtensionContext) {
     NEURO.cancelled = false;
     NEURO.outputChannel = vscode.window.createOutputChannel('NeuroPilot');
     NEURO.currentController = CONNECTION.nameOfAPI;
+    NEURO.context.subscriptions.push(NEURO.outputChannel);
     checkDeprecatedSettings();
 }
 
