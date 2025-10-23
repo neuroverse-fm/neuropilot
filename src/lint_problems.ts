@@ -129,13 +129,12 @@ export const lintActions = {
         cancelEvents: [
             workspaceLintingResolvedEvent,
         ],
-        validators: [() => {
+        validators: [async () => {
             const workspace = getWorkspacePath();
             if (!workspace) {
                 return actionValidationFailure('Unable to get current workspace.');
             }
-            validatePath(workspace, 'workspace');
-            return actionValidationAccept();
+            return await validatePath(workspace, 'workspace');
         }, () => {
             const diagnostics = vscode.languages.getDiagnostics();
             // Filter for diagnostics on safe files with errors.
