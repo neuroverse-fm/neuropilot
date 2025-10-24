@@ -6,6 +6,13 @@ Since v2.1.0, we're keeping a changelog of each version's changes in NeuroPilot.
 
 Changes between each version before then will not be listed.
 
+## 2.2.3
+
+### Fixes
+
+- Fixed error catching not working in Copilot mode.
+- Fixed Delete File not displaying the targeted file in Copilot mode (used to return `undefined`)
+
 ## 2.2.2
 
 ### New settings

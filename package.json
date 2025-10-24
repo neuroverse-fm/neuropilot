@@ -4,7 +4,7 @@
 	"private": true,
 	"description": "Allows Neuro-sama to either act as a companion/copilot or control Visual Studio Code by herself.",
 	"icon": "assets/heart-xaendril.png",
-	"version": "2.2.1",
+	"version": "2.2.2",
 	"publisher": "VSC-NeuroPilot",
 	"repository": "https://github.com/VSC-NeuroPilot/neuropilot",
 	"homepage": "https://vsc-neuropilot.github.io/neuropilot",
@@ -962,7 +962,7 @@
 		}
 	},
 	"scripts": {
- 		"preinstall": "node ./scripts/check-malicious-packages.js",
+		"preinstall": "node ./scripts/check-malicious-packages.js",
 		"version:changesets": "changeset version --global-changelog",
 		"push": "tsx ./dual-publish.ts",
 		"vscode:prepublish": "pnpm build",
@@ -985,7 +985,7 @@
 		"watch:web:esbuild": "node ./scripts/esbuild.mjs --watch --mode web",
 		"watch:web:tsc": "tsc --noEmit --watch --project tsconfig.web.json",
 		"watch:desktop:esbuild": "node ./scripts/esbuild.mjs --watch --mode desktop",
-		"watch:desktop:tsc": "tsc --noEmit --watch --project tsconfig.app.json",				
+		"watch:desktop:tsc": "tsc --noEmit --watch --project tsconfig.app.json",
 		"test:web": "pnpm run build:web && npm-run-all -s test:web:tsc test:web:esbuild test:web:browser",
 		"test:web:tsc": "tsc --noEmit --project test-tsconfigs/tsconfig.web.json",
 		"test:web:esbuild": "node ./scripts/esbuild.mjs --mode web --test",
