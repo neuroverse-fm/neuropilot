@@ -3,7 +3,7 @@ import * as vscode from 'vscode';
 import { NEURO } from '@/constants';
 import { DiffRangeType, escapeRegExp, getDiffRanges, getFence, getPositionContext, getProperty, getVirtualCursor, showDiffRanges, isPathNeuroSafe, logOutput, NeuroPositionContext, setVirtualCursor, simpleFileName, substituteMatch, clearDecorations, formatContext, filterFileContents, positionFromIndex, indexFromPosition } from '@/utils';
 import { ActionData, actionValidationAccept, actionValidationFailure, ActionValidationResult, RCEAction, contextFailure, stripToActions, actionValidationRetry, contextNoAccess } from '@/neuro_client_helper';
-import { PERMISSIONS, getPermissionLevel, CONFIG, isActionEnabled } from '@/config';
+import { PERMISSIONS, getPermissionLevel, CONFIG, isActionEnabled, CONNECTION } from '@/config';
 import { createCursorPositionChangedEvent } from '@events/cursor';
 import { RCECancelEvent } from '@events/utils';
 import type { JSONSchema7 } from 'json-schema';
@@ -424,7 +424,7 @@ export const editingActions = {
         description: 'Find text in the active document.'
             + ' If you set "useRegex" to true, you can use a Regex in the "find" parameter.'
             + ' This will place your cursor directly before or after the found text (depending on "moveCursor"), unless you searched for multiple instances.'
-            + ' Set "highlight" to true to highlight the found text, if you want to draw Vedal\'s or Chat\'s attention to it.'
+            + ' Set "highlight" to true to highlight the found text, if you want to draw insert_turtle_here\'s or Chat\'s attention to it.'
             + ' If you search for multiple matches, the numbers at the start of each line are the one-based line numbers and not part of the code.',
         schema: {
             type: 'object',
@@ -487,7 +487,7 @@ export const editingActions = {
         name: 'undo',
         description: 'Undo the last change made to the active document.'
             + ' Where your cursor will be moved cannot be determined.' // It will move to the real cursor but thats kinda useless for her to know
-            + ' If this doesn\'t work, tell Vedal to focus your VS Code window.',
+            + ' If this doesn\'t work, tell insert_turtle_here to focus your VS Code window.',
         permissions: [PERMISSIONS.editActiveDocument],
         handler: handleUndo,
         cancelEvents: commonCancelEvents,
@@ -571,7 +571,7 @@ export const editingActions = {
     highlight_lines: {
         name: 'highlight_lines',
         description: 'Highlight the specified lines.'
-            + ' Can be used to draw Vedal\'s or Chat\'s attention towards something.'
+            + ' Can be used to draw insert_turtle_here\'s or Chat\'s attention towards something.'
             + ' This will not move your cursor.'
             + ' Line numbers are one-based.',
         schema: LINE_RANGE_SCHEMA,
@@ -583,7 +583,7 @@ export const editingActions = {
     },
     get_user_selection: {
         name: 'get_user_selection',
-        description: 'Get Vedal\'s current selection and the text surrounding it.'
+        description: 'Get insert_turtle_here\'s current selection and the text surrounding it.'
             + ' This will not move your own cursor.',
         permissions: [PERMISSIONS.getUserSelection, PERMISSIONS.editActiveDocument],
         handler: handleGetUserSelection,
@@ -592,15 +592,15 @@ export const editingActions = {
     },
     replace_user_selection: { // TODO: cancellation event
         name: 'replace_user_selection',
-        description: 'Replace Vedal\'s current selection with the provided text.'
-            + ' If Vedal has no selection, this will insert the text at Vedal\'s current cursor position.'
+        description: 'Replace insert_turtle_here\'s current selection with the provided text.'
+            + ' If insert_turtle_here has no selection, this will insert the text at insert_turtle_here\'s current cursor position.'
             + ' After replacing/inserting, your cursor will be placed at the end of the inserted text.'
-            + ' If "requireSelectionUnchanged" is true, the action will be automatically canceled if Vedal\'s selection changes or has changed since it was last obtained.',
+            + ' If "requireSelectionUnchanged" is true, the action will be automatically canceled if insert_turtle_here\'s selection changes or has changed since it was last obtained.',
         schema: {
             type: 'object',
             properties: {
-                content: { type: 'string', description: 'The content to replace Vedal\'s selection with.' },
-                requireSelectionUnchanged: { type: 'boolean', description: 'Does your change require that Vedal keeps his selection unchanged?' },
+                content: { type: 'string', description: 'The content to replace insert_turtle_here\'s selection with.' },
+                requireSelectionUnchanged: { type: 'boolean', description: 'Does your change require that insert_turtle_here keeps his selection unchanged?' },
             },
             required: ['content', 'requireSelectionUnchanged'],
         },
@@ -611,8 +611,8 @@ export const editingActions = {
             (actionData: ActionData) => {
                 if (actionData.params.requireSelectionUnchanged)
                     return new RCECancelEvent({
-                        reason: 'Vedal\'s selection changed.',
-                        logReason: 'Vedal\'s selection changed and requireSelectionUnchanged is set to true.',
+                        reason: `${CONNECTION.userName}'s selection changed.`,
+                        logReason: `${CONNECTION.userName}'s selection changed and requireSelectionUnchanged is set to true.`,
                         events: [[vscode.window.onDidChangeTextEditorSelection, null]],
                     });
                 return null;
@@ -625,7 +625,7 @@ export const editingActions = {
                 if (!actionData.params.requireSelectionUnchanged)
                     return actionValidationAccept();
                 if (NEURO.lastKnownUserSelection === null || NEURO.lastKnownUserSelection !== vscode.window.activeTextEditor?.selection)
-                    return actionValidationFailure('Vedal\'s selection has changed since it was last obtained.');
+                    return actionValidationFailure(`${CONNECTION.userName}'s selection has changed since it was last obtained.`);
                 return actionValidationAccept();
             },
         ],
@@ -1064,7 +1064,7 @@ export function handleFindText(actionData: ActionData): string | undefined {
             const range = new vscode.Range(startPosition, endPosition);
             vscode.window.activeTextEditor!.setDecorations(NEURO.highlightDecorationType!, [{
                 range,
-                hoverMessage: `**Highlighted by ${CONFIG.currentlyAsNeuroAPI} via finding text**`,
+                hoverMessage: `**Highlighted by ${CONNECTION.nameOfAPI} via finding text**`,
             }]);
             vscode.window.activeTextEditor!.revealRange(range, vscode.TextEditorRevealType.InCenterIfOutsideViewport);
         }
@@ -1083,7 +1083,7 @@ export function handleFindText(actionData: ActionData): string | undefined {
         if (highlight) {
             vscode.window.activeTextEditor!.setDecorations(NEURO.highlightDecorationType!, matches.map((match, i) => ({
                 range: new vscode.Range(positions[i], positionFromIndex(documentText, match.index + match[0].length)),
-                hoverMessage: `**Highlighted by ${CONFIG.currentlyAsNeuroAPI} via finding text**`,
+                hoverMessage: `**Highlighted by ${CONNECTION.nameOfAPI} via finding text**`,
             })));
         }
         const lineNumberContextFormat = CONFIG.lineNumberContextFormat || '{n}|';
@@ -1334,7 +1334,7 @@ export function handleHighlightLines(actionData: ActionData): string | undefined
 
     editor!.setDecorations(NEURO.highlightDecorationType!, [{
         range,
-        hoverMessage: `**Highlighted manually by ${CONFIG.currentlyAsNeuroAPI}**`,
+        hoverMessage: `**Highlighted manually by ${CONNECTION.nameOfAPI}**`,
     }]);
     editor!.revealRange(range, vscode.TextEditorRevealType.InCenterIfOutsideViewport);
 
@@ -1429,14 +1429,14 @@ function handleGetUserSelection(_actionData: ActionData): string | undefined {
         cursorPosition: getVirtualCursor() ?? undefined,
     });
     const preamble = editor.selection.isEmpty
-        ? `Vedal's cursor is at (${editor.selection.active.line + 1}:${editor.selection.active.character + 1}).`
-        : `Vedal's selection is from (${editor.selection.start.line + 1}:${editor.selection.start.character + 1}) to (${editor.selection.end.line + 1}:${editor.selection.end.character + 1}).`;
+        ? `${CONNECTION.userName}'s cursor is at (${editor.selection.active.line + 1}:${editor.selection.active.character + 1}).`
+        : `${CONNECTION.userName}'s selection is from (${editor.selection.start.line + 1}:${editor.selection.start.character + 1}) to (${editor.selection.end.line + 1}:${editor.selection.end.character + 1}).`;
 
     const selectedText = editor.document.getText(editor.selection);
     const fence = getFence(selectedText);
     const postamble = editor.selection.isEmpty
         ? ''
-        : `\n\nVedal's selection contains:\n\n${fence}\n${selectedText}\n${fence}`;
+        : `\n\n${CONNECTION.userName}'s selection contains:\n\n${fence}\n${selectedText}\n${fence}`;
 
     return `${preamble}\n\n${formatContext(cursorContext)}${postamble}`;
 }
@@ -1470,7 +1470,7 @@ export function handleReplaceUserSelection(actionData: ActionData): string | und
                 position: selection.start,
                 position2: cursor,
             });
-            NEURO.client?.sendContext(`Replaced Vedal's selection in the document\n\n${formatContext(cursorContext)}`);
+            NEURO.client?.sendContext(`Replaced ${CONNECTION.userName}'s selection in the document\n\n${formatContext(cursorContext)}`);
 
             NEURO.lastKnownUserSelection = editor.selection;
         }
@@ -1659,7 +1659,7 @@ export function moveNeuroCursorHere() {
 
     const cursorContext = getPositionContext(editor.document, editor.selection.active);
 
-    NEURO.client?.sendContext(`Vedal moved your cursor.\n\n${formatContext(cursorContext)}`);
+    NEURO.client?.sendContext(`${CONNECTION.userName} moved your cursor.\n\n${formatContext(cursorContext)}`);
 }
 
 /**
@@ -1667,7 +1667,7 @@ export function moveNeuroCursorHere() {
  */
 export async function handleSendSelectionToNeuro(): Promise<void> {
     if (!NEURO.connected) {
-        logOutput('ERROR', `Attempted to send code selection to ${CONFIG.currentlyAsNeuroAPI} while disconnected.`);
+        logOutput('ERROR', `Attempted to send code selection to ${CONNECTION.nameOfAPI} while disconnected.`);
         vscode.window.showErrorMessage('Not connected to Neuro API.');
         return;
     }
@@ -1678,7 +1678,7 @@ export async function handleSendSelectionToNeuro(): Promise<void> {
     }
     const document = editor.document;
     if (!isPathNeuroSafe(document.fileName)) {
-        vscode.window.showErrorMessage(`${CONFIG.currentlyAsNeuroAPI} does not have permission to access this file.`);
+        vscode.window.showErrorMessage(`${CONNECTION.nameOfAPI} does not have permission to access this file.`);
         return;
     }
     const selection = editor.selection;
@@ -1694,7 +1694,7 @@ export async function handleSendSelectionToNeuro(): Promise<void> {
     const startCol = selection.start.character + 1;
     const endLine = selection.end.line + 1;
     const endCol = selection.end.character + 1;
-    const message = `Vedal sent you his currently highlighted content from file ${relativePath}, lines ${startLine}:${startCol} to ${endLine}:${endCol} (line:column):\n\nContent:\n${fence}${document.languageId}\n${selectedText}\n${fence}`;
+    const message = `${CONNECTION.userName} sent you his currently highlighted content from file ${relativePath}, lines ${startLine}:${startCol} to ${endLine}:${endCol} (line:column):\n\nContent:\n${fence}${document.languageId}\n${selectedText}\n${fence}`;
 
     NEURO.client?.sendContext(message);
     vscode.window.showInformationMessage('Selection sent to Neuro.');

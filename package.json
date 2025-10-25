@@ -196,7 +196,7 @@
 					"neuropilot.currentlyAsNeuroAPI": {
 						"type": "string",
 						"markdownDescription": "Who is currently acting as the Neuro API server?\nThis only changes the name in certain areas (such as Copilot-mode requests or Git commit messages) due to limitations.\n\nYou can add custom characters using `settings.json` if you ignore the lint error from VS Code.\n\n(Most) names mentioned here are not associated with NeuroPilot.",
-						"default": "Neuro",
+						"deprecationMessage": "This setting has been moved to neuropilot.connection.nameOfAPI",
 						"enum": [
 							"Neuro",
 							"Evil",
@@ -782,7 +782,7 @@
 					"neuropilot.connection.initialContext": {
 						"type": "string",
 						"default": "You are using an extension in Visual Studio Code that allows you to code together with Vedal.",
-						"description": "The initial context to sent to Neuro-sama (or whatever is connected to NeuroPilot)",
+						"markdownDescription": "The initial context to sent to Neuro-sama (or whatever is connected to NeuroPilot)\n\nTo replace with your name (according to [this setting](vscode://settings/neuropilot.connection.userName)), use `insert_turtle_here`.",
 						"editPresentation": "multilineText"
 					},
 					"neuropilot.connection.autoConnect": {
@@ -801,6 +801,32 @@
 						"default": 0,
 						"minimum": 0,
 						"markdownDescription": "The amount of retries to connect to the Neuro API if it fails.\n\nThe amount of tries total will be (this setting) + 1.\n\nSet to 0 to disallow retries."
+					},
+					"neuropilot.connection.userName": {
+						"type": "string",
+						"default": "Vedal",
+						"description": "Your name (to communicate who is controlling this VS Code instance alongside the API server). This will be used where the name `Vedal` would work for Neuro."
+					},
+					"neuropilot.connection.nameOfAPI": {
+						"type": "string",
+						"markdownDescription": "Who is currently acting as the Neuro API server?\nThis only changes the name in certain areas (such as Copilot-mode requests or Git commit messages) due to limitations.\n\nYou can add custom characters using `settings.json` if you ignore the lint error from VS Code.\n\n(Most) names mentioned here are not associated with NeuroPilot.",
+						"default": "Neuro",
+						"enum": [
+							"Neuro",
+							"Evil",
+							"Randy",
+							"Jippity",
+							"Tony",
+							"Gary"
+						],
+						"enumDescriptions": [
+							"#1 at osu!",
+							"Evil, but actually nice.",
+							"Random Dot Range (Alex)",
+							"A GPT model (EnterpriseScratchDev)",
+							"The human operator (Pasu4)",
+							"Literally in your computer walls (Govorunb)"
+						]
 					},
 					"neuropilot.actions.disabledActions": {
 						"type": "array",

@@ -60,7 +60,7 @@ suite('file Actions', () => {
 
     test('delete_file_or_folder prompt formats path', () => {
         // === Arrange & Act ===
-        const prompt = fileActions.delete_file_or_folder.promptGenerator({ params: { pathToDelete: 'old/file.txt' } } as ActionData);
+        const prompt = fileActions.delete_file_or_folder.promptGenerator({ params: { path: 'old/file.txt' } } as ActionData);
 
         // === Assert ===
         assert.ok(typeof prompt === 'string' && prompt.length > 0);

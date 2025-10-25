@@ -7,7 +7,7 @@ import * as vscode from 'vscode';
 import { ActionData, RCEAction, stripToAction } from '@/neuro_client_helper';
 import { NEURO } from '@/constants';
 import { checkVirtualWorkspace, checkWorkspaceTrust, logOutput, notifyOnCaughtException } from '@/utils';
-import { ACTIONS, CONFIG, getPermissionLevel, isActionEnabled, PermissionLevel, PERMISSIONS } from '@/config';
+import { ACTIONS, CONFIG, CONNECTION, getPermissionLevel, isActionEnabled, PermissionLevel, PERMISSIONS } from '@/config';
 import { handleRunTask } from '@/tasks';
 import { validate } from 'jsonschema';
 import type { RCECancelEvent } from '@events/utils';
@@ -226,7 +226,7 @@ export function acceptRceRequest(): void {
         return;
     }
 
-    NEURO.client?.sendContext('Vedal has accepted your request.');
+    NEURO.client?.sendContext(`${CONNECTION.userName} has accepted your request.`);
 
     try {
         const result = NEURO.rceRequest.callback();
@@ -251,7 +251,7 @@ export function denyRceRequest(): void {
         return;
     }
 
-    NEURO.client?.sendContext('Vedal has denied your request.');
+    NEURO.client?.sendContext(`${CONNECTION.userName} has denied your request.`);
 
     clearRceRequest();
 }
@@ -351,7 +351,7 @@ export async function RCEActionHandler(actionData: ActionData, actionList: Recor
                     } else {
                         createdLogReason = createdReason;
                     }
-                    logOutput('WARN', `${CONFIG.currentlyAsNeuroAPI}'${CONFIG.currentlyAsNeuroAPI.endsWith('s') ? '' : 's'} action ${action.name} was cancelled because ${createdLogReason}`);
+                    logOutput('WARN', `${CONNECTION.nameOfAPI}'${CONNECTION.nameOfAPI.endsWith('s') ? '' : 's'} action ${action.name} was cancelled because ${createdLogReason}`);
                     NEURO.client?.sendContext(`Your request was cancelled because ${createdReason}`);
                     clearRceRequest();
                 };
