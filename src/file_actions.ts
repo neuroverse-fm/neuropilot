@@ -2,7 +2,7 @@
 import * as vscode from 'vscode';
 
 import { NEURO } from '@/constants';
-import { formatContext, getFence, getPositionContext, getVirtualCursor, getWorkspacePath, getWorkspaceUri, isBinary, isPathNeuroSafe, logOutput, normalizePath } from '@/utils';
+import { formatContext, getFence, getPositionContext, getVirtualCursor, getWorkspacePath, getWorkspaceUri, isBinary, isPathNeuroSafe, logOutput, normalizePath, notifyOnCaughtException } from '@/utils';
 import { ActionData, contextNoAccess, RCEAction, actionValidationFailure, actionValidationAccept, ActionValidationResult, stripToActions } from '@/neuro_client_helper';
 import { CONFIG, PERMISSIONS, PermissionLevel, getPermissionLevel, isActionEnabled } from '@/config';
 import { targetedFileCreatedEvent, targetedFileDeletedEvent } from '@events/files';
@@ -43,8 +43,9 @@ async function getUriExistence(uri: vscode.Uri): Promise<boolean> {
 	try {
 		await vscode.workspace.fs.stat(uri);
 		return true;
-	} catch {
-		return false;
+	} catch (erm: unknown) {
+        if (erm instanceof vscode.FileSystemError && erm.code === 'FileNotFound') return false;
+		else throw erm;
 	}
 }
 
@@ -250,7 +251,7 @@ export const fileActions = {
             (actionData: ActionData) => targetedFileDeletedEvent(actionData.params?.path),
         ],
         validators: [neuroSafeDeleteValidation],
-        promptGenerator: (actionData: ActionData) => `delete "${actionData.params?.pathToDelete}".`,
+        promptGenerator: (actionData: ActionData) => `delete "${actionData.params?.path}".`,
     },
 } satisfies Record<string, RCEAction>;
 
@@ -304,13 +305,19 @@ export function handleCreateFile(actionData: ActionData): string | undefined {
             // If no error is thrown, the file already exists
             NEURO.client?.sendContext(`Could not create file: File ${relativePath} already exists`);
             return;
-        } catch { /* File does not exist, continue */ }
+        } catch (erm: unknown) {
+            if (erm instanceof vscode.FileSystemError && erm.code !== 'FileNotFound') {
+                notifyOnCaughtException('create_file', erm);
+                return;
+            };
+            /* else, file does not exist, continue */
+        }
 
         // Create the file
         try {
             await vscode.workspace.fs.writeFile(fileUri, new Uint8Array(0));
         } catch (erm: unknown) {
-            logOutput('ERROR', `Failed to create file ${relativePath}: ${erm}`);
+            notifyOnCaughtException('create_file', erm);
             NEURO.client?.sendContext(`Failed to create file ${relativePath}`);
             return;
         }
@@ -353,13 +360,19 @@ export function handleCreateFolder(actionData: ActionData): string | undefined {
 			// If no error is thrown, the folder already exists
 			NEURO.client?.sendContext(`Could not create folder: Folder ${relativePath} already exists`);
 			return;
-		} catch { /* Folder does not exist, continue */ }
+		} catch (erm: unknown) {
+            if (erm instanceof vscode.FileSystemError && erm.code !== 'FileNotFound') {
+                notifyOnCaughtException('create_folder', erm);
+                return;
+            }
+            /* else, folder does not exist, continue */
+        }
 
 		// Create the folder
 		try {
 			await vscode.workspace.fs.createDirectory(folderUri);
 		} catch (erm: unknown) {
-			logOutput('ERROR', `Failed to create folder ${relativePath}: ${erm}`);
+			notifyOnCaughtException('create_folder', erm);
 			NEURO.client?.sendContext(`Failed to create folder ${relativePath}`);
 			return;
 		}
@@ -393,13 +406,19 @@ export function handleRenameFileOrFolder(actionData: ActionData): string | undef
             // If no error is thrown, the new path already exists
             NEURO.client?.sendContext(`Could not rename: ${newRelativePath} already exists`);
             return;
-        } catch { /* New path does not exist, continue */ }
+        } catch (erm: unknown) {
+            if (erm instanceof vscode.FileSystemError && erm.code !== 'FileNotFound') {
+                notifyOnCaughtException('rename_file_or_folder', erm);
+                return;
+            };
+            /* New path does not exist, continue */
+        }
 
         // Rename the file/folder
         try {
             await vscode.workspace.fs.rename(oldUri, newUri);
         } catch (erm: unknown) {
-            logOutput('ERROR', `Failed to rename ${oldRelativePath} to ${newRelativePath}: ${erm}`);
+            notifyOnCaughtException('rename_file_or_folder', erm);
             NEURO.client?.sendContext(`Failed to rename ${oldRelativePath} to ${newRelativePath}`);
             return;
         }
@@ -429,9 +448,14 @@ export function handleDeleteFileOrFolder(actionData: ActionData): string | undef
 		// Check if the path exists
 		try {
 			stat = await vscode.workspace.fs.stat(uri);
-		} catch {
-			NEURO.client?.sendContext(`Could not delete: ${relativePath} does not exist`);
-			return;
+		} catch (erm: unknown) {
+            if (erm instanceof vscode.FileSystemError && erm.code === 'FileNotFound') {
+                NEURO.client?.sendContext(`Could not delete: ${relativePath} does not exist`);
+			    return;
+            } else {
+                notifyOnCaughtException('delete_file_or_folder', erm);
+                return;
+            }
 		}
 
 		// Check for correct recursive parameter
@@ -570,7 +594,7 @@ export function handleOpenFile(actionData: ActionData): string | undefined {
 				}
 			}
         } catch (erm: unknown) {
-            logOutput('ERROR', `Failed to open file ${relativePath}: ${erm}`);
+            notifyOnCaughtException('open_file', erm);
             NEURO.client?.sendContext(`Failed to open file ${relativePath}`);
         }
     }
@@ -598,7 +622,8 @@ export function handleReadFile(actionData: ActionData): string | undefined {
             },
         );
     } catch (erm: unknown) {
-        logOutput('ERROR', `Error occured while trying to access file ${file}: ${erm}`);
+        notifyOnCaughtException('read_file', erm);
+        NEURO.client?.sendContext(`Unable to read file ${file}`);
     }
 }
 

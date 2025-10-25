@@ -4,7 +4,7 @@
 
 import { Action } from 'neuro-game-sdk';
 import { ACTIONS, Permission, PermissionLevel } from '@/config';
-import { logOutput } from '@/utils';
+import { logOutput, turtleSafari } from '@/utils';
 import { PromptGenerator } from '@/rce';
 import { RCECancelEvent } from '@events/utils';
 import { JSONSchema7 } from 'json-schema';
@@ -77,7 +77,7 @@ export function stripToAction(action: RCEAction): Action {
     }
     return {
         name: action.name,
-        description: action.description,
+        description: turtleSafari(action.description),
         schema,
     };
 }

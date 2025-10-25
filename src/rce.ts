@@ -7,7 +7,7 @@ import * as vscode from 'vscode';
 import { ActionData, RCEAction, stripToAction } from '@/neuro_client_helper';
 import { NEURO } from '@/constants';
 import { checkVirtualWorkspace, checkWorkspaceTrust, logOutput, notifyOnCaughtException } from '@/utils';
-import { ACTIONS, CONFIG, getPermissionLevel, isActionEnabled, PermissionLevel, PERMISSIONS } from '@/config';
+import { ACTIONS, CONFIG, CONNECTION, getPermissionLevel, isActionEnabled, PermissionLevel, PERMISSIONS } from '@/config';
 import { handleRunTask } from '@/tasks';
 import { validate } from 'jsonschema';
 import type { RCECancelEvent } from '@events/utils';
@@ -47,6 +47,10 @@ export interface RceRequest {
      * Disposable events
      */
     cancelEvents?: vscode.Disposable[]
+    /**
+     * The action data associated with this request.
+     */
+    actionData: ActionData;
 }
 
 export const cancelRequestAction: RCEAction = {
@@ -103,10 +107,13 @@ export function clearRceRequest(): void {
  * Creates a new RCE request and attaches it to NEURO.
  * @param prompt The prompt to be displayed in the notification.
  * @param callback The callback function to be executed when the request is accepted.
+ * @param actionData The action data associated with this request.
+ * @param cancelEvents Optional array of disposables for cancellation events.
  */
 export function createRceRequest(
     prompt: string,
     callback: () => string | undefined,
+    actionData: ActionData,
     cancelEvents?: vscode.Disposable[],
 ): void {
     NEURO.rceRequest = {
@@ -118,6 +125,7 @@ export function createRceRequest(
         resolve: () => { },
         attachNotification: async () => { },
         cancelEvents,
+        actionData,
     };
 
     const promise = new Promise<void>((resolve) => {
@@ -218,11 +226,17 @@ export function acceptRceRequest(): void {
         return;
     }
 
-    NEURO.client?.sendContext('Vedal has accepted your request.');
+    NEURO.client?.sendContext(`${CONNECTION.userName} has accepted your request.`);
 
-    const result = NEURO.rceRequest.callback();
-    if (result)
-        NEURO.client?.sendContext(result);
+    try {
+        const result = NEURO.rceRequest.callback();
+        if (result)
+            NEURO.client?.sendContext(result);
+    } catch (erm: unknown) {
+        const actionName = NEURO.rceRequest.actionData.name;
+        notifyOnCaughtException(actionName, erm);
+        NEURO.client?.sendActionResult(NEURO.rceRequest.actionData.id, true, `An error occurred while executing the action "${actionName}". You can retry if you like, but it may be better to ask ${CONNECTION.userName} to check what's up.`);
+    }
 
     clearRceRequest();
 }
@@ -237,7 +251,7 @@ export function denyRceRequest(): void {
         return;
     }
 
-    NEURO.client?.sendContext('Vedal has denied your request.');
+    NEURO.client?.sendContext(`${CONNECTION.userName} has denied your request.`);
 
     clearRceRequest();
 }
@@ -337,7 +351,7 @@ export async function RCEActionHandler(actionData: ActionData, actionList: Recor
                     } else {
                         createdLogReason = createdReason;
                     }
-                    logOutput('WARN', `${CONFIG.currentlyAsNeuroAPI}'${CONFIG.currentlyAsNeuroAPI.endsWith('s') ? '' : 's'} action ${action.name} was cancelled because ${createdLogReason}`);
+                    logOutput('WARN', `${CONNECTION.nameOfAPI}'${CONNECTION.nameOfAPI.endsWith('s') ? '' : 's'} action ${action.name} was cancelled because ${createdLogReason}`);
                     NEURO.client?.sendContext(`Your request was cancelled because ${createdReason}`);
                     clearRceRequest();
                 };
@@ -369,6 +383,7 @@ export async function RCEActionHandler(actionData: ActionData, actionList: Recor
                 createRceRequest(
                     prompt,
                     () => action.handler(actionData),
+                    actionData,
                     eventArray,
                 );
 
