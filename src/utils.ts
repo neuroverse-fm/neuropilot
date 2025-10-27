@@ -98,7 +98,7 @@ function attemptConnection(currentAttempt: number, maxAttempts: number, interval
         };
 
         NEURO.client.sendContext(
-            vscode.workspace.getConfiguration('neuropilot').get('connection.initialContext', 'Something went wrong, blame Pasu4 and/or KTrain5369 and tell Vedal to file a bug report.'),
+            turtleSafari(vscode.workspace.getConfiguration('neuropilot').get('connection.initialContext', 'Someone tell the NeuroPilot devs that there\'s a problem with their extension.')),
         );
 
         for (const handler of clientConnectedHandlers) {
@@ -127,7 +127,7 @@ export async function disconnectClient() {
     shouldAutoReconnect = false;
     if (NEURO.client) {
         NEURO.client.disconnect();
-        if(!await waitFor(() => !NEURO.connected, 100, 5000)) {
+        if (!await waitFor(() => !NEURO.connected, 100, 5000)) {
             logOutput('ERROR', 'Client took too long to disconnect');
             vscode.window.showErrorMessage('Client could not disconnect.');
         }
@@ -272,8 +272,13 @@ export function normalizePath(path: string): string {
  * @returns The path to the workspace folder, or undefined if the workspace is not open.
  */
 export function getWorkspacePath(): string | undefined {
-    const path = vscode.workspace.workspaceFolders?.[0].uri.fsPath;
-    return path ? normalizePath(path) : undefined;
+    const uri = vscode.workspace.workspaceFolders?.[0]?.uri;
+    if (!uri) return undefined;
+    if (uri.scheme === 'file') {
+        return normalizePath(uri.fsPath);
+    }
+    // For non-file schemes (e.g., vscode-test-web://mount), use the URI path
+    return normalizePath(uri.path);
 }
 
 export function getWorkspaceUri(): vscode.Uri | undefined {
@@ -606,7 +611,7 @@ export function showDiffRanges(editor: vscode.TextEditor, ...ranges: DiffRange[]
     const removedRanges = ranges.filter(r => r.type === DiffRangeType.Removed);
 
     const languageId = editor.document.languageId;
-    const user = CONFIG.currentlyAsNeuroAPI;
+    const user = CONNECTION.nameOfAPI;
 
     editor.setDecorations(NEURO.diffAddedDecorationType!, addedRanges.map(range => ({
         range: range.range,
@@ -883,5 +888,49 @@ export function translatePosition(pos: vscode.Position, delta: vscode.Position):
     return new vscode.Position(
         pos.line + delta.line,
         delta.line > 0 ? delta.character : pos.character + delta.character,
+    );
+}
+
+/**
+ * Replaces all instances of `insert_turtle_here` in the input string with the User Name setting.
+ * @param input String input to check.
+ */
+export const turtleSafari = (input: string) => input.replace(/(?<!\\)insert_turtle_here/g, CONNECTION.userName).replace(/\\insert_turtle_here/g, 'insert_turtle_here');
+
+/**
+ * Log a caught exception and surface an error to report to GitHub.
+ */
+export function notifyOnCaughtException(name: string, error: Error | unknown): void {
+    logOutput('ERROR', `Error occurred while executing action ${name}: ${error}`);
+    vscode.window.showErrorMessage(`${CONNECTION.nameOfAPI} tried to run the action "${name}", but an exception was thrown!`, 'View Logs', 'Disable Action for...', 'Report on GitHub').then(
+        async (v) => {
+            switch (v) {
+                case 'View Logs':
+                    NEURO.outputChannel?.show();
+                    break;
+                case 'Report on GitHub':
+                    vscode.env.openExternal(await vscode.env.asExternalUri(vscode.Uri.parse('https://github.com/VSC-NeuroPilot/neuropilot/issues/new', true)));
+                    break;
+                case 'Disable Action for...': {
+                    const disableFor = await vscode.window.showQuickPick(
+                        ['this session', 'this entire workspace', 'this user'],
+                        { title: 'Disable action for...' },
+                    );
+                    switch (disableFor) {
+                        case 'this session':
+                            NEURO.tempDisabledActions.push(name);
+                            break;
+                        case 'this entire workspace':
+                            await vscode.workspace.getConfiguration('neuropilot').update('actions.disabledActions', name, vscode.ConfigurationTarget.Workspace);
+                            break;
+                        case 'this user':
+                            await vscode.workspace.getConfiguration('neuropilot').update('actions.disabledActions', name, vscode.ConfigurationTarget.Global);
+                            break;
+                    }
+                    if (disableFor) logOutput('INFO', `Disabled action "${name}" for ${disableFor} due to a caught exception.`);
+                    break;
+                }
+            }
+        },
     );
 }

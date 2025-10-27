@@ -3,10 +3,23 @@ import { Action } from 'neuro-game-sdk';
 import { NEURO } from './constants';
 import { logOutput } from './utils';
 
+//#region Types
+
+export type CursorPositionContextStyle = 'off' | 'inline' | 'lineAndColumn' | 'both';
+
+export interface Permission {
+    /** The ID of the permission in package.json, without the `neuropilot.permission.` prefix. */
+    id: string;
+    /** The infinitive of the permission to construct sentences (should fit the scheme "permission to {something}"). */
+    infinitive: string;
+}
+
 interface DeprecatedSetting {
     old: string;
     new: string | ((target: vscode.ConfigurationTarget) => Promise<void>);
 }
+
+//#endregion
 
 /** Array of deprecated settings */
 const DEPRECATED_SETTINGS: DeprecatedSetting[] = [
@@ -65,6 +78,10 @@ const DEPRECATED_SETTINGS: DeprecatedSetting[] = [
     {
         old: 'enableCancelRequests',
         new: 'actions.enableCancelRequests',
+    },
+    {
+        old: 'currentlyAsNeuroAPI',
+        new: 'connection.nameOfAPI',
     },
 ];
 
@@ -181,18 +198,14 @@ export async function checkDeprecatedSettings() {
     }
 }
 
-//#region Types
-
-export type CursorPositionContextStyle = 'off' | 'inline' | 'lineAndColumn' | 'both';
-
-//#endregion
-
 /** Permission level enums */
 export const enum PermissionLevel {
     OFF = 0,
     COPILOT = 1,
     AUTOPILOT = 2,
 }
+
+//#region Config get functions
 
 /**
  * Gets the value of the config
@@ -216,10 +229,11 @@ function getActions<T>(key: string): T | undefined {
 }
 
 export function isActionEnabled(action: string | Action): boolean {
-    if (typeof action === 'string')
-        return !ACTIONS.disabledActions.includes(action);
-    return !ACTIONS.disabledActions.includes(action.name);
+    const name = typeof action === 'string' ? action : action.name;
+    return !ACTIONS.disabledActions.includes(name) && !NEURO.tempDisabledActions.includes(name);
 }
+
+//#endregion
 
 /**
  * Checks the configured permission level for each provided permission and returns 
@@ -227,7 +241,8 @@ export function isActionEnabled(action: string | Action): boolean {
  *
  * @param permissions The permission(s) to query.
  * @returns The lowest permission level in the list of permissions.
- * If no permissions are specified, this function assumes Copilot
+ * If no permissions are specified, this function assumes {@link PermissionLevel.COPILOT}.
+ * If used as a boolean, {@link PermissionLevel.OFF} is considered `false`, everything else is considered `true`.
  */
 export function getPermissionLevel(...permissions: Permission[]): PermissionLevel {
     if (NEURO.killSwitch) {
@@ -253,13 +268,6 @@ export function getPermissionLevel(...permissions: Permission[]): PermissionLeve
         .reduce((lowest, level) => level < lowest ? level : lowest, PermissionLevel.AUTOPILOT);
 }
 
-export interface Permission {
-    /** The ID of the permission in package.json, without the `neuropilot.permission.` prefix. */
-    id: string;
-    /** The infinitive of the permission to construct sentences (should fit the scheme "permission to {something}"). */
-    infinitive: string;
-}
-
 /** Collection of strings for use in {@link actionResultNoPermission}. */
 class Permissions {
     get openFiles() { return { id: 'openFiles', infinitive: 'open files' }; }
@@ -276,7 +284,7 @@ class Permissions {
     get gitConfigs() { return { id: 'gitConfigs', infinitive: 'edit the Git configuration' }; }
     get terminalAccess() { return { id: 'terminalAccess', infinitive: 'access the terminal' }; }
     get accessLintingAnalysis() { return { id: 'accessLintingAnalysis', infinitive: 'view linting problems' }; }
-    get getUserSelection() { return { id: 'getUserSelection', infinitive: 'get Vedal\'s cursor' }; }
+    get getUserSelection() { return { id: 'getUserSelection', infinitive: `get ${CONNECTION.userName}'s cursor` }; }
 }
 
 export const PERMISSIONS = new Permissions();
@@ -293,7 +301,6 @@ class Config {
     get sendSaveNotifications(): boolean { return getConfig('sendSaveNotifications')!; }
     get requestExpiryTimeout(): number { return getConfig('requestExpiryTimeout')!; }
     get cursorFollowsNeuro(): boolean { return getConfig('cursorFollowsNeuro')!; }
-    get currentlyAsNeuroAPI(): string { return getConfig('currentlyAsNeuroAPI')!; }
     get docsURL(): string { return getConfig('docsURL')!; }
     get defaultOpenDocsWindow(): string { return getConfig('defaultOpenDocsWindow')!; }
     get sendContentsOnFileChange(): boolean { return getConfig('sendContentsOnFileChange')!; }
@@ -322,6 +329,8 @@ class Connection {
     get autoConnect(): boolean { return getConnection<boolean>('autoConnect')!; }
     get retryInterval(): number { return getConnection<number>('retryInterval')!; }
     get retryAmount(): number { return getConnection<number>('retryAmount')!; }
+    get userName(): string { return getConnection<string>('userName')!; }
+    get nameOfAPI(): string { return getConnection<string>('nameOfAPI')!; }
 }
 
 export const CONNECTION = new Connection();
