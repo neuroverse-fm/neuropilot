@@ -37,7 +37,6 @@
     ],
     "neuropilot.sendNewLintingProblemsOn": "off",
     "neuropilot.requestExpiryTimeout": 10000,
-    "neuropilot.currentlyAsNeuroAPI": "Neuro",
     "neuropilot.cursorFollowsNeuro": false,
     "neuropilot.connection.autoConnect": true,
     "neuropilot.connection.retryAmount": 1,
@@ -48,5 +47,6 @@
     // VS Code settings
     "files.autoSave": "afterDelay",
     "files.autoSaveDelay": 1000,
-    "neuropilot.actions.hideCopilotRequests": false
+    "neuropilot.actions.hideCopilotRequests": false,
+    "neuropilot.connection.nameOfAPI": "Neuro"
 }
