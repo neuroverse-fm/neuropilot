@@ -940,6 +940,29 @@
 					"group": "navigation"
 				}
 			]
+		},
+		"viewsContainers": {
+			"activitybar": [
+				{
+					"id": "neuropilot",
+					"title": "NeuroPilot",
+					"icon": "assets/neuropilot-font.svg"
+				}
+			]
+		},
+		"views": {
+			"neuropilot": [
+				{
+					"id": "neuropilot-actions",
+					"name": "Actions",
+					"icon": "assets/evilpilot.png"
+				},
+				{
+					"id": "neuropilot-test",
+					"name": "Test",
+					"icon": "assets/evilpilot.png"
+				}
+			]
 		}
 	},
 	"capabilities": {

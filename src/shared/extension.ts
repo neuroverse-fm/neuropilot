@@ -12,6 +12,7 @@ import type { GitExtension } from '@typing/git';
 import { getGitExtension } from '@/git';
 import { openDocsOnTarget, registerDocsCommands, registerDocsLink } from './docs';
 import { moveCursorEmitterDiposable } from '@events/cursor';
+import { ActionsViewProvider } from '@/views/actions';
 
 // Shared commands
 export function registerCommonCommands() {
@@ -101,6 +102,7 @@ export function setupCommonProviders() {
             new NeuroCodeActionsProvider(),
             { providedCodeActionKinds: NeuroCodeActionsProvider.providedCodeActionKinds },
         ),
+        vscode.window.registerTreeDataProvider('neuropilot-actions', new ActionsViewProvider()),
     ];
 
     return providers;
