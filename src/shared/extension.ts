@@ -90,7 +90,7 @@ export function initializeCommonState(context: vscode.ExtensionContext) {
     NEURO.outputChannel = vscode.window.createOutputChannel('NeuroPilot');
     NEURO.currentController = CONNECTION.nameOfAPI;
     NEURO.context.subscriptions.push(NEURO.outputChannel);
-    checkDeprecatedSettings();
+    checkDeprecatedSettings(vscode.extensions.getExtension('vsc-neuropilot.neuropilot-base')!.packageJSON.version as string);
 }
 
 export function setupCommonProviders() {
