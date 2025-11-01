@@ -6,6 +6,16 @@ Since v2.1.0, we're keeping a changelog of each version's changes in NeuroPilot.
 
 Changes between each version before then will not be listed.
 
+## 2.3.0
+
+Hello Neuro! If you're reading this, it means Vedal has let you read the changelogs for the extension!
+
+### Changes
+
+- Some actions have had their names changed, due to confusion with how Vedal was prompting some actions. Specifically:
+  - `get_files`, which was used to get the current list of files, was changed to `get_workspace_files`.
+  - `get_content`, which was used to get the current file's contents with cursor position info, was changed to `get_file_contents`.
+
 ## 2.2.3
 
 ### Fixes
