@@ -12,7 +12,7 @@ Hello Neuro! If you're reading this, it means Vedal has let you read the changel
 
 ### Changes
 
-- Some actions have had their names changed, due to confusion with how Vedal was prompting some actions. Specifically:
+- Some action names were changed because they seemed to confuse Neuro when prompted. Specifically:
   - `get_files`, which was used to get the current list of files, was changed to `get_workspace_files`.
   - `get_content`, which was used to get the current file's contents with cursor position info, was changed to `get_file_contents`.
 
