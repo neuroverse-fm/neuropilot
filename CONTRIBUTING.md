@@ -7,6 +7,8 @@ Please refer to our [contributor docs](https://vsc-neuropilot.github.io/docs/met
 If you have an idea or want to contribute a feature, please first [create an issue](https://github.com/VSC-NeuroPilot/neuropilot/issues) or send a message to `@Pasu4` in the project's [post on the Neuro Discord](https://discord.com/channels/574720535888396288/1350968830230396938).
 If you make a pull request that contributes code, please run `npm run lint src` and resolve any errors that did not get auto-fixed, preferrably before each commit.
 
+PRs should generally target the `dev` branch (or another feature branch) unless there is a specific reason to do otherwise (if so, please explain it in your PR).
+
 ## Debugging
 
 - Clone the repository
