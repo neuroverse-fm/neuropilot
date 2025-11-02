@@ -817,15 +817,17 @@
 							"Randy",
 							"Jippity",
 							"Tony",
-							"Gary"
+							"Gary",
+							"Mini 2.0"
 						],
-						"enumDescriptions": [
+						"markdownEnumDescriptions": [
 							"#1 at osu!",
 							"Evil, but actually nice.",
 							"Random Dot Range (Alex)",
 							"A GPT model (EnterpriseScratchDev)",
 							"The human operator (Pasu4)",
-							"Literally in your computer walls (Govorunb)"
+							"Literally in your computer walls (Govorunb)",
+							"Built by Evil, living in her basement. (2025 Minithon coding subgoal **unofficial** celebration)"
 						]
 					},
 					"neuropilot.actions.disabledActions": {
