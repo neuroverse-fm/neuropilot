@@ -141,7 +141,7 @@ export const fileActions = {
         },
         permissions: [PERMISSIONS.openFiles],
         handler: handleGetWorkspaceFiles,
-        validators: [async (actionData: ActionData) => {
+        validators: [async (actionData: ActionData) => { /** @todo Refactor to partially use {@link validatePath} instead. */
             const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
             if (workspaceFolder === undefined)
                 return actionValidationFailure('No open workspace to get files from.');
