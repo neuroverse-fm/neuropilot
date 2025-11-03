@@ -130,13 +130,34 @@ const commonFileEvents: ((actionData: ActionData) => RCECancelEvent | null)[] = 
 export const fileActions = {
     get_workspace_files: { // pending functionality change, see https://github.com/VSC-NeuroPilot/neuropilot/issues/153
         name: 'get_workspace_files',
-        description: 'Get a list of files in the workspace',
+        description: 'Get a list of files in the workspace. Will not return subdirectories by default, use `recursive` to do so.',
+        schema: {
+            type: 'object',
+            properties: {
+                folder: { type: 'string', description: 'If you want to view only a subfolder\'s contents, specify a subfolder in this property.' },
+                recursive: { type: 'boolean', description: 'Set this to `true` if you want to view all subfolders\' contents as well.' },
+            },
+            additionalProperties: false,
+        },
         permissions: [PERMISSIONS.openFiles],
-        handler: handleGetFiles,
-        validators: [() => {
+        handler: handleGetWorkspaceFiles,
+        validators: [async (actionData: ActionData) => {
             const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
             if (workspaceFolder === undefined)
                 return actionValidationFailure('No open workspace to get files from.');
+            const folder = actionData.params.folder;
+            if (folder) {
+                const relativeFolderPath = normalizePath(folder).replace(/^\/|\/$/g, '');
+                const absolutePath = getWorkspacePath() + '/' + relativeFolderPath;
+                if (!isPathNeuroSafe(absolutePath)) {
+                    return actionValidationFailure('You cannot access that folder.');
+                }
+                const folderUri = vscode.Uri.joinPath(workspaceFolder.uri, relativeFolderPath);
+                if (!await getUriExistence(folderUri)) {
+                    return actionValidationFailure(`Folder "${folder}" does not exist.`);
+                }
+                // TODO: handle if targeted "folder" is a file
+            }
             return actionValidationAccept();
         },
         ],
@@ -156,7 +177,7 @@ export const fileActions = {
         permissions: [PERMISSIONS.openFiles],
         handler: handleOpenFile,
         cancelEvents: commonFileEvents,
-        validators: [neuroSafeValidation, binaryFileValidation],
+        validators: [neuroSafeValidation, binaryFileValidation], // TODO: handle if targeted "file" is a folder
         promptGenerator: (actionData: ActionData) => `open the file "${actionData.params?.filePath}".`,
     },
     read_file: {
@@ -173,7 +194,7 @@ export const fileActions = {
         permissions: [PERMISSIONS.openFiles],
         handler: handleReadFile,
         cancelEvents: commonFileEvents,
-        validators: [neuroSafeValidation, binaryFileValidation],
+        validators: [neuroSafeValidation, binaryFileValidation], // TODO: handle if targeted "file" is a folder
         promptGenerator: (actionData: ActionData) => `read the file "${actionData.params?.filePath}" (without opening it).`,
     },
     create_file: {
@@ -505,13 +526,22 @@ export function handleDeleteFileOrFolder(actionData: ActionData): string | undef
 	}
 }
 
-export function handleGetFiles(_actionData: ActionData): string | undefined {
-    const workspaceFolder = vscode.workspace.workspaceFolders![0].uri;
-    recurseWorkspace(workspaceFolder).then(
+export function handleGetWorkspaceFiles(actionData: ActionData): string | undefined {
+    let folderUri = vscode.workspace.workspaceFolders![0].uri;
+    const folder = actionData.params.folder;
+    if (folder) {
+        const relativeFolderPath = normalizePath(folder).replace(/^\/|\/$/g, '');
+        folderUri = vscode.Uri.joinPath(folderUri, relativeFolderPath);
+    }
+    listWorkspace(folderUri).then(
         (uris) => {
             const paths = uris
-                .filter(uri => isPathNeuroSafe(uri.fsPath, false))
-                .map(uri => vscode.workspace.asRelativePath(uri))
+                .filter(uri => isPathNeuroSafe(uri[0].fsPath, false))
+                .map(uri => {
+                    let returnString = vscode.workspace.asRelativePath(uri[0]);
+                    if (uri[1] === vscode.FileType.Directory) returnString += '/';
+                    return returnString;
+                })
                 .sort((a, b) => {
                     const aParts = a.split('/');
                     const bParts = b.split('/');
@@ -526,28 +556,27 @@ export function handleGetFiles(_actionData: ActionData): string | undefined {
                     return aParts.length - bParts.length;
                 });
             logOutput('INFO', 'Sending list of files in workspace to Neuro');
-            NEURO.client?.sendContext(`Files in workspace:\n\n${paths.join('\n')}`);
+            NEURO.client?.sendContext(`Files in ${folder ? `"${folder}"` : 'workspace'}:\n\n${paths.join('\n')}`);
         },
     );
 
     return undefined;
 
-    async function recurseWorkspace(uri: vscode.Uri): Promise<vscode.Uri[]> {
+    async function listWorkspace(uri: vscode.Uri): Promise<[vscode.Uri, vscode.FileType][]> {
         const entries: [string, vscode.FileType][] = await vscode.workspace.fs.readDirectory(uri);
         const uriEntries: [vscode.Uri, vscode.FileType][] = entries.map((entry: [string, vscode.FileType]) => [uri.with({ path: uri.path + '/' + entry[0] }), entry[1] ]);
 
-        const result: vscode.Uri[] = [];
+        const result: [vscode.Uri, vscode.FileType][] = [];
         for (const [childUri, fileType] of uriEntries) {
-            if (fileType === vscode.FileType.File) {
-                if (isPathNeuroSafe(childUri.fsPath))
-                    result.push(childUri);
-            }
-            else if (fileType === vscode.FileType.Directory) {
-                if (isPathNeuroSafe(childUri.fsPath))
-                    result.push(...await recurseWorkspace(childUri));
-            }
-            else {
-                logOutput('WARNING', `Unhandled file type ${fileType}.`);
+            if (isPathNeuroSafe(childUri.fsPath)) {
+                if (fileType === vscode.FileType.File) result.push([childUri, fileType]);
+                else if (fileType === vscode.FileType.Directory) {
+                    if (actionData.params.recursive) {
+                        result.push(...await listWorkspace(childUri));
+                    } else {
+                        result.push([childUri, fileType]);
+                    }
+                } else logOutput('WARNING', `Unhandled file type ${fileType}.`);
             }
         }
 
