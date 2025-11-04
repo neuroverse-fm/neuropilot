@@ -15,7 +15,7 @@ interface ChangelogSection {
 export const changelogActions = {
     read_changelog: {
         name: 'read_changelog',
-        description: 'Send selected changelog entries for insert_turtle_here. If fromVersion is omitted, defaults are applied based on saved state.',
+        description: 'Get changelog entries starting from a specified version. If fromVersion is omitted, any new entries after the last read_changelog command are read.',
         schema: {
             type: 'object',
             properties: {
@@ -27,8 +27,8 @@ export const changelogActions = {
         defaultPermission: PermissionLevel.COPILOT,
         handler: handleReadChangelog,
         promptGenerator: (actionData: ActionData) => actionData.params?.fromVersion
-            ? `send changelog entries from version ${actionData.params.fromVersion} (inclusive) for summarization.`
-            : 'send the new changelog entries for summarization.',
+            ? `Send all changelog entries starting from version ${actionData.params.fromVersion} (inclusive).`
+            : 'Send the latest changelog entries.',
     },
 } satisfies Record<string, RCEAction>;
 
@@ -53,7 +53,7 @@ export async function readChangelogAndSendToNeuro(fromVersion?: string): Promise
         const { selected, startVersion, endVersion, note } = computeSelection(sections, latest, saved, fromVersion);
 
         if (selected.length === 0) {
-            NEURO.client?.sendContext('No matching changelog entries to summarize.');
+            NEURO.client?.sendContext('No matching changelog entries to send.');
             return;
         }
 
@@ -70,8 +70,8 @@ export async function readChangelogAndSendToNeuro(fromVersion?: string): Promise
         // Update memento to latest delivered
         await NEURO.context?.globalState.update(MEMENTO_KEY, endVersion);
     } catch (erm) {
-        logOutput('ERROR', `Failed to read changelog for summary: ${erm}`);
-        vscode.window.showErrorMessage('Failed to read changelog for summary. See logs for details.');
+        logOutput('ERROR', `Failed to read changelog: ${erm}`);
+        vscode.window.showErrorMessage('Failed to read changelog. See logs for details.');
     }
 }
 
@@ -160,11 +160,9 @@ function computeSelection(
     // Build selection from startIdx to 0 (toward latest), but output oldest→latest
     const endIdx = 0; // latest index in latest-first ordering
     const slice = latestFirst.slice(endIdx, startIdx! + 1); // indices [0..startIdx]
-    const subsetLatestFirst = slice.reverse(); // now oldest→latest
+    const subsetLatestFirst = slice.reverse(); // oldest → latest
 
     const selected = subsetLatestFirst;
     const endVersion = selected[selected.length - 1].version;
     return { selected, startVersion: startVersion!, endVersion, note };
 }
-
-
