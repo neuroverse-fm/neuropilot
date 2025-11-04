@@ -161,7 +161,7 @@ export const fileActions = {
             return actionValidationAccept();
         },
         ],
-        promptGenerator: 'get a list of files in the workspace.',
+        promptGenerator: (actionData: ActionData) => `${actionData.params.recursive ? 'recursively' : ''} get a list of files in ${actionData.params.folder ? `"${actionData.params.folder}"` : 'the workspace'}.`,
     },
     open_file: {
         name: 'open_file',
