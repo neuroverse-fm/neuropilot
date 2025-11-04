@@ -200,7 +200,7 @@ suite('File Actions', () => {
         }), { success: false, retry: false }, 'Recursive delete should fail for a nonexistent directory');
     });
 
-    test('handleGetFiles', async function () {
+    test('handleGetWorkspaceFiles', async function () {
         // === Arrange ===
         const fileUri1 = await createTestFile('file1.js');
         const fileUri2 = await createTestFile('sub/file2.js');
@@ -212,7 +212,7 @@ suite('File Actions', () => {
         const emptyDirPath = vscode.workspace.asRelativePath(emptyDirUri, false);
 
         // === Act ===
-        fileActions.handleGetWorkspaceFiles({ id: 'abc', name: 'get_files' });
+        fileActions.handleGetWorkspaceFiles({ id: 'abc', name: 'get_workspace_files' });
 
         // Wait for context to be sent
         await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); });

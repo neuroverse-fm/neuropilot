@@ -4,12 +4,30 @@ import { ActionData } from '@/neuro_client_helper';
 
 // Tests for file action prompt generators using real logic with loose checks
 suite('file Actions', () => {
-    test('get_files has a non-empty fixed prompt', () => {
+    test('get_workspace_files has a non-empty prompt', () => {
         // === Arrange & Act ===
-        const prompt = fileActions.get_workspace_files.promptGenerator as string;
+        const prompt = fileActions.get_workspace_files.promptGenerator({} as ActionData);
 
         // === Assert ===
         assert.ok(typeof prompt === 'string' && prompt.length > 0);
+    });
+
+    test('get_workspace_files correctly includes the folder in prompt', () => {
+        // === Arrange & Act ===
+        const prompt = fileActions.get_workspace_files.promptGenerator({ params: { folder: 'src/index.ts' } } as ActionData);
+
+        // === Assert ===
+        assert.ok(typeof prompt === 'string' && prompt.length > 0);
+        assert.ok(prompt.includes('src/index.ts'));
+    });
+
+    test('get_workspace_files correctly states if Neuro asked for recursive', () => {
+        // === Arrange & Act ===
+        const prompt = fileActions.get_workspace_files.promptGenerator({ params: { recursive: true } } as ActionData);
+
+        // === Assert ===
+        assert.ok(typeof prompt === 'string' && prompt.length > 0);
+        assert.ok(prompt.startsWith('recursively'));
     });
 
     test('open_file prompt formats path', () => {

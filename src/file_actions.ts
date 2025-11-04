@@ -536,7 +536,7 @@ export function handleDeleteFileOrFolder(actionData: ActionData): string | undef
 
 export function handleGetWorkspaceFiles(actionData: ActionData): string | undefined {
     let folderUri = vscode.workspace.workspaceFolders![0].uri;
-    const folder = actionData.params.folder;
+    const folder = actionData.params?.folder;
     if (folder) {
         const relativeFolderPath = normalizePath(folder).replace(/^\/|\/$/g, '');
         folderUri = vscode.Uri.joinPath(folderUri, relativeFolderPath);
