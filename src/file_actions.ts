@@ -122,6 +122,18 @@ async function binaryFileValidation(actionData: ActionData): Promise<ActionValid
     return actionValidationAccept();
 }
 
+/**
+ * Validates if the targeted file is a file.
+ * @returns The validation result.
+ */
+async function validateIsAFile(actionData: ActionData) {
+            const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+            if (!workspaceFolder) return actionValidationFailure('You are not in an open workspace.');
+            const fullPath = vscode.Uri.joinPath(workspaceFolder.uri, actionData.params.filePath);
+            if ((await vscode.workspace.fs.stat(fullPath)).type === vscode.FileType.Directory) return actionValidationFailure(`${actionData.params.filePath} is a directory, not a file.`);
+            else return actionValidationAccept();
+        }
+
 const commonFileEvents: ((actionData: ActionData) => RCECancelEvent | null)[] = [
     (actionData: ActionData) => targetedFileCreatedEvent(actionData.params?.filePath),
     (actionData: ActionData) => targetedFileDeletedEvent(actionData.params?.filePath),
@@ -141,7 +153,7 @@ export const fileActions = {
         },
         permissions: [PERMISSIONS.openFiles],
         handler: handleGetWorkspaceFiles,
-        validators: [async (actionData: ActionData) => { /** @todo Refactor to partially use {@link validatePath} instead. */
+        validators: [async (actionData: ActionData) => {
             const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
             if (workspaceFolder === undefined)
                 return actionValidationFailure('No open workspace to get files from.');
@@ -149,14 +161,10 @@ export const fileActions = {
             if (folder) {
                 const relativeFolderPath = normalizePath(folder).replace(/^\/|\/$/g, '');
                 const absolutePath = getWorkspacePath() + '/' + relativeFolderPath;
-                if (!isPathNeuroSafe(absolutePath)) {
-                    return actionValidationFailure('You cannot access that folder.');
-                }
-                const folderUri = vscode.Uri.joinPath(workspaceFolder.uri, relativeFolderPath);
-                if (!await getUriExistence(folderUri)) {
-                    return actionValidationFailure(`Folder "${folder}" does not exist.`);
-                }
-                // TODO: handle if targeted "folder" is a file
+                const pathValidated = await validatePath(absolutePath, true, 'folder');
+                if (!pathValidated.success) return pathValidated;
+                const stat = await vscode.workspace.fs.stat(vscode.Uri.joinPath(workspaceFolder.uri, relativeFolderPath));
+                if (stat.type !== vscode.FileType.Directory) return actionValidationFailure('The targeted directory is not a folder.');
             }
             return actionValidationAccept();
         },
@@ -177,7 +185,7 @@ export const fileActions = {
         permissions: [PERMISSIONS.openFiles],
         handler: handleOpenFile,
         cancelEvents: commonFileEvents,
-        validators: [neuroSafeValidation, binaryFileValidation], // TODO: handle if targeted "file" is a folder
+        validators: [neuroSafeValidation, binaryFileValidation, validateIsAFile],
         promptGenerator: (actionData: ActionData) => `open the file "${actionData.params?.filePath}".`,
     },
     read_file: {
@@ -194,7 +202,7 @@ export const fileActions = {
         permissions: [PERMISSIONS.openFiles],
         handler: handleReadFile,
         cancelEvents: commonFileEvents,
-        validators: [neuroSafeValidation, binaryFileValidation], // TODO: handle if targeted "file" is a folder
+        validators: [neuroSafeValidation, binaryFileValidation, validateIsAFile],
         promptGenerator: (actionData: ActionData) => `read the file "${actionData.params?.filePath}" (without opening it).`,
     },
     create_file: {
