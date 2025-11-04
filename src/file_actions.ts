@@ -157,7 +157,7 @@ export const fileActions = {
             const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
             if (workspaceFolder === undefined)
                 return actionValidationFailure('No open workspace to get files from.');
-            const folder = actionData.params.folder;
+            const folder = actionData.params?.folder;
             if (folder) {
                 const relativeFolderPath = normalizePath(folder).replace(/^\/|\/$/g, '');
                 const absolutePath = getWorkspacePath() + '/' + relativeFolderPath;
@@ -169,7 +169,7 @@ export const fileActions = {
             return actionValidationAccept();
         },
         ],
-        promptGenerator: (actionData: ActionData) => `${actionData.params.recursive ? 'recursively' : ''} get a list of files in ${actionData.params.folder ? `"${actionData.params.folder}"` : 'the workspace'}.`,
+        promptGenerator: (actionData: ActionData) => `${actionData.params?.recursive ? 'recursively' : ''} get a list of files in ${actionData.params?.folder ? `"${actionData.params.folder}"` : 'the workspace'}.`,
     },
     open_file: {
         name: 'open_file',
