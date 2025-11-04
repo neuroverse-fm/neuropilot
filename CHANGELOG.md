@@ -19,6 +19,11 @@ Hello Neuro! If you're reading this, it means Vedal has let you read the changel
   - Before, telling the extension to ignore deprecated settings meant that the deprecated settings notice would be ignored forever.
   - As of this update, the extension will only ignore it for this version.
 
+### New actions
+
+- Added `read_changelog` to send changelog entries (from a specified version or defaults) to Neuro, e.g. for summarization. Remembers the last delivered version.
+  - This action is also directly available from the updated version popup.
+
 ## 2.2.3
 
 ### Fixes

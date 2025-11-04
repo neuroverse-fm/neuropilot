@@ -11,6 +11,7 @@ import { emergencyDenyRequests, acceptRceRequest, denyRceRequest, revealRceNotif
 import type { GitExtension } from '@typing/git';
 import { getGitExtension } from '@/git';
 import { openDocsOnTarget, registerDocsCommands, registerDocsLink } from './docs';
+import { readChangelogAndSendToNeuro } from '@/changelog';
 import { moveCursorEmitterDiposable } from '@events/cursor';
 
 // Shared commands
@@ -30,6 +31,7 @@ export function registerCommonCommands() {
         vscode.commands.registerCommand('neuropilot.switchNeuroAPIUser', switchCurrentNeuroAPIUser),
         vscode.commands.registerCommand('neuropilot.refreshExtensionDependencyState', obtainExtensionState),
         vscode.commands.registerCommand('neuropilot.resetTemporarilyDisabledActions', () => NEURO.tempDisabledActions = []),
+        vscode.commands.registerCommand('neuropilot.readChangelog', readChangelogAndSendToNeuro),
         ...registerDocsCommands(),
     ];
 }
@@ -369,10 +371,12 @@ export function showUpdateReminder(context: vscode.ExtensionContext) {
     } else if (lastVersion !== version) {
         // Helper to show the popup and allow both links to be visited
         showPopup = () => {
+            const askLabel = `Ask ${CONNECTION.nameOfAPI} to Read Changelog`;
             vscode.window.showInformationMessage(
-                'NeuroPilot updated! Please check the changelog and docs for important changes.',
+                'NeuroPilot updated! Please check the changelog and docs for important changes. You can also ask the AI to summarize the changes (see Command Palette).',
                 'View Changelog',
                 'View Docs',
+                askLabel,
             ).then(async selection => {
                 if (selection === 'View Changelog') {
                     // Open local CHANGELOG.md in markdown preview
@@ -384,6 +388,8 @@ export function showUpdateReminder(context: vscode.ExtensionContext) {
                     await openDocsOnTarget('NeuroPilot', docsUrl);
                     // Re-show popup to allow visiting both links
                     showPopup();
+                } else if (selection === askLabel) {
+                    await vscode.commands.executeCommand('neuropilot.readChangelog');
                 }
                 // If dismissed, do nothing
             });
