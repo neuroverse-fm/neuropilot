@@ -934,3 +934,12 @@ export function notifyOnCaughtException(name: string, error: Error | unknown): v
         },
     );
 }
+
+/**
+ * Filter out trailing slashes.
+ * @param string String with trailing slashes
+ * @returns Filtered string.
+ */
+export function stripTailSlashes(string: string): string {
+    return string.replace(/^\/+|\/+$/g, '');
+}

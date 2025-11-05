@@ -2,7 +2,7 @@
 import * as vscode from 'vscode';
 
 import { NEURO } from '@/constants';
-import { formatContext, getFence, getPositionContext, getVirtualCursor, getWorkspacePath, getWorkspaceUri, isBinary, isPathNeuroSafe, logOutput, normalizePath, notifyOnCaughtException } from '@/utils';
+import { formatContext, getFence, getPositionContext, getVirtualCursor, getWorkspacePath, getWorkspaceUri, isBinary, isPathNeuroSafe, logOutput, normalizePath, notifyOnCaughtException, stripTailSlashes } from '@/utils';
 import { ActionData, contextNoAccess, RCEAction, actionValidationFailure, actionValidationAccept, ActionValidationResult, stripToActions } from '@/neuro_client_helper';
 import { CONFIG, PERMISSIONS, PermissionLevel, getPermissionLevel, isActionEnabled } from '@/config';
 import { targetedFileCreatedEvent, targetedFileDeletedEvent } from '@events/files';
@@ -159,8 +159,8 @@ export const fileActions = {
                 return actionValidationFailure('No open workspace to get files from.');
             let folder = actionData.params?.folder as string;
             if (folder) {
-                folder = folder.replace(/\/+$/, '');
-                const relativeFolderPath = normalizePath(folder).replace(/^\/|\/$/g, '');
+                folder = stripTailSlashes(folder);
+                const relativeFolderPath = normalizePath(folder);
                 const pathValidated = await validatePath(relativeFolderPath, true, 'folder');
                 if (!pathValidated.success) return pathValidated;
                 const stat = await vscode.workspace.fs.stat(vscode.Uri.joinPath(workspaceFolder.uri, relativeFolderPath));
@@ -169,7 +169,7 @@ export const fileActions = {
             return actionValidationAccept();
         },
         ],
-        promptGenerator: (actionData: ActionData) => `${actionData.params?.recursive ? 'recursively' : ''} get a list of files in ${actionData.params?.folder ? `"${actionData.params.folder}"` : 'the workspace'}.`,
+        promptGenerator: (actionData: ActionData) => `${actionData.params?.recursive ? 'recursively' : ''} get a list of files in ${actionData.params?.folder ? `"${stripTailSlashes(actionData.params.folder)}"` : 'the workspace'}.`,
     },
     open_file: {
         name: 'open_file',
