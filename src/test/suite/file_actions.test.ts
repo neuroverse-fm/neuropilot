@@ -203,6 +203,38 @@ suite('File Actions', () => {
     test('handleGetWorkspaceFiles', async function () {
         // === Arrange ===
         const fileUri1 = await createTestFile('file1.js');
+        const fileUri2 = await createTestDirectory('sub');
+        const fileUri3 = await createTestFile('sub/file2.js');
+        const unsafeFileUri = await createTestFile('.unsafe/file.js'); // Neuro-unsafe because it starts with a dot
+        const emptyDirUri = await createTestDirectory('testDir');
+        const filePath1 = vscode.workspace.asRelativePath(fileUri1, false);
+        const filePath2 = vscode.workspace.asRelativePath(fileUri2, false);
+        const filePath3 = vscode.workspace.asRelativePath(fileUri3, false);
+        const unsafeFilePath = vscode.workspace.asRelativePath(unsafeFileUri, false);
+        const emptyDirPath = vscode.workspace.asRelativePath(emptyDirUri, false);
+
+        // === Act ===
+        fileActions.handleGetWorkspaceFiles({ id: 'abc', name: 'get_workspace_files' });
+
+        // Wait for context to be sent
+        await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); });
+
+        const [context] = capture(mockedClient.sendContext).last();
+        const lines = context.split(/\r?\n/);
+        lines.shift(); // Remove header line
+        lines.shift(); // Remove empty line
+
+        // === Assert ===
+        assert.strictEqual(lines.includes(filePath1), true, 'File file1.js should be in the list of files');
+        assert.strictEqual(lines.includes(filePath2), true, 'Folder sub should be in the list of files');
+        assert.strictEqual(lines.includes(filePath3), false, 'File sub/file2.js should not be in the list of files');
+        assert.strictEqual(lines.includes(unsafeFilePath), false, 'Unsafe directory .unsafe should not be in the list of files');
+        assert.strictEqual(lines.includes(emptyDirPath), true, 'Empty directory testDir should still be in the list of files');
+    });
+
+    test('handleGetWorkspaceFiles (recursive)', async function () {
+        // === Arrange ===
+        const fileUri1 = await createTestFile('file1.js');
         const fileUri2 = await createTestFile('sub/file2.js');
         const unsafeFileUri = await createTestFile('.unsafe/file.js'); // Neuro-unsafe because it starts with a dot
         const emptyDirUri = await createTestDirectory('testDir');
@@ -212,7 +244,7 @@ suite('File Actions', () => {
         const emptyDirPath = vscode.workspace.asRelativePath(emptyDirUri, false);
 
         // === Act ===
-        fileActions.handleGetWorkspaceFiles({ id: 'abc', name: 'get_workspace_files' });
+        fileActions.handleGetWorkspaceFiles({ id: 'abc', name: 'get_workspace_files', params: { recursive: true } });
 
         // Wait for context to be sent
         await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); });
