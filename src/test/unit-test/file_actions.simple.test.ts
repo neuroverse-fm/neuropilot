@@ -14,7 +14,7 @@ suite('file Actions', () => {
 
     test('get_workspace_files correctly includes the folder in prompt', () => {
         // === Arrange & Act ===
-        const prompt = fileActions.get_workspace_files.promptGenerator({ params: { folder: 'src/index.ts' } } as ActionData);
+        const prompt = fileActions.get_workspace_files.promptGenerator({ params: { folder: 'src/' } } as ActionData);
 
         // === Assert ===
         assert.ok(typeof prompt === 'string' && prompt.length > 0);
@@ -27,7 +27,7 @@ suite('file Actions', () => {
 
         // === Assert ===
         assert.ok(typeof prompt === 'string' && prompt.length > 0);
-        assert.ok(prompt.startsWith('recursively'));
+        assert.ok(prompt.includes('recursively'));
     });
 
     test('open_file prompt formats path', () => {

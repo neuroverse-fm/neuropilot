@@ -146,7 +146,7 @@ export const fileActions = {
         schema: {
             type: 'object',
             properties: {
-                folder: { type: 'string', description: 'If you want to view only a subfolder\'s contents, specify a subfolder in this property.' },
+                folder: { type: 'string', description: 'If you want to view only a subfolder\'s contents, specify a subfolder in this property. If not specified, defaults to the workspace root.' },
                 recursive: { type: 'boolean', description: 'Set this to `true` if you want to view all subfolders\' contents as well.' },
             },
             additionalProperties: false,
@@ -160,8 +160,7 @@ export const fileActions = {
             const folder = actionData.params?.folder;
             if (folder) {
                 const relativeFolderPath = normalizePath(folder).replace(/^\/|\/$/g, '');
-                const absolutePath = getWorkspacePath() + '/' + relativeFolderPath;
-                const pathValidated = await validatePath(absolutePath, true, 'folder');
+                const pathValidated = await validatePath(relativeFolderPath, true, 'folder');
                 if (!pathValidated.success) return pathValidated;
                 const stat = await vscode.workspace.fs.stat(vscode.Uri.joinPath(workspaceFolder.uri, relativeFolderPath));
                 if (stat.type !== vscode.FileType.Directory) return actionValidationFailure('The targeted directory is not a folder.');
