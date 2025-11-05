@@ -30,6 +30,15 @@ suite('file Actions', () => {
         assert.ok(prompt.includes('recursively'));
     });
 
+    test('get_workspace_files correctly omits recursive if Neuro didn\'t ask', () => {
+        // === Arrange & Act ===
+        const prompt = fileActions.get_workspace_files.promptGenerator({ params: { recursive: false } } as ActionData);
+
+        // === Assert ===
+        assert.ok(typeof prompt === 'string' && prompt.length > 0);
+        assert.ok(!prompt.includes('recursively'));
+    });
+
     test('open_file prompt formats path', () => {
         // === Arrange & Act ===
         const prompt = fileActions.open_file.promptGenerator({ params: { filePath: 'src/index.ts' } } as ActionData);
