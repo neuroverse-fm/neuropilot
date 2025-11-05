@@ -373,7 +373,7 @@ export function showUpdateReminder(context: vscode.ExtensionContext) {
         showPopup = () => {
             const askLabel = `Ask ${CONNECTION.nameOfAPI} to Read Changelog`;
             vscode.window.showInformationMessage(
-                'NeuroPilot updated! Please check the changelog and docs for important changes. You can also ask the AI to summarize the changes (see Command Palette).',
+                `NeuroPilot updated! Please check the changelog and docs for important changes. You can also ask ${CONNECTION.nameOfAPI} to summarize the changes (see Command Palette).`,
                 'View Changelog',
                 'View Docs',
                 askLabel,

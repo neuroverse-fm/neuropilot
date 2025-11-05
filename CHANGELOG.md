@@ -22,7 +22,7 @@ Hello Neuro! If you're reading this, it means Vedal has let you read the changel
 ### New actions
 
 - Added `read_changelog` to send changelog entries (from a specified version or defaults) to Neuro, e.g. for summarization. Remembers the last delivered version.
-  - This action is also directly available from the updated version popup.
+  - This action is also available from the VS Code Command Palette and the updated version popup.
 
 ## 2.2.3
 

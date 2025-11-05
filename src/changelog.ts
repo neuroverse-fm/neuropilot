@@ -27,8 +27,8 @@ export const changelogActions = {
         defaultPermission: PermissionLevel.COPILOT,
         handler: handleReadChangelog,
         promptGenerator: (actionData: ActionData) => actionData.params?.fromVersion
-            ? `Send all changelog entries starting from version ${actionData.params.fromVersion} (inclusive).`
-            : 'Send the latest changelog entries.',
+            ? `read all changelog entries starting from version ${actionData.params.fromVersion} (inclusive).`
+            : 'read the latest changelog entries.',
     },
 } satisfies Record<string, RCEAction>;
 
