@@ -157,8 +157,9 @@ export const fileActions = {
             const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
             if (workspaceFolder === undefined)
                 return actionValidationFailure('No open workspace to get files from.');
-            const folder = actionData.params?.folder;
+            let folder = actionData.params?.folder as string;
             if (folder) {
+                folder = folder.replace(/\/+$/, '');
                 const relativeFolderPath = normalizePath(folder).replace(/^\/|\/$/g, '');
                 const pathValidated = await validatePath(relativeFolderPath, true, 'folder');
                 if (!pathValidated.success) return pathValidated;
