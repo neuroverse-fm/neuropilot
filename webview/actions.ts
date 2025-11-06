@@ -1,36 +1,11 @@
-/* eslint-disable @stylistic/no-extra-parens */ // Does not work with JSDoc inline type casting
-/// <reference types="vscode-webview" />
-//@ts-check
-
-/**
- * @import { WebviewApi } from 'vscode-webview';
- * @import { ActionNode, ActionsViewState, ActionsViewMessage, ActionsViewProviderMessage } from '../src/views/actions';
- */
+import type { ActionNode, ActionsViewState, ActionsViewMessage, ActionsViewProviderMessage } from '../src/views/actions';
+import { PermissionLevel } from '../src/config';
 
 (function () {
-    //#region Types
-
-    /**
-     * @readonly
-     * @enum {number}
-     */
-    const PermissionLevel = {
-        /** @readonly */
-        OFF: 0,
-        /** @readonly */
-        COPILOT: 1,
-        /** @readonly */
-        AUTOPILOT: 2,
-    };
-
-    //#endregion
-
-    /** @type {WebviewApi<ActionsViewState>} */
-    // eslint-disable-next-line no-undef
-    const vscode = acquireVsCodeApi();
+    const vscode = acquireVsCodeApi<ActionsViewState>();
 
     const oldState = vscode.getState();
-    const state = oldState || { actions: [] };
+    const state: ActionsViewState = oldState ?? { actions: [] };
     if (!oldState) {
         vscode.setState(state);
     }
@@ -40,24 +15,19 @@
 
     // Handle messages sent from the extension to the webview
     window.addEventListener('message', event => {
-        /** @type {ActionsViewProviderMessage} */
-        const message = event.data;
+        const message: ActionsViewProviderMessage = event.data;
         switch (message.type) {
             case 'refreshActions': {
                 state.actions = message.actions;
                 vscode.setState(state);
                 updateActionsList(state.actions);
-                vscode.postMessage({ type: 'error', message: 'test' });
                 break;
             }
         }
     });
 
-    /**
-     * @param {ActionNode[]} actionNodes
-     */
-    function updateActionsList(actionNodes) {
-        const actionsList = /** @type {HTMLUListElement} */ (document.querySelector('.actions-list'));
+    function updateActionsList(actionNodes: ActionNode[]) {
+        const actionsList = document.querySelector<HTMLUListElement>('.actions-list')!;
         actionsList.textContent = '';
         for (const actionNode of actionNodes) {
             const actionEntry = document.createElement('li');
@@ -79,25 +49,18 @@
             actionsList.appendChild(actionEntry);
         }
 
-        /**
-         * @param {ActionNode} actionNode
-         * @param {PermissionLevel} permissionLevel
-         * @returns {HTMLInputElement}
-         */
-        function createPermissionCheckbox(actionNode, permissionLevel) {
+        function createPermissionCheckbox(actionNode: ActionNode, permissionLevel: PermissionLevel): HTMLInputElement {
             const toggle = document.createElement('input');
             toggle.type = 'checkbox';
             toggle.className = 'permission-toggle';
             toggle.checked = actionNode.permissionLevel === permissionLevel;
 
             toggle.addEventListener('change', () => {
-                /** @type {ActionsViewMessage} */
-                const message = {
+                vscode.postMessage({
                     type: 'viewToggledPermission',
                     actionId: actionNode.id,
                     newPermissionLevel: permissionLevel,
-                };
-                vscode.postMessage(message);
+                } satisfies ActionsViewMessage);
             });
 
             return toggle;

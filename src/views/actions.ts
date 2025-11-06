@@ -98,7 +98,7 @@ export class ActionsViewProvider implements vscode.WebviewViewProvider {
     }
 
     private _getHtmlForWebview(webview: vscode.Webview): string {
-        const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(NEURO.context!.extensionUri, 'webviews', 'actions.js'));
+        const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(NEURO.context!.extensionUri, 'out', 'webviews', 'actions.js'));
         const styleUri = webview.asWebviewUri(vscode.Uri.joinPath(NEURO.context!.extensionUri, 'webviews', 'actions.css'));
         const nonce = getNonce();
 
