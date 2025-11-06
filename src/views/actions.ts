@@ -5,59 +5,135 @@ import { NEURO } from '../constants';
 export interface ActionNode {
     id: string;
     label: string;
+    category: string;
     description?: string;
     permissionLevel: PermissionLevel;
 }
 
-export class ActionsViewProvider implements vscode.TreeDataProvider<ActionNode> {
-    // Don't know if we need this event
-    private _onDidChangeTreeData: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
-    readonly onDidChangeTreeData: vscode.Event<void> = this._onDidChangeTreeData.event;
+export interface ActionsViewState {
+    actions: ActionNode[];
+}
 
-    getTreeItem(element: ActionNode): vscode.TreeItem | Thenable<vscode.TreeItem> {
-        return {
-            label: element.label,
-            description:
-                element.permissionLevel === PermissionLevel.AUTOPILOT ? 'Autopilot' :
-                element.permissionLevel === PermissionLevel.COPILOT ? 'Copilot' :
-                'Off',
-            id: element.id,
-            collapsibleState: vscode.TreeItemCollapsibleState.None,
-            tooltip: element.description,
-            // iconPath: NEURO.context!.asAbsolutePath('assets/evilpilot.png'),
-            command: {
-                title: 'Toggle Permission Level',
-                command: 'neuropilot.toggleActionPermission',
-                arguments: [element],
-            } satisfies vscode.Command,
+export type ActionsViewProviderMessage = {
+    type: 'providerToggledPermission';
+    actionId: string;
+    newPermissionLevel: PermissionLevel;
+} | {
+    type: 'refreshActions';
+    actions: ActionNode[];
+};
+
+export type ActionsViewMessage = {
+    type: 'viewToggledPermission';
+    actionId: string;
+    newPermissionLevel: PermissionLevel;
+} | {
+    type: 'error';
+    message: string;
+} | {
+    type: 'requestInitialization';
+};
+
+export class ActionsViewProvider implements vscode.WebviewViewProvider {
+    public static readonly viewType = 'neuropilot.actionsView';
+
+    private _view?: vscode.WebviewView;
+
+    resolveWebviewView(webviewView: vscode.WebviewView, _context: vscode.WebviewViewResolveContext, _token: vscode.CancellationToken): Thenable<void> | void {
+        this._view = webviewView;
+
+        webviewView.webview.options = {
+            enableScripts: true,
+            localResourceRoots: [NEURO.context!.extensionUri],
         };
+
+        webviewView.webview.html = this._getHtmlForWebview(webviewView.webview);
+
+        webviewView.webview.onDidReceiveMessage((data: ActionsViewMessage) => {
+            switch (data.type) {
+                case 'requestInitialization': {
+                    this.refreshActions();
+                    break;
+                }
+                case 'viewToggledPermission': {
+                    // TODO: Handle permission toggle
+                    break;
+                }
+                case 'error': {
+                    vscode.window.showErrorMessage(data.message);
+                    break;
+                }
+            }
+        });
     }
-    getChildren(element?: ActionNode | undefined): vscode.ProviderResult<ActionNode[]> {
-        return element ? [] : [
-            {
-                id: 'sample_autopilot_action',
-                label: 'Sample Autopilot Action',
-                description: 'This action has Autopilot permission level.',
-                permissionLevel: PermissionLevel.AUTOPILOT,
-            },
-            {
-                id: 'sample_copilot_action',
-                label: 'Sample Copilot Action',
-                description: 'This action has Copilot permission level.',
-                permissionLevel: PermissionLevel.COPILOT,
-            },
-            {
-                id: 'sample_off_action',
-                label: 'Sample Off Action',
-                description: 'This action has Off permission level.',
-                permissionLevel: PermissionLevel.OFF,
-            },
-        ];
+
+    public refreshActions() {
+        // TODO: Placeholder implementation
+        this._view?.webview.postMessage({
+            type: 'refreshActions',
+            actions: [
+                {
+                    id: 'sample_action_autopilot',
+                    label: 'Autopilot Sample Action',
+                    category: 'Category A',
+                    description: 'This is the first action.',
+                    permissionLevel: PermissionLevel.AUTOPILOT,
+                },
+                {
+                    id: 'sample_action_copilot',
+                    label: 'Copilot Sample Action',
+                    category: 'Category B',
+                    description: 'This is the second action.',
+                    permissionLevel: PermissionLevel.COPILOT,
+                },
+                {
+                    id: 'sample_action_off',
+                    label: 'Off Sample Action',
+                    category: 'Category C',
+                    description: 'This is the third action.',
+                    permissionLevel: PermissionLevel.OFF,
+                },
+            ],
+        });
     }
-    // getParent?(element: ActionNode): vscode.ProviderResult<ActionNode> {
-    //     throw new Error('Method not implemented.');
-    // }
-    // resolveTreeItem?(item: vscode.TreeItem, element: ActionNode, token: vscode.CancellationToken): vscode.ProviderResult<vscode.TreeItem> {
-    //     throw new Error('Method not implemented.');
-    // }
+
+    private _getHtmlForWebview(webview: vscode.Webview): string {
+        const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(NEURO.context!.extensionUri, 'webviews', 'actions.js'));
+        const styleUri = webview.asWebviewUri(vscode.Uri.joinPath(NEURO.context!.extensionUri, 'webviews', 'actions.css'));
+        const nonce = getNonce();
+
+        return `\
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource}; script-src 'nonce-${nonce}';">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <link href="${styleUri}" rel="stylesheet">
+                <title>Actions</title>
+            </head>
+            <body>
+                A = Autopilot, C = Copilot, O = Off
+
+                <div class="actions-header">
+                    Action
+                    <div class="spacer"></div>
+                    <div class="permission-level-letter">A</div>
+                    <div class="permission-level-letter">C</div>
+                    <div class="permission-level-letter">O</div>
+                </div>
+                <ul class="actions-list"></ul>
+                <script nonce="${nonce}" src="${scriptUri}"></script>
+            </body>
+            </html>`;
+    }
+}
+
+function getNonce() {
+    const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let result = '';
+    for (let i = 0; i < 32; i++) {
+        result += alphabet.charAt(Math.floor(Math.random() * alphabet.length));
+    }
+    return result;
 }

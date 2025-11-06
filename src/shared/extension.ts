@@ -102,7 +102,7 @@ export function setupCommonProviders() {
             new NeuroCodeActionsProvider(),
             { providedCodeActionKinds: NeuroCodeActionsProvider.providedCodeActionKinds },
         ),
-        vscode.window.registerTreeDataProvider('neuropilot-actions', new ActionsViewProvider()),
+        vscode.window.registerWebviewViewProvider(ActionsViewProvider.viewType, new ActionsViewProvider()),
     ];
 
     return providers;

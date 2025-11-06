@@ -1,0 +1,14 @@
+.actions-header {
+    font-weight: bold;
+    display: flex;
+    flex-direction: row;
+}
+
+.actions-header .spacer {
+    flex-grow: 1;
+}
+
+.actions-header .permission-level-letter {
+    width: 20px;
+    text-align: center;
+}

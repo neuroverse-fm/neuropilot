@@ -953,12 +953,14 @@
 		"views": {
 			"neuropilot": [
 				{
-					"id": "neuropilot-actions",
+					"type": "webview",
+					"id": "neuropilot.actionsView",
 					"name": "Actions",
 					"icon": "assets/evilpilot.png"
 				},
 				{
-					"id": "neuropilot-test",
+					"type": "webview",
+					"id": "neuropilot.testView",
 					"name": "Test",
 					"icon": "assets/evilpilot.png"
 				}
@@ -1032,8 +1034,8 @@
 		"@stylistic/eslint-plugin": "^2.9.0",
 		"@types/eslint__js": "^8.42.3",
 		"@types/glob-to-regexp": "^0.4.4",
-		"@types/mocha": "^10.0.10",
 		"@types/json-schema": "^7.0.15",
+		"@types/mocha": "^10.0.10",
 		"@types/node": "^20",
 		"@types/vscode": "^1.95.0",
 		"@types/ws": "^8.18.0",
@@ -1059,6 +1061,7 @@
 		"typescript-eslint": "^8.26.0"
 	},
 	"dependencies": {
+		"@types/vscode-webview": "^1.57.5",
 		"file-type": "^21.0.0",
 		"glob-to-regexp": "^0.4.1",
 		"jsonschema": "^1.5.0",
