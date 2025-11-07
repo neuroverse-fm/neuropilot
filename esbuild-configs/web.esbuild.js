@@ -99,7 +99,7 @@ export async function webTest(_prodFlag, watchFlag) {
 }
 
 /**
- * @param {any} _prodFlag
+ * @param {boolean} _prodFlag
  * @param {boolean} watchFlag
  */
 export async function webTestBrowser(_prodFlag, watchFlag) {
