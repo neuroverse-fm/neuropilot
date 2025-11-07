@@ -3,7 +3,7 @@ playground/**
 .gitignore
 eslint.config.mjs
 tsconfig.json
-tsconfig.web.json
+**/tsconfig.*.json
 src/
 node_modules/
 *.vsix
@@ -15,8 +15,10 @@ node_modules/
 project-files/
 
 # Build files
-esbuild.{m,c,}js
 esbuild-configs/
+
+# Other meta scripts
+/scripts
 
 # Krita
 *.kra
@@ -28,3 +30,11 @@ esbuild-configs/
 # Tony
 .venv
 tony/
+
+# Coverage
+/coverage-*
+
+# Integration testing
+test-playground/
+.vscode-test.mjs
+out/test/**

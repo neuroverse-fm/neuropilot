@@ -1,12 +1,14 @@
 import * as vscode from 'vscode';
-import { EXTENSIONS, NEURO } from '~/constants';
-import type { Change, CommitOptions, Commit, Repository, API } from '@typing/git.d';
+import { EXTENSIONS, NEURO } from '@/constants';
+import type { Change, CommitOptions, Commit, Repository, API, GitExtension } from '@typing/git.d';
 import { ForcePushMode } from '@typing/git.d';
 import { StatusStrings, RefTypeStrings } from '@typing/git_status';
-import { logOutput, simpleFileName, isPathNeuroSafe, normalizePath, getWorkspacePath } from '~/utils';
-import { ActionData, ActionValidationResult, actionValidationAccept, actionValidationFailure, RCEAction, contextFailure, stripToActions } from '~/neuro_client_helper';
-import { PERMISSIONS, getPermissionLevel } from '~/config';
+import { logOutput, simpleFileName, isPathNeuroSafe, normalizePath, getWorkspacePath } from '@/utils';
+import { ActionData, ActionValidationResult, actionValidationAccept, actionValidationFailure, RCEAction, contextFailure, stripToActions, actionValidationRetry } from '@/neuro_client_helper';
+import { PERMISSIONS, getPermissionLevel, isActionEnabled } from '@/config';
 import assert from 'node:assert';
+import { RCECancelEvent } from '@events/utils';
+import { JSONSchema7Definition } from 'json-schema';
 
 /* All actions located in here requires neuropilot.permission.gitOperations to be enabled. */
 
@@ -15,11 +17,13 @@ let git: API | null = null;
 let repo: Repository | null = null;
 
 export function getGitExtension() {
+    NEURO.client?.unregisterActions(Object.keys(gitActions));
     if (EXTENSIONS.git) {
         git = EXTENSIONS.git.getAPI(1);
         logOutput('DEBUG', 'Git extension obtained.');
         repo = git.repositories[0];
-        logOutput('DEBUG', 'Git repo obtained.');
+        logOutput('DEBUG', 'Git repo obtained (if any).');
+        registerGitActions();
     } else {
         git = null;
         repo = null;
@@ -82,7 +86,7 @@ function gitDiffValidator(actionData: ActionData): ActionValidationResult {
             if (actionData.params?.ref1 && actionData.params?.ref2) {
                 return actionValidationAccept('Only "ref1" is needed for the "diffWith" diff type.');
             } else if (!actionData.params?.ref1) {
-                return actionValidationFailure('"ref1" is required for the diff type of "diffWith"', true);
+                return actionValidationRetry('"ref1" is required for the diff type of "diffWith"');
             } else {
                 return actionValidationAccept();
             }
@@ -95,13 +99,13 @@ function gitDiffValidator(actionData: ActionData): ActionValidationResult {
             if (actionData.params?.ref1 && actionData.params?.ref2) {
                 return actionValidationAccept('Only "ref1" is needed for the "diffIndexWith" diff type.');
             } else if (!actionData.params?.ref1) {
-                return actionValidationFailure('"ref1" is required for the diff type of "diffIndexWith"', true);
+                return actionValidationRetry('"ref1" is required for the diff type of "diffIndexWith"');
             } else {
                 return actionValidationAccept();
             }
         case 'diffBetween':
             if (!actionData.params?.ref1 || !actionData.params?.ref2) {
-                return actionValidationFailure('"ref1" AND "ref2" is required for the diff type of "diffWith"', true);
+                return actionValidationRetry('"ref1" AND "ref2" is required for the diff type of "diffWith"');
             } else {
                 return actionValidationAccept();
             }
@@ -114,6 +118,14 @@ function gitDiffValidator(actionData: ActionData): ActionValidationResult {
             return actionValidationFailure('Unknown diff type.');
     }
 }
+const commonCancelEvents: ((actionData: ActionData) => RCECancelEvent | null)[] = [
+    () => new RCECancelEvent({
+        reason: 'the Git extension was disabled.',
+        events: [
+            [vscode.extensions.getExtension<GitExtension>('vscode.git')!.exports.onDidChangeEnablement, null],
+        ],
+    }),
+];
 
 export const gitActions = {
     init_git_repo: {
@@ -122,7 +134,8 @@ export const gitActions = {
         permissions: [PERMISSIONS.gitOperations],
         handler: handleNewGitRepo,
         promptGenerator: 'initialize a Git repository in the workspace.',
-        validator: [(_actionData: ActionData) => {
+        cancelEvents: commonCancelEvents,
+        validators: [(_actionData: ActionData) => {
             if (!git) return actionValidationFailure('Git extension not available.');
             return actionValidationAccept();
         }],
@@ -135,17 +148,20 @@ export const gitActions = {
             properties: {
                 filePath: {
                     type: 'array',
-                    items: { type: 'string' },
+                    description: 'Array of relative file paths to the files you want to add to staging.',
+                    items: { type: 'string', examples: ['src/index.js', './README.md'] },
                     minItems: 1,
                     uniqueItems: true,
                 },
             },
             required: ['filePath'],
+            additionalProperties: false,
         },
         permissions: [PERMISSIONS.gitOperations],
         handler: handleAddFileToGit,
+        cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `add the file "${actionData.params.filePath}" to the staging area.`,
-        validator: [gitValidator, filePathGitValidator],
+        validators: [gitValidator, filePathGitValidator],
     },
     make_git_commit: {
         name: 'make_git_commit',
@@ -153,18 +169,21 @@ export const gitActions = {
         schema: {
             type: 'object',
             properties: {
-                message: { type: 'string' },
+                message: { type: 'string', description: 'The commit message to add.' },
                 options: {
                     type: 'array',
+                    description: 'Extra options you can choose for committing.',
                     items: { type: 'string', enum: ['signoff', 'verbose', 'amend'] },
                 },
             },
             required: ['message'],
+            additionalProperties: false,
         },
         permissions: [PERMISSIONS.gitOperations],
         handler: handleMakeGitCommit,
+        cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `commit changes with the message "${actionData.params.message}".`,
-        validator: [gitValidator],
+        validators: [gitValidator],
     },
     merge_to_current_branch: {
         name: 'merge_to_current_branch',
@@ -172,22 +191,25 @@ export const gitActions = {
         schema: {
             type: 'object',
             properties: {
-                ref_to_merge: { type: 'string' },
+                ref_to_merge: { type: 'string', description: 'The branch name to merge into the current branch.' },
             },
             required: ['ref_to_merge'],
+            additionalProperties: false,
         },
         permissions: [PERMISSIONS.gitOperations],
         handler: handleGitMerge,
+        cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `merge "${actionData.params.ref_to_merge}" into the current branch.`,
-        validator: [gitValidator],
+        validators: [gitValidator],
     },
     git_status: {
         name: 'git_status',
         description: 'Get the current status of the Git repository',
         permissions: [PERMISSIONS.gitOperations],
         handler: handleGitStatus,
+        cancelEvents: commonCancelEvents,
         promptGenerator: 'get the repository\'s Git status.',
-        validator: [gitValidator],
+        validators: [gitValidator],
     },
     remove_file_from_git: {
         name: 'remove_file_from_git',
@@ -197,17 +219,20 @@ export const gitActions = {
             properties: {
                 filePath: {
                     type: 'array',
-                    items: { type: 'string' },
+                    description: 'Array of relative file paths to remove from staging.',
+                    items: { type: 'string', examples: ['src/index.js', './README.md'] },
                     minItems: 1,
                     uniqueItems: true,
                 },
             },
             required: ['filePath'],
+            additionalProperties: false,
         },
         permissions: [PERMISSIONS.gitOperations],
         handler: handleRemoveFileFromGit,
+        cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `remove the file "${actionData.params.filePath}" from the staging area.`,
-        validator: [gitValidator, filePathGitValidator],
+        validators: [gitValidator, filePathGitValidator],
     },
     delete_git_branch: {
         name: 'delete_git_branch',
@@ -215,15 +240,17 @@ export const gitActions = {
         schema: {
             type: 'object',
             properties: {
-                branchName: { type: 'string' },
-                force: { type: 'boolean' },
+                branchName: { type: 'string', description: 'Which branch in the Git repository should be deleted?' },
+                force: { type: 'boolean', description: 'If true, forcibly deletes a branch.' },
             },
             required: ['branchName'],
+            additionalProperties: false,
         },
         permissions: [PERMISSIONS.gitOperations],
         handler: handleDeleteGitBranch,
+        cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `delete the branch "${actionData.params.branchName}".`,
-        validator: [gitValidator],
+        validators: [gitValidator],
     },
     switch_git_branch: {
         name: 'switch_git_branch',
@@ -231,14 +258,16 @@ export const gitActions = {
         schema: {
             type: 'object',
             properties: {
-                branchName: { type: 'string' },
+                branchName: { type: 'string', description: 'The name of the branch to switch to.' },
             },
             required: ['branchName'],
+            additionalProperties: false,
         },
         permissions: [PERMISSIONS.gitOperations],
         handler: handleSwitchGitBranch,
+        cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `switch to the branch "${actionData.params.branchName}".`,
-        validator: [gitValidator],
+        validators: [gitValidator],
     },
     new_git_branch: {
         name: 'new_git_branch',
@@ -246,31 +275,70 @@ export const gitActions = {
         schema: {
             type: 'object',
             properties: {
-                branchName: { type: 'string' },
+                branchName: { type: 'string', description: 'The name of the new branch.' },
             },
             required: ['branchName'],
+            additionalProperties: false,
         },
         permissions: [PERMISSIONS.gitOperations],
         handler: handleNewGitBranch,
+        cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `create a new branch "${actionData.params.branchName}".`,
-        validator: [gitValidator],
+        validators: [gitValidator],
     },
     diff_files: {
         name: 'diff_files',
         description: 'Get the differences between two versions of a file in the Git repository',
         schema: {
             type: 'object',
+            oneOf: [
+                {
+                    properties: {
+                        filePath: { type: 'string', description: 'A file to run diffs against. If omitted, will diff the entire ref.' },
+                        diffType: { type: 'string', enum: ['diffWithHEAD', 'diffIndexWithHEAD', 'fullDiff'], description: 'The type of diff to run.' },
+                    },
+                    required: ['diffType'],
+                    additionalProperties: false,
+                },
+                {
+                    properties: {
+                        ref1: { type: 'string', description: 'The ref to diff with.' },
+                        filePath: { type: 'string', description: 'A file to run diffs against. If omitted, will diff the entire ref.' },
+                        diffType: { type: 'string', enum: ['diffWith', 'diffIndexWith'], description: 'The type of diff to run.'},
+                    },
+                    required: ['ref1', 'diffType'],
+                    additionalProperties: false,
+                },
+                {
+                    properties: {
+                        ref1: { type: 'string', description: 'The ref to diff with.' },
+                        ref2: { type: 'string', description: 'The ref to diff ref1 against.' },
+                        filePath: { type: 'string', description: 'A file to run diffs against. If omitted, will diff the entire ref.' },
+                        diffType: { type: 'string', const: 'diffBetween', description: 'The type of diff to run.' },
+                    },
+                    required: ['ref1', 'ref2', 'diffType'],
+                    additionalProperties: false,
+                },
+            ] as JSONSchema7Definition[],
+        },
+        // TODO: This fallback contains descriptions, which is not officially supported.
+        //       I don't think it will be used in the next dev stream, so I'll leave it for now.
+        //       Remove this comment once it is confirmed that descriptions are stable, or remove the descriptions if they are not.
+        schemaFallback: {
+            type: 'object',
             properties: {
-                ref1: { type: 'string' },
-                ref2: { type: 'string' },
-                filePath: { type: 'string' },
-                diffType: { type: 'string', enum: ['diffWithHEAD', 'diffWith', 'diffIndexWithHEAD', 'diffIndexWith', 'diffBetween', 'fullDiff'] },
+                ref1: { type: 'string', description: 'The first ref to use to diff with. May not be used in some diff types.' },
+                ref2: { type: 'string', description: 'The second ref to diff against the first ref. Will not be used in some diff types.' },
+                filePath: { type: 'string', description: 'For certain diff types, you can specify a file to diff. If omitted, will usually diff the entire ref.' },
+                diffType: { type: 'string', enum: ['diffWithHEAD', 'diffWith', 'diffIndexWithHEAD', 'diffIndexWith', 'diffBetween', 'fullDiff'], description: 'The type of diff to run. This will also affect what parameters are required.' },
             },
+            additionalProperties: false,
         },
         permissions: [PERMISSIONS.gitOperations],
         handler: handleDiffFiles,
+        cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `obtain ${actionData.params?.filePath ? `"${actionData.params.filePath}"'s` : 'a'} Git diff${actionData.params?.ref1 && actionData.params?.ref2 ? ` between ${actionData.params.ref1} and ${actionData.params.ref2}` : actionData.params?.ref1 ? ` at ref ${actionData.params.ref1}` : ''}${actionData.params?.diffType ? ` (of type "${actionData.params.diffType}")` : ''}.`,
-        validator: [gitValidator, filePathGitValidator, gitDiffValidator],
+        validators: [gitValidator, filePathGitValidator, gitDiffValidator],
     },
     git_log: {
         name: 'git_log',
@@ -281,13 +349,16 @@ export const gitActions = {
                 log_limit: {
                     type: 'integer',
                     minimum: 1,
+                    description: 'Limits the number of items returned, starting from the latest commit.',
                 },
             },
+            additionalProperties: false,
         },
         permissions: [PERMISSIONS.gitOperations],
         handler: handleGitLog,
+        cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `get the ${actionData.params?.log_limit ? `${actionData.params.log_limit} most recent commits in the ` : ''}Git log.`,
-        validator: [gitValidator],
+        validators: [gitValidator],
     },
     git_blame: {
         name: 'git_blame',
@@ -295,14 +366,16 @@ export const gitActions = {
         schema: {
             type: 'object',
             properties: {
-                filePath: { type: 'string' },
+                filePath: { type: 'string', description: 'The file to get attributions on.' },
             },
             required: ['filePath'],
+            additionalProperties: false,
         },
         permissions: [PERMISSIONS.gitOperations],
         handler: handleGitBlame,
+        cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `get the Git blame for the file "${actionData.params.filePath}".`,
-        validator: [gitValidator, filePathGitValidator],
+        validators: [gitValidator, filePathGitValidator],
     },
 
     // Requires gitTags
@@ -312,15 +385,17 @@ export const gitActions = {
         schema: {
             type: 'object',
             properties: {
-                name: { type: 'string' },
-                upstream: { type: 'string' },
+                name: { type: 'string', description: 'The name of the tag.' },
+                upstream: { type: 'string', description: 'What commit/ref do you want to tag? If not set, will tag the current commit.' },
             },
-            required: ['name', 'upstream'],
+            required: ['name'],
+            additionalProperties: false,
         },
         permissions: [PERMISSIONS.gitOperations, PERMISSIONS.gitTags],
         handler: handleTagHEAD,
+        cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `tag the current commit with the name "${actionData.params.name}" and associate it with the "${actionData.params.upstream}" remote.`,
-        validator: [gitValidator],
+        validators: [gitValidator],
     },
     delete_tag: {
         name: 'delete_tag',
@@ -328,14 +403,16 @@ export const gitActions = {
         schema: {
             type: 'object',
             properties: {
-                name: { type: 'string' },
+                name: { type: 'string', description: 'The name of the tag to delete.' },
             },
             required: ['name'],
+            additionalProperties: false,
         },
         permissions: [PERMISSIONS.gitOperations, PERMISSIONS.gitTags],
         handler: handleDeleteTag,
+        cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `delete the tag "${actionData.params.name}".`,
-        validator: [gitValidator],
+        validators: [gitValidator],
     },
 
     // Requires gitConfigs
@@ -345,15 +422,17 @@ export const gitActions = {
         schema: {
             type: 'object',
             properties: {
-                key: { type: 'string' },
-                value: { type: 'string' },
+                key: { type: 'string', description: 'The config key to target.' },
+                value: { type: 'string', description: 'The new value for the config key.' },
             },
             required: ['key', 'value'],
+            additionalProperties: false,
         },
         permissions: [PERMISSIONS.gitOperations, PERMISSIONS.gitConfigs],
         handler: handleSetGitConfig,
+        cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `set the Git config key "${actionData.params.key}" to "${actionData.params.value}".`,
-        validator: [gitValidator],
+        validators: [gitValidator],
     },
     get_git_config: {
         name: 'get_git_config',
@@ -361,13 +440,15 @@ export const gitActions = {
         schema: {
             type: 'object',
             properties: {
-                key: { type: 'string' },
+                key: { type: 'string', description: 'The config key to get. If omitted, you will get the full list of config keys and their values.' },
             },
+            additionalProperties: false,
         },
         permissions: [PERMISSIONS.gitOperations, PERMISSIONS.gitConfigs],
         handler: handleGetGitConfig,
+        cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => actionData.params?.key ? `get the Git config key "${actionData.params.key}".` : 'get the Git config.',
-        validator: [gitValidator],
+        validators: [gitValidator],
     },
 
     // Requires gitRemotes
@@ -377,12 +458,14 @@ export const gitActions = {
         schema: {
             type: 'object',
             properties: {
-                remoteName: { type: 'string' },
-                branchName: { type: 'string' },
+                remoteName: { type: 'string', description: 'Which remote to fetch from. If omitted, will fetch from the default set repo.' },
+                branchName: { type: 'string', description: 'Which branch to fetch from. If omitted, will fetch from the set remote branch of the current branch.' },
             },
+            additionalProperties: false,
         },
         permissions: [PERMISSIONS.gitOperations, PERMISSIONS.gitRemotes],
         handler: handleFetchGitCommits,
+        cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => {
             if (actionData.params.remoteName && actionData.params.branchName)
                 return `fetch commits ${actionData.params.remoteName}/${actionData.params.branchName}.`;
@@ -392,15 +475,16 @@ export const gitActions = {
                 return `fetch commits from ${actionData.params.branchName}.`;
             return 'fetch commits.';
         },
-        validator: [gitValidator],
+        validators: [gitValidator],
     },
     pull_git_commits: {
         name: 'pull_git_commits',
         description: 'Pull commits from the remote repository',
         permissions: [PERMISSIONS.gitOperations, PERMISSIONS.gitRemotes],
         handler: handlePullGitCommits,
+        cancelEvents: commonCancelEvents,
         promptGenerator: 'pull commits.',
-        validator: [gitValidator],
+        validators: [gitValidator],
     },
     push_git_commits: {
         name: 'push_git_commits',
@@ -408,13 +492,15 @@ export const gitActions = {
         schema: {
             type: 'object',
             properties: {
-                remoteName: { type: 'string' },
-                branchName: { type: 'string' },
-                forcePush: { type: 'boolean' },
+                remoteName: { type: 'string', description: 'The remote to push to. If omitted, will push to the default remote.' },
+                branchName: { type: 'string', description: 'The branch to push to. If omitted, will push to the set remote branch.' },
+                forcePush: { type: 'boolean', description: 'If true, will forcibly push to remote.' },
             },
+            additionalProperties: false,
         },
         permissions: [PERMISSIONS.gitOperations, PERMISSIONS.gitRemotes],
         handler: handlePushGitCommits,
+        cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => {
             const force = actionData.params.forcePush ? 'force ' : '';
             if (actionData.params.remoteName && actionData.params.branchName)
@@ -425,7 +511,7 @@ export const gitActions = {
                 return `${force}push commits to ${actionData.params.branchName}.`;
             return `${force}push commits.`;
         },
-        validator: [gitValidator],
+        validators: [gitValidator],
     },
 
     // Requires gitRemotes and editRemoteData
@@ -435,15 +521,17 @@ export const gitActions = {
         schema: {
             type: 'object',
             properties: {
-                remoteName: { type: 'string' },
-                remoteURL: { type: 'string' },
+                remoteName: { type: 'string', description: 'The nickname set for the remote. You will use this name for inputs to other remote-related actions if you wish to use their remote parameters.' },
+                remoteURL: { type: 'string', description: 'The URL that the remote name is aliased to. It must be either SSH (which will only work if SSH is properly set up) or HTTPS.' },
             },
             required: ['remoteName', 'remoteURL'],
+            additionalProperties: false,
         },
         permissions: [PERMISSIONS.gitOperations, PERMISSIONS.gitRemotes, PERMISSIONS.editRemoteData],
         handler: handleAddGitRemote,
+        cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `add a new remote "${actionData.params.remoteName}" with URL "${actionData.params.remoteURL}".`,
-        validator: [gitValidator],
+        validators: [gitValidator],
     },
     remove_git_remote: {
         name: 'remove_git_remote',
@@ -451,14 +539,16 @@ export const gitActions = {
         schema: {
             type: 'object',
             properties: {
-                remoteName: { type: 'string' },
+                remoteName: { type: 'string', description: 'Name of the remote Git repository to remove.' },
             },
             required: ['remoteName'],
+            additionalProperties: false,
         },
         permissions: [PERMISSIONS.gitOperations, PERMISSIONS.gitRemotes, PERMISSIONS.editRemoteData],
         handler: handleRemoveGitRemote,
+        cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `remove the remote "${actionData.params.remoteName}".`,
-        validator: [gitValidator],
+        validators: [gitValidator],
     },
     rename_git_remote: {
         name: 'rename_git_remote',
@@ -466,22 +556,26 @@ export const gitActions = {
         schema: {
             type: 'object',
             properties: {
-                oldRemoteName: { type: 'string' },
-                newRemoteName: { type: 'string' },
+                oldRemoteName: { type: 'string', description: 'The current remote name.' },
+                newRemoteName: { type: 'string', description: 'The new remote name.' },
             },
             required: ['oldRemoteName', 'newRemoteName'],
+            additionalProperties: false,
         },
         permissions: [PERMISSIONS.gitOperations, PERMISSIONS.gitRemotes, PERMISSIONS.editRemoteData],
         handler: handleRenameGitRemote,
+        cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `rename the remote "${actionData.params.oldRemoteName}" to "${actionData.params.newRemoteName}".`,
+        validators: [gitValidator],
     },
     abort_merge: {
         name: 'abort_merge',
         description: 'Aborts the current merge operation.',
         permissions: [PERMISSIONS.gitOperations],
         handler: handleAbortMerge,
+        cancelEvents: commonCancelEvents,
         promptGenerator: 'abort the current merge operation.',
-        validator: [gitValidator],
+        validators: [gitValidator],
     },
 } satisfies Record<string, RCEAction>;
 
@@ -498,7 +592,7 @@ export function registerGitActions() {
         if (getPermissionLevel(PERMISSIONS.gitOperations)) {
             NEURO.client?.registerActions(stripToActions([
                 gitActions.init_git_repo,
-            ]));
+            ]).filter(isActionEnabled));
 
             const root = vscode.workspace.workspaceFolders?.[0].uri;
             if (!root) return;
@@ -524,20 +618,20 @@ export function registerGitActions() {
                         gitActions.diff_files,
                         gitActions.git_log,
                         gitActions.git_blame,
-                    ]));
+                    ]).filter(isActionEnabled));
 
                     if (getPermissionLevel(PERMISSIONS.gitTags)) {
                         NEURO.client?.registerActions(stripToActions([
                             gitActions.tag_head,
                             gitActions.delete_tag,
-                        ]));
+                        ]).filter(isActionEnabled));
                     }
 
                     if (getPermissionLevel(PERMISSIONS.gitConfigs)) {
                         NEURO.client?.registerActions(stripToActions([
                             gitActions.set_git_config,
                             gitActions.get_git_config,
-                        ]));
+                        ]).filter(isActionEnabled));
                     }
 
                     if (getPermissionLevel(PERMISSIONS.gitRemotes)) {
@@ -545,14 +639,14 @@ export function registerGitActions() {
                             gitActions.fetch_git_commits,
                             gitActions.pull_git_commits,
                             gitActions.push_git_commits,
-                        ]));
+                        ]).filter(isActionEnabled));
 
                         if (getPermissionLevel(PERMISSIONS.editRemoteData)) {
                             NEURO.client?.registerActions(stripToActions([
                                 gitActions.add_git_remote,
                                 gitActions.remove_git_remote,
                                 gitActions.rename_git_remote,
-                            ]));
+                            ]).filter(isActionEnabled));
                         }
                     }
                 }
@@ -1029,10 +1123,10 @@ export function handleGitBlame(actionData: ActionData): string | undefined {
 export function handleTagHEAD(actionData: ActionData): string | undefined {
     assert(repo);
     const name: string = actionData.params.name;
-    const upstream: string = actionData.params.upstream;
+    const upstream: string = actionData.params.upstream ?? 'HEAD';
 
     repo.tag(name, upstream).then(() => {
-        NEURO.client?.sendContext(`Tag ${name} created for ${upstream} remote.`);
+        NEURO.client?.sendContext(`Tag ${name} created for ${upstream}.`);
     }, (erm: string) => {
         NEURO.client?.sendContext('There was an error during tagging.');
         logOutput('ERROR', `Error trying to tag: ${erm}`);

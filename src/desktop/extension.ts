@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
-import { reloadTasks, taskEndedHandler } from '~/tasks';
-import { emergencyTerminalShutdown } from '~/pseudoterminal';
-import { createClient, isPathNeuroSafe, setVirtualCursor } from '~/utils';
-import { NEURO } from '~/constants';
+import { handleTerminateTask, reloadTasks, taskEndedHandler } from '@/tasks';
+import { emergencyTerminalShutdown } from '@/pseudoterminal';
+import { isPathNeuroSafe, setVirtualCursor } from '@/utils';
+import { NEURO } from '@/constants';
 import {
     initializeCommonState,
     setupCommonProviders,
@@ -11,20 +11,27 @@ import {
     setupClientConnectedHandlers,
     createStatusBarItem,
     deactivate as commonDeactivate,
-    getDecorationRenderOptions,
+    getCursorDecorationRenderOptions,
+    getDiffAddedDecorationRenderOptions,
+    getDiffRemovedDecorationRenderOptions,
+    getDiffModifiedDecorationRenderOptions,
     obtainExtensionState,
     reloadPermissions,
+    getHighlightDecorationRenderOptions,
+    showUpdateReminder,
+    startupCreateClient,
 } from '@shared/extension';
-import { registerDocsLink } from '@shared/docs';
-import { registerChatParticipant } from '~/chat';
+import { registerChatParticipant } from '@/chat';
 import { registerUnsupervisedActions, registerUnsupervisedHandlers } from './unsupervised';
-
-export { registerDocsLink };
+import { registerSendSelectionToNeuro } from '@/editing';
 
 export function activate(context: vscode.ExtensionContext) {
 
     // Initialize common state
     initializeCommonState(context);
+
+    // Show update reminder if version changed
+    showUpdateReminder(context);
 
     vscode.commands.registerCommand('neuropilot.reloadPermissions', reloadDesktopPermissions);
 
@@ -49,23 +56,36 @@ export function activate(context: vscode.ExtensionContext) {
     // Create status bar item
     createStatusBarItem();
 
-    // Extension state
-    obtainExtensionState();
+    // Extension state (delaying this by 5000ms so that the git extension has some time to activate)
+    setTimeout(obtainExtensionState, 5000);
 
     // Create client
-    createClient();
+    startupCreateClient();
 
     // Create cursor decoration (desktop-specific)
-    NEURO.cursorDecorationType = vscode.window.createTextEditorDecorationType(getDecorationRenderOptions());
+    NEURO.cursorDecorationType = vscode.window.createTextEditorDecorationType(getCursorDecorationRenderOptions());
+    NEURO.diffAddedDecorationType = vscode.window.createTextEditorDecorationType(getDiffAddedDecorationRenderOptions());
+    NEURO.diffRemovedDecorationType = vscode.window.createTextEditorDecorationType(getDiffRemovedDecorationRenderOptions());
+    NEURO.diffModifiedDecorationType = vscode.window.createTextEditorDecorationType(getDiffModifiedDecorationRenderOptions());
+    NEURO.highlightDecorationType = vscode.window.createTextEditorDecorationType(getHighlightDecorationRenderOptions());
 
     // Set initial virtual cursor
     if (vscode.window.activeTextEditor && isPathNeuroSafe(vscode.window.activeTextEditor.document.fileName)) {
         setVirtualCursor(vscode.window.activeTextEditor.selection.active);
     }
+
+    // The "Send selection to Neuro" feature requires both a command and a code action provider.
+    // To keep related logic together and allow easy registration in both desktop and web, it is encapsulated
+    // in registerSendSelectionToNeuro instead of being registered inline like most single commands.
+    registerSendSelectionToNeuro(context);
 }
 
 export function deactivate() {
     emergencyTerminalShutdown();
+    handleTerminateTask({
+        id: 'none',
+        name: 'terminate_task',
+    });
     commonDeactivate();
 }
 
