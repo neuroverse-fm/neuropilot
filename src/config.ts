@@ -287,7 +287,7 @@ class Permissions {
     get getUserSelection() { return { id: 'getUserSelection', infinitive: `get ${CONNECTION.userName}'s cursor` }; }
 }
 
-export const PERMISSIONS = new Permissions();
+export const PERMISSIONS = /* @__PURE__ */ new Permissions();
 
 class Config {
     get beforeContext(): number { return getConfig('beforeContext')!; }
@@ -310,7 +310,7 @@ class Config {
     get terminals(): { name: string; path: string; args?: string[]; }[] { return getConfig('terminals')!; }
 }
 
-export const CONFIG = new Config();
+export const CONFIG = /* @__PURE__ */ new Config();
 
 class Access {
     get includePattern(): string[] { return getAccess<string[]>('includePattern')!; }
@@ -320,7 +320,7 @@ class Access {
     get environmentVariables(): boolean { return getAccess<boolean>('environmentVariables')!; }
 }
 
-export const ACCESS = new Access();
+export const ACCESS = /* @__PURE__ */ new Access();
 
 class Connection {
     get websocketUrl(): string { return getConnection<string>('websocketUrl')!; }
@@ -333,7 +333,7 @@ class Connection {
     get nameOfAPI(): string { return getConnection<string>('nameOfAPI')!; }
 }
 
-export const CONNECTION = new Connection();
+export const CONNECTION = /* @__PURE__ */ new Connection();
 
 class Actions {
     get disabledActions(): string[] { return getActions<string[]>('disabledActions')!; }
@@ -343,4 +343,4 @@ class Actions {
     get experimentalSchemas(): boolean { return getActions<boolean>('experimentalSchemas')!; }
 }
 
-export const ACTIONS = new Actions();
+export const ACTIONS = /* @__PURE__ */ new Actions();

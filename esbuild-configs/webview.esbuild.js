@@ -2,6 +2,10 @@
 import { context } from 'esbuild';
 import { polyfillNode } from 'esbuild-plugin-polyfill-node';
 
+/**
+ * @param {any} prodFlag
+ * @param {any} watchFlag
+ */
 export async function webview(prodFlag, watchFlag) {
     const ctx = await context({
         entryPoints: ['webview/*.ts'],
@@ -17,18 +21,28 @@ export async function webview(prodFlag, watchFlag) {
         tsconfig: './tsconfig.webview.json',
         treeShaking: true, // Doesn't really help
         plugins: [
-            polyfillNode({ polyfills: { // trying to make the build as small as possible
-                child_process: false,
-                module: false,
-                os: false,
-                path: false,
-                punycode: false,
-                stream: false,
-                sys: false,
-                v8: false,
-                vm: false,
-                zlib: false,
-            }}),
+            polyfillNode({
+                polyfills: { // trying to make the build as small as possible
+                    child_process: false,
+                    module: false,
+                    os: false,
+                    path: false,
+                    punycode: false,
+                    stream: false,
+                    sys: false,
+                    v8: false,
+                    vm: false,
+                    zlib: false,
+                },
+                globals: {
+                    __dirname: false,
+                    __filename: false,
+                    buffer: false,
+                    global: false,
+                    navigator: false,
+                    process: false,
+                },
+            }),
             /* add to the end of plugins array */
             esbuildProblemMatcherPlugin,
         ],

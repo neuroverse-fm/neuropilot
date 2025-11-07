@@ -986,6 +986,7 @@
 			]
 		}
 	},
+	"sideEffects": [],
 	"scripts": {
 		"preinstall": "node ./scripts/check-malicious-packages.js",
 		"version:changesets": "changeset version --global-changelog",

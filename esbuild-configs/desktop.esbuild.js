@@ -1,6 +1,10 @@
 // @ts-check
 import { context } from 'esbuild';
 
+/**
+ * @param {any} prodFlag
+ * @param {any} watchFlag
+ */
 export async function desktop(prodFlag, watchFlag) {
     const ctx = await context({
         entryPoints: ['src/desktop/extension.ts'],
@@ -27,6 +31,10 @@ export async function desktop(prodFlag, watchFlag) {
     }
 }
 
+/**
+ * @param {any} _prodFlag
+ * @param {any} watchFlag
+ */
 export async function desktopTest(_prodFlag, watchFlag) {
     const ctx = await context({
         entryPoints: ['src/test/suite/desktop/index.ts'],

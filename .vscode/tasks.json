@@ -98,7 +98,7 @@
 			"type": "npm",
 			"script": "watch:webview:esbuild",
 			"group": "build",
-			"problemMatcher": "$tsc-watch",
+			"problemMatcher": "$esbuild-watch",
 			"isBackground": true,
 			"label": "npm: watch:webview:esbuild",
 			"presentation": {
