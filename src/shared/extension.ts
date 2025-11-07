@@ -384,7 +384,7 @@ export function showUpdateReminder(context: vscode.ExtensionContext) {
         // Helper to show the popup and allow both links to be visited
         showPopup = () => {
             vscode.window.showInformationMessage(
-                `NeuroPilot updated! Please check the changelog and docs for important changes. You can also ask ${CONNECTION.nameOfAPI} to summarize the changes (see Command Palette).`,
+                `NeuroPilot updated! Please check the changelog and docs for important changes. You can also let ${CONNECTION.nameOfAPI} read the changes now or later from the Command Palette.`,
                 { modal: true },
                 askLabel,
                 'View Changelog',
