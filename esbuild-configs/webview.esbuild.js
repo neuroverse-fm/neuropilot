@@ -3,8 +3,8 @@ import { context } from 'esbuild';
 import { polyfillNode } from 'esbuild-plugin-polyfill-node';
 
 /**
- * @param {any} prodFlag
- * @param {any} watchFlag
+ * @param {boolean} prodFlag
+ * @param {boolean} watchFlag
  */
 export async function webview(prodFlag, watchFlag) {
     const ctx = await context({

@@ -2,8 +2,8 @@
 import { context } from 'esbuild';
 
 /**
- * @param {any} prodFlag
- * @param {any} watchFlag
+ * @param {boolean} prodFlag
+ * @param {boolean} watchFlag
  */
 export async function desktop(prodFlag, watchFlag) {
     const ctx = await context({
@@ -32,8 +32,8 @@ export async function desktop(prodFlag, watchFlag) {
 }
 
 /**
- * @param {any} _prodFlag
- * @param {any} watchFlag
+ * @param {boolean} _prodFlag
+ * @param {boolean} watchFlag
  */
 export async function desktopTest(_prodFlag, watchFlag) {
     const ctx = await context({

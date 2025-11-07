@@ -3,8 +3,8 @@ import { context } from 'esbuild';
 import { polyfillNode } from 'esbuild-plugin-polyfill-node';
 
 /**
- * @param {any} prodFlag
- * @param {any} watchFlag
+ * @param {boolean} prodFlag
+ * @param {boolean} watchFlag
  */
 export async function web(prodFlag, watchFlag) {
     const ctx = await context({
@@ -45,8 +45,8 @@ export async function web(prodFlag, watchFlag) {
 }
 
 /**
- * @param {any} _prodFlag
- * @param {any} watchFlag
+ * @param {boolean} _prodFlag
+ * @param {boolean} watchFlag
  */
 export async function webTest(_prodFlag, watchFlag) {
     const ctx = await context({
@@ -100,7 +100,7 @@ export async function webTest(_prodFlag, watchFlag) {
 
 /**
  * @param {any} _prodFlag
- * @param {any} watchFlag
+ * @param {boolean} watchFlag
  */
 export async function webTestBrowser(_prodFlag, watchFlag) {
     const ctx = await context({
