@@ -1,0 +1,57 @@
+{
+    "$schema": "https://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "description": "A config object that describes the list of MCP servers Neuro is allowed access to.",
+    "properties": {
+        "version": {
+            "type": "integer",
+            "enum": [1],
+            "description": "The config version"
+        },
+        "servers": {
+            "type": "array",
+            "description": "An array of MCP servers to give Neuro access to.",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "The display name of the server that will be used. If not specified, falls back to the MCP URL."
+                    },
+                    "url": {
+                        "type": "string",
+                        "description": "The URL to the MCP server."
+                    },
+                    "type": {
+                        "type": "string",
+                        "enum": ["http", "sse", "stdio"],
+                        "description": "The type of server. Currently only supports `http`."
+                    },
+                    "credentials": {
+                        "type": "array",
+                        "description": "An array of credential variables the connection may need. Currently unused.",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "startup": {
+                        "type": "boolean",
+                        "description": "Whether or not to connect to this server on extension startup."
+                    },
+                    "allowedTools": {
+                        "type": "array",
+                        "description": "An array of tools that Neuro is allowed to use. Defaults to allowing all registered tools from this server.",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "required": ["url", "type"]
+            }
+        },
+        "inherit": {
+            "type": "boolean",
+            "description": "Whether or not to inherit from VS Code's MCP configuration."
+        }
+    }
+}
