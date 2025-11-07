@@ -349,13 +349,12 @@ export function showUpdateReminder(context: vscode.ExtensionContext) {
     const manifest = context.extension.packageJSON;
     const version = manifest.version as string;
     const id = context.extension.id;
-    const askLabel = `Ask ${CONNECTION.nameOfAPI} to Read Changelog`;
-    let showPopup = () => { }; // Exists so that showPopup isn't nullable, do not modify since if either of the if-else conditions are satisfied then this function will be called.
-    if (!lastVersion) {
-        showPopup = () => {
+    const askLabel = `Send ${CONNECTION.nameOfAPI} changelog`;
+    const showPopup = (modal: boolean) => {
+        if (!lastVersion) {
             vscode.window.showInformationMessage(
-                `Welcome to NeuroPilot! You have just installed version ${version}.`,
-                { modal: true },
+                `Welcome to NeuroPilot. You have just installed version ${version}.`,
+                { modal },
                 askLabel,
                 'View Changelog',
                 'View Docs',
@@ -364,28 +363,26 @@ export function showUpdateReminder(context: vscode.ExtensionContext) {
                 if (selection === 'View Changelog') {
                     const changelogUri = vscode.Uri.joinPath(context.extensionUri, 'CHANGELOG.md');
                     await vscode.commands.executeCommand('markdown.showPreview', changelogUri);
-                    // Re-show popup to allow visiting both links
-                    showPopup();
+                    // Re-show non-modally to avoid focus/sound
+                    showPopup(false);
                 } else if (selection === 'View Docs') {
                     await openDocsOnTarget('NeuroPilot', docsUrl);
-                    // Re-show popup to allow visiting both links
-                    showPopup();
+                    showPopup(false);
                 } else if (selection === 'Configure NeuroPilot') {
                     await vscode.commands.executeCommand('workbench.action.openSettings', `@ext:${id}`);
-                    // Re-show popup to allow visiting both links
-                    showPopup();
+                    showPopup(false);
                 } else if (selection === askLabel) {
                     await vscode.commands.executeCommand('neuropilot.readChangelog');
+                    showPopup(false);
                 }
-                // If dismissed, do nothing
             });
-        };
-    } else if (lastVersion !== version) {
-        // Helper to show the popup and allow both links to be visited
-        showPopup = () => {
+            return;
+        }
+
+        if (lastVersion !== version) {
             vscode.window.showInformationMessage(
-                `NeuroPilot updated! Please check the changelog and docs for important changes. You can also let ${CONNECTION.nameOfAPI} read the changes now or later from the Command Palette.`,
-                { modal: true },
+                `NeuroPilot updated. Please check the changelog and docs for important changes. You can also let ${CONNECTION.nameOfAPI} read the changes now or later from the Command Palette.`,
+                { modal },
                 askLabel,
                 'View Changelog',
                 'View Docs',
@@ -394,20 +391,21 @@ export function showUpdateReminder(context: vscode.ExtensionContext) {
                     // Open local CHANGELOG.md in markdown preview
                     const changelogUri = vscode.Uri.joinPath(context.extensionUri, 'CHANGELOG.md');
                     await vscode.commands.executeCommand('markdown.showPreview', changelogUri);
-                    // Re-show popup to allow visiting both links
-                    showPopup();
+                    // Re-show non-modally to allow visiting both
+                    showPopup(false);
                 } else if (selection === 'View Docs') {
                     await openDocsOnTarget('NeuroPilot', docsUrl);
-                    // Re-show popup to allow visiting both links
-                    showPopup();
+                    // Re-show non-modally to allow visiting both
+                    showPopup(false);
                 } else if (selection === askLabel) {
                     await vscode.commands.executeCommand('neuropilot.readChangelog');
+                    showPopup(false);
                 }
-                // If dismissed, do nothing
             });
-        };
-    }
-    showPopup();
+        }
+    };
+    // Show as modal on first display; subsequent displays will be non-modal
+    showPopup(true);
     context.globalState.update(mementoKey, version);
 }
 
