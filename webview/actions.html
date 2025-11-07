@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource}; script-src 'nonce-${nonce}';">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    ${styles}
+    <title>Actions</title>
+</head>
+<body>
+    A = Autopilot, C = Copilot, O = Off
+
+    <div class="actions-header">
+        Action
+        <div class="spacer"></div>
+        <div class="permission-level-letter">A</div>
+        <div class="permission-level-letter">C</div>
+        <div class="permission-level-letter">O</div>
+    </div>
+    <ul class="actions-list"></ul>
+    <script nonce="${nonce}" src="${scriptUri}"></script>
+</body>
+</html>

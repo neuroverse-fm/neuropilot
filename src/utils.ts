@@ -934,3 +934,19 @@ export function notifyOnCaughtException(name: string, error: Error | unknown): v
         },
     );
 }
+
+export function formatString(template: string, format: Record<string, unknown>): string {
+    // Process matches in reverse order to avoid messing up indices
+    const matches = Array.from(template.matchAll(/\$\$|\$\{([^}]+)\}/g)).reverse();
+    let result = template;
+    for (const match of matches) {
+        const pos = match.index;
+        const length = match[0].length;
+        const key = match[1];
+        const value = match[0] === '$$' ? '$' : getProperty(format, key);
+        if (value !== undefined) {
+            result = result.substring(0, pos) + String(value) + result.substring(pos + length);
+        }
+    }
+    return result;
+}
