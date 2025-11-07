@@ -10,10 +10,6 @@ export interface ActionNode {
     permissionLevel: PermissionLevel;
 }
 
-export interface ActionsViewState {
-    actions: ActionNode[];
-}
-
 export type ActionsViewProviderMessage = {
     type: 'providerToggledPermission';
     actionId: string;
@@ -24,8 +20,8 @@ export type ActionsViewProviderMessage = {
 };
 
 export type ActionsViewMessage = {
-    type: 'viewToggledPermission';
-    actionId: string;
+    type: 'viewToggledPermissions';
+    actionIds: string[];
     newPermissionLevel: PermissionLevel;
 } | {
     type: 'error';
@@ -54,6 +50,13 @@ export class ActionsViewProvider extends BaseWebviewViewProvider<ActionsViewMess
                     permissionLevel: PermissionLevel.AUTOPILOT,
                 },
                 {
+                    id: 'sample_action_copilot_2',
+                    label: 'Copilot Sample Action 2',
+                    category: 'Category A',
+                    description: 'This is the second first action.',
+                    permissionLevel: PermissionLevel.COPILOT,
+                },
+                {
                     id: 'sample_action_copilot',
                     label: 'Copilot Sample Action',
                     category: 'Category B',
@@ -73,8 +76,10 @@ export class ActionsViewProvider extends BaseWebviewViewProvider<ActionsViewMess
 
     protected handleMessage(message: ActionsViewMessage): void {
         switch (message.type) {
-            case 'viewToggledPermission': {
+            case 'viewToggledPermissions': {
                 // TODO: Handle permission toggle
+                vscode.window.showInformationMessage(`Toggled permissions for actions: ${message.actionIds.join(', ')} to ${message.newPermissionLevel}`);
+                this.refreshActions();
                 break;
             }
             case 'error': {
