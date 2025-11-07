@@ -135,15 +135,15 @@ function computeSelection(
     // 2) Defaults if not decided yet
     if (startIdx === undefined) {
         if (!saved) {
-            // Default to 2.2.1 if present; otherwise, oldest available
-            const idx221 = versions.indexOf('2.2.1');
-            startIdx = idx221 !== -1 ? idx221 : versions.length - 1;
+            // Default to 2.3.0 if present; otherwise, oldest available
+            const idx230 = versions.indexOf('2.3.0');
+            startIdx = idx230 !== -1 ? idx230 : versions.length - 1;
             startVersion = versions[startIdx];
         } else {
             const savedIdx = versions.indexOf(saved);
             if (savedIdx === -1) {
-                const idx221 = versions.indexOf('2.2.1');
-                startIdx = idx221 !== -1 ? idx221 : versions.length - 1;
+                const idx230 = versions.indexOf('2.3.0');
+                startIdx = idx230 !== -1 ? idx230 : versions.length - 1;
                 startVersion = versions[startIdx];
             } else if (saved === latest) {
                 // If saved is latest, deliver latest again

@@ -96,12 +96,12 @@ suite('Integration: read_changelog action', () => {
         }
     });
 
-    test('default with no memento starts at 2.2.1', async () => {
+    test('default with no memento starts at 2.3.0', async () => {
         await readChangelogAndSendToNeuro(undefined);
         await checkSendOnce();
         const [ctx] = capture(mockedClient.sendContext).last();
         const text = String(ctx);
-        assert.ok(text.includes('Changelog entries from 2.2.1 to 2.3.0:'), 'default should start at 2.2.1');
+        assert.ok(text.includes('Changelog entries from 2.3.0 to 2.3.0:'), 'default should start at 2.3.0');
     });
 
     test('default when saved is latest sends latest again', async () => {
