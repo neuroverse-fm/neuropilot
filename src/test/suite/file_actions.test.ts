@@ -52,33 +52,33 @@ suite('File Actions', () => {
         assertProperties(await validatePath(nonexistentPath, false, 'file'), { success: true }, 'Nonexistent path should be valid if shouldExist is false');
     });
 
-	test('validateIsAFile', async function () {
-		const validateIsAFile = fileActions._internals.validateIsAFile;
-		const baseAction: ActionData = {
-			id: 'abc',
-			name: 'open_file',
-		};
+    test('validateIsAFile', async function () {
+        const validateIsAFile = fileActions._internals.validateIsAFile;
+        const baseAction: ActionData = {
+            id: 'abc',
+            name: 'open_file',
+        };
 
-		// === Arrange ===
-		const fileUri = await createTestFile('file-to-validate.txt');
-		const dirUri = await createTestDirectory('dir-to-validate');
-		const filePath = vscode.workspace.asRelativePath(fileUri, false);
-		const dirPath = vscode.workspace.asRelativePath(dirUri, false);
-		const nonExistentPath = 'test_files/does-not-exist.txt';
+        // === Arrange ===
+        const fileUri = await createTestFile('file-to-validate.txt');
+        const dirUri = await createTestDirectory('dir-to-validate');
+        const filePath = vscode.workspace.asRelativePath(fileUri, false);
+        const dirPath = vscode.workspace.asRelativePath(dirUri, false);
+        const nonExistentPath = 'test_files/does-not-exist.txt';
 
-		// === Act & Assert ===
-		assertProperties(await validateIsAFile(baseAction), { success: false, retry: true }, 'Missing filePath should be invalid');
-		assertProperties(await validateIsAFile({ ...baseAction, params: {} }), { success: false, retry: true }, 'Undefined filePath should be invalid');
-		assertProperties(await validateIsAFile({ ...baseAction, params: { filePath: '' } }), { success: false, retry: true }, 'Empty filePath should be invalid');
-		assertProperties(await validateIsAFile({ ...baseAction, params: { filePath: '/' } }), { success: false, retry: true }, 'Root-only path should be invalid');
+        // === Act & Assert ===
+        assertProperties(await validateIsAFile(baseAction), { success: false, retry: true }, 'Missing filePath should be invalid');
+        assertProperties(await validateIsAFile({ ...baseAction, params: {} }), { success: false, retry: true }, 'Undefined filePath should be invalid');
+        assertProperties(await validateIsAFile({ ...baseAction, params: { filePath: '' } }), { success: false, retry: true }, 'Empty filePath should be invalid');
+        assertProperties(await validateIsAFile({ ...baseAction, params: { filePath: '/' } }), { success: false, retry: true }, 'Root-only path should be invalid');
 
-		assertProperties(await validateIsAFile({ ...baseAction, params: { filePath: dirPath } }), { success: false, retry: false }, 'Directory path should be invalid');
-		assertProperties(await validateIsAFile({ ...baseAction, params: { filePath: nonExistentPath } }), { success: false, retry: false }, 'Nonexistent file should be invalid');
+        assertProperties(await validateIsAFile({ ...baseAction, params: { filePath: dirPath } }), { success: false, retry: false }, 'Directory path should be invalid');
+        assertProperties(await validateIsAFile({ ...baseAction, params: { filePath: nonExistentPath } }), { success: false, retry: false }, 'Nonexistent file should be invalid');
 
-		assertProperties(await validateIsAFile({ ...baseAction, params: { filePath } }), { success: true }, 'Existing file should be valid');
-		assertProperties(await validateIsAFile({ ...baseAction, params: { filePath: '/' + filePath } }), { success: true }, 'Path with leading slash should be valid');
-		assertProperties(await validateIsAFile({ ...baseAction, params: { filePath: './' + filePath } }), { success: true }, 'Path with leading dot slash should be valid');
-	});
+        assertProperties(await validateIsAFile({ ...baseAction, params: { filePath } }), { success: true }, 'Existing file should be valid');
+        assertProperties(await validateIsAFile({ ...baseAction, params: { filePath: '/' + filePath } }), { success: true }, 'Path with leading slash should be valid');
+        assertProperties(await validateIsAFile({ ...baseAction, params: { filePath: './' + filePath } }), { success: true }, 'Path with leading dot slash should be valid');
+    });
 
     test('neuroSafeRenameValidation', async function () {
         const neuroSafeRenameValidation = fileActions._internals.neuroSafeRenameValidation;
