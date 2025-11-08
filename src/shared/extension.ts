@@ -381,7 +381,7 @@ export function showUpdateReminder(context: vscode.ExtensionContext) {
 
         if (lastVersion !== version) {
             vscode.window.showInformationMessage(
-                `NeuroPilot updated. Please check the changelog and docs for important changes. You can also let ${CONNECTION.nameOfAPI} read the changes now or later from the Command Palette.`,
+                `NeuroPilot updated to version ${version}. Please check the changelog and docs for important changes. You can also let ${CONNECTION.nameOfAPI} read the changes now or later from the Command Palette.`,
                 { modal },
                 askLabel,
                 'View Changelog',
