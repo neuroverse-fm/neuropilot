@@ -167,6 +167,17 @@
 				"category": "NeuroPilot"
 			},
 			{
+				"command": "neuropilot.readChangelog",
+				"title": "Ask Neuro to read changelog",
+				"category": "NeuroPilot"
+			},
+			{
+				"command": "neuropilot.dev.clearMementos",
+				"title": "[Dev] Clear all NeuroPilot mementos",
+				"category": "NeuroPilot",
+				"enablement": "isDevelopment"
+			},
+			{
 				"command": "neuropilot.sendSelectionToNeuro",
 				"title": "Send selection to Neuro",
 				"category": "NeuroPilot",
@@ -458,6 +469,7 @@
 								"undo"
 							]
 						},
+						"uniqueItems": true,
 						"markdownDescription": "List of action names that Neuro can't use, regardless of other permission settings.\n\nRequires [reloading permissions](command:neuropilot.reloadPermissions) if changed.",
 						"markdownDeprecationMessage": "This setting has moved to neuropilot.actions.disabledActions"
 					},
@@ -817,15 +829,17 @@
 							"Randy",
 							"Jippity",
 							"Tony",
-							"Gary"
+							"Gary",
+							"Mini 2.0"
 						],
-						"enumDescriptions": [
+						"markdownEnumDescriptions": [
 							"#1 at osu!",
 							"Evil, but actually nice.",
 							"Random Dot Range (Alex)",
 							"A GPT model (EnterpriseScratchDev)",
 							"The human operator (Pasu4)",
-							"Literally in your computer walls (Govorunb)"
+							"Literally in your computer walls (Govorunb)",
+							"Built by Evil, living in her basement. (2025 Minithon coding subgoal **unofficial** celebration)"
 						]
 					},
 					"neuropilot.actions.disabledActions": {
@@ -849,14 +863,14 @@
 								"execute_in_terminal",
 								"fetch_git_commits",
 								"find_text",
-								"get_content",
 								"get_currently_running_shells",
 								"get_cursor",
+								"get_file_contents",
 								"get_file_lint_problems",
-								"get_files",
 								"get_folder_lint_problems",
 								"get_git_config",
 								"get_user_selection",
+								"get_workspace_files",
 								"get_workspace_lint_problems",
 								"git_blame",
 								"git_log",
@@ -1044,7 +1058,7 @@
 		"@types/ws": "^8.18.0",
 		"@vscode/test-cli": "^0.0.11",
 		"@vscode/test-electron": "^2.5.2",
-		"@vscode/test-web": "^0.0.74",
+		"@vscode/test-web": "^0.0.75",
 		"@vscode/vsce": "^3.6.2",
 		"chalk": "^5.4.1",
 		"cross-env": "^7.0.3",
@@ -1060,6 +1074,7 @@
 		"ovsx": "^0.10.5",
 		"playwright": "^1.44.0",
 		"ts-mockito": "^2.6.1",
+		"tsx": "^4.20.6",
 		"typescript": "^5.8.2",
 		"typescript-eslint": "^8.26.0"
 	},
