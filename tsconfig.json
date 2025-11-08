@@ -25,6 +25,9 @@
 			],
 			"@events/*": [
 				"./src/events/*"
+			],
+			"@views/*": [
+				"./src/views/*"
 			]
 		}
 	},
