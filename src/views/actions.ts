@@ -1,12 +1,15 @@
 import * as vscode from 'vscode';
-import { PermissionLevel } from '@/config';
+import { getAllPermissions, PermissionLevel, setPermissions } from '@/config';
 import { BaseWebviewViewProvider } from './base';
+import { getActions } from '@/rce';
+import { toTitleCase } from '@/utils';
 
 export interface ActionNode {
     id: string;
     label: string;
     category: string;
-    description?: string;
+    // TODO: Not sure this is useful since I don't know how to do tooltips
+    // description?: string;
     permissionLevel: PermissionLevel;
 }
 
@@ -34,52 +37,43 @@ export class ActionsViewProvider extends BaseWebviewViewProvider<ActionsViewMess
     public static readonly viewType = 'neuropilot.actionsView';
 
     constructor() {
-        super('actions.html', 'actions.js', ['actions.css']);
+        super('actions/index.html', 'actions/main.js', ['actions/style.css']);
     }
 
     public refreshActions() {
-        // TODO: Placeholder implementation
+        const permissionLevels = getAllPermissions(); // Get all permissions once to avoid multiple calls
+        const actionNodes = getActions().map(action => ({
+            id: action.name,
+            label: action.displayName ?? toTitleCase(action.name),
+            category: action.category ?? 'No Category Specified', // TODO: Handle null category better?
+            // description: action.description,
+            permissionLevel: permissionLevels[action.name] ?? PermissionLevel.OFF,
+        } satisfies ActionNode));
         this._view?.webview.postMessage({
             type: 'refreshActions',
-            actions: [
-                {
-                    id: 'sample_action_autopilot',
-                    label: 'Autopilot Sample Action',
-                    category: 'Category A',
-                    description: 'This is the first action.',
-                    permissionLevel: PermissionLevel.AUTOPILOT,
-                },
-                {
-                    id: 'sample_action_copilot_2',
-                    label: 'Copilot Sample Action 2',
-                    category: 'Category A',
-                    description: 'This is the second first action.',
-                    permissionLevel: PermissionLevel.COPILOT,
-                },
-                {
-                    id: 'sample_action_copilot',
-                    label: 'Copilot Sample Action',
-                    category: 'Category B',
-                    description: 'This is the second action.',
-                    permissionLevel: PermissionLevel.COPILOT,
-                },
-                {
-                    id: 'sample_action_off',
-                    label: 'Off Sample Action',
-                    category: 'Category C',
-                    description: 'This is the third action.',
-                    permissionLevel: PermissionLevel.OFF,
-                },
-            ],
+            actions: actionNodes,
         });
     }
 
     protected handleMessage(message: ActionsViewMessage): void {
         switch (message.type) {
             case 'viewToggledPermissions': {
-                // TODO: Handle permission toggle
-                vscode.window.showInformationMessage(`Toggled permissions for actions: ${message.actionIds.join(', ')} to ${message.newPermissionLevel}`);
-                this.refreshActions();
+                const permissionLevels = getAllPermissions(); // Get all permissions once to avoid multiple calls
+                const actionsToUpdate = message.actionIds
+                    .filter(id => permissionLevels[id] !== message.newPermissionLevel);
+                const permissionUpdates: Record<string, PermissionLevel> = {};
+                for (const actionId of actionsToUpdate) {
+                    permissionUpdates[actionId] = message.newPermissionLevel;
+                }
+                setPermissions(permissionUpdates).then(
+                    () => {
+                        // Updating permissions should automatically refresh the view via the config change listener
+                        // this.refreshActions();
+                    },
+                    (erm) => {
+                        vscode.window.showErrorMessage(`Failed to update action permissions: ${erm}`);
+                    },
+                );
                 break;
             }
             case 'error': {

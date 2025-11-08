@@ -75,6 +75,7 @@ export function setupCommonEventHandlers() {
             }
             if (event.affectsConfiguration('neuropilot.actionPermissions')) {
                 vscode.commands.executeCommand('neuropilot.reloadPermissions');
+                NEURO.actionsViewProvider?.refreshActions();
             }
         }),
         vscode.extensions.onDidChange(obtainExtensionState),

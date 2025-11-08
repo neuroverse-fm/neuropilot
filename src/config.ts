@@ -252,6 +252,29 @@ function getActions<T>(key: string): T | undefined {
 //#endregion
 
 /**
+ * Computes and returns all configured action permissions, merging workspace folder, workspace, and global settings.
+ * Workspace folder settings take precedence over workspace settings, which take precedence over global settings.
+ * @returns A record mapping action names to their configured permission levels.
+ */
+export function getAllPermissions(): Record<string, PermissionLevel> {
+    const configuration = vscode.workspace.getConfiguration('neuropilot');
+    const settings = configuration.inspect<Record<string, string>>('actionPermissions');
+
+    // Get all configurations
+    const workspaceFolderValue = settings?.workspaceFolderValue;
+    const workspaceValue = settings?.workspaceValue;
+    const globalValue = settings?.globalValue;
+
+    // Merge configurations, prioritizing workspace folder > workspace > global
+    const permissions = { ...globalValue, ...workspaceValue, ...workspaceFolderValue };
+    const result: Record<string, PermissionLevel> = {};
+    for (const key in permissions) {
+        result[key] = stringToPermissionLevel(permissions[key]);
+    }
+    return result;
+}
+
+/**
  * Checks the configured permission level for an action.
  * If no permission level is configured, the action's default permission level is used.
  * If the action has no default permission level, {@link PermissionLevel.OFF} is used.
@@ -263,14 +286,32 @@ export function getPermissionLevel(actionName: string): PermissionLevel {
     if (NEURO.killSwitch) {
         return PermissionLevel.OFF;
     }
-    const configuration = vscode.workspace.getConfiguration('neuropilot');
-    const settings = configuration.inspect<string>('actionPermissions.' + actionName);
-    const permission = settings?.workspaceFolderValue
-        ?? settings?.workspaceValue
-        ?? settings?.globalValue;
+    const permissions = getAllPermissions();
+    const permission = permissions[actionName];
+
     if (permission !== undefined)
-        return stringToPermissionLevel(permission);
+        return permission;
     return getAction(actionName)?.defaultPermission ?? PermissionLevel.OFF;
+}
+
+/**
+ * Sets the specified action permissions.
+ * @param permissions The permissions to set. Will be merged with the current workspace settings.
+ */
+export function setPermissions(permissions: Record<string, PermissionLevel>): Thenable<void> {
+    const configuration = vscode.workspace.getConfiguration('neuropilot');
+    const workspaceValue = configuration.inspect<Record<string, string>>('actionPermissions')?.workspaceValue || {};
+    const stringPermissions: Record<string, string> = {};
+    for (const key in permissions) {
+        stringPermissions[key] = permissionLevelToString(permissions[key]);
+    }
+    const mergedPermissions: Record<string, string> = { ...workspaceValue, ...stringPermissions };
+    return configuration.update('actionPermissions', mergedPermissions, vscode.ConfigurationTarget.Workspace);
+}
+
+export function setPermissionLevel(actionName: string, level: PermissionLevel): Thenable<void> {
+    const configuration = vscode.workspace.getConfiguration('neuropilot');
+    return configuration.update('actionPermissions.' + actionName, permissionLevelToString(level), vscode.ConfigurationTarget.Workspace);
 }
 
 class Config {

@@ -1,5 +1,5 @@
-import type { ActionNode, ActionsViewMessage, ActionsViewProviderMessage } from '../src/views/actions';
-import { PermissionLevel } from '../src/config';
+import type { ActionNode, ActionsViewMessage, ActionsViewProviderMessage } from '@/views/actions';
+import { PermissionLevel } from '@/config';
 
 interface State {
     actions: ActionNode[];
@@ -42,7 +42,11 @@ interface State {
         const actionsList = document.querySelector<HTMLUListElement>('.actions-list')!;
         actionsList.textContent = '';
 
-        for (const category of Object.keys(categories).sort()) {
+        const categoryKeys = Object.keys(categories)
+            .sort()
+            .sort((a, b) => a === 'Miscellaneous' ? 1 : b === 'Miscellaneous' ? -1 : 0)
+            .sort((a, b) => a === 'No Category Specified' ? 1 : b === 'No Category Specified' ? -1 : 0);
+        for (const category of categoryKeys) {
             // <div class="category-header">
             //   <span class="action-label">Category Name</span>
             //   [checkboxes]

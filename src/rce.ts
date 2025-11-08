@@ -7,12 +7,13 @@ import * as vscode from 'vscode';
 import { ActionData, RCEAction, stripToAction } from '@/neuro_client_helper';
 import { NEURO } from '@/constants';
 import { checkVirtualWorkspace, checkWorkspaceTrust, logOutput, notifyOnCaughtException } from '@/utils';
-import { ACTIONS as ACTIONS_CONFIG, CONFIG, CONNECTION, getPermissionLevel, PermissionLevel } from '@/config';
+import { ACTIONS as ACTIONS_CONFIG, CONFIG, CONNECTION, getAllPermissions, getPermissionLevel, PermissionLevel } from '@/config';
 import { handleRunTask } from '@/tasks';
 import { validate } from 'jsonschema';
 import type { RCECancelEvent } from '@events/utils';
 
 const ACTIONS: RCEAction[] = [];
+const REGISTERED_ACTIONS: Set<string> = /* @__PURE__ */ new Set<string>();
 
 /**
  * A prompt parameter can either be a string or a function that converts ActionData into a prompt string.
@@ -299,6 +300,7 @@ export function registerAction(actionName: string): void {
     const action = ACTIONS.find(a => a.name === actionName);
     if (action) {
         NEURO.client?.registerActions([stripToAction(action)]);
+        REGISTERED_ACTIONS.add(action.name);
     }
 }
 
@@ -308,6 +310,35 @@ export function registerAction(actionName: string): void {
  */
 export function unregisterAction(actionName: string): void {
     NEURO.client?.unregisterActions([actionName]);
+}
+
+export function reregisterAllActions(): void {
+    const actionNames = ACTIONS.map(a => a.name);
+
+    // Unregister all actions
+    NEURO.client?.unregisterActions(actionNames);
+
+    // Determine which actions to register
+    const permissions = getAllPermissions();
+    const actionsToRegister = ACTIONS
+        .filter(shouldRegister)
+        .map(stripToAction);
+
+    // Clear and rebuild the registered actions set
+    REGISTERED_ACTIONS.clear();
+    actionsToRegister.forEach(a => REGISTERED_ACTIONS.add(a.name));
+
+    // Register the actions with Neuro
+    NEURO.client?.registerActions(actionsToRegister);
+    return;
+
+    function shouldRegister(action: RCEAction): boolean {
+        // Only register non-auto-registered actions if they were previously registered
+        if (action.autoRegister === false && !REGISTERED_ACTIONS.has(action.name))
+            return false;
+        const effectivePermission = permissions[action.name] ?? PermissionLevel.OFF;
+        return effectivePermission !== PermissionLevel.OFF;
+    }
 }
 
 /**

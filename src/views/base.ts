@@ -29,7 +29,7 @@ export abstract class BaseWebviewViewProvider<TViewMessage extends Message, TPro
     protected abstract handleMessage(message: TViewMessage): void;
 
     protected async _getHtmlForWebview(webview: vscode.Webview, format?: Record<string, unknown>): Promise<string> {
-        const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(NEURO.context!.extensionUri, 'out', 'webview', 'actions.js'));
+        const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(NEURO.context!.extensionUri, 'out', 'webview', this._script));
         const styleUris = this._styles.map(style => webview.asWebviewUri(vscode.Uri.joinPath(NEURO.context!.extensionUri, 'webview', style)));
         const styles = styleUris.map(styleUri => `<link href="${styleUri}" rel="stylesheet">`).join('\n');
         const nonce = getNonce();

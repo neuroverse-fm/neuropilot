@@ -951,3 +951,27 @@ export function formatString(template: string, format: Record<string, unknown>):
     }
     return result;
 }
+
+/**
+ * Split an identifier into an array of words. Handles camelCase, PascalCase, snake_case and kebab-case.
+ * @param str The string to split.
+ */
+export function splitIdentifier(str: string): string[] {
+    const rx = /(?<=[a-z0-9])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])|(?<=[A-Za-z])(?=\d)|_|-/g;
+    return str.split(rx).filter(s => s.length > 0);
+}
+
+export function toTitleCase(str: string): string {
+    const parts = splitIdentifier(str);
+    const excludedWords = ['a', 'an', 'and', 'as', 'at', 'but', 'by', 'for', 'if', 'in', 'nor', 'of', 'off', 'on', 'or', 'per', 'so', 'the', 'to', 'up', 'via', 'yet'];
+    return parts
+        .map(part => {
+            const lowerPart = part.toLowerCase();
+            if (excludedWords.includes(lowerPart)) {
+                return lowerPart;
+            } else {
+                return lowerPart.charAt(0).toUpperCase() + lowerPart.slice(1);
+            }
+        })
+        .join(' ');
+}

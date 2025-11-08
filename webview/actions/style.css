@@ -1,3 +1,7 @@
+body {
+    margin-bottom: 20px;
+}
+
 .actions-header {
     font-weight: bold;
     white-space: nowrap;
@@ -51,9 +55,4 @@
     margin: 0;
     padding: 0;
     /* border: 1px solid red; */
-}
-
-.permission-radio {
-    /* width: 20px; */
-    /* margin: 0; */
 }

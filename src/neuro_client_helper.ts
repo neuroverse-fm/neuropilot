@@ -37,6 +37,9 @@ type TypedAction = Omit<Action, 'schema'> & { schema?: JSONSchema7 };
 
 /** ActionHandler to use with constants for records of actions and their corresponding handlers */
 export interface RCEAction<T = unknown> extends TypedAction {
+    /** A human-friendly name for the action. If not provided, the action's name converted to Title Case will be used. */
+    displayName?: string;
+    /** The JSON schema for validating the action parameters if experimental schemas are disabled. */
     schemaFallback?: JSONSchema7;
     /** The function to validate the action data *after* checking the schema. */
     validators?: ((actionData: ActionData) => (ActionValidationResult | Promise<ActionValidationResult>))[];
@@ -64,6 +67,8 @@ export interface RCEAction<T = unknown> extends TypedAction {
      * You can use null if the action is never added to the registry.
      */
     category: string | null;
+    /** Whether to automatically register the action with Neuro upon addition. Defaults to true. */
+    autoRegister?: boolean;
 }
 
 type RCEHandler = (actionData: ActionData) => string | undefined | void;
