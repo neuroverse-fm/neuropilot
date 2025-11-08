@@ -111,6 +111,7 @@ const DEPRECATED_SETTINGS: DeprecatedSetting[] = [
     deprecatedPermission('runTasks', []),
     deprecatedPermission('requestCookies', ['request_cookie']),
     deprecatedPermission('gitOperations', [
+        'init_git_repo',
         'add_file_to_git',
         'make_git_commit',
         'merge_to_current_branch',

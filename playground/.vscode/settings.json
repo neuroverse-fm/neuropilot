@@ -85,7 +85,9 @@
         "get_currently_running_shells": "copilot",
         "get_file_lint_problems": "copilot",
         "get_folder_lint_problems": "copilot",
-        "get_workspace_lint_problems": "copilot"
+        "get_workspace_lint_problems": "copilot",
+        "init_git_repo": "copilot",
+        "terminate_task": "copilot",
+        "read_changelog": "copilot"
     },
-    
 }
