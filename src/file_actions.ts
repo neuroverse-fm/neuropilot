@@ -169,6 +169,13 @@ export const fileActions = {
             return actionValidationAccept();
         },
         ],
+        cancelEvents: [
+            (actionData: ActionData) => {
+                if (actionData.params?.folder) {
+                    return targetedFileDeletedEvent(actionData.params?.folder);
+                } else return null;
+            },
+        ],
         promptGenerator: (actionData: ActionData) => `${actionData.params?.recursive ? 'recursively' : ''} get a list of files in ${actionData.params?.folder ? `"${stripTailSlashes(actionData.params.folder)}"` : 'the workspace'}.`,
     },
     open_file: {
