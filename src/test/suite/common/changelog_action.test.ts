@@ -129,7 +129,6 @@ suite('Integration: read_changelog action', () => {
 
     async function checkSendOnce(timeoutMs = 5000, intervalMs = 100) {
         const start = Date.now();
-        // eslint-disable-next-line no-constant-condition
         while (true) {
             try {
                 verify(mockedClient.sendContext(anything())).once();
