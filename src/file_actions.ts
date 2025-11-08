@@ -164,7 +164,7 @@ const commonFileEvents: ((actionData: ActionData) => RCECancelEvent | null)[] = 
 ];
 
 export const fileActions = {
-    get_workspace_files: { // pending functionality change, see https://github.com/VSC-NeuroPilot/neuropilot/issues/153
+    get_workspace_files: {
         name: 'get_workspace_files',
         description: 'Get a list of files in the workspace. Will not return subdirectories by default, use `recursive` to do so.',
         schema: {
@@ -191,8 +191,7 @@ export const fileActions = {
                 if (stat.type !== vscode.FileType.Directory) return actionValidationFailure('The specified path is not a directory.');
             }
             return actionValidationAccept();
-        },
-        ],
+        }],
         cancelEvents: [
             (actionData: ActionData) => {
                 if (actionData.params?.folder) {
