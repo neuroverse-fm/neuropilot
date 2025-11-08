@@ -27,7 +27,7 @@ suite('file Actions', () => {
 
         // === Assert ===
         assert.ok(typeof prompt === 'string' && prompt.length > 0);
-        assert.ok(prompt.includes('recursively'));
+        assert.ok(prompt.includes('Recursively'));
     });
 
     test('get_workspace_files correctly omits recursive if Neuro didn\'t ask', () => {

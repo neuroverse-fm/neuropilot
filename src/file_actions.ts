@@ -126,13 +126,38 @@ async function binaryFileValidation(actionData: ActionData): Promise<ActionValid
  * Validates if the targeted file is a file.
  * @returns The validation result.
  */
-async function validateIsAFile(actionData: ActionData) {
-            const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-            if (!workspaceFolder) return actionValidationFailure('You are not in an open workspace.');
-            const fullPath = vscode.Uri.joinPath(workspaceFolder.uri, actionData.params.filePath);
-            if ((await vscode.workspace.fs.stat(fullPath)).type === vscode.FileType.Directory) return actionValidationFailure(`${actionData.params.filePath} is a directory, not a file.`);
-            else return actionValidationAccept();
-        }
+async function validateIsAFile(actionData: ActionData): Promise<ActionValidationResult> {
+	const filePath = actionData.params?.filePath;
+	if (!filePath)
+		return actionValidationFailure('No file path specified.', true);
+
+	const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+	if (!workspaceFolder)
+		return actionValidationFailure('You are not in an open workspace.');
+
+	const normalizedPath = normalizePath(filePath).replace(/^\/|\/$/g, '');
+	const segments = normalizedPath.split('/').filter(Boolean);
+	if (segments.length === 0)
+		return actionValidationFailure('No file path specified.', true);
+	const fullPath = vscode.Uri.joinPath(workspaceFolder.uri, ...segments);
+
+	try {
+		const stat = await vscode.workspace.fs.stat(fullPath);
+		const isDirectory = (stat.type & vscode.FileType.Directory) === vscode.FileType.Directory;
+		const isFile = (stat.type & vscode.FileType.File) === vscode.FileType.File;
+
+		if (isDirectory)
+			return actionValidationFailure(`${filePath} is a directory, not a file.`);
+		if (!isFile)
+			return actionValidationFailure(`${filePath} is not a file.`);
+	} catch (erm: unknown) {
+		if (erm instanceof vscode.FileSystemError && erm.code === 'FileNotFound')
+			return actionValidationFailure(`${filePath} does not exist.`);
+		throw erm;
+	}
+
+	return actionValidationAccept();
+}
 
 const commonFileEvents: ((actionData: ActionData) => RCECancelEvent | null)[] = [
     (actionData: ActionData) => targetedFileCreatedEvent(actionData.params?.filePath),
@@ -163,20 +188,20 @@ export const fileActions = {
                 const relativeFolderPath = normalizePath(folder);
                 const pathValidated = await validatePath(relativeFolderPath, true, 'folder');
                 if (!pathValidated.success) return pathValidated;
-                const stat = await vscode.workspace.fs.stat(vscode.Uri.joinPath(workspaceFolder.uri, relativeFolderPath));
-                if (stat.type !== vscode.FileType.Directory) return actionValidationFailure('The targeted directory is not a folder.');
+				const stat = await vscode.workspace.fs.stat(vscode.Uri.joinPath(workspaceFolder.uri, relativeFolderPath));
+				if (stat.type !== vscode.FileType.Directory) return actionValidationFailure('The specified path is not a directory.');
             }
             return actionValidationAccept();
         },
-        ],
-        cancelEvents: [
-            (actionData: ActionData) => {
-                if (actionData.params?.folder) {
-                    return targetedFileDeletedEvent(actionData.params?.folder);
-                } else return null;
-            },
-        ],
-        promptGenerator: (actionData: ActionData) => `${actionData.params?.recursive ? 'recursively' : ''} get a list of files in ${actionData.params?.folder ? `"${stripTailSlashes(actionData.params.folder)}"` : 'the workspace'}.`,
+		],
+		cancelEvents: [
+			(actionData: ActionData) => {
+				if (actionData.params?.folder) {
+					return targetedFileDeletedEvent(stripTailSlashes(actionData.params.folder));
+				} else return null;
+			},
+		],
+		promptGenerator: (actionData: ActionData) => `${actionData.params?.recursive ? 'Recursively get' : 'Get'} a list of files in ${actionData.params?.folder ? `"${stripTailSlashes(actionData.params.folder)}"` : 'the workspace'}.`,
     },
     open_file: {
         name: 'open_file',
@@ -542,18 +567,24 @@ export function handleDeleteFileOrFolder(actionData: ActionData): string | undef
 }
 
 export function handleGetWorkspaceFiles(actionData: ActionData): string | undefined {
-    let folderUri = vscode.workspace.workspaceFolders![0].uri;
+	const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+	if (!workspaceFolder) {
+		logOutput('WARN', 'handleGetWorkspaceFiles called without an open workspace.');
+		return undefined;
+	}
+
+	let folderUri = workspaceFolder.uri;
     const folder = actionData.params?.folder;
     if (folder) {
-        const relativeFolderPath = normalizePath(folder).replace(/^\/|\/$/g, '');
-        folderUri = vscode.Uri.joinPath(folderUri, relativeFolderPath);
+		const relativeFolderPath = normalizePath(stripTailSlashes(folder)).replace(/^\/|\/$/g, '');
+		folderUri = vscode.Uri.joinPath(folderUri, ...relativeFolderPath.split('/').filter(Boolean));
     }
     listWorkspace(folderUri).then(
         (uris) => {
             const paths = uris
-                .filter(uri => isPathNeuroSafe(uri[0].fsPath, false))
+				.filter(uri => isPathNeuroSafe(uri[0].fsPath))
                 .map(uri => {
-                    let returnString = vscode.workspace.asRelativePath(uri[0]);
+					let returnString = normalizePath(vscode.workspace.asRelativePath(uri[0]));
                     if (uri[1] === vscode.FileType.Directory) returnString += '/';
                     return returnString;
                 })
@@ -570,16 +601,21 @@ export function handleGetWorkspaceFiles(actionData: ActionData): string | undefi
                     }
                     return aParts.length - bParts.length;
                 });
-            logOutput('INFO', 'Sending list of files in workspace to Neuro');
-            NEURO.client?.sendContext(`Files in ${folder ? `"${folder}"` : 'workspace'}:\n\n${paths.join('\n')}`);
+			const displayFolder = folder ? `"${stripTailSlashes(folder)}"` : 'workspace';
+			logOutput('INFO', `Sending list of files in ${displayFolder} to Neuro`);
+			NEURO.client?.sendContext(`Files in ${displayFolder}:\n\n${paths.join('\n')}`);
         },
+		(erm: unknown) => {
+			logOutput('ERROR', `Could not list workspace files: ${String(erm)}`);
+			NEURO.client?.sendContext('Unable to list workspace files.');
+		},
     );
 
     return undefined;
 
     async function listWorkspace(uri: vscode.Uri): Promise<[vscode.Uri, vscode.FileType][]> {
         const entries: [string, vscode.FileType][] = await vscode.workspace.fs.readDirectory(uri);
-        const uriEntries: [vscode.Uri, vscode.FileType][] = entries.map((entry: [string, vscode.FileType]) => [uri.with({ path: uri.path + '/' + entry[0] }), entry[1] ]);
+		const uriEntries: [vscode.Uri, vscode.FileType][] = entries.map(([name, type]) => [vscode.Uri.joinPath(uri, name), type]);
 
         const result: [vscode.Uri, vscode.FileType][] = [];
         for (const [childUri, fileType] of uriEntries) {
@@ -680,5 +716,6 @@ export const _internals = {
     getUriExistence,
     neuroSafeValidation,
     neuroSafeDeleteValidation,
-    neuroSafeRenameValidation,
+	neuroSafeRenameValidation,
+	validateIsAFile,
 };
