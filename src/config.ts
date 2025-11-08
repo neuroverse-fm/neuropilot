@@ -37,7 +37,7 @@ const DEPRECATED_SETTINGS: DeprecatedSetting[] = [
     },
     {
         old: 'includePattern',
-        async new(target: vscode.ConfigurationTarget) {
+        async new(target) {
             const cfg = vscode.workspace.getConfiguration('neuropilot');
             const config = getTargetConfig<string>(cfg, 'includePattern', target)!;
             const newConfig = config.split('\n');
@@ -46,7 +46,7 @@ const DEPRECATED_SETTINGS: DeprecatedSetting[] = [
     },
     {
         old: 'excludePattern',
-        async new(target: vscode.ConfigurationTarget) {
+        async new(target) {
             const cfg = vscode.workspace.getConfiguration('neuropilot');
             const config = getTargetConfig<string>(cfg, 'excludePattern', target)!;
             const newConfig = config.split('\n');
@@ -55,7 +55,7 @@ const DEPRECATED_SETTINGS: DeprecatedSetting[] = [
     },
     {
         old: 'allowUnsafePaths',
-        async new(target: vscode.ConfigurationTarget) {
+        async new(target) {
             const cfg = vscode.workspace.getConfiguration('neuropilot');
             const config = getTargetConfig<boolean>(cfg, 'allowUnsafePaths', target)!;
             await cfg.update('access.dotFiles', config, target);
@@ -79,7 +79,130 @@ const DEPRECATED_SETTINGS: DeprecatedSetting[] = [
         old: 'currentlyAsNeuroAPI',
         new: 'connection.nameOfAPI',
     },
+    deprecatedPermission('openFiles', [
+        'get_workspace_files',
+        'open_file',
+        'read_file',
+    ]),
+    deprecatedPermission('create', [
+        'create_file',
+        'create_folder',
+    ]),
+    deprecatedPermission('rename', ['rename_file_or_folder']),
+    deprecatedPermission('delete', ['delete_file_or_folder']),
+    deprecatedPermission('editActiveDocument', [
+        'place_cursor',
+        'get_cursor',
+        'get_file_contents',
+        'insert_text',
+        'insert_lines',
+        'replace_text',
+        'delete_text',
+        'find_text',
+        'undo',
+        'rewrite_all',
+        'rewrite_lines',
+        'delete_lines',
+        'highlight_lines',
+        'get_user_selection',
+        'replace_user_selection',
+        'diff_patch',
+    ]),
+    deprecatedPermission('runTasks', []),
+    deprecatedPermission('requestCookies', ['request_cookie']),
+    deprecatedPermission('gitOperations', [
+        'add_file_to_git',
+        'make_git_commit',
+        'merge_to_current_branch',
+        'git_status',
+        'remove_file_from_git',
+        'delete_git_branch',
+        'switch_git_branch',
+        'new_git_branch',
+        'diff_files',
+        'git_log',
+        'git_blame',
+        'tag_head',
+        'delete_tag',
+        'set_git_config',
+        'get_git_config',
+        'fetch_git_commits',
+        'pull_git_commits',
+        'push_git_commits',
+        'add_git_remote',
+        'remove_git_remote',
+        'rename_git_remote',
+    ]),
+    deprecatedPermission('gitTags', [
+        'tag_head',
+        'delete_tag',
+    ]),
+    deprecatedPermission('gitConfigs', [
+        'set_git_config',
+        'get_git_config',
+    ]),
+    deprecatedPermission('gitRemotes', [
+        'fetch_git_commits',
+        'pull_git_commits',
+        'push_git_commits',
+        'add_git_remote',
+        'remove_git_remote',
+        'rename_git_remote',
+    ]),
+    deprecatedPermission('editRemoteData', [
+        'add_git_remote',
+        'remove_git_remote',
+        'rename_git_remote',
+    ]),
+    deprecatedPermission('terminalAccess', [
+        'execute_in_terminal',
+        'kill_terminal_process',
+        'get_currently_running_shells',
+    ]),
+    deprecatedPermission('accessLintingAnalysis', [
+        'get_file_lint_problems',
+        'get_folder_lint_problems',
+        'get_workspace_lint_problems',
+    ]),
+    deprecatedPermission('getUserSelection', [
+        'get_user_selection',
+        'replace_user_selection',
+    ]),
+    { // Must be AFTER all permissions settings
+        old: 'actions.disabledActions',
+        async new(target) {
+            const cfg = vscode.workspace.getConfiguration('neuropilot');
+            const config = getTargetConfig<string[]>(cfg, 'actions.disabledActions', target)!;
+            const permissions = getTargetConfig<Record<string, string>>(cfg, 'actionPermissions', target) ?? {};
+            for (const action of config) {
+                permissions[action] = 'off';
+            }
+            await cfg.update('actionPermissions', permissions, target);
+        },
+    },
 ];
+
+function deprecatedPermission(oldKey: string, affectedActions: string[]): DeprecatedSetting {
+    return {
+        old: 'permission.' + oldKey,
+        async new(target) {
+            const cfg = vscode.workspace.getConfiguration('neuropilot');
+            const config = getTargetConfig<string>(cfg, 'permission.' + oldKey, target)?.toLowerCase(); // Permission levels used to be capitalized
+            if (!config) return;
+            const configPermissionLevel = stringToPermissionLevel(config);
+
+            const permissions = getTargetConfig<Record<string, string>>(cfg, 'actionPermissions', target) ?? {};
+            for (const action of affectedActions) {
+                // Take the most restrictive permission level
+                let newLevel = configPermissionLevel;
+                if (action in permissions)
+                    newLevel = Math.min(newLevel, stringToPermissionLevel(permissions[action]));
+                permissions[action] = permissionLevelToString(newLevel as PermissionLevel);
+            }
+            await cfg.update('actionPermissions', permissions, target);
+        },
+    };
+}
 
 function getTargetConfig<T>(config: vscode.WorkspaceConfiguration, key: string, target: vscode.ConfigurationTarget) {
     switch (target) {
