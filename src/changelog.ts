@@ -2,8 +2,9 @@ import * as vscode from 'vscode';
 
 import { NEURO } from '@/constants';
 import { getFence, logOutput } from '@/utils';
-import { ActionData, RCEAction, stripToActions } from '@/neuro_client_helper';
+import { ActionData, RCEAction } from '@/neuro_client_helper';
 import { PermissionLevel } from '@/config';
+import { addActions } from './rce';
 
 const MEMENTO_KEY = 'lastDeliveredChangelogVersion';
 
@@ -16,6 +17,7 @@ export const changelogActions = {
     read_changelog: {
         name: 'read_changelog',
         description: 'Get changelog entries starting from a specified version. If fromVersion is omitted, any new entries after the last read_changelog command are read.',
+        category: 'Miscellaneous',
         schema: {
             type: 'object',
             properties: {
@@ -23,7 +25,6 @@ export const changelogActions = {
             },
             additionalProperties: false,
         },
-        permissions: [],
         defaultPermission: PermissionLevel.COPILOT,
         handler: handleReadChangelog,
         promptGenerator: (actionData: ActionData) => actionData.params?.fromVersion
@@ -32,8 +33,8 @@ export const changelogActions = {
     },
 } satisfies Record<string, RCEAction>;
 
-export function registerChangelogActions(): void {
-    NEURO.client?.registerActions(stripToActions([changelogActions.read_changelog]));
+export function addChangelogActions(): void {
+    addActions([changelogActions.read_changelog]);
 }
 
 export async function readChangelogAndSendToNeuro(fromVersion?: string): Promise<void> {

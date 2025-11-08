@@ -7,10 +7,12 @@ import * as vscode from 'vscode';
 import { ActionData, RCEAction, stripToAction } from '@/neuro_client_helper';
 import { NEURO } from '@/constants';
 import { checkVirtualWorkspace, checkWorkspaceTrust, logOutput, notifyOnCaughtException } from '@/utils';
-import { ACTIONS, CONFIG, CONNECTION, getPermissionLevel, isActionEnabled, PermissionLevel, PERMISSIONS } from '@/config';
+import { ACTIONS as ACTIONS_CONFIG, CONFIG, CONNECTION, getPermissionLevel, PermissionLevel } from '@/config';
 import { handleRunTask } from '@/tasks';
 import { validate } from 'jsonschema';
 import type { RCECancelEvent } from '@events/utils';
+
+const ACTIONS: RCEAction[] = [];
 
 /**
  * A prompt parameter can either be a string or a function that converts ActionData into a prompt string.
@@ -28,7 +30,7 @@ export interface RceRequest {
     /**
      * The callback function to be executed when the request is accepted.
      */
-    callback: () => string | undefined;
+    callback: () => string | undefined | void;
     /**
      * Resolve the request, closing all attached notifications and clearing timers.
      */
@@ -56,7 +58,7 @@ export interface RceRequest {
 export const cancelRequestAction: RCEAction = {
     name: 'cancel_request',
     description: 'Cancel the current request.',
-    permissions: [],
+    category: null,
     handler: handleCancelRequest,
     promptGenerator: () => '', // No prompt needed for this action
     defaultPermission: PermissionLevel.AUTOPILOT,
@@ -112,7 +114,7 @@ export function clearRceRequest(): void {
  */
 export function createRceRequest(
     prompt: string,
-    callback: () => string | undefined,
+    callback: () => string | undefined | void,
     actionData: ActionData,
     cancelEvents?: vscode.Disposable[],
 ): void {
@@ -257,6 +259,71 @@ export function denyRceRequest(): void {
 }
 
 /**
+ * Adds multiple actions to the RCE system.
+ * @param actions The actions to add.
+ * @param register Whether to register the actions with Neuro immediately if the permissions allow.
+ */
+export function addActions(actions: RCEAction[], register = true): void {
+    ACTIONS.push(...actions);
+    NEURO.actionsViewProvider?.refreshActions();
+    if (register) {
+        const actionNames = actions.map(a => a.name);
+        NEURO.client?.registerActions(actionNames.map(name => {
+            const action = ACTIONS.find(a => a.name === name)!;
+            return stripToAction(action);
+        }).filter(({name}) => getPermissionLevel(name)));
+    }
+}
+
+/**
+ * Removes multiple actions from the registry.
+ * @param actionNames The names of the actions to remove.
+ */
+export function removeActions(actionNames: string[]): void {
+    for (const actionName of actionNames) {
+        const actionIndex = ACTIONS.findIndex(a => a.name === actionName);
+        if (actionIndex !== -1) {
+            ACTIONS.splice(actionIndex, 1);
+        }
+    }
+    NEURO.actionsViewProvider?.refreshActions();
+    NEURO.client?.unregisterActions(actionNames);
+}
+
+/**
+ * Registers an action with Neuro.
+ * The action to register must already be added to the registry via {@link addAction} or {@link addActions}.
+ * @param actionName The name of the action to register.
+ */
+export function registerAction(actionName: string): void {
+    const action = ACTIONS.find(a => a.name === actionName);
+    if (action) {
+        NEURO.client?.registerActions([stripToAction(action)]);
+    }
+}
+
+/**
+ * Unregisters an action from Neuro.
+ * @param actionName The name of the action to unregister.
+ */
+export function unregisterAction(actionName: string): void {
+    NEURO.client?.unregisterActions([actionName]);
+}
+
+/**
+ * Gets the list of registered actions.
+ * Do not modify the actions in the returned array directly.
+ * @returns The list of registered actions.
+ */
+export function getActions(): readonly RCEAction[] {
+    return ACTIONS;
+}
+
+export function getAction(actionName: string): RCEAction | undefined {
+    return ACTIONS.find(a => a.name === actionName);
+}
+
+/**
  * RCE action handler code for unsupervised requests.
  * Intended to be used with something like `NEURO.client?.onAction(async (actionData: ActionData) => await RCEActionHandler(actionData, actionList, true))
  * @param actionData The action data from Neuro.
@@ -273,31 +340,22 @@ export async function RCEActionHandler(actionData: ActionData, actionList: Recor
             if (actionKeys.includes(actionData.name)) {
                 action = actionList[actionData.name];
             }
+            // TODO: Replace this with dynamically registered actions
             else {
                 const task = NEURO.tasks.find(task => task.id === actionData.name)!;
                 action = {
                     name: task.id,
                     description: task.description,
-                    permissions: [PERMISSIONS.runTasks],
+                    category: 'Tasks',
                     handler: handleRunTask,
                     validators: [checkVirtualWorkspace, checkWorkspaceTrust],
                     promptGenerator: () => `run the task "${task.id}".`,
                 };
             }
 
-            // 1. If the action is not enabled, permission is always OFF.
-            // 2. Otherwise, if the action has permissions, use the lowest permission level.
-            // 3. Otherwise, if the action has a default permission, use the default permission.
-            // 4. Otherwise, fall back to COPILOT.
-            const effectivePermission = isActionEnabled(action)
-                ? action.permissions.length > 0
-                    ? getPermissionLevel(...action.permissions) // 2.
-                    : action.defaultPermission                  // 3.
-                ?? PermissionLevel.COPILOT                  // 4.
-                : PermissionLevel.OFF;                          // 1.
+            const effectivePermission = getPermissionLevel(action.name);
             if (effectivePermission === PermissionLevel.OFF) {
-                const offPermission = action.permissions.find(permission => getPermissionLevel(permission) === PermissionLevel.OFF);
-                NEURO.client?.sendActionResult(actionData.id, true, `Action failed: You don't have permission to ${offPermission?.infinitive ?? 'execute this action'}.`);
+                NEURO.client?.sendActionResult(actionData.id, true, 'Action failed: You don\'t have permission to execute this action.');
                 return;
             }
 
@@ -331,7 +389,7 @@ export async function RCEActionHandler(actionData: ActionData, actionList: Recor
 
             const eventArray: vscode.Disposable[] = [];
 
-            if (ACTIONS.enableCancelEvents && action.cancelEvents) {
+            if (ACTIONS_CONFIG.enableCancelEvents && action.cancelEvents) {
                 const eventListener = (eventObject: RCECancelEvent) => {
                     let createdReason: string;
                     let createdLogReason: string;
@@ -366,9 +424,9 @@ export async function RCEActionHandler(actionData: ActionData, actionList: Recor
             if (effectivePermission === PermissionLevel.AUTOPILOT) {
                 for (const d of eventArray) d.dispose();
                 const result = action.handler(actionData);
-                NEURO.client?.sendActionResult(actionData.id, true, result);
+                NEURO.client?.sendActionResult(actionData.id, true, result ?? undefined);
             }
-            else { // permissionLevel === PermissionLevel.COPILOT
+            else { // effectivePermission === PermissionLevel.COPILOT
                 if (NEURO.rceRequest) {
                     NEURO.client?.sendActionResult(actionData.id, true, 'Action failed: Already waiting for permission to run another action.');
                     return;
@@ -393,7 +451,7 @@ export async function RCEActionHandler(actionData: ActionData, actionList: Recor
                 NEURO.statusBarItem!.color = new vscode.ThemeColor('statusBarItem.warningForeground');
 
                 // Show the RCE dialog immediately if the config says so
-                if (!ACTIONS.hideCopilotRequests)
+                if (!ACTIONS_CONFIG.hideCopilotRequests)
                     revealRceNotification();
 
                 // End of added code.

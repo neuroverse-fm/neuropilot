@@ -4,7 +4,7 @@ import globToRegExp from 'glob-to-regexp';
 import { fileTypeFromBuffer } from 'file-type';
 
 import { NEURO } from '@/constants';
-import { ACCESS, CONFIG, CONNECTION, CursorPositionContextStyle, getPermissionLevel, PERMISSIONS } from '@/config';
+import { ACCESS, CONFIG, CONNECTION, CursorPositionContextStyle } from '@/config';
 
 import { ActionValidationResult, ActionData, actionValidationAccept, actionValidationFailure } from '@/neuro_client_helper';
 import assert from 'node:assert';
@@ -446,7 +446,8 @@ export function setVirtualCursor(position?: vscode.Position | null) {
     const editor = vscode.window.activeTextEditor;
     if (!editor) return;
 
-    if (position === null || !getPermissionLevel(PERMISSIONS.editActiveDocument) || !isPathNeuroSafe(editor.document.fileName)) {
+    // TODO: Replacement for getPermissionLevel
+    if (position === null /*|| !getPermissionLevel(PERMISSIONS.editActiveDocument)*/ || !isPathNeuroSafe(editor.document.fileName)) {
         removeVirtualCursor();
         return;
     }
@@ -921,10 +922,10 @@ export function notifyOnCaughtException(name: string, error: Error | unknown): v
                             NEURO.tempDisabledActions.push(name);
                             break;
                         case 'this entire workspace':
-                            await vscode.workspace.getConfiguration('neuropilot').update('actions.disabledActions', name, vscode.ConfigurationTarget.Workspace);
+                            await vscode.workspace.getConfiguration('neuropilot').update('actionPermissions.' + name, 'off', vscode.ConfigurationTarget.Workspace);
                             break;
                         case 'this user':
-                            await vscode.workspace.getConfiguration('neuropilot').update('actions.disabledActions', name, vscode.ConfigurationTarget.Global);
+                            await vscode.workspace.getConfiguration('neuropilot').update('actionPermissions.' + name, 'off', vscode.ConfigurationTarget.Global);
                             break;
                     }
                     if (disableFor) logOutput('INFO', `Disabled action "${name}" for ${disableFor} due to a caught exception.`);

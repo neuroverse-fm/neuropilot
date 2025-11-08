@@ -73,7 +73,7 @@ export function setupCommonEventHandlers() {
             ) {
                 setVirtualCursor();
             }
-            if (event.affectsConfiguration('neuropilot.permission') || event.affectsConfiguration('neuropilot.actions.disabledActions')) {
+            if (event.affectsConfiguration('neuropilot.actionPermissions')) {
                 vscode.commands.executeCommand('neuropilot.reloadPermissions');
             }
         }),
@@ -98,6 +98,7 @@ export function initializeCommonState(context: vscode.ExtensionContext) {
 }
 
 export function setupCommonProviders() {
+    NEURO.actionsViewProvider = new ActionsViewProvider();
     const providers = [
         vscode.languages.registerInlineCompletionItemProvider({ pattern: '**' }, completionsProvider),
         vscode.languages.registerCodeActionsProvider(
@@ -105,7 +106,7 @@ export function setupCommonProviders() {
             new NeuroCodeActionsProvider(),
             { providedCodeActionKinds: NeuroCodeActionsProvider.providedCodeActionKinds },
         ),
-        vscode.window.registerWebviewViewProvider(ActionsViewProvider.viewType, new ActionsViewProvider()),
+        vscode.window.registerWebviewViewProvider(ActionsViewProvider.viewType, NEURO.actionsViewProvider),
     ];
 
     return providers;

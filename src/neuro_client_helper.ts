@@ -38,8 +38,6 @@ type TypedAction = Omit<Action, 'schema'> & { schema?: JSONSchema7 };
 /** ActionHandler to use with constants for records of actions and their corresponding handlers */
 export interface RCEAction<T = unknown> extends TypedAction {
     schemaFallback?: JSONSchema7;
-    /** The permissions required to execute this action. */
-    permissions: Permission[];
     /** The function to validate the action data *after* checking the schema. */
     validators?: ((actionData: ActionData) => (ActionValidationResult | Promise<ActionValidationResult>))[];
     /**
@@ -51,7 +49,7 @@ export interface RCEAction<T = unknown> extends TypedAction {
      */
     cancelEvents?: ((actionData: ActionData) => RCECancelEvent<T> | null)[];
     /** The function to handle the action. */
-    handler: (actionData: ActionData) => string | undefined;
+    handler: RCEHandler;
     /** 
      * The function to generate a prompt for the action request (Copilot Mode). 
      * The prompt should fit the phrasing scheme "Neuro wants to [prompt]".
@@ -59,9 +57,16 @@ export interface RCEAction<T = unknown> extends TypedAction {
      * More info (comment): https://github.com/VedalAI/neuro-game-sdk/discussions/58#discussioncomment-12938623
      */
     promptGenerator: PromptGenerator;
-    /** Default permission for actions like chat, cancel_request, etc */
+    /** Default permission for actions like chat, cancel_request, etc. Defaults to {@link PermissionLevel.OFF}. */
     defaultPermission?: PermissionLevel;
+    /**
+     * The category of the request.
+     * You can use null if the action is never added to the registry.
+     */
+    category: string | null;
 }
+
+type RCEHandler = (actionData: ActionData) => string | undefined | void;
 
 /**
  * Strips an action to the form expected by the API.

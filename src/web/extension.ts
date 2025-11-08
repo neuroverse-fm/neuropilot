@@ -18,7 +18,7 @@ import {
     showUpdateReminder,
     startupCreateClient,
 } from '@shared/extension';
-import { registerUnsupervisedActions, registerUnsupervisedHandlers } from './unsupervised';
+import { addUnsupervisedActions, registerUnsupervisedHandlers } from './unsupervised';
 import { registerSendSelectionToNeuro } from '@/editing';
 
 export function activate(context: vscode.ExtensionContext) {
@@ -40,7 +40,7 @@ export function activate(context: vscode.ExtensionContext) {
     NEURO.context!.subscriptions.push(...setupCommonEventHandlers());
 
     // Setup client connected handlers
-    setupClientConnectedHandlers(registerUnsupervisedActions, registerUnsupervisedHandlers);
+    setupClientConnectedHandlers(addUnsupervisedActions, registerUnsupervisedHandlers);
 
     // Create status bar item
     createStatusBarItem();
@@ -73,5 +73,5 @@ export function deactivate() {
 }
 
 function reloadWebPermissions() {
-    reloadPermissions(registerUnsupervisedActions);
+    reloadPermissions(addUnsupervisedActions);
 }

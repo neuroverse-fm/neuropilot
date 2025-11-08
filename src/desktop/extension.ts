@@ -22,7 +22,7 @@ import {
     startupCreateClient,
 } from '@shared/extension';
 import { registerChatParticipant } from '@/chat';
-import { registerUnsupervisedActions, registerUnsupervisedHandlers } from './unsupervised';
+import { addUnsupervisedActions, registerUnsupervisedHandlers } from './unsupervised';
 import { registerSendSelectionToNeuro } from '@/editing';
 
 export function activate(context: vscode.ExtensionContext) {
@@ -51,7 +51,7 @@ export function activate(context: vscode.ExtensionContext) {
     registerChatParticipant();
 
     // Setup client connected handlers
-    setupClientConnectedHandlers(reloadTasks, registerUnsupervisedActions, registerUnsupervisedHandlers); // reloadTasks added to set it up at the same time
+    setupClientConnectedHandlers(reloadTasks, addUnsupervisedActions, registerUnsupervisedHandlers); // reloadTasks added to set it up at the same time
 
     // Create status bar item
     createStatusBarItem();
@@ -90,5 +90,5 @@ export function deactivate() {
 }
 
 function reloadDesktopPermissions() {
-    reloadPermissions(reloadTasks, registerUnsupervisedActions);
+    reloadPermissions(reloadTasks, addUnsupervisedActions);
 }

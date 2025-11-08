@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 
 import { getFence, logOutput, notifyOnCaughtException, simpleFileName } from '@/utils';
 import { NEURO } from '@/constants';
-import { CONNECTION, PERMISSIONS, PermissionLevel, getPermissionLevel, isActionEnabled } from '@/config';
+import { CONNECTION, PermissionLevel, getPermissionLevel } from '@/config';
 
 export function sendCurrentFile() {
     const editor = vscode.window.activeTextEditor;
@@ -30,7 +30,7 @@ export function sendCurrentFile() {
 export function registerRequestCookieAction() {
     NEURO.client?.unregisterActions(['request_cookie']);
 
-    if (!getPermissionLevel(PERMISSIONS.requestCookies) || !isActionEnabled('request_cookie'))
+    if (!getPermissionLevel('request_cookie'))
         return;
 
     NEURO.client?.registerActions([
@@ -60,7 +60,7 @@ export function registerRequestCookieHandler() {
                     return;
                 }
 
-                const permission = getPermissionLevel(PERMISSIONS.requestCookies);
+                const permission = getPermissionLevel('request_cookie');
 
                 switch (permission) {
                     case PermissionLevel.OFF:

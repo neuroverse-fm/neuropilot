@@ -1,13 +1,13 @@
 import { NEURO } from '@/constants';
-import { registerTaskActions, taskHandlers } from '@/tasks';
-import { fileActions, registerFileActions } from '@/file_actions';
-import { gitActions, registerGitActions } from '@/git';
-import { editingActions, registerEditingActions } from '@/editing';
+import { addTaskActions, taskHandlers } from '@/tasks';
+import { fileActions, addFileActions } from '@/file_actions';
+import { gitActions, addGitActions } from '@/git';
+import { editingActions, addEditingActions } from '@/editing';
 import { ActionData, RCEAction } from '@/neuro_client_helper';
-import { registerTerminalActions, terminalAccessHandlers } from '@/pseudoterminal';
-import { lintActions, registerLintActions } from '@/lint_problems';
+import { addTerminalActions, terminalAccessHandlers } from '@/pseudoterminal';
+import { lintActions, addLintActions } from '@/lint_problems';
 import { cancelRequestAction, RCEActionHandler } from '@/rce';
-import { changelogActions, registerChangelogActions } from '@/changelog';
+import { changelogActions, addChangelogActions } from '@/changelog';
 
 /**
  * Register unsupervised actions with the Neuro API.
@@ -27,17 +27,17 @@ const neuroActions: Record<string, RCEAction> = {
 
 const actionKeys: string[] = Object.keys(neuroActions);
 
-export function registerUnsupervisedActions() {
+export function addUnsupervisedActions() {
     // Unregister all actions first to properly refresh everything
     NEURO.client?.unregisterActions(actionKeys);
 
-    registerFileActions();
-    registerGitActions();
-    registerTaskActions();
-    registerEditingActions();
-    registerTerminalActions();
-    registerLintActions();
-    registerChangelogActions();
+    addFileActions();
+    addGitActions();
+    addTaskActions();
+    addEditingActions();
+    addTerminalActions();
+    addLintActions();
+    addChangelogActions();
 }
 
 /**

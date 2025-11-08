@@ -3,10 +3,11 @@ import * as vscode from 'vscode';
 
 import { NEURO } from '@/constants';
 import { formatContext, getFence, getPositionContext, getVirtualCursor, getWorkspacePath, getWorkspaceUri, isBinary, isPathNeuroSafe, logOutput, normalizePath, notifyOnCaughtException } from '@/utils';
-import { ActionData, contextNoAccess, RCEAction, actionValidationFailure, actionValidationAccept, ActionValidationResult, stripToActions } from '@/neuro_client_helper';
-import { CONFIG, PERMISSIONS, PermissionLevel, getPermissionLevel, isActionEnabled } from '@/config';
+import { ActionData, contextNoAccess, RCEAction, actionValidationFailure, actionValidationAccept, ActionValidationResult } from '@/neuro_client_helper';
+import { CONFIG, PermissionLevel, getPermissionLevel } from '@/config';
 import { targetedFileCreatedEvent, targetedFileDeletedEvent } from '@events/files';
 import { RCECancelEvent } from '@events/utils';
+import { addActions } from './rce';
 
 /**
  * The path validator.
@@ -131,7 +132,7 @@ export const fileActions = {
     get_workspace_files: { // pending functionality change, see https://github.com/VSC-NeuroPilot/neuropilot/issues/153
         name: 'get_workspace_files',
         description: 'Get a list of files in the workspace',
-        permissions: [PERMISSIONS.openFiles],
+        category: 'File Actions',
         handler: handleGetFiles,
         validators: [() => {
             const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
@@ -145,6 +146,7 @@ export const fileActions = {
     open_file: {
         name: 'open_file',
         description: 'Open a file in the workspace. You cannot open a binary file directly.',
+        category: 'File Actions',
         schema: {
             type: 'object',
             properties: {
@@ -153,7 +155,6 @@ export const fileActions = {
             required: ['filePath'],
             additionalProperties: false,
         },
-        permissions: [PERMISSIONS.openFiles],
         handler: handleOpenFile,
         cancelEvents: commonFileEvents,
         validators: [neuroSafeValidation, binaryFileValidation],
@@ -162,6 +163,7 @@ export const fileActions = {
     read_file: {
         name: 'read_file',
         description: 'Read a file\'s contents without opening it.',
+        category: 'File Actions',
         schema: {
             type: 'object',
             properties: {
@@ -170,7 +172,6 @@ export const fileActions = {
             required: ['filePath'],
             additionalProperties: false,
         },
-        permissions: [PERMISSIONS.openFiles],
         handler: handleReadFile,
         cancelEvents: commonFileEvents,
         validators: [neuroSafeValidation, binaryFileValidation],
@@ -179,6 +180,7 @@ export const fileActions = {
     create_file: {
         name: 'create_file',
         description: 'Create a new file at the specified path. The path should include the name of the new file.',
+        category: 'File Actions',
         schema: {
             type: 'object',
             properties: {
@@ -187,7 +189,6 @@ export const fileActions = {
             required: ['filePath'],
             additionalProperties: false,
         },
-        permissions: [PERMISSIONS.create],
         handler: handleCreateFile,
         cancelEvents: commonFileEvents,
         validators: [neuroSafeValidation],
@@ -196,6 +197,7 @@ export const fileActions = {
     create_folder: {
         name: 'create_folder',
         description: 'Create a new folder at the specified path. The path should include the name of the new folder.',
+        category: 'File Actions',
         schema: {
             type: 'object',
             properties: {
@@ -204,7 +206,6 @@ export const fileActions = {
             required: ['folderPath'],
             additionalProperties: false,
         },
-        permissions: [PERMISSIONS.create],
         handler: handleCreateFolder,
         cancelEvents: [
             (actionData: ActionData) => targetedFileCreatedEvent(actionData.params?.folderPath),
@@ -215,6 +216,7 @@ export const fileActions = {
     rename_file_or_folder: {
         name: 'rename_file_or_folder',
         description: 'Rename a file or folder. Specify the full relative path for both the old and new names.',
+        category: 'File Actions',
         schema: {
             type: 'object',
             properties: {
@@ -224,7 +226,6 @@ export const fileActions = {
             required: ['oldPath', 'newPath'],
             additionalProperties: false,
         },
-        permissions: [PERMISSIONS.rename],
         handler: handleRenameFileOrFolder,
         cancelEvents: [
             (actionData: ActionData) => targetedFileCreatedEvent(actionData.params?.newPath),
@@ -236,6 +237,7 @@ export const fileActions = {
     delete_file_or_folder: {
         name: 'delete_file_or_folder',
         description: 'Delete a file or folder. If you want to delete a folder, set the "recursive" parameter to true.',
+        category: 'File Actions',
         schema: {
             type: 'object',
             properties: {
@@ -245,7 +247,6 @@ export const fileActions = {
             required: ['path'],
             additionalProperties: false,
         },
-        permissions: [PERMISSIONS.delete],
         handler: handleDeleteFileOrFolder,
         cancelEvents: [
             (actionData: ActionData) => targetedFileDeletedEvent(actionData.params?.path),
@@ -255,33 +256,16 @@ export const fileActions = {
     },
 } satisfies Record<string, RCEAction>;
 
-export function registerFileActions() {
-	if (getPermissionLevel(PERMISSIONS.openFiles)) {
-		NEURO.client?.registerActions(stripToActions([
-			fileActions.get_workspace_files,
-			fileActions.open_file,
-			fileActions.read_file,
-		]).filter(isActionEnabled));
-	}
-
-	if (getPermissionLevel(PERMISSIONS.create)) {
-		NEURO.client?.registerActions(stripToActions([
-			fileActions.create_file,
-			fileActions.create_folder,
-		]).filter(isActionEnabled));
-	}
-
-	if (getPermissionLevel(PERMISSIONS.rename)) {
-		NEURO.client?.registerActions(stripToActions([
-			fileActions.rename_file_or_folder,
-		]).filter(isActionEnabled));
-	}
-
-	if (getPermissionLevel(PERMISSIONS.delete)) {
-		NEURO.client?.registerActions(stripToActions([
-			fileActions.delete_file_or_folder,
-		]).filter(isActionEnabled));
-	}
+export function addFileActions() {
+    addActions([
+        fileActions.get_workspace_files,
+        fileActions.open_file,
+        fileActions.read_file,
+        fileActions.create_file,
+        fileActions.create_folder,
+        fileActions.rename_file_or_folder,
+        fileActions.delete_file_or_folder,
+    ]);
 }
 
 export function handleCreateFile(actionData: ActionData): string | undefined {
@@ -325,8 +309,8 @@ export function handleCreateFile(actionData: ActionData): string | undefined {
         logOutput('INFO', `Created file ${relativePath}`);
         NEURO.client?.sendContext(`Created file ${relativePath}`);
 
-        // Open the file if Neuro has permission to do so
-        if (getPermissionLevel(PERMISSIONS.openFiles) !== PermissionLevel.AUTOPILOT)
+        // Open the file if Neuro has permission for open_file
+        if (getPermissionLevel('open_file') !== PermissionLevel.AUTOPILOT)
             return;
 
         try {

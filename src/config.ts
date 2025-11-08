@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
-import { Action } from 'neuro-game-sdk';
-import { NEURO } from './constants';
-import { logOutput } from './utils';
+import { NEURO } from '@/constants';
+import { logOutput } from '@/utils';
+import { getAction } from '@/rce';
 
 //#region Types
 
@@ -62,10 +62,6 @@ const DEPRECATED_SETTINGS: DeprecatedSetting[] = [
             await cfg.update('access.externalFiles', config, target);
             await cfg.update('access.environmentVariables', config, target);
         },
-    },
-    {
-        old: 'disabledActions',
-        new: 'actions.disabledActions',
     },
     {
         old: 'hideCopilotRequests',
@@ -206,6 +202,30 @@ export const enum PermissionLevel {
     AUTOPILOT = 2,
 }
 
+export function permissionLevelToString(level: PermissionLevel): string {
+    switch (level) {
+        case PermissionLevel.AUTOPILOT:
+            return 'autopilot';
+        case PermissionLevel.COPILOT:
+            return 'copilot';
+        case PermissionLevel.OFF:
+        default:
+            return 'off';
+    }
+}
+
+export function stringToPermissionLevel(level: string): PermissionLevel {
+    switch (level.toLowerCase()) {
+        case 'autopilot':
+            return PermissionLevel.AUTOPILOT;
+        case 'copilot':
+            return PermissionLevel.COPILOT;
+        case 'off':
+        default:
+            return PermissionLevel.OFF;
+    }
+}
+
 //#region Config get functions
 
 /**
@@ -229,66 +249,29 @@ function getActions<T>(key: string): T | undefined {
     return vscode.workspace.getConfiguration('neuropilot').get<T>('actions.' + key);
 }
 
-export function isActionEnabled(action: string | Action): boolean {
-    const name = typeof action === 'string' ? action : action.name;
-    return !ACTIONS.disabledActions.includes(name) && !NEURO.tempDisabledActions.includes(name);
-}
-
 //#endregion
 
 /**
- * Checks the configured permission level for each provided permission and returns 
- * the lowest (most restrictive) level.
- *
- * @param permissions The permission(s) to query.
- * @returns The lowest permission level in the list of permissions.
- * If no permissions are specified, this function assumes {@link PermissionLevel.COPILOT}.
+ * Checks the configured permission level for an action.
+ * If no permission level is configured, the action's default permission level is used.
+ * If the action has no default permission level, {@link PermissionLevel.OFF} is used.
+ * @param actionName The name of the action whose permission level is to be checked.
+ * @returns The permission level for the action.
  * If used as a boolean, {@link PermissionLevel.OFF} is considered `false`, everything else is considered `true`.
  */
-export function getPermissionLevel(...permissions: Permission[]): PermissionLevel {
+export function getPermissionLevel(actionName: string): PermissionLevel {
     if (NEURO.killSwitch) {
         return PermissionLevel.OFF;
     }
-    if (permissions.length === 0) {
-        return PermissionLevel.COPILOT;
-    }
-    return permissions
-        .map(permission => {
-            let setting = vscode.workspace.getConfiguration('neuropilot')
-                .get<string>('permission.' + permission.id, 'off');
-            setting = setting.toLowerCase();
-            switch (setting) {
-                case 'autopilot':
-                    return PermissionLevel.AUTOPILOT;
-                case 'copilot':
-                    return PermissionLevel.COPILOT;
-                default:
-                    return PermissionLevel.OFF;
-            }
-        })
-        .reduce((lowest, level) => level < lowest ? level : lowest, PermissionLevel.AUTOPILOT);
+    const configuration = vscode.workspace.getConfiguration('neuropilot');
+    const settings = configuration.inspect<string>('actionPermissions.' + actionName);
+    const permission = settings?.workspaceFolderValue
+        ?? settings?.workspaceValue
+        ?? settings?.globalValue;
+    if (permission !== undefined)
+        return stringToPermissionLevel(permission);
+    return getAction(actionName)?.defaultPermission ?? PermissionLevel.OFF;
 }
-
-/** Collection of strings for use in {@link actionResultNoPermission}. */
-class Permissions {
-    get openFiles() { return { id: 'openFiles', infinitive: 'open files' }; }
-    get editActiveDocument() { return { id: 'editActiveDocument', infinitive: 'edit or view documents' }; }
-    get create() { return { id: 'create', infinitive: 'create files or folders' }; }
-    get rename() { return { id: 'rename', infinitive: 'rename files or folders' }; }
-    get delete() { return { id: 'delete', infinitive: 'delete files or folders' }; }
-    get runTasks() { return { id: 'runTasks', infinitive: 'run or terminate tasks' }; }
-    get requestCookies() { return { id: 'requestCookies', infinitive: 'request cookies' }; }
-    get gitOperations() { return { id: 'gitOperations', infinitive: 'use Git' }; }
-    get gitTags() { return { id: 'gitTags', infinitive: 'tag commits' }; }
-    get gitRemotes() { return { id: 'gitRemotes', infinitive: 'interact with Git remotes' }; }
-    get editRemoteData() { return { id: 'editRemoteData', infinitive: 'edit remote data' }; }
-    get gitConfigs() { return { id: 'gitConfigs', infinitive: 'edit the Git configuration' }; }
-    get terminalAccess() { return { id: 'terminalAccess', infinitive: 'access the terminal' }; }
-    get accessLintingAnalysis() { return { id: 'accessLintingAnalysis', infinitive: 'view linting problems' }; }
-    get getUserSelection() { return { id: 'getUserSelection', infinitive: `get ${CONNECTION.userName}'s cursor` }; }
-}
-
-export const PERMISSIONS = /* @__PURE__ */ new Permissions();
 
 class Config {
     get beforeContext(): number { return getConfig('beforeContext')!; }
@@ -337,7 +320,6 @@ class Connection {
 export const CONNECTION = /* @__PURE__ */ new Connection();
 
 class Actions {
-    get disabledActions(): string[] { return getActions<string[]>('disabledActions')!; }
     get hideCopilotRequests(): boolean { return getActions<boolean>('hideCopilotRequests')!; }
     get allowRunningAllTasks(): boolean { return getActions<boolean>('allowRunningAllTasks')!; }
     get enableCancelEvents(): boolean { return getActions<boolean>('enableCancelEvents')!; }
