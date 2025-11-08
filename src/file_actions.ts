@@ -579,7 +579,7 @@ export function handleGetWorkspaceFiles(actionData: ActionData): string | undefi
             if (isPathNeuroSafe(childUri.fsPath)) {
                 if (fileType === vscode.FileType.File) result.push([childUri, fileType]);
                 else if (fileType === vscode.FileType.Directory) {
-                    if (actionData.params.recursive) {
+                    if (actionData.params?.recursive) {
                         result.push(...await listWorkspace(childUri));
                     } else {
                         result.push([childUri, fileType]);

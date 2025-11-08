@@ -214,7 +214,7 @@ suite('File Actions', () => {
         const emptyDirPath = vscode.workspace.asRelativePath(emptyDirUri, false);
 
         // === Act ===
-        fileActions.handleGetWorkspaceFiles({ id: 'abc', name: 'get_workspace_files' });
+        fileActions.handleGetWorkspaceFiles({ id: 'abc', name: 'get_workspace_files', params: { folder: 'test_files' } });
 
         // Wait for context to be sent
         await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); });
@@ -226,10 +226,12 @@ suite('File Actions', () => {
 
         // === Assert ===
         assert.strictEqual(lines.includes(filePath1), true, 'File file1.js should be in the list of files');
-        assert.strictEqual(lines.includes(filePath2), true, 'Folder sub should be in the list of files');
+        const expectedFolderSub = filePath2.endsWith('/') ? filePath2 : filePath2 + '/';
+        assert.strictEqual(lines.includes(expectedFolderSub), true, 'Folder sub should be in the list of files');
         assert.strictEqual(lines.includes(filePath3), false, 'File sub/file2.js should not be in the list of files');
         assert.strictEqual(lines.includes(unsafeFilePath), false, 'Unsafe directory .unsafe should not be in the list of files');
-        assert.strictEqual(lines.includes(emptyDirPath), true, 'Empty directory testDir should still be in the list of files');
+        const expectedEmptyDir = emptyDirPath.endsWith('/') ? emptyDirPath : emptyDirPath + '/';
+        assert.strictEqual(lines.includes(expectedEmptyDir), true, 'Empty directory testDir should still be in the list of files');
     });
 
     test('handleGetWorkspaceFiles (recursive)', async function () {
