@@ -266,15 +266,9 @@
 						"description": "The timeout in milliseconds for completions and chat responses in ms"
 					},
 					"neuropilot.includePattern": {
-						"type": "string",
-						"markdownDescription": "A case-sensitive glob pattern for files Neuro is allowed to open, i.e. she will be unable to open files that don't match this pattern. Separate multiple patterns with a newline. Patterns without a slash will match any file or folder with that name.",
-						"editPresentation": "multilineText",
 						"markdownDeprecationMessage": "This setting has been moved to `neuropilot.access.includePattern`."
 					},
 					"neuropilot.excludePattern": {
-						"type": "string",
-						"markdownDescription": "A case-sensitive glob pattern for files Neuro is not allowed to open. Applied after the include pattern. Files and folders beginning with a dot are always excluded, regardless of this setting. Separate multiple patterns with a newline. Patterns without a slash will match any file or folder with that name.",
-						"editPresentation": "multilineText",
 						"markdownDeprecationMessage": "This setting has been moved to `neuropilot.access.excludePattern`."
 					},
 					"neuropilot.terminals": {
@@ -338,13 +332,9 @@
 						"markdownDescription": "The time in ms to wait for the terminal to print more output before sending context to Neuro. This is to prevent sending multiple context messages if the terminal doesn't print fast enough."
 					},
 					"neuropilot.allowUnsafePaths": {
-						"type": "boolean",
-						"markdownDescription": "Allow Neuro to view & edit files and folders in unsafe paths. These include:\n- files/folders starting with a '.'\n- parent directories and directories outside the workspace\n- Environmental variables\n\nNote that your include/exclude patterns are still respected.",
 						"markdownDeprecationMessage": "This setting is no longer used. Please use the more granular access permissions such as `neuropilot.access.dotFiles` and `neuropilot.access.externalFiles`."
 					},
 					"neuropilot.allowRunningAllTasks": {
-						"type": "boolean",
-						"markdownDescription": "Allow Neuro to run all tasks regardless of their prefix in their 'detail' key.",
 						"markdownDeprecationMessage": "This setting has been moved to neuropilot.actions.allowRunningAllTasks."
 					},
 					"neuropilot.sendNewLintingProblemsOn": {
@@ -378,8 +368,6 @@
 						"markdownDescription": "The time to wait (in milliseconds) before automatically rejecting Copilot-mode action requests from Neuro.\nSetting this to 0 will cause the requests to never expire."
 					},
 					"neuropilot.hideCopilotRequests": {
-						"type": "boolean",
-						"markdownDescription": "Don't immediately show Copilot-mode action requests, requiring clicking the status bar item to reveal them.",
 						"markdownDeprecationMessage": "This setting has been moved to neuropilot.actions.hideCopilotRequests."
 					},
 					"neuropilot.cursorFollowsNeuro": {
@@ -406,6 +394,9 @@
 							"Always open docs in a new WebView window"
 						],
 						"markdownDescription": "Choose where to open docs links.\n\nThis applies to both docs commands."
+					},
+					"neuropilot.disabledActions": {
+						"markdownDeprecationMessage": "This setting has moved to neuropilot.actions.disabledActions"
 					},
 					"neuropilot.sendContentsOnFileChange": {
 						"type": "boolean",
@@ -449,9 +440,52 @@
 						]
 					},
 					"neuropilot.enableCancelEvents": {
-						"type": "boolean",
-						"markdownDescription": "Whether to enable cancellation events for RCE. See [this docs page](https://vsc-neuropilot.github.io/docs/references/rce#cancellation-events).",
 						"markdownDeprecationMessage": "This setting has been moved to neuropilot.actions.enableCancelEvents."
+					},
+					"neuropilot.permission.openFiles": {
+						"markdownDeprecationMessage": "Categorical permissions have been deprecated in favor of fine-grained permissions (`neuropilot.actionPermissions`)."
+					},
+					"neuropilot.permission.editActiveDocument": {
+						"markdownDeprecationMessage": "Categorical permissions have been deprecated in favor of fine-grained permissions (`neuropilot.actionPermissions`)."
+					},
+					"neuropilot.permission.create": {
+						"markdownDeprecationMessage": "Categorical permissions have been deprecated in favor of fine-grained permissions (`neuropilot.actionPermissions`)."
+					},
+					"neuropilot.permission.rename": {
+						"markdownDeprecationMessage": "Categorical permissions have been deprecated in favor of fine-grained permissions (`neuropilot.actionPermissions`)."
+					},
+					"neuropilot.permission.delete": {
+						"markdownDeprecationMessage": "Categorical permissions have been deprecated in favor of fine-grained permissions (`neuropilot.actionPermissions`)."
+					},
+					"neuropilot.permission.runTasks": {
+						"markdownDeprecationMessage": "Categorical permissions have been deprecated in favor of fine-grained permissions (`neuropilot.actionPermissions`)."
+					},
+					"neuropilot.permission.requestCookies": {
+						"markdownDeprecationMessage": "Categorical permissions have been deprecated in favor of fine-grained permissions (`neuropilot.actionPermissions`)."
+					},
+					"neuropilot.permission.gitOperations": {
+						"markdownDeprecationMessage": "Categorical permissions have been deprecated in favor of fine-grained permissions (`neuropilot.actionPermissions`)."
+					},
+					"neuropilot.permission.gitTags": {
+						"markdownDeprecationMessage": "Categorical permissions have been deprecated in favor of fine-grained permissions (`neuropilot.actionPermissions`)."
+					},
+					"neuropilot.permission.gitRemotes": {
+						"markdownDeprecationMessage": "Categorical permissions have been deprecated in favor of fine-grained permissions (`neuropilot.actionPermissions`)."
+					},
+					"neuropilot.permission.editRemoteData": {
+						"markdownDeprecationMessage": "Categorical permissions have been deprecated in favor of fine-grained permissions (`neuropilot.actionPermissions`)."
+					},
+					"neuropilot.permission.gitConfigs": {
+						"markdownDeprecationMessage": "Categorical permissions have been deprecated in favor of fine-grained permissions (`neuropilot.actionPermissions`)."
+					},
+					"neuropilot.permission.terminalAccess": {
+						"markdownDeprecationMessage": "Categorical permissions have been deprecated in favor of fine-grained permissions (`neuropilot.actionPermissions`)."
+					},
+					"neuropilot.permission.accessLintingAnalysis": {
+						"markdownDeprecationMessage": "Categorical permissions have been deprecated in favor of fine-grained permissions (`neuropilot.actionPermissions`)."
+					},
+					"neuropilot.permission.getUserSelection": {
+						"markdownDeprecationMessage": "Categorical permissions have been deprecated in favor of fine-grained permissions (`neuropilot.actionPermissions`)."
 					},
 					"neuropilot.access.dotFiles": {
 						"type": "boolean",
@@ -550,6 +584,9 @@
 							"Literally in your computer walls (Govorunb)",
 							"Built by Evil, living in her basement. (2025 Minithon coding subgoal **unofficial** celebration)"
 						]
+					},
+					"neuropilot.actions.disabledActions": {
+						"markdownDeprecationMessage": "Disabling specific actions has been deprecated in favor of fine-grained permissions (`neuropilot.actionPermissions`)."
 					},
 					"neuropilot.actionPermissions": {
 						"type": "object",
