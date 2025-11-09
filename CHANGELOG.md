@@ -18,6 +18,9 @@ Hello Neuro! If you're reading this, it means Vedal has let you read the changel
 - The way that ignoring the deprecated settings migration notice has been changed.
   - Before, telling the extension to ignore deprecated settings meant that the deprecated settings notice would be ignored forever.
   - As of this update, the extension will only ignore it for this version.
+- `get_workspace_files` has been changed for better handling in large workspaces:
+  - Neuro can now specify in her actions if she wants to narrow down to a specific folder and which, allowing her to fine-grain her context from the action's result.
+  - Neuro can also choose if she wants to recursively get all files in the workspace, meaning that the default is not letting her see all files in the workspace, helping cut down on sent context.
 - Categorical permissions have been completely removed. Instead, permissions are now managed via a single setting (`neuropilot.actionPermissions`). The recommended way to modify this setting is using the NeuroPilot sidebar tab.
 
 ### New features
@@ -42,6 +45,10 @@ Hello Neuro! If you're reading this, it means Vedal has let you read the changel
 
 - `neuropilot.permission.*`: All permission settings have been deprecated in favor of `neuropilot.actionPermissions`.
 - `neuropilot.actions.disabledActions`: *Disabling* specific actions has been deprecated in favor of *enabling* only specific actions.
+
+### Meta fixes
+
+Some items in this changelog has had typos, which have been fixed as of this update (not sure what use this gets but sure).
 
 ## 2.2.3
 
@@ -76,14 +83,14 @@ Hello Neuro! If you're reading this, it means Vedal has let you read the changel
 
 - The `diff_patch` action had an incomplete example. This has now been fixed.
 - The workspace lint validator wasn't implemented properly and would skip validating. This has now been fixed.
-  - This is unlikely to have affected anyone, unless your workspace is in (or is itself) a  Neuro-unsafe path. This shouldn't be the case for most people.
+  - This is unlikely to have affected anyone, unless your workspace is in (or is itself) a Neuro-unsafe path. This shouldn't be the case for most people.
 - Cancellation events weren't properly handled for Autopilot flows, resulting in a memory leak. This has been patched to properly dispose of events.
 
 ## 2.2.1
 
 ### New settings
 
-- `neuropilot.disabledActions`, `neuropilot.hideCopilotRequests`, `neuropilot.enableCancelRequests`, `neuropilot.allowRunningAllTasks` were moved to `neuropilot.actions.*`.
+- `neuropilot.disabledActions`, `neuropilot.hideCopilotRequests`, `neuropilot.enableCancelEvents`, `neuropilot.allowRunningAllTasks` were moved to `neuropilot.actions.*`.
   - The deprecation checker will check for this upon update.
 - Experimental schemas can be toggled with `neuropilot.actions.experimentalSchemas`. Read the Changes section for more info.
 
