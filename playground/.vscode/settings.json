@@ -37,12 +37,6 @@
     "neuropilot.connection.nameOfAPI": "Neuro",
     "neuropilot.access.ignoreFiles": ["./.neuroignore"],
     "neuropilot.actionPermissions": {
-        "place_cursor": "copilot",
-        "get_cursor": "copilot",
-        "get_file_contents": "copilot",
-        "insert_text": "copilot",
-        "insert_lines": "copilot",
-        "replace_text": "copilot",
         "delete_text": "copilot",
         "find_text": "copilot",
         "undo": "copilot",
@@ -94,6 +88,12 @@
         "terminate_task": "copilot",
         "save": "copilot",
         "run_current_file": "copilot",
-        "run_python_file": "copilot"
+        "run_python_file": "copilot",
+        "get_cursor": "copilot",
+        "get_file_contents": "copilot",
+        "insert_lines": "copilot",
+        "insert_text": "copilot",
+        "place_cursor": "copilot",
+        "replace_text": "copilot"
     },
 }

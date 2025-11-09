@@ -12,6 +12,7 @@ export interface ActionNode {
     category: string;
     description?: string;
     permissionLevel: PermissionLevel;
+    modifiedInCurrentContext: boolean;
     modifiedExternally: boolean;
     isRegistered: boolean;
 }
@@ -56,6 +57,7 @@ export class ActionsViewProvider extends BaseWebviewViewProvider<ActionsViewMess
             category: info.action.category ?? 'No Category Specified', // TODO: Handle null category better?
             description: info.action.description,
             permissionLevel: (this._currentContext === 'user' ? info.configuredGlobalPermission : info.configuredWorkspacePermission) ?? info.configuredGlobalPermission ?? PermissionLevel.OFF,
+            modifiedInCurrentContext: this._currentContext === 'workspace' && info.configuredWorkspacePermission !== undefined && info.configuredWorkspacePermission !== info.configuredGlobalPermission,
             modifiedExternally:
                 // We are in workspace context and the permission is modified in global settings but not in workspace settings
                 this._currentContext === 'workspace' && info.configuredWorkspacePermission === undefined && info.configuredGlobalPermission !== undefined

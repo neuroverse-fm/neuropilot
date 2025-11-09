@@ -89,6 +89,8 @@ interface State {
                 actionLabel.classList.add('action-label');
                 if (actionNode.modifiedExternally)
                     actionLabel.classList.add('modified-externally');
+                // if (actionNode.modifiedInCurrentContext)
+                //     actionLabel.classList.add('modified-in-current-context');
                 if (!actionNode.isRegistered)
                     actionLabel.classList.add('unregistered-action');
                 if (actionNode.description)

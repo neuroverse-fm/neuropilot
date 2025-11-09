@@ -592,13 +592,13 @@ export const gitActions = {
     // Special: Only registered during a merge conflict
     abort_merge: {
         name: 'abort_merge',
-        description: 'Aborts the current merge operation.',
+        description: 'Abort the current merge operation.',
         category: 'Git',
         handler: handleAbortMerge,
         cancelEvents: commonCancelEvents,
         promptGenerator: 'abort the current merge operation.',
         validators: [gitValidator],
-        registerCondition: () => !!repo,
+        autoRegister: false,
     },
 } satisfies Record<string, RCEAction>;
 
