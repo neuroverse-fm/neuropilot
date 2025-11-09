@@ -88,6 +88,7 @@
         "get_workspace_lint_problems": "copilot",
         "init_git_repo": "copilot",
         "terminate_task": "copilot",
-        "read_changelog": "copilot"
+        "read_changelog": "copilot",
+        "abort_merge": "copilot"
     },
 }

@@ -69,6 +69,8 @@ export interface RCEAction<T = unknown> extends TypedAction {
     category: string | null;
     /** Whether to automatically register the action with Neuro upon addition. Defaults to true. */
     autoRegister?: boolean;
+    /** A condition that must be true for the action to be registered. If not provided, the action is always registered. */
+    registerCondition?: () => boolean;
 }
 
 type RCEHandler = (actionData: ActionData) => string | undefined | void;

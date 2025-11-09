@@ -8,7 +8,7 @@ import { ActionData, ActionValidationResult, actionValidationAccept, actionValid
 import assert from 'node:assert';
 import { RCECancelEvent } from '@events/utils';
 import { JSONSchema7Definition } from 'json-schema';
-import { addActions } from './rce';
+import { addActions, reregisterAllActions } from './rce';
 
 /* All actions located in here requires neuropilot.permission.gitOperations to be enabled. */
 
@@ -162,6 +162,7 @@ export const gitActions = {
         cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `add the file "${actionData.params.filePath}" to the staging area.`,
         validators: [gitValidator, filePathGitValidator],
+        registerCondition: () => !!repo,
     },
     make_git_commit: {
         name: 'make_git_commit',
@@ -184,6 +185,7 @@ export const gitActions = {
         cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `commit changes with the message "${actionData.params.message}".`,
         validators: [gitValidator],
+        registerCondition: () => !!repo,
     },
     merge_to_current_branch: {
         name: 'merge_to_current_branch',
@@ -201,6 +203,7 @@ export const gitActions = {
         cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `merge "${actionData.params.ref_to_merge}" into the current branch.`,
         validators: [gitValidator],
+        registerCondition: () => !!repo,
     },
     git_status: {
         name: 'git_status',
@@ -210,6 +213,7 @@ export const gitActions = {
         cancelEvents: commonCancelEvents,
         promptGenerator: 'get the repository\'s Git status.',
         validators: [gitValidator],
+        registerCondition: () => !!repo,
     },
     remove_file_from_git: {
         name: 'remove_file_from_git',
@@ -233,6 +237,7 @@ export const gitActions = {
         cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `remove the file "${actionData.params.filePath}" from the staging area.`,
         validators: [gitValidator, filePathGitValidator],
+        registerCondition: () => !!repo,
     },
     delete_git_branch: {
         name: 'delete_git_branch',
@@ -251,6 +256,7 @@ export const gitActions = {
         cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `delete the branch "${actionData.params.branchName}".`,
         validators: [gitValidator],
+        registerCondition: () => !!repo,
     },
     switch_git_branch: {
         name: 'switch_git_branch',
@@ -268,6 +274,7 @@ export const gitActions = {
         cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `switch to the branch "${actionData.params.branchName}".`,
         validators: [gitValidator],
+        registerCondition: () => !!repo,
     },
     new_git_branch: {
         name: 'new_git_branch',
@@ -285,6 +292,7 @@ export const gitActions = {
         cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `create a new branch "${actionData.params.branchName}".`,
         validators: [gitValidator],
+        registerCondition: () => !!repo,
     },
     diff_files: {
         name: 'diff_files',
@@ -339,6 +347,7 @@ export const gitActions = {
         cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `obtain ${actionData.params?.filePath ? `"${actionData.params.filePath}"'s` : 'a'} Git diff${actionData.params?.ref1 && actionData.params?.ref2 ? ` between ${actionData.params.ref1} and ${actionData.params.ref2}` : actionData.params?.ref1 ? ` at ref ${actionData.params.ref1}` : ''}${actionData.params?.diffType ? ` (of type "${actionData.params.diffType}")` : ''}.`,
         validators: [gitValidator, filePathGitValidator, gitDiffValidator],
+        registerCondition: () => !!repo,
     },
     git_log: {
         name: 'git_log',
@@ -359,6 +368,7 @@ export const gitActions = {
         cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `get the ${actionData.params?.log_limit ? `${actionData.params.log_limit} most recent commits in the ` : ''}Git log.`,
         validators: [gitValidator],
+        registerCondition: () => !!repo,
     },
     git_blame: {
         name: 'git_blame',
@@ -376,6 +386,7 @@ export const gitActions = {
         cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `get the Git blame for the file "${actionData.params.filePath}".`,
         validators: [gitValidator, filePathGitValidator],
+        registerCondition: () => !!repo,
     },
 
     // Requires gitTags
@@ -396,6 +407,7 @@ export const gitActions = {
         cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `tag the current commit with the name "${actionData.params.name}" and associate it with the "${actionData.params.upstream}" remote.`,
         validators: [gitValidator],
+        registerCondition: () => !!repo,
     },
     delete_tag: {
         name: 'delete_tag',
@@ -413,6 +425,7 @@ export const gitActions = {
         cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `delete the tag "${actionData.params.name}".`,
         validators: [gitValidator],
+        registerCondition: () => !!repo,
     },
 
     // Requires gitConfigs
@@ -433,6 +446,7 @@ export const gitActions = {
         cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `set the Git config key "${actionData.params.key}" to "${actionData.params.value}".`,
         validators: [gitValidator],
+        registerCondition: () => !!repo,
     },
     get_git_config: {
         name: 'get_git_config',
@@ -449,6 +463,7 @@ export const gitActions = {
         cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => actionData.params?.key ? `get the Git config key "${actionData.params.key}".` : 'get the Git config.',
         validators: [gitValidator],
+        registerCondition: () => !!repo,
     },
 
     // Requires gitRemotes
@@ -476,6 +491,7 @@ export const gitActions = {
             return 'fetch commits.';
         },
         validators: [gitValidator],
+        registerCondition: () => !!repo,
     },
     pull_git_commits: {
         name: 'pull_git_commits',
@@ -485,6 +501,7 @@ export const gitActions = {
         cancelEvents: commonCancelEvents,
         promptGenerator: 'pull commits.',
         validators: [gitValidator],
+        registerCondition: () => !!repo,
     },
     push_git_commits: {
         name: 'push_git_commits',
@@ -512,6 +529,7 @@ export const gitActions = {
             return `${force}push commits.`;
         },
         validators: [gitValidator],
+        registerCondition: () => !!repo,
     },
 
     // Requires gitRemotes and editRemoteData
@@ -532,6 +550,7 @@ export const gitActions = {
         cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `add a new remote "${actionData.params.remoteName}" with URL "${actionData.params.remoteURL}".`,
         validators: [gitValidator],
+        registerCondition: () => !!repo,
     },
     remove_git_remote: {
         name: 'remove_git_remote',
@@ -549,6 +568,7 @@ export const gitActions = {
         cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `remove the remote "${actionData.params.remoteName}".`,
         validators: [gitValidator],
+        registerCondition: () => !!repo,
     },
     rename_git_remote: {
         name: 'rename_git_remote',
@@ -567,6 +587,7 @@ export const gitActions = {
         cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `rename the remote "${actionData.params.oldRemoteName}" to "${actionData.params.newRemoteName}".`,
         validators: [gitValidator],
+        registerCondition: () => !!repo,
     },
     // Special: Only registered during a merge conflict
     abort_merge: {
@@ -577,6 +598,7 @@ export const gitActions = {
         cancelEvents: commonCancelEvents,
         promptGenerator: 'abort the current merge operation.',
         validators: [gitValidator],
+        registerCondition: () => !!repo,
     },
 } satisfies Record<string, RCEAction>;
 
@@ -589,15 +611,42 @@ export const gitActions = {
 
 // Register all git commands
 export function addGitActions() {
+    const actionsToRegister = [
+        gitActions.add_file_to_git,
+        gitActions.make_git_commit,
+        gitActions.merge_to_current_branch,
+        gitActions.git_status,
+        gitActions.remove_file_from_git,
+        gitActions.delete_git_branch,
+        gitActions.switch_git_branch,
+        gitActions.new_git_branch,
+        gitActions.diff_files,
+        gitActions.git_log,
+        gitActions.git_blame,
+        gitActions.tag_head,
+        gitActions.delete_tag,
+        gitActions.set_git_config,
+        gitActions.get_git_config,
+        gitActions.fetch_git_commits,
+        gitActions.pull_git_commits,
+        gitActions.push_git_commits,
+        gitActions.add_git_remote,
+        gitActions.remove_git_remote,
+        gitActions.rename_git_remote,
+    ];
+
     if (git) {
         addActions([gitActions.init_git_repo]);
 
         const root = vscode.workspace.workspaceFolders?.[0].uri;
-        if (!root) return;
+        if (!root) {
+            // Register actions immediately, but they will be disabled due to no repo being found
+            addActions([...actionsToRegister, gitActions.abort_merge], false);
+            return;
+        }
 
         git.openRepository(root).then((r) => {
             repo = r;
-            if (!repo) return;
 
             addActions([
                 gitActions.add_file_to_git,
@@ -643,7 +692,7 @@ export function handleNewGitRepo(_actionData: ActionData): string | undefined {
 
     git!.init(vscode.Uri.file(folderPath)).then(() => {
         repo = git!.repositories[0]; // Update the repo reference to the new repository, just in case
-        addGitActions(); // Re-register commands
+        reregisterAllActions();
         NEURO.client?.sendContext('Initialized a new Git repository in the workspace folder. You should now be able to use git commands.');
     }, (erm: string) => {
         NEURO.client?.sendContext('Failed to initialize Git repository');

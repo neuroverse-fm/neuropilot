@@ -269,10 +269,12 @@ export function addActions(actions: RCEAction[], register = true): void {
     NEURO.actionsViewProvider?.refreshActions();
     if (register) {
         const actionNames = actions.map(a => a.name);
-        NEURO.client?.registerActions(actionNames.map(name => {
-            const action = ACTIONS.find(a => a.name === name)!;
-            return stripToAction(action);
-        }).filter(({name}) => getPermissionLevel(name)));
+        const actionsToRegister = actionNames
+            .map(name => ACTIONS.find(a => a.name === name)!)
+            .filter((action) => getPermissionLevel(action.name) && action.registerCondition?.() !== false)
+            .map(stripToAction);
+        if (actionsToRegister.length > 0)
+            NEURO.client?.registerActions(actionsToRegister);
     }
 }
 
@@ -335,6 +337,9 @@ export function reregisterAllActions(): void {
     function shouldRegister(action: RCEAction): boolean {
         // Only register non-auto-registered actions if they were previously registered
         if (action.autoRegister === false && !REGISTERED_ACTIONS.has(action.name))
+            return false;
+        // Check the register condition
+        if (action.registerCondition && !action.registerCondition())
             return false;
         const effectivePermission = permissions[action.name] ?? PermissionLevel.OFF;
         return effectivePermission !== PermissionLevel.OFF;
