@@ -376,7 +376,7 @@ function getActions<T>(key: string): T | undefined {
 //#endregion
 
 /**
- * Computes and returns all configured action permissions, merging workspace folder, workspace, and global settings.
+ * Computes and returns all *configured* action permissions, merging workspace folder, workspace, and global settings.
  * Workspace folder settings take precedence over workspace settings, which take precedence over global settings.
  * @returns A record mapping action names to their configured permission levels.
  */

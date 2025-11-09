@@ -47,7 +47,7 @@ export class ActionsViewProvider extends BaseWebviewViewProvider<ActionsViewMess
             label: action.displayName ?? toTitleCase(action.name),
             category: action.category ?? 'No Category Specified', // TODO: Handle null category better?
             // description: action.description,
-            permissionLevel: permissionLevels[action.name] ?? PermissionLevel.OFF,
+            permissionLevel: permissionLevels[action.name] ?? action.defaultPermission ?? PermissionLevel.OFF,
         } satisfies ActionNode));
         this._view?.webview.postMessage({
             type: 'refreshActions',
