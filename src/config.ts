@@ -338,8 +338,8 @@ export function permissionLevelToString(level: PermissionLevel): string {
     }
 }
 
-export function stringToPermissionLevel(level: string): PermissionLevel {
-    switch (level.toLowerCase()) {
+export function stringToPermissionLevel(level?: string): PermissionLevel {
+    switch (level?.toLowerCase()) {
         case 'autopilot':
             return PermissionLevel.AUTOPILOT;
         case 'copilot':

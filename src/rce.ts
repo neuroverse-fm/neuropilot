@@ -7,7 +7,7 @@ import * as vscode from 'vscode';
 import { ActionData, RCEAction, stripToAction } from '@/neuro_client_helper';
 import { NEURO } from '@/constants';
 import { checkVirtualWorkspace, checkWorkspaceTrust, logOutput, notifyOnCaughtException } from '@/utils';
-import { ACTIONS as ACTIONS_CONFIG, CONFIG, CONNECTION, getAllPermissions, getPermissionLevel, PermissionLevel } from '@/config';
+import { ACTIONS as ACTIONS_CONFIG, CONFIG, CONNECTION, getAllPermissions, getPermissionLevel, PermissionLevel, stringToPermissionLevel } from '@/config';
 import { handleRunTask } from '@/tasks';
 import { validate } from 'jsonschema';
 import type { RCECancelEvent } from '@events/utils';
@@ -54,6 +54,15 @@ export interface RceRequest {
      * The action data associated with this request.
      */
     actionData: ActionData;
+}
+
+export interface ExtendedActionInfo {
+    action: RCEAction;
+    isRegistered: boolean;
+    effectivePermissionLevel: PermissionLevel;
+    isConfigured: boolean;
+    configuredWorkspacePermission?: PermissionLevel;
+    configuredGlobalPermission?: PermissionLevel;
 }
 
 export const cancelRequestAction: RCEAction = {
@@ -273,6 +282,7 @@ export function addActions(actions: RCEAction[], register = true): void {
             .map(name => ACTIONS.find(a => a.name === name)!)
             .filter((action) => getPermissionLevel(action.name) && action.registerCondition?.() !== false)
             .map(stripToAction);
+        actionsToRegister.forEach(a => REGISTERED_ACTIONS.add(a.name));
         if (actionsToRegister.length > 0)
             NEURO.client?.registerActions(actionsToRegister);
     }
@@ -303,6 +313,7 @@ export function registerAction(actionName: string): void {
     if (action) {
         NEURO.client?.registerActions([stripToAction(action)]);
         REGISTERED_ACTIONS.add(action.name);
+        NEURO.actionsViewProvider?.refreshActions();
     }
 }
 
@@ -312,6 +323,8 @@ export function registerAction(actionName: string): void {
  */
 export function unregisterAction(actionName: string): void {
     NEURO.client?.unregisterActions([actionName]);
+    REGISTERED_ACTIONS.delete(actionName);
+    NEURO.actionsViewProvider?.refreshActions();
 }
 
 export function reregisterAllActions(): void {
@@ -332,6 +345,7 @@ export function reregisterAllActions(): void {
 
     // Register the actions with Neuro
     NEURO.client?.registerActions(actionsToRegister);
+    NEURO.actionsViewProvider?.refreshActions();
     return;
 
     function shouldRegister(action: RCEAction): boolean {
@@ -357,6 +371,24 @@ export function getActions(): readonly RCEAction[] {
 
 export function getAction(actionName: string): RCEAction | undefined {
     return ACTIONS.find(a => a.name === actionName);
+}
+
+export function getExtendedActionsInfo(): ExtendedActionInfo[] {
+    const permissions = getAllPermissions();
+    const configuration = vscode.workspace.getConfiguration('neuropilot');
+    const { workspaceValue, globalValue } = configuration.inspect<Record<string, string>>('actionPermissions') || {};
+    return ACTIONS.map(action => {
+        const configuredWorkspacePermission = workspaceValue?.[action.name] ? stringToPermissionLevel(workspaceValue[action.name]) : undefined;
+        const configuredGlobalPermission = globalValue?.[action.name] ? stringToPermissionLevel(globalValue[action.name]) : undefined;
+        return {
+            action,
+            isRegistered: REGISTERED_ACTIONS.has(action.name),
+            effectivePermissionLevel: permissions[action.name] ?? action.defaultPermission ?? PermissionLevel.OFF,
+            configuredWorkspacePermission,
+            configuredGlobalPermission,
+            isConfigured: configuredWorkspacePermission !== undefined || configuredGlobalPermission !== undefined,
+        } satisfies ExtendedActionInfo;
+    });
 }
 
 /**

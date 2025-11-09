@@ -4,11 +4,11 @@ import type { Change, CommitOptions, Commit, Repository, API, GitExtension } fro
 import { ForcePushMode } from '@typing/git.d';
 import { StatusStrings, RefTypeStrings } from '@typing/git_status';
 import { logOutput, simpleFileName, isPathNeuroSafe, normalizePath, getWorkspacePath } from '@/utils';
-import { ActionData, ActionValidationResult, actionValidationAccept, actionValidationFailure, RCEAction, contextFailure, stripToActions, actionValidationRetry } from '@/neuro_client_helper';
+import { ActionData, ActionValidationResult, actionValidationAccept, actionValidationFailure, RCEAction, contextFailure, actionValidationRetry } from '@/neuro_client_helper';
 import assert from 'node:assert';
 import { RCECancelEvent } from '@events/utils';
 import { JSONSchema7Definition } from 'json-schema';
-import { addActions, reregisterAllActions } from './rce';
+import { addActions, registerAction, reregisterAllActions, unregisterAction } from './rce';
 
 /* All actions located in here requires neuropilot.permission.gitOperations to be enabled. */
 
@@ -973,9 +973,7 @@ export function handleGitMerge(actionData: ActionData): string | undefined {
         NEURO.client?.sendContext(`Cleanly merged ${refToMerge} into the current branch.`);
     }, (erm: string) => {
         if (repo?.state.mergeChanges.some(() => true)) {
-            NEURO.client?.registerActions(stripToActions([
-                gitActions.abort_merge,
-            ]));
+            registerAction(gitActions.abort_merge.name);
         }
         NEURO.client?.sendContext(`Couldn't merge ${refToMerge}: ${erm}`);
         logOutput('ERROR', `Encountered an error when merging ${refToMerge}: ${erm}`);
@@ -988,7 +986,7 @@ export function handleAbortMerge(_actionData: ActionData): string | undefined {
     assert(repo);
 
     repo.mergeAbort().then(() => {
-        NEURO.client?.unregisterActions(['abort_merge']);
+        unregisterAction(gitActions.abort_merge.name);
         NEURO.client?.sendContext('Merge aborted.');
     }, (erm: string) => {
         NEURO.client?.sendContext("Couldn't abort merging!");

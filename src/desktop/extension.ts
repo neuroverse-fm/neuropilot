@@ -94,5 +94,6 @@ export function deactivate() {
 }
 
 function reloadDesktopPermissions() {
-    reloadPermissions(reloadTasks, reregisterAllActions);
+    // TODO: Add command to reload tasks separately
+    reloadPermissions(/*reloadTasks,*/ reregisterAllActions);
 }

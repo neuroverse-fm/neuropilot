@@ -1,16 +1,19 @@
 import * as vscode from 'vscode';
-import { getAllPermissions, PermissionLevel, setPermissions } from '@/config';
+import { PermissionLevel, setPermissions } from '@/config';
 import { BaseWebviewViewProvider } from './base';
-import { getActions } from '@/rce';
+import { getExtendedActionsInfo } from '@/rce';
 import { toTitleCase } from '@/utils';
+
+export type SettingsContext = 'user' | 'workspace';
 
 export interface ActionNode {
     id: string;
     label: string;
     category: string;
-    // TODO: Not sure this is useful since I don't know how to do tooltips
-    // description?: string;
+    description?: string;
     permissionLevel: PermissionLevel;
+    modifiedExternally: boolean;
+    isRegistered: boolean;
 }
 
 export type ActionsViewProviderMessage = {
@@ -31,24 +34,36 @@ export type ActionsViewMessage = {
     message: string;
 } | {
     type: 'requestInitialization';
+    currentContext: SettingsContext;
+} | {
+    type: 'changeContext';
+    newContext: SettingsContext;
 };
 
 export class ActionsViewProvider extends BaseWebviewViewProvider<ActionsViewMessage, ActionsViewProviderMessage> {
     public static readonly viewType = 'neuropilot.actionsView';
+    private _currentContext: SettingsContext = 'workspace';
 
     constructor() {
         super('actions/index.html', 'actions/main.js', ['actions/style.css']);
     }
 
     public refreshActions() {
-        const permissionLevels = getAllPermissions(); // Get all permissions once to avoid multiple calls
-        const actionNodes = getActions().map(action => ({
-            id: action.name,
-            label: action.displayName ?? toTitleCase(action.name),
-            category: action.category ?? 'No Category Specified', // TODO: Handle null category better?
-            // description: action.description,
-            permissionLevel: permissionLevels[action.name] ?? action.defaultPermission ?? PermissionLevel.OFF,
+        const actionsInfo = getExtendedActionsInfo();
+        const actionNodes = actionsInfo.map(info => ({
+            id: info.action.name,
+            label: info.action.displayName ?? toTitleCase(info.action.name),
+            category: info.action.category ?? 'No Category Specified', // TODO: Handle null category better?
+            description: info.action.description,
+            permissionLevel: (this._currentContext === 'user' ? info.configuredGlobalPermission : info.configuredWorkspacePermission) ?? info.configuredGlobalPermission ?? PermissionLevel.OFF,
+            modifiedExternally:
+                // We are in workspace context and the permission is modified in global settings but not in workspace settings
+                this._currentContext === 'workspace' && info.configuredWorkspacePermission === undefined && info.configuredGlobalPermission !== undefined
+                // OR we are in user context and the permission is modified in workspace settings and not equal to the global setting
+                || this._currentContext === 'user' && info.configuredWorkspacePermission !== undefined && info.configuredWorkspacePermission !== info.configuredGlobalPermission,
+            isRegistered: info.isRegistered,
         } satisfies ActionNode));
+        // TODO: Fix flickering by specifying if actions have been added/removed
         this._view?.webview.postMessage({
             type: 'refreshActions',
             actions: actionNodes,
@@ -58,17 +73,16 @@ export class ActionsViewProvider extends BaseWebviewViewProvider<ActionsViewMess
     protected handleMessage(message: ActionsViewMessage): void {
         switch (message.type) {
             case 'viewToggledPermissions': {
-                const permissionLevels = getAllPermissions(); // Get all permissions once to avoid multiple calls
-                const actionsToUpdate = message.actionIds
-                    .filter(id => permissionLevels[id] !== message.newPermissionLevel);
+                const actionsToUpdate = message.actionIds;
                 const permissionUpdates: Record<string, PermissionLevel> = {};
                 for (const actionId of actionsToUpdate) {
                     permissionUpdates[actionId] = message.newPermissionLevel;
                 }
-                setPermissions(permissionUpdates).then(
+                const target = this._currentContext === 'user' ? vscode.ConfigurationTarget.Global : vscode.ConfigurationTarget.Workspace;
+                setPermissions(permissionUpdates, target).then(
                     () => {
-                        // Updating permissions should automatically refresh the view via the config change listener
-                        // this.refreshActions();
+                        if (this._currentContext === 'user')
+                            this.refreshActions();
                     },
                     (erm) => {
                         vscode.window.showErrorMessage(`Failed to update action permissions: ${erm}`);
@@ -81,6 +95,12 @@ export class ActionsViewProvider extends BaseWebviewViewProvider<ActionsViewMess
                 break;
             }
             case 'requestInitialization': {
+                this._currentContext = message.currentContext;
+                this.refreshActions();
+                break;
+            }
+            case 'changeContext': {
+                this._currentContext = message.newContext;
                 this.refreshActions();
                 break;
             }

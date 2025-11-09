@@ -1,20 +1,28 @@
-import type { ActionNode, ActionsViewMessage, ActionsViewProviderMessage } from '@/views/actions';
+import type { ActionNode, ActionsViewMessage, ActionsViewProviderMessage, SettingsContext } from '@/views/actions';
 import { PermissionLevel } from '@/config';
 
 interface State {
     actions: ActionNode[];
+    context: SettingsContext;
 }
 
 (function () {
     const vscode = acquireVsCodeApi<State>();
 
     const oldState = vscode.getState();
-    const state: State = oldState ?? { actions: [] };
+    const state: State = oldState ?? {
+        actions: [],
+        context: 'workspace',
+    };
     if (!oldState) {
         vscode.setState(state);
     }
-    vscode.postMessage({ type: 'requestInitialization' });
+    vscode.postMessage({
+        type: 'requestInitialization',
+        currentContext: state.context,
+    } satisfies ActionsViewMessage);
 
+    updateContextSwitcher();
     updateActionsList();
 
     // Handle messages sent from the extension to the webview
@@ -69,7 +77,7 @@ interface State {
 
             for (const actionNode of categories[category]) {
                 // <div class="action-entry" id="action-{id}">
-                //   <span class="action-label">Action Label</span>
+                //   <span class="action-label" title="Action Description">Action Label</span>
                 //   [checkboxes]
                 // </div>
                 const actionEntry = document.createElement('div');
@@ -77,7 +85,13 @@ interface State {
                 actionEntry.id = `action-${actionNode.id}`;
 
                 const actionLabel = document.createElement('span');
-                actionLabel.className = 'action-label';
+                actionLabel.classList.add('action-label');
+                if (actionNode.modifiedExternally)
+                    actionLabel.classList.add('modified-externally');
+                if (!actionNode.isRegistered)
+                    actionLabel.classList.add('unregistered-action');
+                if (actionNode.description)
+                    actionLabel.title = actionNode.description;
                 actionLabel.textContent = actionNode.label;
                 actionEntry.appendChild(actionLabel);
 
@@ -142,5 +156,41 @@ interface State {
 
             return container;
         }
+    }
+
+    function changeContext(newContext: SettingsContext) {
+        state.context = newContext;
+        vscode.setState(state);
+        updateContextSwitcher();
+        vscode.postMessage({
+            type: 'changeContext',
+            newContext: newContext,
+        } satisfies ActionsViewMessage);
+    }
+
+    function updateContextSwitcher() {
+        const switcherContainer = document.querySelector<HTMLParagraphElement>('.context-switcher')!;
+        switcherContainer.textContent = '';
+        const linkElement = document.createElement('a');
+        const spanElement = document.createElement('span');
+        const userElement = state.context === 'user' ? spanElement : linkElement;
+        const workspaceElement = state.context === 'workspace' ? spanElement : linkElement;
+
+        userElement.textContent = 'User';
+        workspaceElement.textContent = 'Workspace';
+        spanElement.className = 'current-context';
+        linkElement.className = 'not-current-context';
+
+        if (state.context === 'user') {
+            linkElement.title = 'Switch to Workspace Settings';
+            linkElement.onclick = () => changeContext('workspace');
+        } else {
+            linkElement.title = 'Switch to User Settings';
+            linkElement.onclick = () => changeContext('user');
+        }
+
+        switcherContainer.appendChild(userElement);
+        switcherContainer.appendChild(document.createTextNode(' | '));
+        switcherContainer.appendChild(workspaceElement);
     }
 }());

@@ -2,6 +2,14 @@ body {
     margin-bottom: 20px;
 }
 
+.current-context {
+    font-weight: bold;
+}
+
+.not-current-context {
+    cursor: pointer;
+}
+
 .actions-header {
     font-weight: bold;
     white-space: nowrap;
@@ -46,6 +54,14 @@ body {
     text-overflow: ellipsis;
     flex-grow: 1;
     flex-shrink: 1;
+}
+
+.modified-externally {
+    font-style: italic;
+}
+
+.unregistered-action {
+    color: var(--vscode-disabledForeground);
 }
 
 .permission-radio-container {
