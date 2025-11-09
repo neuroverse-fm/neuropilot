@@ -4,6 +4,10 @@
     "neuropilot.showTimeOnTerminalStart": true,
     "neuropilot.sendContentsOnFileChange": false,
     "neuropilot.cursorPositionContextStyle": "both",
+    "neuropilot.access.inheritFromIgnoreFiles": false,
+    "neuropilot.access.ignoreFiles": [
+        ".gitignore"
+    ],
     "neuropilot.actionPermissions": {
         "get_workspace_files": "autopilot",
         "open_file": "autopilot",

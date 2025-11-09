@@ -35,6 +35,7 @@
     "files.autoSaveDelay": 1000,
     "neuropilot.actions.hideCopilotRequests": false,
     "neuropilot.connection.nameOfAPI": "Neuro",
+    "neuropilot.access.ignoreFiles": ["./.neuroignore"],
     "neuropilot.actionPermissions": {
         "place_cursor": "copilot",
         "get_cursor": "copilot",

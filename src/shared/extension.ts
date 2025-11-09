@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { NEURO, EXTENSIONS } from '@/constants';
-import { logOutput, createClient, onClientConnected, setVirtualCursor, showAPIMessage, disconnectClient, reconnectClient } from '@/utils';
+import { logOutput, createClient, onClientConnected, setVirtualCursor, showAPIMessage, disconnectClient, reconnectClient, getWorkspaceUri } from '@/utils';
 import { completionsProvider, registerCompletionResultHandler } from '@/completions';
 import { giveCookie, sendCurrentFile } from '@/context';
 import { registerChatResponseHandler } from '@/chat';
@@ -13,6 +13,8 @@ import { getGitExtension } from '@/git';
 import { openDocsOnTarget, registerDocsCommands, registerDocsLink } from './docs';
 import { readChangelogAndSendToNeuro } from '@/changelog';
 import { moveCursorEmitterDiposable } from '@events/cursor';
+import { loadIgnoreFiles } from '@/ignore_files_utils';
+import { getWorkspacePath, normalizePath } from '@/utils';
 import { ActionsViewProvider } from '@/views/actions';
 
 // Shared commands
@@ -41,10 +43,17 @@ export function registerCommonCommands() {
 export function setupCommonEventHandlers() {
     const handlers = [
         vscode.languages.onDidChangeDiagnostics(sendDiagnosticsDiff),
-        vscode.workspace.onDidSaveTextDocument(fileSaveListener),
+        vscode.workspace.onDidSaveTextDocument(async (e) => {
+            fileSaveListener(e);
+            const workspaceUri = getWorkspaceUri();
+            if (workspaceUri) {
+                const isIgnoreFile = ACCESS.ignoreFiles.some(f => vscode.Uri.joinPath(workspaceUri, f).fsPath === e.fileName);
+                if (isIgnoreFile) await loadIgnoreFiles(getWorkspacePath() || '');
+            }
+        }),
         vscode.window.onDidChangeActiveTextEditor(editorChangeHandler),
         vscode.workspace.onDidChangeTextDocument(workspaceEditHandler),
-        vscode.workspace.onDidChangeConfiguration(event => {
+        vscode.workspace.onDidChangeConfiguration(async (event) => {
             if (event.affectsConfiguration('files.autoSave')) {
                 NEURO.client?.sendContext('The Auto-Save setting has been modified.');
                 toggleSaveAction();
@@ -76,6 +85,14 @@ export function setupCommonEventHandlers() {
             if (event.affectsConfiguration('neuropilot.actionPermissions')) {
                 vscode.commands.executeCommand('neuropilot.reloadPermissions');
                 NEURO.actionsViewProvider?.refreshActions();
+            }
+
+            if (event.affectsConfiguration('neuropilot.access.ignoreFiles')) {
+                await loadIgnoreFiles(
+                    normalizePath(
+                        getWorkspacePath() || '',
+                    ) || '',
+                );
             }
         }),
         vscode.extensions.onDidChange(obtainExtensionState),
