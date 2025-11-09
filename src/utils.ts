@@ -4,7 +4,7 @@ import globToRegExp from 'glob-to-regexp';
 import { fileTypeFromBuffer } from 'file-type';
 
 import { NEURO } from '@/constants';
-import { ACCESS, CONFIG, CONNECTION, CursorPositionContextStyle } from '@/config';
+import { ACCESS, CONFIG, CONNECTION, CursorPositionContextStyle, PermissionLevel, setPermissionLevel } from '@/config';
 
 import { ActionValidationResult, ActionData, actionValidationAccept, actionValidationFailure } from '@/neuro_client_helper';
 import assert from 'node:assert';
@@ -922,10 +922,10 @@ export function notifyOnCaughtException(name: string, error: Error | unknown): v
                             NEURO.tempDisabledActions.push(name);
                             break;
                         case 'this entire workspace':
-                            await vscode.workspace.getConfiguration('neuropilot').update('actionPermissions.' + name, 'off', vscode.ConfigurationTarget.Workspace);
+                            await setPermissionLevel(name, PermissionLevel.OFF, vscode.ConfigurationTarget.Workspace);
                             break;
                         case 'this user':
-                            await vscode.workspace.getConfiguration('neuropilot').update('actionPermissions.' + name, 'off', vscode.ConfigurationTarget.Global);
+                            await setPermissionLevel(name, PermissionLevel.OFF, vscode.ConfigurationTarget.Global);
                             break;
                     }
                     if (disableFor) logOutput('INFO', `Disabled action "${name}" for ${disableFor} due to a caught exception.`);

@@ -407,7 +407,7 @@ export function getAllPermissions(): Record<string, PermissionLevel> {
  * If used as a boolean, {@link PermissionLevel.OFF} is considered `false`, everything else is considered `true`.
  */
 export function getPermissionLevel(actionName: string): PermissionLevel {
-    if (NEURO.killSwitch) {
+    if (NEURO.killSwitch || NEURO.tempDisabledActions.includes(actionName)) {
         return PermissionLevel.OFF;
     }
     const permissions = getAllPermissions();
@@ -422,20 +422,23 @@ export function getPermissionLevel(actionName: string): PermissionLevel {
  * Sets the specified action permissions.
  * @param permissions The permissions to set. Will be merged with the current workspace settings.
  */
-export function setPermissions(permissions: Record<string, PermissionLevel>): Thenable<void> {
+export function setPermissions(permissions: Record<string, PermissionLevel>, target: vscode.ConfigurationTarget = vscode.ConfigurationTarget.Workspace): Thenable<void> {
     const configuration = vscode.workspace.getConfiguration('neuropilot');
-    const workspaceValue = configuration.inspect<Record<string, string>>('actionPermissions')?.workspaceValue || {};
+    const configValue = configuration.inspect<Record<string, string>>('actionPermissions');
+    const value =
+        target === vscode.ConfigurationTarget.Global ? configValue?.globalValue ?? {} :
+        target === vscode.ConfigurationTarget.Workspace ? configValue?.workspaceValue ?? {} :
+        configValue?.workspaceFolderValue ?? {};
     const stringPermissions: Record<string, string> = {};
     for (const key in permissions) {
         stringPermissions[key] = permissionLevelToString(permissions[key]);
     }
-    const mergedPermissions: Record<string, string> = { ...workspaceValue, ...stringPermissions };
-    return configuration.update('actionPermissions', mergedPermissions, vscode.ConfigurationTarget.Workspace);
+    const mergedPermissions: Record<string, string> = { ...value, ...stringPermissions };
+    return configuration.update('actionPermissions', mergedPermissions, target);
 }
 
-export function setPermissionLevel(actionName: string, level: PermissionLevel): Thenable<void> {
-    const configuration = vscode.workspace.getConfiguration('neuropilot');
-    return configuration.update('actionPermissions.' + actionName, permissionLevelToString(level), vscode.ConfigurationTarget.Workspace);
+export function setPermissionLevel(actionName: string, level: PermissionLevel, target: vscode.ConfigurationTarget = vscode.ConfigurationTarget.Workspace): Thenable<void> {
+    return setPermissions({ [actionName]: level }, target);
 }
 
 class Config {
