@@ -54,6 +54,7 @@ interface State {
             .sort()
             .sort((a, b) => a === 'Miscellaneous' ? 1 : b === 'Miscellaneous' ? -1 : 0)
             .sort((a, b) => a === 'No Category Specified' ? 1 : b === 'No Category Specified' ? -1 : 0);
+        categoryKeys.forEach(c => categories[c].sort((a, b) => a.label.localeCompare(b.label)));
         for (const category of categoryKeys) {
             // <div class="category-header">
             //   <span class="action-label">Category Name</span>
