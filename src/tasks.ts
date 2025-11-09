@@ -18,7 +18,7 @@ export const taskHandlers = {
     terminate_task: {
         name: 'terminate_task',
         description: 'Terminate the currently running task',
-        category: 'Miscellaneous',
+        category: 'Tasks',
         handler: handleTerminateTask,
         cancelEvents: [
             notifyOnTaskFinish,
@@ -124,7 +124,7 @@ export function reloadTasks() {
         addActions(NEURO.tasks.map((task) => ({
             name: task.id,
             description: task.description,
-            category: 'Tasks',
+            category: 'Registered Tasks',
             handler: handleRunTask,
             promptGenerator: `run the task: ${task.description}`,
             // TODO: Do we need these validators?
