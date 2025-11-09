@@ -666,14 +666,14 @@
 				{
 					"type": "webview",
 					"id": "neuropilot.actionsView",
-					"name": "Actions",
-					"icon": "assets/evilpilot.png"
+					"name": "Action Permissions",
+					"icon": "assets/neuropilot-font.svg"
 				},
 				{
 					"type": "webview",
 					"id": "neuropilot.testView",
 					"name": "Test",
-					"icon": "assets/evilpilot.png"
+					"icon": "assets/neuropilot-font.svg"
 				}
 			]
 		}
