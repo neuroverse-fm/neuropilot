@@ -10,10 +10,6 @@ Changes between each version before then will not be listed.
 
 Hello Neuro! If you're reading this, it means Vedal has let you read the changelogs for the extension!
 
-### Fixes
-
-- `neuropilot.actions.disabledActions` is now given a `uniqueItems` property on its schema, meaning that all items inside it must be unique. It isn't strictly necessary but to ensure no breakage or anything we've added that.
-
 ### Changes
 
 - Some action names were changed because they seemed to confuse Neuro when prompted. Specifically:
@@ -22,16 +18,30 @@ Hello Neuro! If you're reading this, it means Vedal has let you read the changel
 - The way that ignoring the deprecated settings migration notice has been changed.
   - Before, telling the extension to ignore deprecated settings meant that the deprecated settings notice would be ignored forever.
   - As of this update, the extension will only ignore it for this version.
+- Categorical permissions have been completely removed. Instead, permissions are now managed via a single setting (`neuropilot.actionPermissions`). The recommended way to modify this setting is using the NeuroPilot sidebar tab.
+
+### New features
+
+- Added a sidebar tab for NeuroPilot. This sidebar tab currently only contains the new permission settings but will be extended in the future.
 
 ### New actions
 
 - Added `read_changelog` to send changelog entries (from a specified version or defaults) to Neuro, e.g. for summarization. Remembers the last delivered version.
   - This action is also available from the VS Code Command Palette and the updated version popup/notification.
-  - This action will always be set to Copilot mode.
+  - This action will be set to Copilot mode by default.
 
 ### New commands
 
 - [Dev] Clear all NeuroPilot mementos: a developer-only command that removes all stored memento values (both globalState and workspaceState) for this extension. This command is only available when running in the Extension Development Host and is hidden for normal users.
+
+### New settings
+
+- `neuropilot.actionPermissions`: Replacement for the `neuropilot.permission.*` settings. Allows specifying a permission for each individual action.
+
+### Deprecated settings
+
+- `neuropilot.permission.*`: All permission settings have been deprecated in favor of `neuropilot.actionPermissions`.
+- `neuropilot.actions.disabledActions`: *Disabling* specific actions has been deprecated in favor of *enabling* only specific actions.
 
 ## 2.2.3
 
