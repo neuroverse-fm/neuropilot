@@ -7,7 +7,7 @@ import { registerChatResponseHandler } from '@/chat';
 import { ACCESS, ACTIONS, checkDeprecatedSettings, CONFIG, CONNECTION, PermissionLevel, setPermissions } from '@/config';
 import { explainWithNeuro, fixWithNeuro, NeuroCodeActionsProvider, sendDiagnosticsDiff } from '@/lint_problems';
 import { editorChangeHandler, fileSaveListener, moveNeuroCursorHere, toggleSaveAction, workspaceEditHandler } from '@/editing';
-import { emergencyDenyRequests, acceptRceRequest, denyRceRequest, revealRceNotification, clearRceRequest, getActions } from '@/rce';
+import { emergencyDenyRequests, acceptRceRequest, denyRceRequest, revealRceNotification, clearRceRequest, getActions, reregisterAllActions } from '@/rce';
 import type { GitExtension } from '@typing/git';
 import { getGitExtension } from '@/git';
 import { openDocsOnTarget, registerDocsCommands, registerDocsLink } from './docs';
@@ -83,7 +83,7 @@ export function setupCommonEventHandlers() {
                 setVirtualCursor();
             }
             if (event.affectsConfiguration('neuropilot.actionPermissions')) {
-                vscode.commands.executeCommand('neuropilot.reloadPermissions');
+                reregisterAllActions(true);
                 NEURO.actionsViewProvider?.refreshActions();
             }
 

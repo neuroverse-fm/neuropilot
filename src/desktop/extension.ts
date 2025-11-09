@@ -61,7 +61,7 @@ export function activate(context: vscode.ExtensionContext) {
     registerChatParticipant();
 
     // Setup client connected handlers
-    setupClientConnectedHandlers(reloadTasks, reregisterAllActions, registerUnsupervisedHandlers); // reloadTasks added to set it up at the same time
+    setupClientConnectedHandlers(reloadTasks, () => reregisterAllActions(false), registerUnsupervisedHandlers); // reloadTasks added to set it up at the same time
 
     // Create status bar item
     createStatusBarItem();
@@ -101,5 +101,5 @@ export function deactivate() {
 
 function reloadDesktopPermissions() {
     // TODO: Add command to reload tasks separately
-    reloadPermissions(/*reloadTasks,*/ reregisterAllActions);
+    reloadPermissions(/*reloadTasks,*/ () => reregisterAllActions(false));
 }

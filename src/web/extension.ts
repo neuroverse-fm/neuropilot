@@ -51,7 +51,7 @@ export function activate(context: vscode.ExtensionContext) {
     NEURO.context!.subscriptions.push(...setupCommonEventHandlers());
 
     // Setup client connected handlers
-    setupClientConnectedHandlers(reregisterAllActions, registerUnsupervisedHandlers);
+    setupClientConnectedHandlers(() => reregisterAllActions(false), registerUnsupervisedHandlers);
 
     // Create status bar item
     createStatusBarItem();
@@ -84,5 +84,5 @@ export function deactivate() {
 }
 
 function reloadWebPermissions() {
-    reloadPermissions(reregisterAllActions);
+    reloadPermissions(() => reregisterAllActions(false));
 }

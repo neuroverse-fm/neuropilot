@@ -326,35 +326,48 @@ export function unregisterAction(actionName: string): void {
     NEURO.actionsViewProvider?.refreshActions();
 }
 
-export function reregisterAllActions(): void {
-    const actionNames = ACTIONS.map(a => a.name);
+/**
+ * Reregisters all actions with the Neuro API.
+ * @param conservative Only reregister as necessary.
+ */
+export function reregisterAllActions(conservative: boolean): void {
+    const permissions = getAllPermissions();
+    const actionsToUnregister = conservative
+        ? ACTIONS
+            .filter(a => REGISTERED_ACTIONS.has(a.name) && !shouldBeRegistered(a))
+            .map(a => a.name)
+        : ACTIONS.map(a => a.name);
 
-    // Unregister all actions
-    NEURO.client?.unregisterActions(actionNames);
+    // Unregister actions
+    if (actionsToUnregister.length > 0)
+        NEURO.client?.unregisterActions(actionsToUnregister);
+    actionsToUnregister.forEach(a => REGISTERED_ACTIONS.delete(a));
 
     // Determine which actions to register
-    const permissions = getAllPermissions();
     const actionsToRegister = ACTIONS
-        .filter(shouldRegister)
+        // Skip actions that are already registered
+        .filter(a => !REGISTERED_ACTIONS.has(a.name))
+        .filter(shouldBeRegistered)
         .map(stripToAction);
 
-    // Clear and rebuild the registered actions set
-    REGISTERED_ACTIONS.clear();
     actionsToRegister.forEach(a => REGISTERED_ACTIONS.add(a.name));
 
     // Register the actions with Neuro
-    NEURO.client?.registerActions(actionsToRegister);
+    if (actionsToRegister.length > 0)
+        NEURO.client?.registerActions(actionsToRegister);
+
     NEURO.actionsViewProvider?.refreshActions();
     return;
 
-    function shouldRegister(action: RCEAction): boolean {
-        // Only register non-auto-registered actions if they were previously registered
+    function shouldBeRegistered(action: RCEAction): boolean {
+        // Non-auto-registered actions should stay unregistered
         if (action.autoRegister === false && !REGISTERED_ACTIONS.has(action.name))
             return false;
         // Check the register condition
         if (action.registerCondition && !action.registerCondition())
             return false;
-        const effectivePermission = permissions[action.name] ?? PermissionLevel.OFF;
+        // Check permissions
+        const effectivePermission = permissions[action.name] ?? action.defaultPermission ?? PermissionLevel.OFF;
         return effectivePermission !== PermissionLevel.OFF;
     }
 }
