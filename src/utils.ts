@@ -41,7 +41,6 @@ export function createClient() {
     NEURO.connected = false;
     NEURO.waiting = false;
     NEURO.cancelled = false;
-    NEURO.waitingForCookie = false;
 
     // Reset auto-reconnect flag for new connection
     shouldAutoReconnect = true;

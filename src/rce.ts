@@ -6,9 +6,8 @@
 import * as vscode from 'vscode';
 import { ActionData, RCEAction, stripToAction } from '@/neuro_client_helper';
 import { NEURO } from '@/constants';
-import { checkVirtualWorkspace, checkWorkspaceTrust, logOutput, notifyOnCaughtException } from '@/utils';
+import { logOutput, notifyOnCaughtException } from '@/utils';
 import { ACTIONS as ACTIONS_CONFIG, CONFIG, CONNECTION, getAllPermissions, getPermissionLevel, PermissionLevel, stringToPermissionLevel } from '@/config';
-import { handleRunTask } from '@/tasks';
 import { validate } from 'jsonschema';
 import type { RCECancelEvent } from '@events/utils';
 
@@ -398,28 +397,12 @@ export function getExtendedActionsInfo(): ExtendedActionInfo[] {
  * @param actionList The list of actions currently registered.
  * @param checkTasks Whether or not to check for tasks.
  */
-export async function RCEActionHandler(actionData: ActionData, actionList: Record<string, RCEAction>, checkTasks: boolean) {
-    const actionKeys = Object.keys(actionList);
+export async function RCEActionHandler(actionData: ActionData) {
     try {
-        if (actionKeys.includes(actionData.name) || checkTasks === true && NEURO.tasks.find(task => task.id === actionData.name)) {
+        if (REGISTERED_ACTIONS.has(actionData.name)) {
             NEURO.actionHandled = true;
 
-            let action: RCEAction;
-            if (actionKeys.includes(actionData.name)) {
-                action = actionList[actionData.name];
-            }
-            // TODO: Replace this with dynamically registered actions
-            else {
-                const task = NEURO.tasks.find(task => task.id === actionData.name)!;
-                action = {
-                    name: task.id,
-                    description: task.description,
-                    category: 'Tasks',
-                    handler: handleRunTask,
-                    validators: [checkVirtualWorkspace, checkWorkspaceTrust],
-                    promptGenerator: () => `run the task "${task.id}".`,
-                };
-            }
+            const action = getAction(actionData.name)!;
 
             const effectivePermission = getPermissionLevel(action.name);
             if (effectivePermission === PermissionLevel.OFF) {

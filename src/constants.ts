@@ -36,8 +36,6 @@ interface Neuro {
     cancelled: boolean;
     /** The extension's output channel (logging) */
     outputChannel: vscode.OutputChannel | null;
-    /** Whether Neuro has asked for a cookie. */
-    waitingForCookie: boolean;
     /** The array of tasks that Neuro can execute. */
     tasks: NeuroTask[];
     /** Stores the currently executed task. */
@@ -96,7 +94,6 @@ export const NEURO: Neuro = {
     waiting: false,
     cancelled: false,
     outputChannel: null,
-    waitingForCookie: false,
     tasks: [],
     currentTaskExecution: null,
     actionHandled: false,

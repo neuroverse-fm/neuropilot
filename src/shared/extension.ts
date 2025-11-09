@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { NEURO, EXTENSIONS } from '@/constants';
 import { logOutput, createClient, onClientConnected, setVirtualCursor, showAPIMessage, disconnectClient, reconnectClient } from '@/utils';
 import { completionsProvider, registerCompletionResultHandler } from '@/completions';
-import { giveCookie, registerRequestCookieAction, registerRequestCookieHandler, sendCurrentFile } from '@/context';
+import { giveCookie, sendCurrentFile } from '@/context';
 import { registerChatResponseHandler } from '@/chat';
 import { ACCESS, ACTIONS, checkDeprecatedSettings, CONFIG, CONNECTION, PermissionLevel, setPermissions } from '@/config';
 import { explainWithNeuro, fixWithNeuro, NeuroCodeActionsProvider, sendDiagnosticsDiff } from '@/lint_problems';
@@ -120,8 +120,6 @@ export function setupClientConnectedHandlers(...extraHandlers: (() => void)[]) {
     for (const handlers of extraHandlers) {
         onClientConnected(handlers);
     }
-    onClientConnected(registerRequestCookieAction);
-    onClientConnected(registerRequestCookieHandler);
     onClientConnected(registerPostActionHandler);
 }
 
@@ -164,7 +162,6 @@ function disconnect() {
 }
 
 export function reloadPermissions(...extraFunctions: (() => void)[]) {
-    registerRequestCookieAction();
     for (const reloads of extraFunctions) {
         reloads();
     }
