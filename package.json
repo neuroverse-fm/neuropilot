@@ -777,7 +777,6 @@
 		"typescript-eslint": "^8.26.0"
 	},
 	"dependencies": {
-		"@types/vscode-webview": "^1.57.5",
 		"file-type": "^21.0.0",
 		"glob-to-regexp": "^0.4.1",
 		"jsonschema": "^1.5.0",
