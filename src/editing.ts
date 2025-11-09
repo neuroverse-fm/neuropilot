@@ -2,12 +2,12 @@ import * as vscode from 'vscode';
 
 import { NEURO } from '@/constants';
 import { DiffRangeType, escapeRegExp, getDiffRanges, getFence, getPositionContext, getProperty, getVirtualCursor, showDiffRanges, isPathNeuroSafe, logOutput, NeuroPositionContext, setVirtualCursor, simpleFileName, substituteMatch, clearDecorations, formatContext, filterFileContents, positionFromIndex, indexFromPosition } from '@/utils';
-import { ActionData, actionValidationAccept, actionValidationFailure, ActionValidationResult, RCEAction, contextFailure, stripToActions, actionValidationRetry, contextNoAccess } from '@/neuro_client_helper';
+import { ActionData, actionValidationAccept, actionValidationFailure, ActionValidationResult, RCEAction, contextFailure, actionValidationRetry, contextNoAccess } from '@/neuro_client_helper';
 import { CONFIG, CONNECTION } from '@/config';
 import { createCursorPositionChangedEvent } from '@events/cursor';
 import { RCECancelEvent } from '@events/utils';
 import type { JSONSchema7 } from 'json-schema';
-import { addActions } from '@/rce';
+import { addActions, registerAction, unregisterAction } from '@/rce';
 
 const CONTEXT_NO_ACCESS = 'You do not have permission to access this file.';
 const CONTEXT_NO_ACTIVE_DOCUMENT = 'No active document to edit.';
@@ -511,6 +511,7 @@ export const editingActions = {
         ],
         validators: [checkCurrentFile],
         promptGenerator: 'save.',
+        registerCondition: () => vscode.workspace.getConfiguration('files').get<string>('autoSave') !== 'afterDelay',
     },
     rewrite_all: {
         name: 'rewrite_all',
@@ -695,7 +696,7 @@ export const editingActions = {
 } satisfies Record<string, RCEAction>;
 
 export function addEditingActions() {
-    const actions = [
+    addActions([
         editingActions.place_cursor,
         editingActions.get_cursor,
         editingActions.get_file_contents,
@@ -712,19 +713,16 @@ export function addEditingActions() {
         editingActions.get_user_selection,
         editingActions.replace_user_selection,
         editingActions.diff_patch,
-    ];
-    if (vscode.workspace.getConfiguration('files').get<string>('autoSave') !== 'afterDelay') {
-        actions.push(editingActions.save);
-    }
-    addActions(actions);
+        editingActions.save,
+    ]);
 }
 
 export function toggleSaveAction(): void {
     const autoSave = vscode.workspace.getConfiguration('files').get<string>('autoSave');
     if (autoSave === 'afterDelay') {
-        NEURO.client?.unregisterActions(['save']);
+        unregisterAction(editingActions.save.name);
     } else {
-        NEURO.client?.registerActions(stripToActions([editingActions.save]));
+        registerAction(editingActions.save.name);
     }
 }
 

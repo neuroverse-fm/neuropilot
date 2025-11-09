@@ -90,6 +90,7 @@
         "get_currently_running_shells": "copilot",
         "read_changelog": "copilot",
         "request_cookie": "copilot",
-        "terminate_task": "copilot"
+        "terminate_task": "copilot",
+        "save": "copilot"
     },
 }
