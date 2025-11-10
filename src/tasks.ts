@@ -130,7 +130,6 @@ export function reloadTasks() {
             category: CATEGORY_REGISTERED_TASKS,
             handler: handleRunTask,
             promptGenerator: `run the task: ${task.description}`,
-            // TODO: Do we need these validators?
             validators: [checkVirtualWorkspace, checkWorkspaceTrust],
         })));
     });

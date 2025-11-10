@@ -1609,8 +1609,6 @@ export function editorChangeHandler(editor: vscode.TextEditor | undefined) {
 export async function workspaceEditHandler(event: vscode.TextDocumentChangeEvent) {
     if (event.contentChanges.length === 0) return;
     if (event.document !== vscode.window.activeTextEditor?.document) return;
-    // TODO: Find a replacement for this check?
-    // if (!getPermissionLevel(PERMISSIONS.editActiveDocument)) return;
     if (event.document.fileName.startsWith('extension-output-')) return; // Ignore extension output to avoid infinite logging
 
     // Diffs

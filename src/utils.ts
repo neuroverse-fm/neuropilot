@@ -481,8 +481,7 @@ export function setVirtualCursor(position?: vscode.Position | null) {
     const editor = vscode.window.activeTextEditor;
     if (!editor) return;
 
-    // TODO: Replacement for getPermissionLevel
-    if (position === null /*|| !getPermissionLevel(PERMISSIONS.editActiveDocument)*/ || !isPathNeuroSafe(editor.document.fileName)) {
+    if (position === null || !isPathNeuroSafe(editor.document.fileName)) {
         removeVirtualCursor();
         return;
     }

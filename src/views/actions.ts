@@ -66,6 +66,7 @@ export class ActionsViewProvider extends BaseWebviewViewProvider<ActionsViewMess
             isRegistered: info.isRegistered,
         } satisfies ActionNode));
         // TODO: Fix flickering by specifying if actions have been added/removed
+        // Nevermind, it doesn't flicker anymore??
         this._view?.webview.postMessage({
             type: 'refreshActions',
             actions: actionNodes,
