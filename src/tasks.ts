@@ -88,9 +88,6 @@ export function taskEndedHandler(event: vscode.TaskEndEvent) {
 }
 
 export function reloadTasks() {
-    // if (NEURO.tasks.length)
-    //     NEURO.client?.unregisterActions(NEURO.tasks.map((task) => task.id));
-
     NEURO.tasks = [];
     const tasks = getActions()
         .filter(action => action.category === CATEGORY_REGISTERED_TASKS)
