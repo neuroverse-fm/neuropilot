@@ -8,7 +8,7 @@ import { polyfillNode } from 'esbuild-plugin-polyfill-node';
  */
 export async function webview(prodFlag, watchFlag) {
     const ctx = await context({
-        entryPoints: ['webview/*.ts'],
+        entryPoints: ['webview/**/*.ts'],
         bundle: true,
         format: 'cjs',
         minify: prodFlag,
@@ -16,10 +16,11 @@ export async function webview(prodFlag, watchFlag) {
         sourcesContent: false,
         platform: 'browser',
         outdir: 'out/webview/',
+        outbase: 'webview/',
         external: ['vscode'],
         logLevel: 'warning',
         tsconfig: './tsconfig.webview.json',
-        treeShaking: true, // Doesn't really help
+        treeShaking: true,
         plugins: [
             polyfillNode({
                 polyfills: { // trying to make the build as small as possible

@@ -1,6 +1,10 @@
 import * as vscode from 'vscode';
-import { PermissionLevel } from '@/config';
+import { PermissionLevel, setPermissions } from '@/config';
 import { BaseWebviewViewProvider } from './base';
+import { getExtendedActionsInfo } from '@/rce';
+import { toTitleCase } from '@/utils';
+
+export type SettingsContext = 'user' | 'workspace';
 
 export interface ActionNode {
     id: string;
@@ -8,6 +12,9 @@ export interface ActionNode {
     category: string;
     description?: string;
     permissionLevel: PermissionLevel;
+    modifiedInCurrentContext: boolean;
+    modifiedExternally: boolean;
+    isRegistered: boolean;
 }
 
 export type ActionsViewProviderMessage = {
@@ -28,58 +35,61 @@ export type ActionsViewMessage = {
     message: string;
 } | {
     type: 'requestInitialization';
+    currentContext: SettingsContext;
+} | {
+    type: 'changeContext';
+    newContext: SettingsContext;
 };
 
 export class ActionsViewProvider extends BaseWebviewViewProvider<ActionsViewMessage, ActionsViewProviderMessage> {
     public static readonly viewType = 'neuropilot.actionsView';
+    private _currentContext: SettingsContext = 'workspace';
 
     constructor() {
-        super('actions.html', 'actions.js', ['actions.css']);
+        super('actions/index.html', 'actions/main.js', ['actions/style.css']);
     }
 
     public refreshActions() {
-        // TODO: Placeholder implementation
+        const actionsInfo = getExtendedActionsInfo();
+        const actionNodes = actionsInfo.map(info => ({
+            id: info.action.name,
+            label: info.action.displayName ?? toTitleCase(info.action.name),
+            category: info.action.category ?? 'No Category Specified', // TODO: Handle null category better?
+            description: info.action.description,
+            permissionLevel: (this._currentContext === 'user' ? info.configuredGlobalPermission : info.configuredWorkspacePermission) ?? info.configuredGlobalPermission ?? PermissionLevel.OFF,
+            modifiedInCurrentContext: this._currentContext === 'workspace' && info.configuredWorkspacePermission !== undefined && info.configuredWorkspacePermission !== info.configuredGlobalPermission,
+            modifiedExternally:
+                // We are in workspace context and the permission is modified in global settings but not in workspace settings
+                this._currentContext === 'workspace' && info.configuredWorkspacePermission === undefined && info.configuredGlobalPermission !== undefined
+                // OR we are in user context and the permission is modified in workspace settings and not equal to the global setting
+                || this._currentContext === 'user' && info.configuredWorkspacePermission !== undefined && info.configuredWorkspacePermission !== info.configuredGlobalPermission,
+            isRegistered: info.isRegistered,
+        } satisfies ActionNode));
+        // TODO: Fix flickering by specifying if actions have been added/removed
         this._view?.webview.postMessage({
             type: 'refreshActions',
-            actions: [
-                {
-                    id: 'sample_action_autopilot',
-                    label: 'Autopilot Sample Action',
-                    category: 'Category A',
-                    description: 'This is the first action.',
-                    permissionLevel: PermissionLevel.AUTOPILOT,
-                },
-                {
-                    id: 'sample_action_copilot_2',
-                    label: 'Copilot Sample Action 2',
-                    category: 'Category A',
-                    description: 'This is the second first action.',
-                    permissionLevel: PermissionLevel.COPILOT,
-                },
-                {
-                    id: 'sample_action_copilot',
-                    label: 'Copilot Sample Action',
-                    category: 'Category B',
-                    description: 'This is the second action.',
-                    permissionLevel: PermissionLevel.COPILOT,
-                },
-                {
-                    id: 'sample_action_off',
-                    label: 'Off Sample Action',
-                    category: 'Category C',
-                    description: 'This is the third action.',
-                    permissionLevel: PermissionLevel.OFF,
-                },
-            ],
+            actions: actionNodes,
         });
     }
 
     protected handleMessage(message: ActionsViewMessage): void {
         switch (message.type) {
             case 'viewToggledPermissions': {
-                // TODO: Handle permission toggle
-                vscode.window.showInformationMessage(`Toggled permissions for actions: ${message.actionIds.join(', ')} to ${message.newPermissionLevel}`);
-                this.refreshActions();
+                const actionsToUpdate = message.actionIds;
+                const permissionUpdates: Record<string, PermissionLevel> = {};
+                for (const actionId of actionsToUpdate) {
+                    permissionUpdates[actionId] = message.newPermissionLevel;
+                }
+                const target = this._currentContext === 'user' ? vscode.ConfigurationTarget.Global : vscode.ConfigurationTarget.Workspace;
+                setPermissions(permissionUpdates, target).then(
+                    () => {
+                        if (this._currentContext === 'user')
+                            this.refreshActions();
+                    },
+                    (erm) => {
+                        vscode.window.showErrorMessage(`Failed to update action permissions: ${erm}`);
+                    },
+                );
                 break;
             }
             case 'error': {
@@ -87,6 +97,12 @@ export class ActionsViewProvider extends BaseWebviewViewProvider<ActionsViewMess
                 break;
             }
             case 'requestInitialization': {
+                this._currentContext = message.currentContext;
+                this.refreshActions();
+                break;
+            }
+            case 'changeContext': {
+                this._currentContext = message.newContext;
                 this.refreshActions();
                 break;
             }

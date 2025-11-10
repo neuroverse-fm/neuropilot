@@ -3,6 +3,7 @@ import { NeuroClient } from 'neuro-game-sdk';
 import { TerminalSession } from './pseudoterminal';
 import { RceRequest } from './rce';
 import type { GitExtension } from '@typing/git.d';
+import { ActionsViewProvider } from './views/actions';
 
 export interface NeuroTask {
     id: string;
@@ -35,8 +36,6 @@ interface Neuro {
     cancelled: boolean;
     /** The extension's output channel (logging) */
     outputChannel: vscode.OutputChannel | null;
-    /** Whether Neuro has asked for a cookie. */
-    waitingForCookie: boolean;
     /** The array of tasks that Neuro can execute. */
     tasks: NeuroTask[];
     /** Stores the currently executed task. */
@@ -80,6 +79,8 @@ interface Neuro {
     lastKnownUserSelection: vscode.Selection | null;
     /** Any temporarily disabled actions for this session. */
     tempDisabledActions: string[]
+    /** The provider for the actions view. */
+    actionsViewProvider?: ActionsViewProvider | null;
 }
 
 
@@ -93,7 +94,6 @@ export const NEURO: Neuro = {
     waiting: false,
     cancelled: false,
     outputChannel: null,
-    waitingForCookie: false,
     tasks: [],
     currentTaskExecution: null,
     actionHandled: false,
@@ -114,6 +114,7 @@ export const NEURO: Neuro = {
     killSwitch: false,
     lastKnownUserSelection: null,
     tempDisabledActions: [],
+    actionsViewProvider: null,
 };
 
 // this will likely be transformed for a different use later when the API rolls around

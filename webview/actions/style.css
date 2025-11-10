@@ -1,3 +1,26 @@
+body {
+    margin-bottom: 20px;
+    margin-top: 5px;
+}
+
+summary {
+    cursor: pointer;
+    font-style: italic;
+    text-decoration: underline;
+}
+
+.disabled {
+    color: var(--vscode-disabledForeground);
+}
+
+.current-context {
+    font-weight: bold;
+}
+
+.not-current-context {
+    cursor: pointer;
+}
+
 .actions-header {
     font-weight: bold;
     white-space: nowrap;
@@ -44,6 +67,18 @@
     flex-shrink: 1;
 }
 
+.modified-externally {
+    font-style: italic;
+}
+
+/* .modified-in-current-context {
+    font-weight: bold;
+} */
+
+.unregistered-action {
+    color: var(--vscode-disabledForeground);
+}
+
 .permission-radio-container {
     display: flex;
     align-items: center;
@@ -51,9 +86,4 @@
     margin: 0;
     padding: 0;
     /* border: 1px solid red; */
-}
-
-.permission-radio {
-    /* width: 20px; */
-    /* margin: 0; */
 }

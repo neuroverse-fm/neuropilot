@@ -41,6 +41,7 @@ export default tseslint.config(
         'check-malicious-packages.js',
         'coverage-desktop/**',
         'coverage-web/**',
+        'scripts/check-malicious-packages.js', // TODO: Maybe fix the file later
     ]),
     js.configs.recommended,
     ...tseslint.configs.recommended,
@@ -92,9 +93,7 @@ export default tseslint.config(
         languageOptions: {
             parserOptions: {
                 tsconfigRootDir: import.meta.dirname,
-                project: [
-                    './tsconfig.json',
-                ],
+                projectService: true,
             },
         },
     },

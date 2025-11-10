@@ -4,7 +4,7 @@ import globToRegExp from 'glob-to-regexp';
 import { fileTypeFromBuffer } from 'file-type';
 
 import { NEURO } from '@/constants';
-import { ACCESS, CONFIG, CONNECTION, CursorPositionContextStyle, getPermissionLevel, PERMISSIONS } from '@/config';
+import { ACCESS, CONFIG, CONNECTION, CursorPositionContextStyle, PermissionLevel, setPermissionLevel } from '@/config';
 
 import { ActionValidationResult, ActionData, actionValidationAccept, actionValidationFailure } from '@/neuro_client_helper';
 import assert from 'node:assert';
@@ -13,6 +13,12 @@ import { fireCursorPositionChangedEvent } from '@events/cursor';
 
 export const REGEXP_ALWAYS = /^/;
 export const REGEXP_NEVER = /^\b$/;
+
+// Cache compiled include/exclude regexes to avoid recompiling on every call
+let cachedIncludeKey = '';
+let cachedExcludeKey = '';
+let cachedIncludeRegExp: RegExp = REGEXP_ALWAYS;
+let cachedExcludeRegExp: RegExp = REGEXP_NEVER;
 
 export function logOutput(tag: string, message: string) {
     if (!NEURO.outputChannel) {
@@ -41,7 +47,6 @@ export function createClient() {
     NEURO.connected = false;
     NEURO.waiting = false;
     NEURO.cancelled = false;
-    NEURO.waitingForCookie = false;
 
     // Reset auto-reconnect flag for new connection
     shouldAutoReconnect = true;
@@ -304,6 +309,8 @@ export function combineGlobLinesToRegExp(lines: string[]): RegExp {
     return new RegExp(result);
 }
 
+import { fastIsItIgnored } from '@/ignore_files_utils';
+
 /**
  * Check if an absolute path is safe for Neuro to access.
  * Neuro may not access paths outside the workspace, or files and folders starting with a dot.
@@ -318,8 +325,31 @@ export function isPathNeuroSafe(path: string, checkPatterns = true): boolean {
     const normalizedPath = normalizePath(path);
     const includePattern = ACCESS.includePattern || ['**/*'];
     const excludePattern = ACCESS.excludePattern;
-    const includeRegExp: RegExp = checkPatterns ? combineGlobLinesToRegExp(includePattern) : REGEXP_ALWAYS;
-    const excludeRegExp: RegExp = checkPatterns && excludePattern ? combineGlobLinesToRegExp(excludePattern) : REGEXP_NEVER;
+
+    // Use cached regexes when pattern checking is enabled
+    let includeRegExp: RegExp = REGEXP_ALWAYS;
+    let excludeRegExp: RegExp = REGEXP_NEVER;
+    if (checkPatterns) {
+        const includeKey = includePattern.join('\n');
+        const excludeKey = (excludePattern ?? []).join('\n');
+
+        if (includeKey !== cachedIncludeKey) {
+            cachedIncludeRegExp = combineGlobLinesToRegExp(includePattern);
+            cachedIncludeKey = includeKey;
+        }
+        if (!excludePattern || excludeKey === '') {
+            cachedExcludeRegExp = REGEXP_NEVER;
+            cachedExcludeKey = '';
+        } else if (excludeKey !== cachedExcludeKey) {
+            cachedExcludeRegExp = combineGlobLinesToRegExp(excludePattern);
+            cachedExcludeKey = excludeKey;
+        }
+
+        includeRegExp = cachedIncludeRegExp;
+        excludeRegExp = cachedExcludeRegExp;
+    }
+
+    const ignored = rootFolder ? fastIsItIgnored(normalizedPath) : false;
 
     return rootFolder !== undefined
         // Prevent access to the workspace folder itself
@@ -337,7 +367,9 @@ export function isPathNeuroSafe(path: string, checkPatterns = true): boolean {
         // Check against include pattern
         && includeRegExp.test(normalizedPath)
         // Check against exclude pattern
-        && !excludeRegExp.test(normalizedPath);
+        && !excludeRegExp.test(normalizedPath)
+        // Check if the path is ignored by .gitignore (if so, it's likely a library, or something large and not necessarily needed to be viewed by the user or Neuro).
+        && !ignored;
 }
 
 export const delayAsync = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -446,7 +478,8 @@ export function setVirtualCursor(position?: vscode.Position | null) {
     const editor = vscode.window.activeTextEditor;
     if (!editor) return;
 
-    if (position === null || !getPermissionLevel(PERMISSIONS.editActiveDocument) || !isPathNeuroSafe(editor.document.fileName)) {
+    // TODO: Replacement for getPermissionLevel
+    if (position === null /*|| !getPermissionLevel(PERMISSIONS.editActiveDocument)*/ || !isPathNeuroSafe(editor.document.fileName)) {
         removeVirtualCursor();
         return;
     }
@@ -921,10 +954,10 @@ export function notifyOnCaughtException(name: string, error: Error | unknown): v
                             NEURO.tempDisabledActions.push(name);
                             break;
                         case 'this entire workspace':
-                            await vscode.workspace.getConfiguration('neuropilot').update('actions.disabledActions', name, vscode.ConfigurationTarget.Workspace);
+                            await setPermissionLevel(name, PermissionLevel.OFF, vscode.ConfigurationTarget.Workspace);
                             break;
                         case 'this user':
-                            await vscode.workspace.getConfiguration('neuropilot').update('actions.disabledActions', name, vscode.ConfigurationTarget.Global);
+                            await setPermissionLevel(name, PermissionLevel.OFF, vscode.ConfigurationTarget.Global);
                             break;
                     }
                     if (disableFor) logOutput('INFO', `Disabled action "${name}" for ${disableFor} due to a caught exception.`);
@@ -933,6 +966,15 @@ export function notifyOnCaughtException(name: string, error: Error | unknown): v
             }
         },
     );
+}
+
+/**
+ * Filter out trailing slashes.
+ * @param string String with trailing slashes
+ * @returns Filtered string.
+ */
+export function stripTailSlashes(string: string): string {
+    return string.replace(/^\/+|\/+$/g, '');
 }
 
 export function formatString(template: string, format: Record<string, unknown>): string {
@@ -949,4 +991,28 @@ export function formatString(template: string, format: Record<string, unknown>):
         }
     }
     return result;
+}
+
+/**
+ * Split an identifier into an array of words. Handles camelCase, PascalCase, snake_case and kebab-case.
+ * @param str The string to split.
+ */
+export function splitIdentifier(str: string): string[] {
+    const rx = /(?<=[a-z0-9])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])|(?<=[A-Za-z])(?=\d)|_|-/g;
+    return str.split(rx).filter(s => s.length > 0);
+}
+
+export function toTitleCase(str: string): string {
+    const parts = splitIdentifier(str);
+    const excludedWords = ['a', 'an', 'and', 'as', 'at', 'but', 'by', 'for', 'if', 'in', 'nor', 'of', 'off', 'on', 'or', 'per', 'so', 'the', 'to', 'up', 'via', 'yet'];
+    return parts
+        .map(part => {
+            const lowerPart = part.toLowerCase();
+            if (excludedWords.includes(lowerPart)) {
+                return lowerPart;
+            } else {
+                return lowerPart.charAt(0).toUpperCase() + lowerPart.slice(1);
+            }
+        })
+        .join(' ');
 }
