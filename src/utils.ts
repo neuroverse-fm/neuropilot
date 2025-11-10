@@ -79,6 +79,8 @@ function attemptConnection(currentAttempt: number, maxAttempts: number, interval
             NEURO.connected = false;
             logOutput('INFO', 'Disconnected from Neuro API');
 
+            unregisterAllActions();
+
             // Only auto-reconnect if it wasn't a manual disconnection
             if (shouldAutoReconnect) {
                 if (currentAttempt < maxAttempts) {
@@ -310,6 +312,7 @@ export function combineGlobLinesToRegExp(lines: string[]): RegExp {
 }
 
 import { fastIsItIgnored } from '@/ignore_files_utils';
+import { unregisterAllActions } from './rce';
 
 /**
  * Check if an absolute path is safe for Neuro to access.
