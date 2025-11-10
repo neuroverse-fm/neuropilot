@@ -6,6 +6,12 @@ Since v2.1.0, we're keeping a changelog of each version's changes in NeuroPilot.
 
 Changes between each version before then will not be listed.
 
+## 2.3.2
+
+### Fixes
+
+- Fixed a logic error that caused default permissions to be displayed incorrectly.
+
 ## 2.3.1
 
 ### Fixes
