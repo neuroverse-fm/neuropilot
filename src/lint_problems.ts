@@ -1,10 +1,13 @@
 import * as vscode from 'vscode';
 import { NEURO } from '@/constants';
 import { normalizePath, getWorkspacePath, logOutput, isPathNeuroSafe, getWorkspaceUri } from '@/utils';
-import { PERMISSIONS, getPermissionLevel, CONFIG, isActionEnabled } from '@/config';
-import { ActionData, actionValidationAccept, actionValidationFailure, ActionValidationResult, RCEAction, contextFailure, stripToActions } from '@/neuro_client_helper';
+import { CONFIG } from '@/config';
+import { ActionData, actionValidationAccept, actionValidationFailure, ActionValidationResult, RCEAction, contextFailure } from '@/neuro_client_helper';
 import assert from 'node:assert';
 import { targetedFileLintingResolvedEvent, targetedFolderLintingResolvedEvent, workspaceLintingResolvedEvent } from '@events/linting';
+import { addActions } from './rce';
+
+const CATEGORY_LINTING = 'Linting';
 
 /**
  * The path validator.
@@ -67,6 +70,7 @@ export const lintActions = {
     get_file_lint_problems: {
         name: 'get_file_lint_problems',
         description: 'Gets linting diagnostics for a file.',
+        category: CATEGORY_LINTING,
         schema: {
             type: 'object',
             properties: {
@@ -75,7 +79,6 @@ export const lintActions = {
             required: ['file'],
             additionalProperties: false,
         },
-        permissions: [PERMISSIONS.accessLintingAnalysis],
         handler: handleGetFileLintProblems,
         cancelEvents: [
             (actionData: ActionData) => targetedFileLintingResolvedEvent(actionData.params?.file),
@@ -93,6 +96,7 @@ export const lintActions = {
     get_folder_lint_problems: {
         name: 'get_folder_lint_problems',
         description: 'Gets linting diagnostics for a folder.',
+        category: CATEGORY_LINTING,
         schema: {
             type: 'object',
             properties: {
@@ -101,7 +105,6 @@ export const lintActions = {
             required: ['folder'],
             additionalProperties: false,
         },
-        permissions: [PERMISSIONS.accessLintingAnalysis],
         handler: handleGetFolderLintProblems,
         cancelEvents: [
             (actionData: ActionData) => targetedFolderLintingResolvedEvent(actionData.params?.folder),
@@ -112,7 +115,7 @@ export const lintActions = {
             assert(workspacePath);
             const normalizedFolderPath = normalizePath(workspacePath + '/' + relativeFolder);
             const diagnostics = vscode.languages.getDiagnostics();
-            const folderDiagnostics = diagnostics.filter(([diagUri, diags]) => {
+            const folderDiagnostics = diagnostics.filter(async ([diagUri, diags]) => {
                 return normalizePath(diagUri.fsPath).startsWith(normalizedFolderPath) &&
                 isPathNeuroSafe(diagUri.fsPath) && diags.length > 0;
             });
@@ -125,7 +128,7 @@ export const lintActions = {
     get_workspace_lint_problems: {
         name: 'get_workspace_lint_problems',
         description: 'Gets linting diagnostics for the current workspace.',
-        permissions: [PERMISSIONS.accessLintingAnalysis],
+        category: CATEGORY_LINTING,
         handler: handleGetWorkspaceLintProblems,
         cancelEvents: [
             workspaceLintingResolvedEvent,
@@ -150,14 +153,12 @@ export const lintActions = {
     },
 } satisfies Record<string, RCEAction>;
 
-export function registerLintActions() {
-    if (getPermissionLevel(PERMISSIONS.accessLintingAnalysis)) {
-        NEURO.client?.registerActions(stripToActions([
-            lintActions.get_file_lint_problems,
-            lintActions.get_folder_lint_problems,
-            lintActions.get_workspace_lint_problems,
-        ]).filter(isActionEnabled));
-    }
+export function addLintActions() {
+    addActions([
+        lintActions.get_file_lint_problems,
+        lintActions.get_folder_lint_problems,
+        lintActions.get_workspace_lint_problems,
+    ]);
 }
 
 // Helper: Formats raw diagnostics (from the API) into readable lines.
@@ -242,8 +243,8 @@ export function handleGetFolderLintProblems(actionData: ActionData): string | un
 
         // Filter diagnostics to those that belong to files in this folder.
         const folderDiagnostics = diagnostics.filter(([diagUri, diags]) => {
-            return normalizePath(diagUri.fsPath).startsWith(normalizedFolderPath) &&
-                isPathNeuroSafe(diagUri.fsPath) && diags.length > 0;
+            return normalizePath(diagUri.fsPath).startsWith(normalizedFolderPath)
+                && isPathNeuroSafe(diagUri.fsPath) && diags.length > 0;
         });
 
         if (folderDiagnostics.length === 0) {
