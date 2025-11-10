@@ -60,7 +60,7 @@ export interface RCEAction<T = unknown> extends TypedAction {
      * More info (comment): https://github.com/VedalAI/neuro-game-sdk/discussions/58#discussioncomment-12938623
      */
     promptGenerator: PromptGenerator;
-    /** Default permission for actions like chat, cancel_request, etc. Defaults to {@link PermissionLevel.OFF}. */
+    /** Default permission for actions when no permission is configured in user or workspace settings. Defaults to {@link PermissionLevel.OFF}. */
     defaultPermission?: PermissionLevel;
     /**
      * The category of the request.
