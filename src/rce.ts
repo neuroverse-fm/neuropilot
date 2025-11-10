@@ -11,6 +11,8 @@ import { ACTIONS as ACTIONS_CONFIG, CONFIG, CONNECTION, getAllPermissions, getPe
 import { validate } from 'jsonschema';
 import type { RCECancelEvent } from '@events/utils';
 
+export const CATEGORY_MISC = 'Miscellaneous';
+
 const ACTIONS: RCEAction[] = [];
 const REGISTERED_ACTIONS: Set<string> = /* @__PURE__ */ new Set<string>();
 

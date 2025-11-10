@@ -3,7 +3,7 @@ import * as vscode from 'vscode';
 import { getFence, logOutput, simpleFileName } from '@/utils';
 import { NEURO } from '@/constants';
 import { CONNECTION, PermissionLevel, getPermissionLevel } from '@/config';
-import { addActions } from './rce';
+import { addActions, CATEGORY_MISC } from './rce';
 import { ActionData, RCEAction } from './neuro_client_helper';
 
 export function sendCurrentFile() {
@@ -32,7 +32,7 @@ export function sendCurrentFile() {
 const REQUEST_COOKIE_ACTION: RCEAction = {
     name: 'request_cookie',
     description: `Ask ${CONNECTION.userName} for a cookie. You can request a specific flavor, but it's up to ${CONNECTION.userName} to decide.`,
-    category: 'Miscellaneous',
+    category: CATEGORY_MISC,
     schema: {
         type: 'object',
         properties: {

@@ -7,6 +7,8 @@ import assert from 'node:assert';
 import { targetedFileLintingResolvedEvent, targetedFolderLintingResolvedEvent, workspaceLintingResolvedEvent } from '@events/linting';
 import { addActions } from './rce';
 
+const CATEGORY_LINTING = 'Linting';
+
 /**
  * The path validator.
  * @param path The relative path to the file/folder.
@@ -68,7 +70,7 @@ export const lintActions = {
     get_file_lint_problems: {
         name: 'get_file_lint_problems',
         description: 'Gets linting diagnostics for a file.',
-        category: 'Linting',
+        category: CATEGORY_LINTING,
         schema: {
             type: 'object',
             properties: {
@@ -94,7 +96,7 @@ export const lintActions = {
     get_folder_lint_problems: {
         name: 'get_folder_lint_problems',
         description: 'Gets linting diagnostics for a folder.',
-        category: 'Linting',
+        category: CATEGORY_LINTING,
         schema: {
             type: 'object',
             properties: {
@@ -126,7 +128,7 @@ export const lintActions = {
     get_workspace_lint_problems: {
         name: 'get_workspace_lint_problems',
         description: 'Gets linting diagnostics for the current workspace.',
-        category: 'Linting',
+        category: CATEGORY_LINTING,
         handler: handleGetWorkspaceLintProblems,
         cancelEvents: [
             workspaceLintingResolvedEvent,
