@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Security-Policy"
+        content="default-src 'none'; style-src ${webview.cspSource}; img-src ${webview.cspSource} data: blob:; script-src 'nonce-${nonce}';" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    ${styles}
+    <title>Images</title>
+</head>
+
+<body>
+    <div class="viewer">
+        <div class="toolbar">
+            <select id="setSelect" aria-label="Image set"></select>
+            <input id="searchBox" type="search" placeholder="Search images..." aria-label="Search images" />
+            <button id="searchBtn" title="Search">🔍</button>
+            <div class="spacer"></div>
+            <button id="randomBtn" title="Random image">🎲</button>
+        </div>
+
+        <div class="image-container" role="region" aria-live="polite">
+            <button id="prevBtn" class="nav" title="Previous">◀</button>
+            <img id="mainImage" alt="No image selected" />
+            <button id="nextBtn" class="nav" title="Next">▶</button>
+        </div>
+
+        <div class="caption">
+            <h2 id="imageTitle">No image</h2>
+            <p id="imageCredits"></p>
+        </div>
+    </div>
+    <script nonce="${nonce}" src="${scriptUri}"></script>
+</body>
+</html>

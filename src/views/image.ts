@@ -1,37 +1,304 @@
 import * as vscode from 'vscode';
+import { NEURO } from '@/constants';
 import { BaseWebviewViewProvider } from './base';
-
-export type LoadedImageSets = Record<string, ImageData[]>; // need to figure out how to store this data
+import { logOutput } from '../utils';
 
 export interface ImageData {
+    name: string;
     path: string;
     credits: string;
+    set: {
+        name: string;
+        description: string;
+    };
 }
 
-export interface ImageViewProviderMessage {
+export type ImagesViewProviderMessage = {
     type: 'newImage';
-    image: ImageData; // Image data
+    image: ImageData;
+    sets: Record<string, {
+        description: string;
+        images: Omit<ImageData, 'set'>[];
+    }>;
+} | {
+    type: 'searchResult';
+    names: string[];
+} | {
+    type: 'setList';
+    sets: string[];
+};
+
+export type ImagesViewMessage = {
+    type: 'randomImage' | 'randomSet' | 'searchSet';
+} | {
+    type: 'searchImage' | 'switchSet' | 'switchImage';
+    name: string;
+} | {
+    type: 'nextImage' | 'previousImage' | 'randomImageInSet';
+    current: string;
+};
+
+interface GallerySet {
+    title: string;
+    rotation: boolean;
+    description: string;
+    images: {
+        name: string;
+        filePath: string;
+        attributions: string;
+    }[];
 }
 
-export enum TransitionType {
-    PREVIOUS,
-    NEXT,
-    RANDOM,
+interface GalleryConfig {
+    version: number;
+    sets: Record<string, GallerySet>;
 }
 
-export interface ImageViewMessage {
-    type: 'cycleImages';
-    refresh: boolean;
-}
+export class ImagesViewProvider extends BaseWebviewViewProvider<ImagesViewMessage, ImagesViewProviderMessage> {
+    public static readonly viewType = 'neuropilot.testView';
 
-export class ImageViewProvider extends BaseWebviewViewProvider<ImageViewMessage, ImageViewProviderMessage> {
-    public static readonly viewType = 'neuropilot.imageView';
+    private config: GalleryConfig | null = null;
+    private currentSet: string | null = null;
+    private currentImageName: string | null = null;
 
     constructor() {
-        super('image.html', 'image.js', ['image.css']);
+        super('images/index.html', 'images/main.js', ['images/style.css']);
     }
 
-    protected handleMessage(message: ImageViewMessage): void {
-        /** @todo handle messages */
+    protected async onViewReady(): Promise<void> {
+        await this.loadConfig();
+
+        // Send the sets list first so the dropdown populates
+        if (this.config) {
+            this.postMessage({
+                type: 'setList',
+                sets: Object.keys(this.config.sets),
+            });
+        }
+
+        // Show a random image on load
+        await this.showRandomImage();
     }
-};
+
+    /**
+     * Load the gallery configuration from sets.json
+     */
+    private async loadConfig(): Promise<void> {
+        try {
+            const configUri = vscode.Uri.joinPath(NEURO.context!.extensionUri, 'image-gallery', 'sets.json');
+            const data = await vscode.workspace.fs.readFile(configUri);
+            const text = new TextDecoder('utf-8').decode(data);
+            this.config = JSON.parse(text) as GalleryConfig;
+        } catch (erm) {
+            logOutput('ERROR', 'Failed to load image gallery config:' + erm);
+            this.config = { version: 1, sets: {} };
+        }
+    }
+
+    /**
+     * Convert gallery config to message format
+     */
+    private getSetsForMessage(): Record<string, { description: string; images: Omit<ImageData, 'set'>[]; }> {
+        if (!this.config) return {};
+
+        const result: Record<string, { description: string; images: Omit<ImageData, 'set'>[]; }> = {};
+
+        for (const [setName, setData] of Object.entries(this.config.sets)) {
+            result[setName] = {
+                description: setData.description,
+                images: setData.images.map(img => ({
+                    name: img.name,
+                    path: this.getWebviewUri(setName, img.filePath).toString(),
+                    credits: img.attributions,
+                })),
+            };
+        }
+
+        return result;
+    }
+
+    /**
+     * Get a webview-safe URI for an image
+     */
+    private getWebviewUri(setName: string, filePath: string): vscode.Uri {
+        const imageUri = vscode.Uri.joinPath(
+            NEURO.context!.extensionUri,
+            'image-gallery',
+            setName,
+            filePath,
+        );
+        return this._view?.webview.asWebviewUri(imageUri) ?? imageUri;
+    }
+
+    /**
+     * Get a random set name
+     */
+    private getRandomSetName(): string | null {
+        if (!this.config) return null;
+        const setNames = Object.keys(this.config.sets);
+        if (setNames.length === 0) return null;
+        return setNames[Math.floor(Math.random() * setNames.length)];
+    }
+
+    /**
+     * Get a random image from a specific set
+     */
+    private getRandomImageFromSet(setName: string): string | null {
+        if (!this.config) return null;
+        const set = this.config.sets[setName];
+        if (!set || set.images.length === 0) return null;
+        const image = set.images[Math.floor(Math.random() * set.images.length)];
+        return image.name;
+    }
+
+    /**
+     * Find an image by name across all sets
+     */
+    private findImage(name: string): { setName: string; image: GallerySet['images'][0]; } | null {
+        if (!this.config) return null;
+
+        for (const [setName, setData] of Object.entries(this.config.sets)) {
+            const image = setData.images.find(img =>
+                img.name.toLowerCase().includes(name.toLowerCase()),
+            );
+            if (image) {
+                return { setName, image };
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Show a specific image
+     */
+    private async showImage(setName: string, imageName: string): Promise<void> {
+        if (!this.config) return;
+
+        const set = this.config.sets[setName];
+        if (!set) return;
+
+        const image = set.images.find(img => img.name === imageName);
+        if (!image) return;
+
+        this.currentSet = setName;
+        this.currentImageName = imageName;
+
+        const imageData: ImageData = {
+            name: image.name,
+            path: this.getWebviewUri(setName, image.filePath).toString(),
+            credits: image.attributions,
+            set: {
+                name: setName,
+                description: set.description,
+            },
+        };
+
+        this.postMessage({
+            type: 'newImage',
+            image: imageData,
+            sets: this.getSetsForMessage(),
+        });
+    }
+
+    /**
+     * Show a random image from any set
+     */
+    private async showRandomImage(): Promise<void> {
+        const setName = this.getRandomSetName();
+        if (!setName) return;
+
+        const imageName = this.getRandomImageFromSet(setName);
+        if (!imageName) return;
+
+        await this.showImage(setName, imageName);
+    }
+
+    /**
+     * Navigate to next/previous image in current set
+     */
+    private async navigateImage(direction: 'next' | 'previous'): Promise<void> {
+        if (!this.config || !this.currentSet || !this.currentImageName) return;
+
+        const set = this.config.sets[this.currentSet];
+        if (!set) return;
+
+        const currentIndex = set.images.findIndex(img => img.name === this.currentImageName);
+        if (currentIndex === -1) return;
+
+        const newIndex = direction === 'next'
+            ? (currentIndex + 1) % set.images.length
+            : (currentIndex - 1 + set.images.length) % set.images.length;
+
+        await this.showImage(this.currentSet, set.images[newIndex].name);
+    }
+
+    protected handleMessage(message: ImagesViewMessage): void {
+        switch (message.type) {
+            case 'randomImage':
+                void this.showRandomImage();
+                break;
+
+            case 'randomSet': {
+                const setName = this.getRandomSetName();
+                if (setName) {
+                    const imageName = this.getRandomImageFromSet(setName);
+                    if (imageName) {
+                        void this.showImage(setName, imageName);
+                    }
+                }
+                break;
+            }
+
+            case 'randomImageInSet':
+                if (this.currentSet) {
+                    const imageName = this.getRandomImageFromSet(this.currentSet);
+                    if (imageName) {
+                        void this.showImage(this.currentSet, imageName);
+                    }
+                }
+                break;
+
+            case 'searchImage': {
+                const found = this.findImage(message.name);
+                if (found) {
+                    void this.showImage(found.setName, found.image.name);
+                }
+                break;
+            }
+
+            case 'switchSet':
+                if (this.config && this.config.sets[message.name]) {
+                    const imageName = this.getRandomImageFromSet(message.name);
+                    if (imageName) {
+                        void this.showImage(message.name, imageName);
+                    }
+                }
+                break;
+
+            case 'switchImage':
+                if (this.currentSet) {
+                    void this.showImage(this.currentSet, message.name);
+                }
+                break;
+
+            case 'nextImage':
+                void this.navigateImage('next');
+                break;
+
+            case 'previousImage':
+                void this.navigateImage('previous');
+                break;
+
+            case 'searchSet':
+                // Send available set names
+                if (this.config) {
+                    this.postMessage({
+                        type: 'setList',
+                        sets: Object.keys(this.config.sets),
+                    });
+                }
+                break;
+        }
+    }
+}
