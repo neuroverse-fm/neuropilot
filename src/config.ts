@@ -37,7 +37,7 @@ const DEPRECATED_SETTINGS: DeprecatedSetting[] = [
     },
     {
         old: 'includePattern',
-        async new(target) {
+        async new(target: vscode.ConfigurationTarget) {
             const cfg = vscode.workspace.getConfiguration('neuropilot');
             const config = getTargetConfig<string>(cfg, 'includePattern', target)!;
             const newConfig = config.split('\n');
@@ -46,7 +46,7 @@ const DEPRECATED_SETTINGS: DeprecatedSetting[] = [
     },
     {
         old: 'excludePattern',
-        async new(target) {
+        async new(target: vscode.ConfigurationTarget) {
             const cfg = vscode.workspace.getConfiguration('neuropilot');
             const config = getTargetConfig<string>(cfg, 'excludePattern', target)!;
             const newConfig = config.split('\n');
@@ -55,7 +55,7 @@ const DEPRECATED_SETTINGS: DeprecatedSetting[] = [
     },
     {
         old: 'allowUnsafePaths',
-        async new(target) {
+        async new(target: vscode.ConfigurationTarget) {
             const cfg = vscode.workspace.getConfiguration('neuropilot');
             const config = getTargetConfig<boolean>(cfg, 'allowUnsafePaths', target)!;
             await cfg.update('access.dotFiles', config, target);
@@ -171,7 +171,7 @@ const DEPRECATED_SETTINGS: DeprecatedSetting[] = [
     ]),
     { // Must be AFTER all permissions settings
         old: 'actions.disabledActions',
-        async new(target) {
+        async new(target: vscode.ConfigurationTarget) {
             const cfg = vscode.workspace.getConfiguration('neuropilot');
             const config = getTargetConfig<string[]>(cfg, 'actions.disabledActions', target)!;
             const permissions = getTargetConfig<Record<string, string>>(cfg, 'actionPermissions', target) ?? {};
@@ -186,7 +186,7 @@ const DEPRECATED_SETTINGS: DeprecatedSetting[] = [
 function deprecatedPermission(oldKey: string, affectedActions: string[]): DeprecatedSetting {
     return {
         old: 'permission.' + oldKey,
-        async new(target) {
+        async new(target: vscode.ConfigurationTarget) {
             const cfg = vscode.workspace.getConfiguration('neuropilot');
             const config = getTargetConfig<string>(cfg, 'permission.' + oldKey, target)?.toLowerCase(); // Permission levels used to be capitalized
             if (!config) return;
@@ -194,11 +194,12 @@ function deprecatedPermission(oldKey: string, affectedActions: string[]): Deprec
 
             const permissions = getTargetConfig<Record<string, string>>(cfg, 'actionPermissions', target) ?? {};
             for (const action of affectedActions) {
-                // Take the most restrictive permission level
+                // Take the lowest (most restrictive) permission level
                 let newLevel = configPermissionLevel;
                 if (action in permissions)
                     newLevel = Math.min(newLevel, stringToPermissionLevel(permissions[action]));
-                permissions[action] = permissionLevelToString(newLevel as PermissionLevel);
+                permissions[action] = permissionLevelToString(newLevel);
+                logOutput('INFO', `Migrated permission for action "${action}" to level ${newLevel}`);
             }
             await cfg.update('actionPermissions', permissions, target);
         },
@@ -286,21 +287,26 @@ export async function checkDeprecatedSettings(version: string) {
                         const updateObject = DEPRECATED_SETTINGS.find(o => o.old === key);
                         const targetValueMap = deprecatedSettings[key];
 
-                        if (updateObject && targetValueMap) {
-                            // Process each configuration target for this setting
-                            for (const [target, value] of targetValueMap.entries()) {
-                                if (typeof updateObject.new === 'string') {
-                                    // Update with the specific configuration target
-                                    await cfg.update(updateObject.new, value, target);
-                                    // Remove the old setting from this target
-                                    await cfg.update(updateObject.old, undefined, target);
-                                } else {
-                                    // For custom migration functions, pass the target and value
-                                    await updateObject.new(target);
-                                    // Remove the old setting from this target
-                                    await cfg.update(updateObject.old, undefined, target);
+                        try {
+                            if (updateObject && targetValueMap) {
+                                // Process each configuration target for this setting
+                                for (const [target, value] of targetValueMap.entries()) {
+                                    if (typeof updateObject.new === 'string') {
+                                        // Update with the specific configuration target
+                                        await cfg.update(updateObject.new, value, target);
+                                        // Remove the old setting from this target
+                                        await cfg.update(updateObject.old, undefined, target);
+                                    } else {
+                                        // For custom migration functions, pass the target and value
+                                        await updateObject.new(target);
+                                        // Remove the old setting from this target
+                                        await cfg.update(updateObject.old, undefined, target);
+                                    }
                                 }
                             }
+                        } catch (erm) {
+                            logOutput('ERROR', `Failed to migrate setting "${key}": ${erm}`);
+                            vscode.window.showErrorMessage(`Failed to migrate setting "${key}". See output for details.`);
                         }
                     }
                     vscode.window.showInformationMessage('Configuration migration completed successfully.');
