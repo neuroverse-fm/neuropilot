@@ -84,7 +84,11 @@ async function readAndParseChangelog(): Promise<{ sections: ChangelogSection[]; 
     const uri = vscode.Uri.joinPath(NEURO.context!.extensionUri, 'CHANGELOG.md');
     const data = await vscode.workspace.fs.readFile(uri);
     const text = new TextDecoder('utf-8').decode(data);
-    const sections = parseChangelog(text);
+
+    // Remove HTML comments (<!-- ... -->) so commented content is not sent to Neuro
+    const cleanedText = text.replace(/<!--[\s\S]*?-->/g, '');
+
+    const sections = parseChangelog(cleanedText);
     const latest = sections[0]?.version ?? '0.0.0';
     return { sections, latest };
 }
