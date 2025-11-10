@@ -426,20 +426,23 @@ export function getPermissionLevel(actionName: string): PermissionLevel {
 
 /**
  * Sets the specified action permissions.
+ * This can lead to race conditions, so always await the returned promise.
+ * The caller is responsible for handling promise rejections from write failures.
  * @param permissions The permissions to set. Will be merged with the current workspace settings.
+ * @param target The configuration target to set the permissions on. Defaults to Workspace.
  */
 export function setPermissions(permissions: Record<string, PermissionLevel>, target: vscode.ConfigurationTarget = vscode.ConfigurationTarget.Workspace): Thenable<void> {
     const configuration = vscode.workspace.getConfiguration('neuropilot');
-    const configValue = configuration.inspect<Record<string, string>>('actionPermissions');
-    const value =
-        target === vscode.ConfigurationTarget.Global ? configValue?.globalValue ?? {} :
-        target === vscode.ConfigurationTarget.Workspace ? configValue?.workspaceValue ?? {} :
-        configValue?.workspaceFolderValue ?? {};
+    const inspected = configuration.inspect<Record<string, string>>('actionPermissions');
+    const currentScopeValue =
+        target === vscode.ConfigurationTarget.Global ? inspected?.globalValue ?? {} :
+        target === vscode.ConfigurationTarget.Workspace ? inspected?.workspaceValue ?? {} :
+        inspected?.workspaceFolderValue ?? {};
     const stringPermissions: Record<string, string> = {};
     for (const key in permissions) {
         stringPermissions[key] = permissionLevelToString(permissions[key]);
     }
-    const mergedPermissions: Record<string, string> = { ...value, ...stringPermissions };
+    const mergedPermissions: Record<string, string> = { ...currentScopeValue, ...stringPermissions };
     return configuration.update('actionPermissions', mergedPermissions, target);
 }
 
