@@ -4,6 +4,7 @@ import * as fs from 'fs';
 import chalk from 'chalk';
 import console from 'node:console';
 import process from 'node:process';
+import { webview } from '../esbuild-configs/webview.esbuild.js';
 
 // Checks production mode
 function determineProductionMode() {
@@ -77,6 +78,9 @@ if (test) {
         case 'desktop':
             outDir = ['./out/desktop/extension.js'];
             break;
+        case 'webview':
+            outDir = ['./out/webview/'];
+            break;
         default:
             outDir = ['./out/desktop/extension.js', './out/web/extension.js'];
     }
@@ -127,6 +131,14 @@ try {
                 });
                 console.log(chalk.green.bold.underline('🧰  Desktop build completed successfully!'));
             }
+            break;
+        case 'webview':
+            console.log(chalk.blue(`🖥️  ${watch ? 'Watching' : 'Running'} webview build...`));
+            await webview(production, watch).catch(erm => {
+                console.error(chalk.red.bold(`💥 Webview build failed: ${erm}`));
+                process.exit(1);
+            });
+            console.log(chalk.green.bold.underline('🧰  Webview build completed successfully!'));
             break;
         case 'default':
             // Can't use watch while building both.

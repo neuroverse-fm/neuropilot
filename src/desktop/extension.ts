@@ -22,9 +22,10 @@ import {
     startupCreateClient,
 } from '@shared/extension';
 import { registerChatParticipant } from '@/chat';
-import { registerUnsupervisedActions, registerUnsupervisedHandlers } from './unsupervised';
+import { addUnsupervisedActions, registerUnsupervisedHandlers } from './unsupervised';
 import { registerSendSelectionToNeuro } from '@/editing';
 import { loadIgnoreFiles } from '@/ignore_files_utils';
+import { reregisterAllActions } from '../rce';
 
 export function activate(context: vscode.ExtensionContext) {
     loadIgnoreFiles(
@@ -40,6 +41,9 @@ export function activate(context: vscode.ExtensionContext) {
     showUpdateReminder(context);
 
     vscode.commands.registerCommand('neuropilot.reloadPermissions', reloadDesktopPermissions);
+
+    // Add actions to the registry
+    addUnsupervisedActions();
 
     // Setup providers
     NEURO.context!.subscriptions.push(...setupCommonProviders());
@@ -57,7 +61,7 @@ export function activate(context: vscode.ExtensionContext) {
     registerChatParticipant();
 
     // Setup client connected handlers
-    setupClientConnectedHandlers(reloadTasks, registerUnsupervisedActions, registerUnsupervisedHandlers); // reloadTasks added to set it up at the same time
+    setupClientConnectedHandlers(reloadTasks, () => reregisterAllActions(false), registerUnsupervisedHandlers); // reloadTasks added to set it up at the same time
 
     // Create status bar item
     createStatusBarItem();
@@ -96,5 +100,5 @@ export function deactivate() {
 }
 
 function reloadDesktopPermissions() {
-    reloadPermissions(reloadTasks, registerUnsupervisedActions);
+    reloadPermissions(reloadTasks, () => reregisterAllActions(false));
 }

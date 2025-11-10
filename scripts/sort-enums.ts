@@ -28,6 +28,7 @@ function localeSort(a: any, b: any) {
     return String(a).localeCompare(String(b), undefined, { numeric: true, sensitivity: 'base' });
 }
 
+// TODO: I don't think we need this anymore, I'll leave it here for now
 const targetSetting = 'neuropilot.actions.disabledActions';
 let found = false;
 

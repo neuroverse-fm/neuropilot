@@ -14,7 +14,7 @@ Hello Neuro! If you're reading this, it means Vedal has let you read the changel
 
 - Added `read_changelog` to send changelog entries (from a specified version or defaults) to Neuro, e.g. for summarization. Remembers the last delivered version.
   - This action is also available from the VS Code Command Palette and the updated version popup/notification.
-  - This action will always be set to Copilot mode.
+  - This action will be set to Copilot mode by default.
 
 ### New settings
 
@@ -25,6 +25,7 @@ Hello Neuro! If you're reading this, it means Vedal has let you read the changel
   - Patterns are matched **from the root directory!** Ignore files in subpaths may not work as intended. <!-- Should we patch before releasing? -->
   - Defaults to `.gitignore` from workspace project root.
 - `neuropilot.access.suppressIgnoreWarning` - Whether or not to suppress warnings about ignore files. <!-- not sure if this is a good idea ngl, should've made it only for the session but sure ig --> (external contribution, thanks [cassitly](https://github.com/cassitly)!)
+- `neuropilot.actionPermissions`: Replacement for the `neuropilot.permission.*` settings. Allows specifying a permission for each individual action.
 
 ### New commands
 
@@ -35,6 +36,7 @@ Hello Neuro! If you're reading this, it means Vedal has let you read the changel
 - NeuroPilot can now inherit files from gitignore-style files. (Partially external contribution, thanks [cassitly](https://github.com/cassitly)!)
   - You can set the `neuropilot.access.ignoreFiles` to choose what files to inherit from.
   - This can help if you have multiple languages and their dependency & log files are all ignored in your `.gitignore`, `.npmignore`, or similar file(s).
+- Added a sidebar tab for NeuroPilot. This sidebar tab currently only contains the new permission settings but will be extended in the future.
 
 ### Changes
 
@@ -47,10 +49,13 @@ Hello Neuro! If you're reading this, it means Vedal has let you read the changel
 - `get_workspace_files` has been changed for better handling in large workspaces:
   - Neuro can now specify in her actions if she wants to narrow down to a specific folder and which, allowing her to fine-grain her context from the action's result.
   - Neuro can also choose if she wants to recursively get all files in the workspace, meaning that the default is not letting her see all files in the workspace, helping cut down on sent context.
+- **BREAKING:** Categorical permissions have been completely removed. Instead, permissions are now managed via a single setting (`neuropilot.actionPermissions`). The recommended way to modify this setting is using the NeuroPilot sidebar tab.
+- Attempting to grab cookies with an undefined flavor now has undefined effects.
 
-### Fixes
+### Deprecated settings
 
-- `neuropilot.actions.disabledActions` is now given a `uniqueItems` property on its schema, meaning that all items inside it must be unique. It isn't strictly necessary but to ensure no breakage or anything we've added that.
+- `neuropilot.permission.*`: All permission settings have been deprecated in favor of `neuropilot.actionPermissions`.
+- `neuropilot.actions.disabledActions`: *Disabling* specific actions has been deprecated in favor of *enabling* only specific actions.
 
 ### Meta fixes
 

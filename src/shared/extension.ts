@@ -2,12 +2,12 @@ import * as vscode from 'vscode';
 import { NEURO, EXTENSIONS } from '@/constants';
 import { logOutput, createClient, onClientConnected, setVirtualCursor, showAPIMessage, disconnectClient, reconnectClient, getWorkspaceUri } from '@/utils';
 import { completionsProvider, registerCompletionResultHandler } from '@/completions';
-import { giveCookie, registerRequestCookieAction, registerRequestCookieHandler, sendCurrentFile } from '@/context';
+import { giveCookie, sendCurrentFile } from '@/context';
 import { registerChatResponseHandler } from '@/chat';
-import { ACCESS, ACTIONS, checkDeprecatedSettings, CONFIG, CONNECTION } from '@/config';
+import { ACCESS, ACTIONS, checkDeprecatedSettings, CONFIG, CONNECTION, PermissionLevel, setPermissions } from '@/config';
 import { explainWithNeuro, fixWithNeuro, NeuroCodeActionsProvider, sendDiagnosticsDiff } from '@/lint_problems';
 import { editorChangeHandler, fileSaveListener, moveNeuroCursorHere, toggleSaveAction, workspaceEditHandler } from '@/editing';
-import { emergencyDenyRequests, acceptRceRequest, denyRceRequest, revealRceNotification, clearRceRequest } from '@/rce';
+import { emergencyDenyRequests, acceptRceRequest, denyRceRequest, revealRceNotification, clearRceRequest, getActions, reregisterAllActions } from '@/rce';
 import type { GitExtension } from '@typing/git';
 import { getGitExtension } from '@/git';
 import { openDocsOnTarget, registerDocsCommands, registerDocsLink } from './docs';
@@ -15,6 +15,7 @@ import { readChangelogAndSendToNeuro } from '@/changelog';
 import { moveCursorEmitterDiposable } from '@events/cursor';
 import { loadIgnoreFiles } from '@/ignore_files_utils';
 import { getWorkspacePath, normalizePath } from '@/utils';
+import { ActionsViewProvider } from '@/views/actions';
 
 // Shared commands
 export function registerCommonCommands() {
@@ -81,8 +82,9 @@ export function setupCommonEventHandlers() {
             ) {
                 setVirtualCursor();
             }
-            if (event.affectsConfiguration('neuropilot.permission') || event.affectsConfiguration('neuropilot.actions.disabledActions')) {
-                vscode.commands.executeCommand('neuropilot.reloadPermissions');
+            if (event.affectsConfiguration('neuropilot.actionPermissions')) {
+                reregisterAllActions(true);
+                NEURO.viewProviders.actions?.refreshActions();
             }
 
             if (event.affectsConfiguration('neuropilot.access.ignoreFiles')) {
@@ -114,6 +116,7 @@ export function initializeCommonState(context: vscode.ExtensionContext) {
 }
 
 export function setupCommonProviders() {
+    NEURO.viewProviders.actions = new ActionsViewProvider();
     const providers = [
         vscode.languages.registerInlineCompletionItemProvider({ pattern: '**' }, completionsProvider),
         vscode.languages.registerCodeActionsProvider(
@@ -121,6 +124,7 @@ export function setupCommonProviders() {
             new NeuroCodeActionsProvider(),
             { providedCodeActionKinds: NeuroCodeActionsProvider.providedCodeActionKinds },
         ),
+        vscode.window.registerWebviewViewProvider(ActionsViewProvider.viewType, NEURO.viewProviders.actions),
     ];
 
     return providers;
@@ -133,8 +137,6 @@ export function setupClientConnectedHandlers(...extraHandlers: (() => void)[]) {
     for (const handlers of extraHandlers) {
         onClientConnected(handlers);
     }
-    onClientConnected(registerRequestCookieAction);
-    onClientConnected(registerRequestCookieHandler);
     onClientConnected(registerPostActionHandler);
 }
 
@@ -177,7 +179,6 @@ function disconnect() {
 }
 
 export function reloadPermissions(...extraFunctions: (() => void)[]) {
-    registerRequestCookieAction();
     for (const reloads of extraFunctions) {
         reloads();
     }
@@ -199,15 +200,14 @@ function registerPostActionHandler() {
 function disableAllPermissions() {
     NEURO.killSwitch = true;
     const config = vscode.workspace.getConfiguration('neuropilot');
-    const permissionKeys = config.get<Record<string, string>>('permission');
+    const actions = getActions();
+    const updates: Record<string, PermissionLevel> = {};
+    for (const action of actions) {
+        updates[action.name] = PermissionLevel.OFF;
+    }
     const promises: Thenable<void>[] = [];
 
-    if (permissionKeys) {
-        // Yes this will spam Neuro but if Vedal has to use it she probably deserves it
-        for (const key of Object.keys(permissionKeys)) {
-            promises.push(config.update(`permission.${key}`, 'Off', vscode.ConfigurationTarget.Workspace));
-        }
-    }
+    promises.push(setPermissions(updates));
 
     if (ACCESS.dotFiles === true) {
         promises.push(config.update('access.dotFiles', false, vscode.ConfigurationTarget.Workspace));
@@ -225,9 +225,8 @@ function disableAllPermissions() {
         promises.push(config.update('sendNewLintingProblemsOn', 'off', vscode.ConfigurationTarget.Workspace));
     }
 
-    const exe = NEURO.currentTaskExecution;
-    if (exe) {
-        exe.terminate();
+    if (NEURO.currentTaskExecution) {
+        NEURO.currentTaskExecution.terminate();
         NEURO.currentTaskExecution = null;
     }
     emergencyDenyRequests();
