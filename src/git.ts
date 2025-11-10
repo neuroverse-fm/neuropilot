@@ -648,29 +648,7 @@ export function addGitActions() {
         git.openRepository(root).then((r) => {
             repo = r;
 
-            addActions([
-                gitActions.add_file_to_git,
-                gitActions.make_git_commit,
-                gitActions.merge_to_current_branch,
-                gitActions.git_status,
-                gitActions.remove_file_from_git,
-                gitActions.delete_git_branch,
-                gitActions.switch_git_branch,
-                gitActions.new_git_branch,
-                gitActions.diff_files,
-                gitActions.git_log,
-                gitActions.git_blame,
-                gitActions.tag_head,
-                gitActions.delete_tag,
-                gitActions.set_git_config,
-                gitActions.get_git_config,
-                gitActions.fetch_git_commits,
-                gitActions.pull_git_commits,
-                gitActions.push_git_commits,
-                gitActions.add_git_remote,
-                gitActions.remove_git_remote,
-                gitActions.rename_git_remote,
-            ]);
+            addActions(actionsToRegister);
 
             // Don't register abort_merge unless there is a merge in progress
             addActions([gitActions.abort_merge], false);
