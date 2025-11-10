@@ -49,7 +49,7 @@ Hello Neuro! If you're reading this, it means Vedal has let you read the changel
 - `get_workspace_files` has been changed for better handling in large workspaces:
   - Neuro can now specify in her actions if she wants to narrow down to a specific folder and which, allowing her to fine-grain her context from the action's result.
   - Neuro can also choose if she wants to recursively get all files in the workspace, meaning that the default is not letting her see all files in the workspace, helping cut down on sent context.
-- Categorical permissions have been completely removed. Instead, permissions are now managed via a single setting (`neuropilot.actionPermissions`). The recommended way to modify this setting is using the NeuroPilot sidebar tab.
+- **BREAKING:** Categorical permissions have been completely removed. Instead, permissions are now managed via a single setting (`neuropilot.actionPermissions`). The recommended way to modify this setting is using the NeuroPilot sidebar tab.
 - Attempting to grab cookies with an undefined flavor now has undefined effects.
 
 ### Deprecated settings
