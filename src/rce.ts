@@ -407,16 +407,15 @@ export function getAction(actionName: string): RCEAction | undefined {
 }
 
 export function getExtendedActionsInfo(): ExtendedActionInfo[] {
-    const permissions = getAllPermissions();
     const configuration = vscode.workspace.getConfiguration('neuropilot');
     const { workspaceValue, globalValue } = configuration.inspect<Record<string, string>>('actionPermissions') || {};
     return ACTIONS.map(action => {
-        const configuredWorkspacePermission = workspaceValue?.[action.name] ? stringToPermissionLevel(workspaceValue[action.name]) : undefined;
-        const configuredGlobalPermission = globalValue?.[action.name] ? stringToPermissionLevel(globalValue[action.name]) : undefined;
+        const configuredWorkspacePermission = workspaceValue?.[action.name] !== undefined ? stringToPermissionLevel(workspaceValue[action.name]) : undefined;
+        const configuredGlobalPermission = globalValue?.[action.name] !== undefined ? stringToPermissionLevel(globalValue[action.name]) : undefined;
         return {
             action,
             isRegistered: REGISTERED_ACTIONS.has(action.name),
-            effectivePermissionLevel: permissions[action.name] ?? action.defaultPermission ?? PermissionLevel.OFF,
+            effectivePermissionLevel: getPermissionLevel(action.name),
             configuredWorkspacePermission,
             configuredGlobalPermission,
             isConfigured: configuredWorkspacePermission !== undefined || configuredGlobalPermission !== undefined,
