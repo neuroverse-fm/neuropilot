@@ -11,6 +11,10 @@ export interface NeuroTask {
     task: vscode.Task;
 }
 
+interface NeuroViewProviders {
+    actions: ActionsViewProvider | null;
+}
+
 interface Neuro {
     /** Whether or not the NeuroClient connection has been initialized. */
     initialized: boolean;
@@ -80,7 +84,7 @@ interface Neuro {
     /** Any temporarily disabled actions for this session. */
     tempDisabledActions: string[]
     /** The provider for the actions view. */
-    actionsViewProvider?: ActionsViewProvider | null;
+    viewProviders: NeuroViewProviders;
 }
 
 
@@ -114,7 +118,9 @@ export const NEURO: Neuro = {
     killSwitch: false,
     lastKnownUserSelection: null,
     tempDisabledActions: [],
-    actionsViewProvider: null,
+    viewProviders: {
+        actions: null,
+    },
 };
 
 // this will likely be transformed for a different use later when the API rolls around

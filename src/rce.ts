@@ -274,7 +274,7 @@ export function denyRceRequest(): void {
  */
 export function addActions(actions: RCEAction[], register = true): void {
     ACTIONS.push(...actions);
-    NEURO.actionsViewProvider?.refreshActions();
+    NEURO.viewProviders.actions?.refreshActions();
     if (register) {
         const actionNames = actions.map(a => a.name);
         const actionsToRegister = actionNames
@@ -298,7 +298,7 @@ export function removeActions(actionNames: string[]): void {
             ACTIONS.splice(actionIndex, 1);
         }
     }
-    NEURO.actionsViewProvider?.refreshActions();
+    NEURO.viewProviders.actions?.refreshActions();
     NEURO.client?.unregisterActions(actionNames);
 }
 
@@ -312,7 +312,7 @@ export function registerAction(actionName: string): void {
     if (action) {
         NEURO.client?.registerActions([stripToAction(action)]);
         REGISTERED_ACTIONS.add(action.name);
-        NEURO.actionsViewProvider?.refreshActions();
+        NEURO.viewProviders.actions?.refreshActions();
     }
 }
 
@@ -323,7 +323,7 @@ export function registerAction(actionName: string): void {
 export function unregisterAction(actionName: string): void {
     NEURO.client?.unregisterActions([actionName]);
     REGISTERED_ACTIONS.delete(actionName);
-    NEURO.actionsViewProvider?.refreshActions();
+    NEURO.viewProviders.actions?.refreshActions();
 }
 
 /**
@@ -356,7 +356,7 @@ export function reregisterAllActions(conservative: boolean): void {
     if (actionsToRegister.length > 0)
         NEURO.client?.registerActions(actionsToRegister);
 
-    NEURO.actionsViewProvider?.refreshActions();
+    NEURO.viewProviders.actions?.refreshActions();
     return;
 
     function shouldBeRegistered(action: RCEAction): boolean {
