@@ -82,7 +82,7 @@ if (test) {
             outDir = ['./out/webview/'];
             break;
         default:
-            outDir = ['./out/desktop/extension.js', './out/web/extension.js'];
+            outDir = ['./out/desktop/extension.js', './out/web/extension.js', './out/webview/'];
     }
 }
 
@@ -167,6 +167,11 @@ try {
                 console.log(chalk.blue('🌐 Running web build...'));
                 await web(production, false).catch(erm => {
                     console.error(chalk.red.bold(`💥  Web build failed: ${erm}`));
+                    process.exit(1);
+                });
+                console.log(chalk.blue('🌐 Running webview build...'));
+                await webview(production, false).catch(erm => {
+                    console.error(chalk.red.bold(`💥  Webview build failed: ${erm}`));
                     process.exit(1);
                 });
                 console.log(chalk.green.bold.underline('🎉 Builds completed successfully!'));
