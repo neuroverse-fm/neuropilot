@@ -979,9 +979,18 @@ export function stripTailSlashes(string: string): string {
     return string.replace(/^\/+|\/+$/g, '');
 }
 
+/**
+ * Formats a string by replacing placeholders with properties from the format object, similar to JavaScript template literals.
+ * Allows for accessing nested properties using dot notation.
+ * Use `$$` to insert a literal `$`.
+ * This performs a single pass replacement, so nested placeholders are not processed.
+ * @param template The string to search for replacement patterns in.
+ * @param format The object defining the replacements. Any keys of this object and nested keys must be valid ASCII JavaScript identifiers.
+ * @returns The formatted string.
+ */
 export function formatString(template: string, format: Record<string, unknown>): string {
     // Process matches in reverse order to avoid messing up indices
-    const matches = Array.from(template.matchAll(/\$\$|\$\{([^}]+)\}/g)).reverse();
+    const matches = Array.from(template.matchAll(/\$\$|\$\{([^}]*)\}/g)).reverse();
     let result = template;
     for (const match of matches) {
         const pos = match.index;
