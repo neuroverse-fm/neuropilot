@@ -53,17 +53,34 @@ function handleRequestCookie(actionData: ActionData) {
     const permission = getPermissionLevel(actionData.name);
 
     switch (permission) {
-        case PermissionLevel.COPILOT:
+        case PermissionLevel.COPILOT: {
             giveCookie(true, actionData.params?.flavor);
             return `Waiting on ${CONNECTION.userName} to decide on the flavor.`;
-        case PermissionLevel.AUTOPILOT:
-            // Removed this because flavor is supposed to be optional
-            // if (!actionData.params?.flavor) {
-            //     NEURO.client?.sendActionResult(actionData.id, false, 'You need to specify a flavor!');
-            //     break;
-            // }
+        }
+        case PermissionLevel.AUTOPILOT: {
             logOutput('INFO', `Neuro grabbed a ${actionData.params?.flavor} cookie.`);
-            return `You grabbed a ${actionData.params?.flavor} cookie!`;
+            if (actionData.params?.flavor) {
+                // Return flavor as requested
+                return `You grabbed a ${actionData.params.flavor} cookie!`;
+            }
+            // Funny quotes if no flavor specified
+            const base = 'You grabbed an undefined cookie. ';
+            const quotes = [
+                'Wait a second...',
+                'Unfortunately, Vedal wasn\'t around to decide the flavor for you.',
+                'Maybe you should have defined it.',
+                'You could maybe write the Cookie class to define it.',
+                'Probably undefined taste as well.',
+                'It\'s still a cookie. Probably.',
+                'Isn\'t that just stale cookies?',
+                'You should probably #define it.',
+                'NullReferenceException: Flavor reference not set to an instance of a Cookie.',
+                'TypeError: Cannot read property \'flavor\' of undefined cookie.',
+                'Segmentation fault (core dumped).',
+            ];
+            const randomIndex = Math.floor(Math.random() * quotes.length);
+            return base + quotes[randomIndex];
+        }
     }
     // Removed the try-catch because this shoud be handled by the RCE system now
     // catch (erm) {
@@ -89,8 +106,26 @@ export function giveCookie(isRequested = false, defaultFlavor = 'Chocolate Chip'
     }).then((flavor) => {
         if (!flavor) {
             logOutput('INFO', 'No flavor given, canceling cookie');
-            if (isRequested)
-                NEURO.client?.sendContext(`${CONNECTION.userName} couldn't decide on a flavor for your cookie.`);
+            if (isRequested) {
+                // Funny quotes if cookie was requested but no flavor given
+                const quotes = [
+                    `${CONNECTION.userName} couldn't decide on a flavor for your cookie.`,
+                    `${CONNECTION.userName} accidentally dropped your cookie.`,
+                    `${CONNECTION.userName} ate your cookie.`,
+                    `${CONNECTION.userName} made the cookie of types null and void.`,
+                    `${CONNECTION.userName} mixed your cookie into banana rum.`,
+                    `${CONNECTION.userName} clicked the cookie circle to the beat.`,
+                    `${CONNECTION.userName} used the cookie to buy a cursor.`,
+                ];
+                if (CONNECTION.userName === 'Vedal') {
+                    quotes.push(
+                        'Vedal\'s robot dog ate the cookie.',
+                        'Vedal mixed your cookie into his banana rum.',
+                    );
+                }
+                const randomIndex = Math.floor(Math.random() * quotes.length);
+                NEURO.client?.sendContext(quotes[randomIndex]);
+            }
             return;
         }
         logOutput('INFO', 'Giving cookie to Neuro');
