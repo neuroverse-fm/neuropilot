@@ -13,8 +13,28 @@ body {
 
 summary {
     cursor: pointer;
-    font-style: italic;
-    text-decoration: underline;
+    display: block;
+}
+
+summary .codicon {
+    color: var(--vscode-notificationsInfoIcon-foreground);
+}
+
+summary:hover {
+    display: list-item;
+}
+
+details[open] summary {
+    display: list-item;
+}
+
+summary i {
+    vertical-align: middle;
+    margin-right: 4px;
+}
+
+summary span {
+    vertical-align: middle;
 }
 
 .disabled {
@@ -46,7 +66,6 @@ summary {
 .permission-level-letter {
     width: 20px;
     text-align: center;
-    /* border: 1px solid red; */
 }
 
 .actions-list {
@@ -99,5 +118,4 @@ summary {
     width: 20px;
     margin: 0;
     padding: 0;
-    /* border: 1px solid red; */
 }
