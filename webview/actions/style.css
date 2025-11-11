@@ -3,6 +3,14 @@ body {
     margin-top: 5px;
 }
 
+.webview-header {
+    position: sticky;
+    top: 0;
+    background-color: var(--vscode-sideBar-background);
+    border-bottom: 1px solid var(--vscode-menu-border);
+    padding-bottom: 5px;
+}
+
 summary {
     cursor: pointer;
     font-style: italic;
@@ -26,7 +34,13 @@ summary {
     white-space: nowrap;
     display: flex;
     flex-direction: row;
-    justify-content: end;
+}
+
+.actions-header-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-grow: 1;
+    flex-shrink: 1;
 }
 
 .permission-level-letter {

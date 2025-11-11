@@ -10,7 +10,6 @@
 <body>
     <details>
         <summary>Help</summary>
-
         <p><i>Italics = Actual permission is controlled by the other context or the action's default permission.</i></p>
         <!-- TODO: Doesn't look good with the category headings -->
         <!-- <p><b>Bold = Permission is modified in the current settings context.</b></p> -->
@@ -22,17 +21,20 @@
             <b>O</b> = <b>O</b>ff
         </p>
     </details>
-
     <p class="context-switcher">
         <!-- Dynamically added content -->
     </p>
-
-    <div class="actions-header">
-        <div class="permission-level-letter">A</div>
-        <div class="permission-level-letter">C</div>
-        <div class="permission-level-letter">O</div>
+    <div class="webview-header">
+        <div class="actions-header">
+            <div class="actions-header-label">Action Name</div>
+            <div class="permission-level-letter">A</div>
+            <div class="permission-level-letter">C</div>
+            <div class="permission-level-letter">O</div>
+        </div>
     </div>
-    <div class="actions-list"></div>
+    <div class="actions-list">
+        <!-- Dynamically added content -->
+    </div>
     <script nonce="${nonce}" src="${scriptUri}"></script>
 </body>
 </html>
