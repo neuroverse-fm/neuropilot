@@ -37,4 +37,4 @@ test-playground/
 out/test/**
 
 # NPM packages required at runtime
-!!node_modules/@vscode/codicons
+!node_modules/@vscode/codicons
