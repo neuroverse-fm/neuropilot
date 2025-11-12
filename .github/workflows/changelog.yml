@@ -1,0 +1,21 @@
+name: Check that changelog is updated
+
+on:
+  # Should run for every push to the PR branch
+  pull_request:
+
+jobs:
+  check-changelog:
+    runs-on: ubuntu-latest
+    # Only run if the PR is not a draft and does not have the 'refactor' label
+    if: github.event.pull_request.draft == false && !contains(github.event.pull_request.labels.*.name, 'refactor')
+    permissions:
+      pull-requests: read
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - name: Check that changelog is updated
+        run: git diff --name-only HEAD^1 HEAD | grep -qP '^CHANGELOG\.md$' || (echo "::error file=CHANGELOG.md::Changelog must be updated in non-refactor PRs" && exit 1)
