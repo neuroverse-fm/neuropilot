@@ -8,6 +8,8 @@ import { targetedFileCreatedEvent, targetedFileDeletedEvent } from '@events/file
 import { RCECancelEvent } from '@events/utils';
 import { addActions } from './rce';
 
+const CATEGORY_FILE_ACTIONS = 'File Actions';
+
 /**
  * The path validator.
  * @param path The relative path to the file/folder.
@@ -176,7 +178,7 @@ export const fileActions = {
             },
             additionalProperties: false,
         },
-        category: 'File Actions',
+        category: CATEGORY_FILE_ACTIONS,
         handler: handleGetWorkspaceFiles,
         validators: [async (actionData: ActionData) => {
             const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
@@ -205,7 +207,7 @@ export const fileActions = {
     open_file: {
         name: 'open_file',
         description: 'Open a file in the workspace. You cannot open a binary file directly.',
-        category: 'File Actions',
+        category: CATEGORY_FILE_ACTIONS,
         schema: {
             type: 'object',
             properties: {
@@ -222,7 +224,7 @@ export const fileActions = {
     read_file: {
         name: 'read_file',
         description: 'Read a file\'s contents without opening it.',
-        category: 'File Actions',
+        category: CATEGORY_FILE_ACTIONS,
         schema: {
             type: 'object',
             properties: {
@@ -239,7 +241,7 @@ export const fileActions = {
     create_file: {
         name: 'create_file',
         description: 'Create a new file at the specified path. The path should include the name of the new file.',
-        category: 'File Actions',
+        category: CATEGORY_FILE_ACTIONS,
         schema: {
             type: 'object',
             properties: {
@@ -256,7 +258,7 @@ export const fileActions = {
     create_folder: {
         name: 'create_folder',
         description: 'Create a new folder at the specified path. The path should include the name of the new folder.',
-        category: 'File Actions',
+        category: CATEGORY_FILE_ACTIONS,
         schema: {
             type: 'object',
             properties: {
@@ -275,7 +277,7 @@ export const fileActions = {
     rename_file_or_folder: {
         name: 'rename_file_or_folder',
         description: 'Rename a file or folder. Specify the full relative path for both the old and new names.',
-        category: 'File Actions',
+        category: CATEGORY_FILE_ACTIONS,
         schema: {
             type: 'object',
             properties: {
@@ -296,7 +298,7 @@ export const fileActions = {
     delete_file_or_folder: {
         name: 'delete_file_or_folder',
         description: 'Delete a file or folder. If you want to delete a folder, set the "recursive" parameter to true.',
-        category: 'File Actions',
+        category: CATEGORY_FILE_ACTIONS,
         schema: {
             type: 'object',
             properties: {
@@ -369,7 +371,7 @@ export function handleCreateFile(actionData: ActionData): string | undefined {
         NEURO.client?.sendContext(`Created file ${relativePath}`);
 
         // Open the file if Neuro has permission for open_file
-        if (getPermissionLevel('open_file') !== PermissionLevel.AUTOPILOT)
+        if (getPermissionLevel(fileActions.open_file.name) !== PermissionLevel.AUTOPILOT)
             return;
 
         try {
@@ -601,7 +603,7 @@ export function handleGetWorkspaceFiles(actionData: ActionData): string | undefi
 
         const result: [vscode.Uri, vscode.FileType][] = [];
         for (const [childUri, fileType] of uriEntries) {
-            if (await isPathNeuroSafe(childUri.fsPath)) {
+            if (isPathNeuroSafe(childUri.fsPath)) {
                 if (fileType === vscode.FileType.File) result.push([childUri, fileType]);
                 else if (fileType === vscode.FileType.Directory) {
                     if (actionData.params?.recursive) {

@@ -10,7 +10,7 @@ import { RCECancelEvent } from '@events/utils';
 import { JSONSchema7Definition } from 'json-schema';
 import { addActions, registerAction, reregisterAllActions, unregisterAction } from './rce';
 
-/* All actions located in here requires neuropilot.permission.gitOperations to be enabled. */
+const CATEGORY_GIT = 'Git';
 
 // Get the Git extension
 let git: API | null = null;
@@ -131,7 +131,7 @@ export const gitActions = {
     init_git_repo: {
         name: 'init_git_repo',
         description: 'Initialize a new Git repository in the current workspace folder',
-        category: 'Git',
+        category: CATEGORY_GIT,
         handler: handleNewGitRepo,
         promptGenerator: 'initialize a Git repository in the workspace.',
         cancelEvents: commonCancelEvents,
@@ -143,7 +143,7 @@ export const gitActions = {
     add_file_to_git: {
         name: 'add_file_to_git',
         description: 'Add a file to the staging area',
-        category: 'Git',
+        category: CATEGORY_GIT,
         schema: {
             type: 'object',
             properties: {
@@ -167,7 +167,7 @@ export const gitActions = {
     make_git_commit: {
         name: 'make_git_commit',
         description: 'Commit staged changes with a message',
-        category: 'Git',
+        category: CATEGORY_GIT,
         schema: {
             type: 'object',
             properties: {
@@ -190,7 +190,7 @@ export const gitActions = {
     merge_to_current_branch: {
         name: 'merge_to_current_branch',
         description: 'Merge another branch into the current branch.',
-        category: 'Git',
+        category: CATEGORY_GIT,
         schema: {
             type: 'object',
             properties: {
@@ -208,7 +208,7 @@ export const gitActions = {
     git_status: {
         name: 'git_status',
         description: 'Get the current status of the Git repository',
-        category: 'Git',
+        category: CATEGORY_GIT,
         handler: handleGitStatus,
         cancelEvents: commonCancelEvents,
         promptGenerator: 'get the repository\'s Git status.',
@@ -218,7 +218,7 @@ export const gitActions = {
     remove_file_from_git: {
         name: 'remove_file_from_git',
         description: 'Remove a file from the staging area',
-        category: 'Git',
+        category: CATEGORY_GIT,
         schema: {
             type: 'object',
             properties: {
@@ -242,7 +242,7 @@ export const gitActions = {
     delete_git_branch: {
         name: 'delete_git_branch',
         description: 'Delete a branch in the current Git repository',
-        category: 'Git',
+        category: CATEGORY_GIT,
         schema: {
             type: 'object',
             properties: {
@@ -261,7 +261,7 @@ export const gitActions = {
     switch_git_branch: {
         name: 'switch_git_branch',
         description: 'Switch to a different branch in the current Git repository',
-        category: 'Git',
+        category: CATEGORY_GIT,
         schema: {
             type: 'object',
             properties: {
@@ -279,7 +279,7 @@ export const gitActions = {
     new_git_branch: {
         name: 'new_git_branch',
         description: 'Create a new branch in the current Git repository',
-        category: 'Git',
+        category: CATEGORY_GIT,
         schema: {
             type: 'object',
             properties: {
@@ -297,7 +297,7 @@ export const gitActions = {
     diff_files: {
         name: 'diff_files',
         description: 'Get the differences between two versions of a file in the Git repository',
-        category: 'Git',
+        category: CATEGORY_GIT,
         schema: {
             type: 'object',
             oneOf: [
@@ -352,7 +352,7 @@ export const gitActions = {
     git_log: {
         name: 'git_log',
         description: 'Get the commit history of the current branch',
-        category: 'Git',
+        category: CATEGORY_GIT,
         schema: {
             type: 'object',
             properties: {
@@ -373,7 +373,7 @@ export const gitActions = {
     git_blame: {
         name: 'git_blame',
         description: 'Get commit attributions for each line in a file.',
-        category: 'Git',
+        category: CATEGORY_GIT,
         schema: {
             type: 'object',
             properties: {
@@ -393,7 +393,7 @@ export const gitActions = {
     tag_head: {
         name: 'tag_head',
         description: 'Tag the current commit using Git.',
-        category: 'Git',
+        category: CATEGORY_GIT,
         schema: {
             type: 'object',
             properties: {
@@ -412,7 +412,7 @@ export const gitActions = {
     delete_tag: {
         name: 'delete_tag',
         description: 'Delete a tag from Git.',
-        category: 'Git',
+        category: CATEGORY_GIT,
         schema: {
             type: 'object',
             properties: {
@@ -593,7 +593,7 @@ export const gitActions = {
     abort_merge: {
         name: 'abort_merge',
         description: 'Abort the current merge operation.',
-        category: 'Git',
+        category: CATEGORY_GIT,
         handler: handleAbortMerge,
         cancelEvents: commonCancelEvents,
         promptGenerator: 'abort the current merge operation.',
@@ -648,29 +648,7 @@ export function addGitActions() {
         git.openRepository(root).then((r) => {
             repo = r;
 
-            addActions([
-                gitActions.add_file_to_git,
-                gitActions.make_git_commit,
-                gitActions.merge_to_current_branch,
-                gitActions.git_status,
-                gitActions.remove_file_from_git,
-                gitActions.delete_git_branch,
-                gitActions.switch_git_branch,
-                gitActions.new_git_branch,
-                gitActions.diff_files,
-                gitActions.git_log,
-                gitActions.git_blame,
-                gitActions.tag_head,
-                gitActions.delete_tag,
-                gitActions.set_git_config,
-                gitActions.get_git_config,
-                gitActions.fetch_git_commits,
-                gitActions.pull_git_commits,
-                gitActions.push_git_commits,
-                gitActions.add_git_remote,
-                gitActions.remove_git_remote,
-                gitActions.rename_git_remote,
-            ]);
+            addActions(actionsToRegister);
 
             // Don't register abort_merge unless there is a merge in progress
             addActions([gitActions.abort_merge], false);

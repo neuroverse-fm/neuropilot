@@ -13,12 +13,15 @@ import { ACTIONS } from '@/config';
 import { notifyOnTaskFinish } from '@events/shells';
 import { addActions, getActions, removeActions } from './rce';
 
+const CATEGORY_TASKS = 'Tasks';
+const CATEGORY_REGISTERED_TASKS = 'Registered Tasks';
+
 export const taskHandlers = {
     // handleRunTask is used separately and not on this list
     terminate_task: {
         name: 'terminate_task',
         description: 'Terminate the currently running task',
-        category: 'Tasks',
+        category: CATEGORY_TASKS,
         handler: handleTerminateTask,
         cancelEvents: [
             notifyOnTaskFinish,
@@ -85,12 +88,9 @@ export function taskEndedHandler(event: vscode.TaskEndEvent) {
 }
 
 export function reloadTasks() {
-    // if (NEURO.tasks.length)
-    //     NEURO.client?.unregisterActions(NEURO.tasks.map((task) => task.id));
-
     NEURO.tasks = [];
     const tasks = getActions()
-        .filter(action => action.category === 'Tasks')
+        .filter(action => action.category === CATEGORY_REGISTERED_TASKS)
         .map(action => action.name);
     removeActions(tasks);
 
@@ -124,10 +124,9 @@ export function reloadTasks() {
         addActions(NEURO.tasks.map((task) => ({
             name: task.id,
             description: task.description,
-            category: 'Registered Tasks',
+            category: CATEGORY_REGISTERED_TASKS,
             handler: handleRunTask,
             promptGenerator: `run the task: ${task.description}`,
-            // TODO: Do we need these validators?
             validators: [checkVirtualWorkspace, checkWorkspaceTrust],
         })));
     });

@@ -11,6 +11,8 @@ import { ACTIONS as ACTIONS_CONFIG, CONFIG, CONNECTION, getAllPermissions, getPe
 import { validate } from 'jsonschema';
 import type { RCECancelEvent } from '@events/utils';
 
+export const CATEGORY_MISC = 'Miscellaneous';
+
 const ACTIONS: RCEAction[] = [];
 const REGISTERED_ACTIONS: Set<string> = /* @__PURE__ */ new Set<string>();
 
@@ -273,10 +275,14 @@ export function denyRceRequest(): void {
  * @param register Whether to register the actions with Neuro immediately if the permissions allow.
  */
 export function addActions(actions: RCEAction[], register = true): void {
-    ACTIONS.push(...actions);
-    NEURO.viewProviders.actions?.refreshActions();
-    if (register) {
-        const actionNames = actions.map(a => a.name);
+    const actionsToAdd = actions.filter(a => !ACTIONS.some(existing => existing.name === a.name));
+    const actionsNotToAdd = actions.filter(a => !actionsToAdd.includes(a));
+    if (actionsNotToAdd.length > 0) {
+        logOutput('WARN', `Tried to add actions that are already registered: ${actionsNotToAdd.map(a => a.name).join(', ')}`);
+    }
+    ACTIONS.push(...actionsToAdd);
+    if (register && NEURO.connected) {
+        const actionNames = actionsToAdd.map(a => a.name);
         const actionsToRegister = actionNames
             .map(name => ACTIONS.find(a => a.name === name)!)
             .filter((action) => getPermissionLevel(action.name) && action.registerCondition?.() !== false)
@@ -285,6 +291,7 @@ export function addActions(actions: RCEAction[], register = true): void {
         if (actionsToRegister.length > 0)
             NEURO.client?.registerActions(actionsToRegister);
     }
+    NEURO.viewProviders.actions?.refreshActions();
 }
 
 /**
@@ -298,19 +305,23 @@ export function removeActions(actionNames: string[]): void {
             ACTIONS.splice(actionIndex, 1);
         }
     }
+    if (NEURO.connected) {
+        NEURO.client?.unregisterActions(actionNames);
+        actionNames.forEach(a => REGISTERED_ACTIONS.delete(a));
+    }
     NEURO.viewProviders.actions?.refreshActions();
-    NEURO.client?.unregisterActions(actionNames);
 }
 
 /**
  * Registers an action with Neuro.
  * The action to register must already be added to the registry via {@link addAction} or {@link addActions}.
+ * Will only register the action if it is not already registered.
  * @param actionName The name of the action to register.
  */
 export function registerAction(actionName: string): void {
     const action = ACTIONS.find(a => a.name === actionName);
-    if (action) {
-        NEURO.client?.registerActions([stripToAction(action)]);
+    if (action && NEURO.connected && !REGISTERED_ACTIONS.has(action.name)) {
+        NEURO.client!.registerActions([stripToAction(action)]);
         REGISTERED_ACTIONS.add(action.name);
         NEURO.viewProviders.actions?.refreshActions();
     }
@@ -326,11 +337,21 @@ export function unregisterAction(actionName: string): void {
     NEURO.viewProviders.actions?.refreshActions();
 }
 
+export function unregisterAllActions(): void {
+    const actionNames = Array.from(REGISTERED_ACTIONS);
+    NEURO.client?.unregisterActions(actionNames);
+    REGISTERED_ACTIONS.clear();
+    NEURO.viewProviders.actions?.refreshActions();
+}
+
 /**
  * Reregisters all actions with the Neuro API.
  * @param conservative Only reregister as necessary.
  */
 export function reregisterAllActions(conservative: boolean): void {
+    // Can't reregister if no client is connected
+    if (!NEURO.connected) return;
+
     const permissions = getAllPermissions();
     const actionsToUnregister = conservative
         ? ACTIONS
@@ -386,16 +407,15 @@ export function getAction(actionName: string): RCEAction | undefined {
 }
 
 export function getExtendedActionsInfo(): ExtendedActionInfo[] {
-    const permissions = getAllPermissions();
     const configuration = vscode.workspace.getConfiguration('neuropilot');
     const { workspaceValue, globalValue } = configuration.inspect<Record<string, string>>('actionPermissions') || {};
     return ACTIONS.map(action => {
-        const configuredWorkspacePermission = workspaceValue?.[action.name] ? stringToPermissionLevel(workspaceValue[action.name]) : undefined;
-        const configuredGlobalPermission = globalValue?.[action.name] ? stringToPermissionLevel(globalValue[action.name]) : undefined;
+        const configuredWorkspacePermission = workspaceValue?.[action.name] !== undefined ? stringToPermissionLevel(workspaceValue[action.name]) : undefined;
+        const configuredGlobalPermission = globalValue?.[action.name] !== undefined ? stringToPermissionLevel(globalValue[action.name]) : undefined;
         return {
             action,
             isRegistered: REGISTERED_ACTIONS.has(action.name),
-            effectivePermissionLevel: permissions[action.name] ?? action.defaultPermission ?? PermissionLevel.OFF,
+            effectivePermissionLevel: getPermissionLevel(action.name),
             configuredWorkspacePermission,
             configuredGlobalPermission,
             isConfigured: configuredWorkspacePermission !== undefined || configuredGlobalPermission !== undefined,

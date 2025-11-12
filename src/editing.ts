@@ -9,6 +9,8 @@ import { RCECancelEvent } from '@events/utils';
 import type { JSONSchema7 } from 'json-schema';
 import { addActions, registerAction, unregisterAction } from '@/rce';
 
+const CATEGORY_EDITING = 'Editing';
+
 const CONTEXT_NO_ACCESS = 'You do not have permission to access this file.';
 const CONTEXT_NO_ACTIVE_DOCUMENT = 'No active document to edit.';
 
@@ -195,7 +197,7 @@ export const editingActions = {
     place_cursor: {
         name: 'place_cursor',
         description: 'Place your cursor in the current file at the specified position. Line and column numbers are one-based for "absolute" and zero-based for "relative".',
-        category: 'Editing',
+        category: CATEGORY_EDITING,
         schema: {
             ...POSITION_SCHEMA,
             description: undefined,
@@ -208,7 +210,7 @@ export const editingActions = {
     get_cursor: {
         name: 'get_cursor',
         description: 'Get your current cursor position and the text surrounding it.',
-        category: 'Editing',
+        category: CATEGORY_EDITING,
         handler: handleGetCursor,
         validators: [checkCurrentFile],
         cancelEvents: commonCancelEventsWithCursor,
@@ -217,7 +219,7 @@ export const editingActions = {
     get_file_contents: {
         name: 'get_file_contents',
         description: 'Get the contents of the current file.',
-        category: 'Editing',
+        category: CATEGORY_EDITING,
         handler: handleGetContent,
         cancelEvents: [
             cancelOnDidChangeTextDocument,
@@ -233,7 +235,7 @@ export const editingActions = {
             + ' Remember to add indents after newlines where appropriate.'
             + ' After inserting, your cursor will be placed at the end of the inserted text.'
             + ' Also make sure you use new lines and indentation appropriately.',
-        category: 'Editing',
+        category: CATEGORY_EDITING,
         schema: {
             type: 'object',
             properties: {
@@ -276,7 +278,7 @@ export const editingActions = {
             + ' The insertUnder parameter is one-based, not zero-based.'
             + ' Remember to add indents after newlines where appropriate.'
             + ' Your cursor will be moved to the end of the inserted line.', // TODO: Clarify cursor stuff again
-        category: 'Editing',
+        category: CATEGORY_EDITING,
         schema: {
             type: 'object',
             properties: {
@@ -312,7 +314,7 @@ export const editingActions = {
         description: 'Replace text in the active document.'
             + ' If you set "useRegex" to true, you can use a Regex in the "find" parameter and a substitution pattern in the "replaceWith" parameter.'
             + ' This will place your cursor at the end of the replaced text, unless you replaced multiple instances.',
-        category: 'Editing',
+        category: CATEGORY_EDITING,
         schema: {
             type: 'object',
             properties: {
@@ -368,7 +370,7 @@ export const editingActions = {
             + ' If you set "useRegex" to true, you can use a Regex in the "find" parameter.'
             + ' This will place your cursor where the deleted text was, unless you deleted multiple instances.'
             + ' Line numbers are one-based.',
-        category: 'Editing',
+        category: CATEGORY_EDITING,
         schema: {
             type: 'object',
             properties: {
@@ -427,7 +429,7 @@ export const editingActions = {
             + ' This will place your cursor directly before or after the found text (depending on "moveCursor"), unless you searched for multiple instances.'
             + ' Set "highlight" to true to highlight the found text, if you want to draw insert_turtle_here\'s or Chat\'s attention to it.'
             + ' If you search for multiple matches, the numbers at the start of each line are the one-based line numbers and not part of the code.',
-        category: 'Editing',
+        category: CATEGORY_EDITING,
         schema: {
             type: 'object',
             properties: {
@@ -489,7 +491,7 @@ export const editingActions = {
         description: 'Undo the last change made to the active document.'
             + ' Where your cursor will be moved cannot be determined.' // It will move to the real cursor but thats kinda useless for her to know
             + ' If this doesn\'t work, tell insert_turtle_here to focus your VS Code window.',
-        category: 'Editing',
+        category: CATEGORY_EDITING,
         handler: handleUndo,
         cancelEvents: commonCancelEvents,
         validators: [checkCurrentFile],
@@ -498,7 +500,7 @@ export const editingActions = {
     save: {
         name: 'save',
         description: 'Manually save the currently open document.',
-        category: 'Editing',
+        category: CATEGORY_EDITING,
         handler: handleSave,
         cancelEvents: [
             ...commonCancelEvents,
@@ -516,7 +518,7 @@ export const editingActions = {
     rewrite_all: {
         name: 'rewrite_all',
         description: 'Rewrite the entire contents of the file. Your cursor will be moved to the start of the file.',
-        category: 'Editing',
+        category: CATEGORY_EDITING,
         schema: {
             type: 'object',
             properties: {
@@ -538,7 +540,7 @@ export const editingActions = {
         description: 'Rewrite everything in the specified line range.'
             + ' After rewriting, your cursor will be placed at the end of the last inserted line.'
             + ' Line numbers are one-based.',
-        category: 'Editing',
+        category: CATEGORY_EDITING,
         schema: {
             type: 'object',
             properties: {
@@ -561,7 +563,7 @@ export const editingActions = {
         description: 'Delete everything in the specified line range.'
             + ' After deleting, your cursor will be placed at the end of the line before the deleted lines, if possible.'
             + ' Line numbers are one-based.',
-        category: 'Editing',
+        category: CATEGORY_EDITING,
         schema: LINE_RANGE_SCHEMA,
         handler: handleDeleteLines,
         cancelEvents: commonCancelEvents,
@@ -576,7 +578,7 @@ export const editingActions = {
             + ' Can be used to draw insert_turtle_here\'s or Chat\'s attention towards something.'
             + ' This will not move your cursor.'
             + ' Line numbers are one-based.',
-        category: 'Editing',
+        category: CATEGORY_EDITING,
         schema: LINE_RANGE_SCHEMA,
         handler: handleHighlightLines,
         cancelEvents: commonCancelEvents,
@@ -587,7 +589,7 @@ export const editingActions = {
         name: 'get_user_selection',
         description: 'Get insert_turtle_here\'s current selection and the text surrounding it.'
             + ' This will not move your own cursor.',
-        category: 'Editing',
+        category: CATEGORY_EDITING,
         handler: handleGetUserSelection,
         validators: [checkCurrentFile],
         promptGenerator: 'get your cursor position and surrounding text.',
@@ -598,7 +600,7 @@ export const editingActions = {
             + ' If insert_turtle_here has no selection, this will insert the text at insert_turtle_here\'s current cursor position.'
             + ' After replacing/inserting, your cursor will be placed at the end of the inserted text.'
             + ' If "requireSelectionUnchanged" is true, the action will be automatically canceled if insert_turtle_here\'s selection changes or has changed since it was last obtained.',
-        category: 'Editing',
+        category: CATEGORY_EDITING,
         schema: {
             type: 'object',
             properties: {
@@ -645,7 +647,7 @@ export const editingActions = {
             ' `>>>>>> SEARCH`, `<<<<<< REPLACE` and `======` must be on a separate line, and be the only content on that line.' +
             ' You can only specify **one** search/replace pair per diff patch.*' +
             ' Read the schema for an example.',
-        category: 'Editing',
+        category: CATEGORY_EDITING,
         schema: {
             type: 'object',
             properties: {
@@ -1607,8 +1609,6 @@ export function editorChangeHandler(editor: vscode.TextEditor | undefined) {
 export async function workspaceEditHandler(event: vscode.TextDocumentChangeEvent) {
     if (event.contentChanges.length === 0) return;
     if (event.document !== vscode.window.activeTextEditor?.document) return;
-    // TODO: Find a replacement for this check?
-    // if (!getPermissionLevel(PERMISSIONS.editActiveDocument)) return;
     if (event.document.fileName.startsWith('extension-output-')) return; // Ignore extension output to avoid infinite logging
 
     // Diffs

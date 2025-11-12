@@ -14,6 +14,8 @@ import { CONFIG } from '@/config';
 import { notifyOnTerminalClose } from '@events/shells';
 import { addActions } from './rce';
 
+const CATEGORY_TERMINAL = 'Terminal Access';
+
 /*
  * Extended interface for terminal sessions.
  * We now explicitly store the event emitter along with the pseudoterminal.
@@ -41,7 +43,7 @@ export const terminalAccessHandlers = {
     execute_in_terminal: {
         name: 'execute_in_terminal',
         description: 'Run a command directly in the terminal',
-        category: 'Terminal Access',
+        category: CATEGORY_TERMINAL,
         schema: {
             type: 'object',
             properties: {
@@ -61,7 +63,7 @@ export const terminalAccessHandlers = {
     kill_terminal_process: {
         name: 'kill_terminal_process',
         description: 'Kill a terminal process that is running.',
-        category: 'Terminal Access',
+        category: CATEGORY_TERMINAL,
         schema: {
             type: 'object',
             properties: {
@@ -80,7 +82,7 @@ export const terminalAccessHandlers = {
     get_currently_running_shells: {
         name: 'get_currently_running_shells',
         description: 'Get the list of terminal processes that are spawned.',
-        category: 'Terminal Access',
+        category: CATEGORY_TERMINAL,
         handler: handleGetCurrentlyRunningShells,
         validators: [checkVirtualWorkspace, checkWorkspaceTrust],
         promptGenerator: 'get the list of currently running shells.',

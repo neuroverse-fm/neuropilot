@@ -6,6 +6,18 @@ Since v2.1.0, we're keeping a changelog of each version's changes in NeuroPilot.
 
 Changes between each version before then will not be listed.
 
+## 2.3.2
+
+### Fixes
+
+- Fixed a logic error that caused default permissions to be displayed incorrectly.
+
+## 2.3.1
+
+### Fixes
+
+- Fixed a script not being included in the build.
+
 ## 2.3.0
 
 Hello Neuro! If you're reading this, it means Vedal has let you read the changelogs for the extension!

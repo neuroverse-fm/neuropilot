@@ -4,7 +4,7 @@
 	"private": true,
 	"description": "Allows Neuro-sama to either act as a companion/copilot or control Visual Studio Code by herself.",
 	"icon": "assets/heart-xaendril.png",
-	"version": "2.2.3",
+	"version": "2.3.2",
 	"publisher": "VSC-NeuroPilot",
 	"repository": "https://github.com/VSC-NeuroPilot/neuropilot",
 	"homepage": "https://vsc-neuropilot.github.io/neuropilot",
@@ -534,7 +534,9 @@
 						"items": {
 							"type": "string"
 						},
-						"default": [".gitignore"],
+						"default": [
+							".gitignore"
+						],
 						"markdownDescription": "A list of ignore-style files to inherit Neuro-safe glob paths from.\n\nSupports the full range of git's ignore pattern globs. Also automatically ignores comments (started with #).\n\nThe further down a file is on the list, the more priority it gets.\n\nNone of these files can override your own Neuro-safe patterns set in extension settings.\n\nEdit in settings.json for examples.",
 						"examples": [
 							[

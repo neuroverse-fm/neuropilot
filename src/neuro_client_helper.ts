@@ -60,7 +60,7 @@ export interface RCEAction<T = unknown> extends TypedAction {
      * More info (comment): https://github.com/VedalAI/neuro-game-sdk/discussions/58#discussioncomment-12938623
      */
     promptGenerator: PromptGenerator;
-    /** Default permission for actions like chat, cancel_request, etc. Defaults to {@link PermissionLevel.OFF}. */
+    /** Default permission for actions when no permission is configured in user or workspace settings. Defaults to {@link PermissionLevel.OFF}. */
     defaultPermission?: PermissionLevel;
     /**
      * The category of the request.
@@ -69,7 +69,7 @@ export interface RCEAction<T = unknown> extends TypedAction {
     category: string | null;
     /** Whether to automatically register the action with Neuro upon addition. Defaults to true. */
     autoRegister?: boolean;
-    /** A condition that must be true for the action to be registered. If not provided, the action is always registered. */
+    /** A condition that must be true for the action to be registered. If not provided, the action is always registered. This function must never throw. */
     registerCondition?: () => boolean;
 }
 

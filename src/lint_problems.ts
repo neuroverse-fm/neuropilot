@@ -7,6 +7,8 @@ import assert from 'node:assert';
 import { targetedFileLintingResolvedEvent, targetedFolderLintingResolvedEvent, workspaceLintingResolvedEvent } from '@events/linting';
 import { addActions } from './rce';
 
+const CATEGORY_LINTING = 'Linting';
+
 /**
  * The path validator.
  * @param path The relative path to the file/folder.
@@ -68,7 +70,7 @@ export const lintActions = {
     get_file_lint_problems: {
         name: 'get_file_lint_problems',
         description: 'Gets linting diagnostics for a file.',
-        category: 'Linting',
+        category: CATEGORY_LINTING,
         schema: {
             type: 'object',
             properties: {
@@ -94,7 +96,7 @@ export const lintActions = {
     get_folder_lint_problems: {
         name: 'get_folder_lint_problems',
         description: 'Gets linting diagnostics for a folder.',
-        category: 'Linting',
+        category: CATEGORY_LINTING,
         schema: {
             type: 'object',
             properties: {
@@ -115,7 +117,7 @@ export const lintActions = {
             const diagnostics = vscode.languages.getDiagnostics();
             const folderDiagnostics = diagnostics.filter(async ([diagUri, diags]) => {
                 return normalizePath(diagUri.fsPath).startsWith(normalizedFolderPath) &&
-                await isPathNeuroSafe(diagUri.fsPath) && diags.length > 0;
+                isPathNeuroSafe(diagUri.fsPath) && diags.length > 0;
             });
 
             if (folderDiagnostics.length === 0) return actionValidationFailure(`No linting problems found for folder "${relativeFolder}".`);
@@ -126,7 +128,7 @@ export const lintActions = {
     get_workspace_lint_problems: {
         name: 'get_workspace_lint_problems',
         description: 'Gets linting diagnostics for the current workspace.',
-        category: 'Linting',
+        category: CATEGORY_LINTING,
         handler: handleGetWorkspaceLintProblems,
         cancelEvents: [
             workspaceLintingResolvedEvent,
@@ -141,7 +143,7 @@ export const lintActions = {
             const diagnostics = vscode.languages.getDiagnostics();
             // Filter for diagnostics on safe files with errors.
             const safeDiagnostics = diagnostics.filter(
-                async ([uri, diags]) => await isPathNeuroSafe(uri.fsPath) && diags.length > 0,
+                ([uri, diags]) => isPathNeuroSafe(uri.fsPath) && diags.length > 0,
             );
 
             if (safeDiagnostics.length === 0) return actionValidationFailure('No linting problems found for the current workspace.');
@@ -240,9 +242,9 @@ export function handleGetFolderLintProblems(actionData: ActionData): string | un
         const diagnostics = vscode.languages.getDiagnostics();
 
         // Filter diagnostics to those that belong to files in this folder.
-        const folderDiagnostics = diagnostics.filter(async ([diagUri, diags]) => {
-            return normalizePath(diagUri.fsPath).startsWith(normalizedFolderPath) &&
-                await isPathNeuroSafe(diagUri.fsPath) && diags.length > 0;
+        const folderDiagnostics = diagnostics.filter(([diagUri, diags]) => {
+            return normalizePath(diagUri.fsPath).startsWith(normalizedFolderPath)
+                && isPathNeuroSafe(diagUri.fsPath) && diags.length > 0;
         });
 
         if (folderDiagnostics.length === 0) {
@@ -272,7 +274,7 @@ export function handleGetWorkspaceLintProblems(_actionData: ActionData): string 
         const diagnostics = vscode.languages.getDiagnostics();
         // Filter for diagnostics on safe files with errors.
         const safeDiagnostics = diagnostics.filter(
-            async ([uri, diags]) => await isPathNeuroSafe(uri.fsPath) && diags.length > 0,
+            ([uri, diags]) => isPathNeuroSafe(uri.fsPath) && diags.length > 0,
         );
 
         if (safeDiagnostics.length === 0) {

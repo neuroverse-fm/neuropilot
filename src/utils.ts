@@ -79,6 +79,8 @@ function attemptConnection(currentAttempt: number, maxAttempts: number, interval
             NEURO.connected = false;
             logOutput('INFO', 'Disconnected from Neuro API');
 
+            unregisterAllActions();
+
             // Only auto-reconnect if it wasn't a manual disconnection
             if (shouldAutoReconnect) {
                 if (currentAttempt < maxAttempts) {
@@ -310,6 +312,7 @@ export function combineGlobLinesToRegExp(lines: string[]): RegExp {
 }
 
 import { fastIsItIgnored } from '@/ignore_files_utils';
+import { unregisterAllActions } from './rce';
 
 /**
  * Check if an absolute path is safe for Neuro to access.
@@ -478,8 +481,7 @@ export function setVirtualCursor(position?: vscode.Position | null) {
     const editor = vscode.window.activeTextEditor;
     if (!editor) return;
 
-    // TODO: Replacement for getPermissionLevel
-    if (position === null /*|| !getPermissionLevel(PERMISSIONS.editActiveDocument)*/ || !isPathNeuroSafe(editor.document.fileName)) {
+    if (position === null || !isPathNeuroSafe(editor.document.fileName)) {
         removeVirtualCursor();
         return;
     }
@@ -977,9 +979,18 @@ export function stripTailSlashes(string: string): string {
     return string.replace(/^\/+|\/+$/g, '');
 }
 
+/**
+ * Formats a string by replacing placeholders with properties from the format object, similar to JavaScript template literals.
+ * Allows for accessing nested properties using dot notation.
+ * Use `$$` to insert a literal `$`.
+ * This performs a single pass replacement, so nested placeholders are not processed.
+ * @param template The string to search for replacement patterns in.
+ * @param format The object defining the replacements. Any keys of this object and nested keys must be valid ASCII JavaScript identifiers.
+ * @returns The formatted string.
+ */
 export function formatString(template: string, format: Record<string, unknown>): string {
     // Process matches in reverse order to avoid messing up indices
-    const matches = Array.from(template.matchAll(/\$\$|\$\{([^}]+)\}/g)).reverse();
+    const matches = Array.from(template.matchAll(/\$\$|\$\{([^}]*)\}/g)).reverse();
     let result = template;
     for (const match of matches) {
         const pos = match.index;
@@ -998,17 +1009,23 @@ export function formatString(template: string, format: Record<string, unknown>):
  * @param str The string to split.
  */
 export function splitIdentifier(str: string): string[] {
-    const rx = /(?<=[a-z0-9])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])|(?<=[A-Za-z])(?=\d)|_|-/g;
-    return str.split(rx).filter(s => s.length > 0);
+    const rx = /[A-Z]{1,}(?=[A-Z][a-z]|$)|[A-Z]?[a-z]+|[A-Z]+|\d+|_|-/g;
+    return Array.from(str.matchAll(rx))
+        .map(m => m[0])
+        .filter(part => part !== '_' && part !== '-');
 }
 
 export function toTitleCase(str: string): string {
+    const allCaps = str.toUpperCase() === str;
     const parts = splitIdentifier(str);
     const excludedWords = ['a', 'an', 'and', 'as', 'at', 'but', 'by', 'for', 'if', 'in', 'nor', 'of', 'off', 'on', 'or', 'per', 'so', 'the', 'to', 'up', 'via', 'yet'];
     return parts
-        .map(part => {
+        .map((part, i) => {
+            if (!allCaps && part.toUpperCase() === part)
+                return part;
             const lowerPart = part.toLowerCase();
-            if (excludedWords.includes(lowerPart)) {
+
+            if (i && excludedWords.includes(lowerPart)) {
                 return lowerPart;
             } else {
                 return lowerPart.charAt(0).toUpperCase() + lowerPart.slice(1);
