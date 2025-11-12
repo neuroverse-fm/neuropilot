@@ -3,6 +3,17 @@ name: Check that changelog is updated
 on:
   # Should run for every push to the PR branch
   pull_request:
+    paths:
+      - 'assets/**'
+      - 'esbuild-configs/**'
+      - 'scripts/**'
+      - 'src/**'
+      - 'webview/**'
+      - '.vscodeignore'
+      - 'LICENSE'
+      - 'package.json'
+      - 'README.md'
+      - 'tsconfig*.json'
 
 jobs:
   check-changelog:
