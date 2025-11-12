@@ -811,7 +811,7 @@
 		"typescript-eslint": "^8.26.0"
 	},
 	"dependencies": {
-		"file-type": "^21.0.0",
+		"file-type": "^21.1.0",
 		"glob-to-regexp": "^0.4.1",
 		"ignore": "^7.0.5",
 		"jsonschema": "^1.5.0",
