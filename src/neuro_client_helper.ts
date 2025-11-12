@@ -42,7 +42,7 @@ export interface RCEAction<T = unknown> extends TypedAction {
     /** The JSON schema for validating the action parameters if experimental schemas are disabled. */
     schemaFallback?: JSONSchema7;
     /** The function to validate the action data *after* checking the schema. */
-    validators?: ((actionData: ActionData) => (ActionValidationResult | Promise<ActionValidationResult>))[];
+    validators?: ((actionData: ActionData) => ActionValidationResult | Promise<ActionValidationResult>)[];
     /**
      * Cancellation events attached to the action that will be automatically set up.
      * Each cancellation event will be setup in parallel to each other.
