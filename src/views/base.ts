@@ -30,12 +30,11 @@ export abstract class BaseWebviewViewProvider<TViewMessage extends Message, TPro
 
     protected async _getHtmlForWebview(webview: vscode.Webview, format?: Record<string, unknown>): Promise<string> {
         const codiconsStyleUri = webview.asWebviewUri(vscode.Uri.joinPath(NEURO.context!.extensionUri, 'node_modules', '@vscode/codicons', 'dist', 'codicon.css'));
-        const resetStyleUri = webview.asWebviewUri(vscode.Uri.joinPath(NEURO.context!.extensionUri, 'webview', 'reset.css'));
         const vscodeStyleUri = webview.asWebviewUri(vscode.Uri.joinPath(NEURO.context!.extensionUri, 'webview', 'vscode.css'));
 
         const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(NEURO.context!.extensionUri, 'out', 'webview', this._script));
         const styleUris = this._styles.map(style => webview.asWebviewUri(vscode.Uri.joinPath(NEURO.context!.extensionUri, 'webview', style)));
-        const styles = [codiconsStyleUri, resetStyleUri, vscodeStyleUri, ...styleUris]
+        const styles = [codiconsStyleUri, vscodeStyleUri, ...styleUris]
             .map(styleUri => `<link href="${styleUri}" rel="stylesheet">`)
             .join('\n');
         const nonce = getNonce();

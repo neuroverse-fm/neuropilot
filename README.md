@@ -106,7 +106,7 @@ The short answer is no, there isn't an intentional Remote Code Execution vulnera
 
 ### External Licenses
 
-The (modified) VS Code stylesheets included in the extension (reset.css and vscode.css) are from the [microsoft/vscode-extension-samples](https://github.com/microsoft/vscode-extension-samples) repository, licensed under [MIT](https://github.com/microsoft/vscode-extension-samples/blob/5839b5c2336e1488ee642a037a2084f2dd3d6755/LICENSE).
+The (modified) VS Code stylesheet included in the extension (vscode.css) is from the [microsoft/vscode-extension-samples](https://github.com/microsoft/vscode-extension-samples) repository, licensed under [MIT](https://github.com/microsoft/vscode-extension-samples/blob/5839b5c2336e1488ee642a037a2084f2dd3d6755/LICENSE).
 
 ## Contributing to NeuroPilot
 
