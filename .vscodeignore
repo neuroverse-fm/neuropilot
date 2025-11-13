@@ -35,3 +35,6 @@ tony/
 test-playground/
 .vscode-test.mjs
 out/test/**
+
+# NPM packages required at runtime
+!node_modules/@vscode/codicons
