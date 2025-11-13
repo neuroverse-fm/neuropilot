@@ -13,19 +13,10 @@ body {
 
 summary {
     cursor: pointer;
-    display: block;
 }
 
 summary .codicon {
     color: var(--vscode-notificationsInfoIcon-foreground);
-}
-
-summary:hover {
-    display: list-item;
-}
-
-details[open] summary {
-    display: list-item;
 }
 
 summary i {
