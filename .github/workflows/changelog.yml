@@ -10,16 +10,14 @@ on:
       - 'src/**'
       - 'webview/**'
       - '.vscodeignore'
-      - 'LICENSE'
       - 'package.json'
-      - 'README.md'
       - 'tsconfig*.json'
 
 jobs:
   check-changelog:
     runs-on: ubuntu-latest
     # Only run if the PR is not a draft and does not have the 'refactor' label
-    if: github.event.pull_request.draft == false && !contains(github.event.pull_request.labels.*.name, 'refactor')
+    if: github.event.pull_request.draft == false && !contains(github.event.pull_request.labels.*.name, 'refactor') && !contains(github.event.pull_request.labels.*.name, 'meta')
     permissions:
       pull-requests: read
       contents: read
@@ -29,4 +27,16 @@ jobs:
         with:
           fetch-depth: 2
       - name: Check that changelog is updated
-        run: git diff --name-only HEAD^1 HEAD | grep -qP '^CHANGELOG\.md$' || (echo "::error file=CHANGELOG.md::Changelog must be updated in non-refactor PRs" && exit 1)
+        run: |
+          echo "Comparing ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}"
+          git fetch origin ${{ github.event.pull_request.base.ref }} ${{ github.event.pull_request.head.ref }}
+          changed=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }})
+          echo "Changed files:"
+          echo "$changed"
+
+          if echo "$changed" | grep -q '^CHANGELOG\.md$'; then
+            echo "✅ CHANGELOG.md modified — OK"
+          else
+            echo "::error file=CHANGELOG.md::Changelog must be updated in non-refactor PRs"
+            exit 1
+          fi
