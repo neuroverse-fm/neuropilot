@@ -42,6 +42,7 @@ export default tseslint.config(
         'coverage-desktop/**',
         'coverage-web/**',
         'scripts/check-malicious-packages.js', // TODO: Maybe fix the file later
+        'media/**',
     ]),
     js.configs.recommended,
     ...tseslint.configs.recommended,

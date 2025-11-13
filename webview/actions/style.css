@@ -3,10 +3,29 @@ body {
     margin-top: 5px;
 }
 
+.webview-header {
+    position: sticky;
+    top: 0;
+    background-color: var(--vscode-sideBar-background);
+    border-bottom: 1px solid var(--vscode-menu-border);
+    padding-bottom: 5px;
+}
+
 summary {
     cursor: pointer;
-    font-style: italic;
-    text-decoration: underline;
+}
+
+summary .codicon {
+    color: var(--vscode-notificationsInfoIcon-foreground);
+}
+
+summary i {
+    vertical-align: middle;
+    margin-right: 4px;
+}
+
+summary span {
+    vertical-align: middle;
 }
 
 .disabled {
@@ -26,13 +45,18 @@ summary {
     white-space: nowrap;
     display: flex;
     flex-direction: row;
-    justify-content: end;
+}
+
+.actions-header-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-grow: 1;
+    flex-shrink: 1;
 }
 
 .permission-level-letter {
     width: 20px;
     text-align: center;
-    /* border: 1px solid red; */
 }
 
 .actions-list {
@@ -85,5 +109,4 @@ summary {
     width: 20px;
     margin: 0;
     padding: 0;
-    /* border: 1px solid red; */
 }
