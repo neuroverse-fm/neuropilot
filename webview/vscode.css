@@ -12,7 +12,7 @@ body {
 	font-size: var(--vscode-font-size);
 	font-weight: var(--vscode-font-weight);
 	font-family: var(--vscode-font-family);
-	background-color: var(--vscode-editor-background);
+	background-color: var(--vscode-sideBar-background);
 }
 
 ol,
@@ -44,7 +44,10 @@ code {
 	font-family: var(--vscode-editor-font-family);
 }
 
-button {
+button,
+input[type="button"],
+input[type="submit"],
+input[type="reset"] {
 	border: none;
 	padding: var(--input-padding-vertical) var(--input-padding-horizontal);
 	width: 100%;
@@ -53,28 +56,42 @@ button {
 	outline-offset: 2px !important;
 	color: var(--vscode-button-foreground);
 	background: var(--vscode-button-background);
+	border-radius: 2px;
 }
 
-button:hover {
+button:hover,
+input[type="button"]:hover,
+input[type="submit"]:hover,
+input[type="reset"]:hover {
 	cursor: pointer;
 	background: var(--vscode-button-hoverBackground);
 }
 
-button:focus {
+button:focus,
+input[type="button"]:focus,
+input[type="submit"]:focus,
+input[type="reset"]:focus {
 	outline-color: var(--vscode-focusBorder);
 }
 
-button.secondary {
+button.secondary,
+input[type="button"].secondary,
+input[type="submit"].secondary,
+input[type="reset"].secondary {
 	color: var(--vscode-button-secondaryForeground);
 	background: var(--vscode-button-secondaryBackground);
 }
 
-button.secondary:hover {
+button.secondary:focus,
+input[type="button"].secondary:focus,
+input[type="submit"].secondary:focus,
+input[type="reset"].secondary:focus {
 	background: var(--vscode-button-secondaryHoverBackground);
 }
 
-input:not([type='checkbox']),
-textarea {
+input:not([type='checkbox']):not([type='radio']):not([type='button']):not([type='submit']):not([type='reset']),
+textarea,
+select {
 	display: block;
 	width: 100%;
 	border: none;
@@ -83,9 +100,26 @@ textarea {
 	color: var(--vscode-input-foreground);
 	outline-color: var(--vscode-input-border);
 	background-color: var(--vscode-input-background);
+	border-radius: 2px;
 }
 
 input::placeholder,
 textarea::placeholder {
 	color: var(--vscode-input-placeholderForeground);
+}
+
+input::file-selector-button {
+	border: none;
+	padding: var(--input-padding-vertical) var(--input-padding-horizontal);
+	text-align: center;
+	outline: 1px solid transparent;
+	outline-offset: 2px !important;
+	color: var(--vscode-button-foreground);
+	background: var(--vscode-button-background);
+	border-radius: 2px;
+}
+
+input::file-selector-button:hover {
+	cursor: pointer;
+	background: var(--vscode-button-hoverBackground);
 }
