@@ -5,9 +5,7 @@
 	"tasks": [
 		{
 			"type": "npm",
-			"script": "watch:desktop",
-			"problemMatcher": "$tsc-watch",
-			"isBackground": true,
+			"script": "vendor-codicons",
 			"presentation": {
 				"reveal": "never"
 			},
@@ -22,7 +20,8 @@
 				"npm: watch:desktop:tsc",
 				"npm: watch:desktop:esbuild",
 				"npm: watch:webview:tsc",
-				"npm: watch:webview:esbuild"
+				"npm: watch:webview:esbuild",
+				"npm: vendor-codicons"
 			],
 			"presentation": {
 				"reveal": "never"
@@ -60,7 +59,10 @@
 			"label": "watch:web",
 			"dependsOn": [
 				"npm: watch:web:tsc",
-				"npm: watch:web:esbuild"
+				"npm: watch:web:esbuild",
+				"npm: watch:webview:tsc",
+				"npm: watch:webview:esbuild",
+				"npm: vendor-codicons"
 			],
 			"presentation": {
 				"reveal": "never"
