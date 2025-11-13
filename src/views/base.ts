@@ -29,7 +29,7 @@ export abstract class BaseWebviewViewProvider<TViewMessage extends Message, TPro
     protected abstract handleMessage(message: TViewMessage): void;
 
     protected async _getHtmlForWebview(webview: vscode.Webview, format?: Record<string, unknown>): Promise<string> {
-        const codiconsStyleUri = webview.asWebviewUri(vscode.Uri.joinPath(NEURO.context!.extensionUri, 'node_modules', '@vscode/codicons', 'dist', 'codicon.css'));
+        const codiconsStyleUri = webview.asWebviewUri(vscode.Uri.joinPath(NEURO.context!.extensionUri, 'media', 'codicons', 'codicon.css'));
         const vscodeStyleUri = webview.asWebviewUri(vscode.Uri.joinPath(NEURO.context!.extensionUri, 'webview', 'vscode.css'));
 
         const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(NEURO.context!.extensionUri, 'out', 'webview', this._script));
