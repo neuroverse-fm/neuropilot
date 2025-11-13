@@ -439,6 +439,11 @@
 							"L. {n}: "
 						]
 					},
+					"neuropilot.celebrations": {
+						"type": "boolean",
+						"default": true,
+						"description": "Whether or not to enable celebratory stuff. This is completely cosmetic and will not affect the main extension functionality."
+					},
 					"neuropilot.enableCancelEvents": {
 						"markdownDeprecationMessage": "This setting has been moved to neuropilot.actions.enableCancelEvents."
 					},
