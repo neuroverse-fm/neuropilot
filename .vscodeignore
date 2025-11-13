@@ -10,6 +10,9 @@ node_modules/
 *.vsix
 **/*.tsbuildinfo
 
+# Source .ts files for webviews
+webview/**/*.ts
+
 # Project files
 project-files/
 
