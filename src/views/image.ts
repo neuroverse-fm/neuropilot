@@ -16,10 +16,7 @@ export interface ImageData {
 export type ImagesViewProviderMessage = {
     type: 'newImage';
     image: ImageData;
-    sets: Record<string, {
-        description: string;
-        images: Omit<ImageData, 'set'>[];
-    }>;
+    sets: Record<string, ImageSet>;
 } | {
     type: 'searchResult';
     names: string[];
@@ -36,6 +33,8 @@ export type ImagesViewMessage = {
 } | {
     type: 'nextImage' | 'previousImage' | 'randomImageInSet';
     current: string;
+} | {
+    type: 'viewReady';
 };
 
 interface GallerySet {
@@ -54,6 +53,11 @@ interface GalleryConfig {
     sets: Record<string, GallerySet>;
 }
 
+export interface ImageSet {
+    description: string;
+    images: Omit<ImageData, 'set'>[];
+}
+
 export class ImagesViewProvider extends BaseWebviewViewProvider<ImagesViewMessage, ImagesViewProviderMessage> {
     public static readonly viewType = 'neuropilot.testView';
 
@@ -66,18 +70,21 @@ export class ImagesViewProvider extends BaseWebviewViewProvider<ImagesViewMessag
     }
 
     protected async onViewReady(): Promise<void> {
-        await this.loadConfig();
+        if (this.config === null) {
+            await this.loadConfig();
 
-        // Send the sets list first so the dropdown populates
-        if (this.config) {
-            this.postMessage({
-                type: 'setList',
-                sets: Object.keys(this.config.sets),
-            });
+            // Send the sets list first so the dropdown populates
+            if (this.config) {
+                this.postMessage({
+                    type: 'setList',
+                    // TypeScript thinks config is 'never' here
+                    sets: Object.keys((this.config as GalleryConfig).sets),
+                });
+            }
+
+            // Show a random image on load
+            await this.showRandomImage();
         }
-
-        // Show a random image on load
-        await this.showRandomImage();
     }
 
     /**
@@ -98,10 +105,10 @@ export class ImagesViewProvider extends BaseWebviewViewProvider<ImagesViewMessag
     /**
      * Convert gallery config to message format
      */
-    private getSetsForMessage(): Record<string, { description: string; images: Omit<ImageData, 'set'>[]; }> {
+    private getSetsForMessage(): Record<string, ImageSet> {
         if (!this.config) return {};
 
-        const result: Record<string, { description: string; images: Omit<ImageData, 'set'>[]; }> = {};
+        const result: Record<string, ImageSet> = {};
 
         for (const [setName, setData] of Object.entries(this.config.sets)) {
             result[setName] = {
@@ -298,6 +305,9 @@ export class ImagesViewProvider extends BaseWebviewViewProvider<ImagesViewMessag
                         sets: Object.keys(this.config.sets),
                     });
                 }
+                break;
+            case 'viewReady':
+                void this.onViewReady();
                 break;
         }
     }

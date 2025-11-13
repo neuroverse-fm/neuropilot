@@ -1,9 +1,18 @@
-import { ImagesViewProviderMessage, ImagesViewMessage } from '@/views/image';
+import type { ImagesViewProviderMessage, ImagesViewMessage, ImageData, ImageSet } from '@/views/image';
 
-// Acquire the vscode API provided to webviews
-const vscode = acquireVsCodeApi();
+interface State {
+    currentImage: ImageData | null;
+    sets: Record<string, ImageSet>;
+}
 
 (function () {
+    // Acquire the vscode API provided to webviews
+    const vscode = acquireVsCodeApi<State>();
+    const state = vscode.getState() || {
+        currentImage: null,
+        sets: {},
+    } satisfies State;
+
     let currentName: string | null = null;
     let availableNames: string[] = [];
 
@@ -22,7 +31,10 @@ const vscode = acquireVsCodeApi();
         const message = event.data as ImagesViewProviderMessage;
         switch (message.type) {
             case 'newImage':
-                updateImage(message.image, message.sets);
+                state.currentImage = message.image;
+                state.sets = message.sets;
+                vscode.setState(state);
+                updateImage();
                 break;
             case 'searchResult':
                 updateSearchResults(message.names);
@@ -36,34 +48,31 @@ const vscode = acquireVsCodeApi();
         }
     });
 
-    function updateImage(
-        image: { name: string; path: string; credits: string; set: { name: string; description: string; }; },
-        sets: Record<string, {
-            description: string;
-            images: Omit<typeof image, 'set'>[];
-        }>,
-    ) {
-        currentName = image.name;
+    function updateImage() {
+        if (!state.currentImage)
+            return;
+
+        currentName = state.currentImage.name;
 
         // path should be a webview-safe uri provided by extension (string)
-        mainImage.src = image.path || '';
-        mainImage.alt = image.name;
-        imageTitle.textContent = image.name;
-        imageCredits.textContent = image.credits || '';
+        mainImage.src = state.currentImage.path || '';
+        mainImage.alt = state.currentImage.name;
+        imageTitle.textContent = state.currentImage.name;
+        imageCredits.textContent = state.currentImage.credits || '';
 
         // Populate set selector if needed, and set current selection
         if (setSelect.options.length === 0) {
-            populateSets(Object.keys(sets));
+            populateSets(Object.keys(state.sets));
         }
         // Update selected set to match current image
-        setSelect.value = image.set.name;
+        setSelect.value = state.currentImage.set.name;
     }
 
     function updateSearchResults(names: string[]) {
         availableNames = names;
         // if results not empty, show first
         if (names.length > 0) {
-            vscode.postMessage({ type: 'searchImage', name: names[0] } as ImagesViewMessage);
+            vscode.postMessage({ type: 'searchImage', name: names[0] } satisfies ImagesViewMessage);
         }
     }
 
@@ -87,31 +96,38 @@ const vscode = acquireVsCodeApi();
         if (availableNames.length === 0) {
             return; // No images available to navigate
         }
-        vscode.postMessage({ type: 'previousImage', current: currentName ?? '' } as ImagesViewMessage);
+        vscode.postMessage({ type: 'previousImage', current: currentName ?? '' } satisfies ImagesViewMessage);
     });
 
     nextBtn.addEventListener('click', () => {
         if (availableNames.length === 0) {
             return; // No images available to navigate
         }
-        vscode.postMessage({ type: 'nextImage', current: currentName ?? '' } as ImagesViewMessage);
+        vscode.postMessage({ type: 'nextImage', current: currentName ?? '' } satisfies ImagesViewMessage);
     });
 
     randomBtn.addEventListener('click', () => {
-        vscode.postMessage({ type: 'randomImage' } as ImagesViewMessage);
+        vscode.postMessage({ type: 'randomImage' } satisfies ImagesViewMessage);
     });
 
     searchBtn.addEventListener('click', () => {
         const q = searchBox.value.trim();
         if (q) {
-            vscode.postMessage({ type: 'searchImage', name: q } as ImagesViewMessage);
+            vscode.postMessage({ type: 'searchImage', name: q } satisfies ImagesViewMessage);
         }
     });
 
     setSelect.addEventListener('change', () => {
         const name = setSelect.value;
         if (name) {
-            vscode.postMessage({ type: 'switchSet', name } as ImagesViewMessage);
+            vscode.postMessage({ type: 'switchSet', name } satisfies ImagesViewMessage);
         }
     });
+
+    vscode.postMessage({ type: 'viewReady' } satisfies ImagesViewMessage);
+
+    // Restore state if available
+    if (state.currentImage) {
+        updateImage();
+    }
 }());
