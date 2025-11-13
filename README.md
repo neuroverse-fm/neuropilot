@@ -104,6 +104,10 @@ Copilot mode is developed for making Neuro request to do actions instead of dire
 This was called the **R**equested **C**ommand **E**xecution (or Request for Command Execution) framework when it was first conceived.
 The short answer is no, there isn't an intentional Remote Code Execution vulnerability in this extension, but by enabling Neuro's access to Pseudoterminals, one could say she already has access to a very powerful RCE, so be careful with that one.
 
+### External Licenses
+
+The (modified) VS Code stylesheets included in the extension (reset.css and vscode.css) are from the [microsoft/vscode-extension-samples](https://github.com/microsoft/vscode-extension-samples) repository, licensed under [MIT](https://github.com/microsoft/vscode-extension-samples/blob/5839b5c2336e1488ee642a037a2084f2dd3d6755/LICENSE).
+
 ## Contributing to NeuroPilot
 
 Please see [CONTRIBUTING.md](./CONTRIBUTING.md).
