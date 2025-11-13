@@ -699,6 +699,13 @@
 			"neuropilot": [
 				{
 					"type": "webview",
+					"id": "neuropilot.imagesView",
+					"name": "Images",
+					"icon": "assets/neuropilot-font.svg",
+					"visibility": "visible"
+				},
+				{
+					"type": "webview",
 					"id": "neuropilot.actionsView",
 					"name": "Action Permissions",
 					"icon": "assets/neuropilot-font.svg"
