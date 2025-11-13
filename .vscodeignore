@@ -7,6 +7,7 @@ tsconfig.json
 src/
 node_modules/
 *.vsix
+**/*.tsbuildinfo
 
 # Project files
 project-files/
@@ -15,7 +16,7 @@ project-files/
 esbuild-configs/
 
 # Other meta scripts
-/scripts
+scripts/**
 
 # Krita
 *.kra
@@ -29,7 +30,7 @@ esbuild-configs/
 tony/
 
 # Coverage
-/coverage-*
+coverage-*/**
 
 # Integration testing
 test-playground/
