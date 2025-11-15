@@ -14,7 +14,6 @@ interface State {
     } satisfies State;
 
     let currentName: string | null = null;
-    let availableNames: string[] = [];
 
     const mainImage = document.getElementById('mainImage') as HTMLImageElement;
     const imageTitle = document.getElementById('imageTitle') as HTMLHeadingElement;
@@ -31,6 +30,7 @@ interface State {
         const message = event.data as ImagesViewProviderMessage;
         switch (message.type) {
             case 'newImage':
+                // Overwrite state with authoritative data from provider
                 state.currentImage = message.image;
                 state.sets = message.sets;
                 vscode.setState(state);
@@ -41,6 +41,15 @@ interface State {
                 break;
             case 'setList':
                 populateSets(message.sets);
+                // Check if current image is still valid in the new sets
+                if (state.currentImage) {
+                    const setName = state.currentImage.set?.name;
+                    const imageStillExists = setName && message.sets.includes(setName);
+                    if (!imageStillExists) {
+                        // Current image's set was removed, request a new random image
+                        vscode.postMessage({ type: 'randomImage' } satisfies ImagesViewMessage);
+                    }
+                }
                 break;
             default:
                 // ignore unknown
@@ -69,7 +78,6 @@ interface State {
     }
 
     function updateSearchResults(names: string[]) {
-        availableNames = names;
         // if results not empty, show first
         if (names.length > 0) {
             vscode.postMessage({ type: 'searchImage', name: names[0] } satisfies ImagesViewMessage);
@@ -93,16 +101,10 @@ interface State {
 
     // control handlers
     prevBtn.addEventListener('click', () => {
-        if (availableNames.length === 0) {
-            return; // No images available to navigate
-        }
         vscode.postMessage({ type: 'previousImage', current: currentName ?? '' } satisfies ImagesViewMessage);
     });
 
     nextBtn.addEventListener('click', () => {
-        if (availableNames.length === 0) {
-            return; // No images available to navigate
-        }
         vscode.postMessage({ type: 'nextImage', current: currentName ?? '' } satisfies ImagesViewMessage);
     });
 
@@ -124,10 +126,11 @@ interface State {
         }
     });
 
-    vscode.postMessage({ type: 'viewReady' } satisfies ImagesViewMessage);
-
-    // Restore state if available
+    // Restore state if available, then request authoritative update
     if (state.currentImage) {
         updateImage();
     }
+
+    // Request update from provider (will send filtered sets based on config)
+    vscode.postMessage({ type: 'updateSets' } satisfies ImagesViewMessage);
 }());

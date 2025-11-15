@@ -35,6 +35,8 @@ export type ImagesViewMessage = {
     current: string;
 } | {
     type: 'viewReady';
+} | {
+    type: 'updateSets';
 };
 
 interface GallerySet {
@@ -64,27 +66,35 @@ export class ImagesViewProvider extends BaseWebviewViewProvider<ImagesViewMessag
     private config: GalleryConfig | null = null;
     private currentSet: string | null = null;
     private currentImageName: string | null = null;
+    private disposables: vscode.Disposable[] = [];
 
     constructor() {
         super('images/index.html', 'images/main.js', ['images/style.css']);
+    }
+
+    public dispose(): void {
+        for (const disposable of this.disposables) {
+            disposable.dispose();
+        }
+        this.disposables = [];
     }
 
     protected async onViewReady(): Promise<void> {
         if (this.config === null) {
             await this.loadConfig();
 
-            // Send the sets list first so the dropdown populates
-            if (this.config) {
-                this.postMessage({
-                    type: 'setList',
-                    // TypeScript thinks config is 'never' here
-                    sets: Object.keys((this.config as GalleryConfig).sets),
-                });
-            }
-
-            // Show a random image on load
-            await this.showRandomImage();
+            // Subscribe to configuration changes
+            this.disposables.push(
+                vscode.workspace.onDidChangeConfiguration((e) => {
+                    if (e.affectsConfiguration('neuropilot.celebrations')) {
+                        this.sendUpdateToView();
+                    }
+                }),
+            );
         }
+
+        // Always send update when view becomes ready
+        this.sendUpdateToView();
     }
 
     /**
@@ -105,12 +115,15 @@ export class ImagesViewProvider extends BaseWebviewViewProvider<ImagesViewMessag
     /**
      * Convert gallery config to message format
      */
-    private getSetsForMessage(): Record<string, ImageSet> {
+    private getSetsForMessage(includeRotations = true): Record<string, ImageSet> {
         if (!this.config) return {};
 
         const result: Record<string, ImageSet> = {};
 
         for (const [setName, setData] of Object.entries(this.config.sets)) {
+            // Skip rotation sets if not including them
+            if (!includeRotations && setData.rotation) continue;
+
             result[setName] = {
                 description: setData.description,
                 images: setData.images.map(img => ({
@@ -122,6 +135,65 @@ export class ImagesViewProvider extends BaseWebviewViewProvider<ImagesViewMessag
         }
 
         return result;
+    }
+
+    /**
+     * Send an update to the webview with filtered sets and appropriate image
+     */
+    private sendUpdateToView(): void {
+        if (!this.config || !this._view) return;
+
+        const includeRotations = vscode.workspace.getConfiguration('neuropilot').get<boolean>('celebrations', true);
+        const setsForMsg = this.getSetsForMessage(includeRotations);
+
+        // Check whether current image still exists in filtered sets
+        let imageToSend: ImageData | null = null;
+        if (this.currentSet && this.currentImageName) {
+            const setImages = setsForMsg[this.currentSet]?.images ?? [];
+            const found = setImages.find(i => i.name === this.currentImageName);
+            if (found) {
+                imageToSend = {
+                    name: found.name,
+                    path: found.path,
+                    credits: found.credits,
+                    set: { name: this.currentSet, description: setsForMsg[this.currentSet].description },
+                };
+            }
+        }
+
+        // Fallback: pick random image from the filtered sets
+        if (!imageToSend) {
+            const setNames = Object.keys(setsForMsg);
+            if (setNames.length === 0) {
+                // Nothing to show — send empty sets list
+                this.postMessage({ type: 'setList', sets: setNames });
+                return;
+            }
+            const randSet = setNames[Math.floor(Math.random() * setNames.length)];
+            const imgs = setsForMsg[randSet].images;
+            if (imgs.length === 0) {
+                this.postMessage({ type: 'setList', sets: setNames });
+                return;
+            }
+            const randImg = imgs[Math.floor(Math.random() * imgs.length)];
+            imageToSend = {
+                name: randImg.name,
+                path: randImg.path,
+                credits: randImg.credits,
+                set: { name: randSet, description: setsForMsg[randSet].description },
+            };
+
+            // Update provider current pointers
+            this.currentSet = randSet;
+            this.currentImageName = randImg.name;
+        }
+
+        // Post authoritative update (image + sets)
+        this.postMessage({
+            type: 'newImage',
+            image: imageToSend,
+            sets: setsForMsg,
+        });
     }
 
     /**
@@ -227,17 +299,37 @@ export class ImagesViewProvider extends BaseWebviewViewProvider<ImagesViewMessag
     private async navigateImage(direction: 'next' | 'previous'): Promise<void> {
         if (!this.config || !this.currentSet || !this.currentImageName) return;
 
-        const set = this.config.sets[this.currentSet];
-        if (!set) return;
+        const includeRotations = vscode.workspace.getConfiguration('neuropilot').get<boolean>('celebrations', true);
+        const setsForMsg = this.getSetsForMessage(includeRotations);
 
-        const currentIndex = set.images.findIndex(img => img.name === this.currentImageName);
+        // Check if current set is still available after filtering
+        const setImages = setsForMsg[this.currentSet]?.images;
+        if (!setImages || setImages.length === 0) return;
+
+        const currentIndex = setImages.findIndex(img => img.name === this.currentImageName);
         if (currentIndex === -1) return;
 
         const newIndex = direction === 'next'
-            ? (currentIndex + 1) % set.images.length
-            : (currentIndex - 1 + set.images.length) % set.images.length;
+            ? (currentIndex + 1) % setImages.length
+            : (currentIndex - 1 + setImages.length) % setImages.length;
 
-        await this.showImage(this.currentSet, set.images[newIndex].name);
+        const nextImage = setImages[newIndex];
+        this.currentImageName = nextImage.name;
+
+        // Send the update with the new image
+        this.postMessage({
+            type: 'newImage',
+            image: {
+                name: nextImage.name,
+                path: nextImage.path,
+                credits: nextImage.credits,
+                set: {
+                    name: this.currentSet,
+                    description: setsForMsg[this.currentSet].description,
+                },
+            },
+            sets: setsForMsg,
+        });
     }
 
     protected handleMessage(message: ImagesViewMessage): void {
@@ -306,6 +398,12 @@ export class ImagesViewProvider extends BaseWebviewViewProvider<ImagesViewMessag
                     });
                 }
                 break;
+
+            case 'updateSets':
+                // Webview is requesting an update with current config
+                this.sendUpdateToView();
+                break;
+
             case 'viewReady':
                 void this.onViewReady();
                 break;
