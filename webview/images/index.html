@@ -14,10 +14,11 @@
     <div class="viewer">
         <div class="toolbar">
             <select id="setSelect" aria-label="Image set"></select>
-            <input id="searchBox" type="search" placeholder="Search images..." aria-label="Search images" />
-            <button id="searchBtn" title="Search"><i class='codicon codicon-search'></i></button>
-            <div class="spacer"></div>
-            <button id="randomBtn" title="Random image"><i class='codicon codicon-sync'></i></button>
+            <div class="searchbar-container">
+                <input id="searchBox" type="search" placeholder="Search images..." aria-label="Search images" list="searchSuggestions" />
+                <button id="searchBtn" title="Search"><i class='codicon codicon-search'></i></button>
+                <button id="randomBtn" title="Random image"><i class='codicon codicon-sync'></i></button>
+            </div>
         </div>
 
         <div class="image-container" role="region" aria-live="polite">

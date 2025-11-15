@@ -1,4 +1,22 @@
 /* 4-space indent, simple responsive viewer */
+@media (max-width: 300px) {
+    .toolbar {
+        flex-direction: column;
+    }
+    #setSelect,
+    .searchbar-container {
+        width: 100%;
+    }
+}
+@media (min-width: 301px) {
+    .toolbar {
+        flex-direction: row;
+    }
+    #setSelect {
+        max-width: 40%;
+    }
+}
+
 .viewer {
     display: flex;
     flex-direction: column;
@@ -16,6 +34,24 @@
 
 .toolbar .spacer {
     flex: 1 1 auto;
+}
+
+.toolbar button,
+.toolbar select,
+.toolbar input {
+    /* By default VS Code buttons have width: 100% */
+    width: unset;
+}
+
+.searchbar-container {
+    display: flex;
+    gap: 4px;
+    flex-direction: row;
+    flex-grow: 1;
+}
+
+#searchBox {
+    flex-grow: 1;
 }
 
 .image-container {
