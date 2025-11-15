@@ -3,6 +3,7 @@ name: Check that changelog is updated
 on:
   # Should run for every push to the PR branch
   pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled, ready_for_review]
     paths:
       - 'assets/**'
       - 'esbuild-configs/**'
