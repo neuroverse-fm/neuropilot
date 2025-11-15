@@ -38,7 +38,8 @@
 
 .toolbar button,
 .toolbar select,
-.toolbar input {
+.toolbar input,
+.image-container button {
     /* By default VS Code buttons have width: 100% */
     width: unset;
 }
@@ -62,12 +63,10 @@
     background-color: var(--vscode-editor-background);
     border-radius: 6px;
     padding: 8px;
-    min-height: 240px;
 }
 
 .image-container img {
     width: 75%;
-    height: 320px;
     border-radius: 4px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.2);
     object-fit: contain;
