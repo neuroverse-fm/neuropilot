@@ -26,9 +26,6 @@ scripts/**
 *.kra
 *.*~
 
-# Inkscape
-*.svg
-
 # Tony
 .venv
 tony/

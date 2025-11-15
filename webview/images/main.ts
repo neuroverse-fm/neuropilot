@@ -49,6 +49,9 @@ interface State {
                         // Current image's set was removed, request a new random image
                         vscode.postMessage({ type: 'randomImage' } satisfies ImagesViewMessage);
                     }
+                } else if (message.sets.length === 0) {
+                    // No sets available, clear the image display
+                    clearImageDisplay();
                 }
                 break;
             default:
@@ -75,6 +78,14 @@ interface State {
         }
         // Update selected set to match current image
         setSelect.value = state.currentImage.set.name;
+    }
+
+    function clearImageDisplay() {
+        currentName = null;
+        mainImage.src = '';
+        mainImage.alt = 'No image selected';
+        imageTitle.textContent = 'No image selected';
+        imageCredits.textContent = '';
     }
 
     function updateSearchResults(names: string[]) {

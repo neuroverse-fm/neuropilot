@@ -87,14 +87,14 @@ export class ImagesViewProvider extends BaseWebviewViewProvider<ImagesViewMessag
             this.disposables.push(
                 vscode.workspace.onDidChangeConfiguration((e) => {
                     if (e.affectsConfiguration('neuropilot.celebrations')) {
-                        this.sendUpdateToView();
+                        void this.sendUpdateToView();
                     }
                 }),
             );
         }
 
         // Always send update when view becomes ready
-        this.sendUpdateToView();
+        void this.sendUpdateToView();
     }
 
     /**
@@ -140,8 +140,15 @@ export class ImagesViewProvider extends BaseWebviewViewProvider<ImagesViewMessag
     /**
      * Send an update to the webview with filtered sets and appropriate image
      */
-    private sendUpdateToView(): void {
-        if (!this.config || !this._view) return;
+    private async sendUpdateToView(): Promise<void> {
+        if (!this._view) return;
+
+        // Ensure config is loaded
+        if (this.config === null) {
+            await this.loadConfig();
+        }
+
+        if (!this.config) return;
 
         const includeRotations = vscode.workspace.getConfiguration('neuropilot').get<boolean>('celebrations', true);
         const setsForMsg = this.getSetsForMessage(includeRotations);
@@ -231,17 +238,26 @@ export class ImagesViewProvider extends BaseWebviewViewProvider<ImagesViewMessag
     }
 
     /**
-     * Find an image by name across all sets
+     * Find an image by name across visible sets (respects filter settings)
      */
     private findImage(name: string): { setName: string; image: GallerySet['images'][0]; } | null {
         if (!this.config) return null;
 
-        for (const [setName, setData] of Object.entries(this.config.sets)) {
+        const includeRotations = vscode.workspace.getConfiguration('neuropilot').get<boolean>('celebrations', true);
+        const setsForMsg = this.getSetsForMessage(includeRotations);
+
+        // Search only in visible sets
+        for (const [setName, setData] of Object.entries(setsForMsg)) {
             const image = setData.images.find(img =>
                 img.name.toLowerCase().includes(name.toLowerCase()),
             );
             if (image) {
-                return { setName, image };
+                // Find the original image data from config to get filePath
+                const originalSet = this.config.sets[setName];
+                const originalImage = originalSet?.images.find(img => img.name === image.name);
+                if (originalImage) {
+                    return { setName, image: originalImage };
+                }
             }
         }
 
@@ -260,6 +276,13 @@ export class ImagesViewProvider extends BaseWebviewViewProvider<ImagesViewMessag
         const image = set.images.find(img => img.name === imageName);
         if (!image) return;
 
+        // Check if this set is filtered out
+        const includeRotations = vscode.workspace.getConfiguration('neuropilot').get<boolean>('celebrations', true);
+        const setsForMsg = this.getSetsForMessage(includeRotations);
+
+        // If the set is filtered out, don't show the image
+        if (!setsForMsg[setName]) return;
+
         this.currentSet = setName;
         this.currentImageName = imageName;
 
@@ -276,7 +299,7 @@ export class ImagesViewProvider extends BaseWebviewViewProvider<ImagesViewMessag
         this.postMessage({
             type: 'newImage',
             image: imageData,
-            sets: this.getSetsForMessage(),
+            sets: setsForMsg,
         });
     }
 
@@ -296,8 +319,12 @@ export class ImagesViewProvider extends BaseWebviewViewProvider<ImagesViewMessag
     /**
      * Navigate to next/previous image in current set
      */
-    private async navigateImage(direction: 'next' | 'previous'): Promise<void> {
-        if (!this.config || !this.currentSet || !this.currentImageName) return;
+    private async navigateImage(direction: 'next' | 'previous', currentImageName?: string): Promise<void> {
+        if (!this.config || !this.currentSet) return;
+
+        // Use provided currentImageName or fall back to stored state
+        const imageNameToFind = currentImageName || this.currentImageName;
+        if (!imageNameToFind) return;
 
         const includeRotations = vscode.workspace.getConfiguration('neuropilot').get<boolean>('celebrations', true);
         const setsForMsg = this.getSetsForMessage(includeRotations);
@@ -306,7 +333,7 @@ export class ImagesViewProvider extends BaseWebviewViewProvider<ImagesViewMessag
         const setImages = setsForMsg[this.currentSet]?.images;
         if (!setImages || setImages.length === 0) return;
 
-        const currentIndex = setImages.findIndex(img => img.name === this.currentImageName);
+        const currentIndex = setImages.findIndex(img => img.name === imageNameToFind);
         if (currentIndex === -1) return;
 
         const newIndex = direction === 'next'
@@ -382,11 +409,11 @@ export class ImagesViewProvider extends BaseWebviewViewProvider<ImagesViewMessag
                 break;
 
             case 'nextImage':
-                void this.navigateImage('next');
+                void this.navigateImage('next', message.current);
                 break;
 
             case 'previousImage':
-                void this.navigateImage('previous');
+                void this.navigateImage('previous', message.current);
                 break;
 
             case 'searchSet':
@@ -401,7 +428,7 @@ export class ImagesViewProvider extends BaseWebviewViewProvider<ImagesViewMessag
 
             case 'updateSets':
                 // Webview is requesting an update with current config
-                this.sendUpdateToView();
+                void this.sendUpdateToView();
                 break;
 
             case 'viewReady':
