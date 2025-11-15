@@ -14,6 +14,7 @@ interface State {
     } satisfies State;
 
     let currentName: string | null = null;
+    let availableNames: string[] = [];
 
     const mainImage = document.getElementById('mainImage') as HTMLImageElement;
     const imageTitle = document.getElementById('imageTitle') as HTMLHeadingElement;
@@ -34,6 +35,10 @@ interface State {
                 state.currentImage = message.image;
                 state.sets = message.sets;
                 vscode.setState(state);
+
+                // Update dropdown with new sets
+                populateSets(Object.keys(message.sets));
+
                 updateImage();
                 break;
             case 'searchResult':
@@ -66,22 +71,25 @@ interface State {
 
         currentName = state.currentImage.name;
 
+        // Extract available image names from current set
+        const setName = state.currentImage.set?.name;
+        availableNames = setName && state.sets[setName]
+            ? state.sets[setName].images.map(img => img.name)
+            : [];
+
         // path should be a webview-safe uri provided by extension (string)
         mainImage.src = state.currentImage.path || '';
         mainImage.alt = state.currentImage.name;
         imageTitle.textContent = state.currentImage.name;
         imageCredits.textContent = state.currentImage.credits || '';
 
-        // Populate set selector if needed, and set current selection
-        if (setSelect.options.length === 0) {
-            populateSets(Object.keys(state.sets));
-        }
         // Update selected set to match current image
         setSelect.value = state.currentImage.set.name;
     }
 
     function clearImageDisplay() {
         currentName = null;
+        availableNames = [];
         mainImage.src = '';
         mainImage.alt = 'No image selected';
         imageTitle.textContent = 'No image selected';
@@ -112,10 +120,16 @@ interface State {
 
     // control handlers
     prevBtn.addEventListener('click', () => {
+        if (availableNames.length === 0) {
+            return;
+        }
         vscode.postMessage({ type: 'previousImage', current: currentName ?? '' } satisfies ImagesViewMessage);
     });
 
     nextBtn.addEventListener('click', () => {
+        if (availableNames.length === 0) {
+            return;
+        }
         vscode.postMessage({ type: 'nextImage', current: currentName ?? '' } satisfies ImagesViewMessage);
     });
 
