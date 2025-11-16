@@ -23,7 +23,7 @@ interface State {
     } satisfies ActionsViewMessage);
 
     updateContextSwitcher();
-    updateActionsList();
+    renderActionsList();
 
     // Handle messages sent from the extension to the webview
     window.addEventListener('message', event => {
@@ -38,7 +38,49 @@ interface State {
         }
     });
 
-    function updateActionsList() {
+    function createPermissionLevelRadio(name: string, currentLevel: PermissionLevel | undefined, onChange: (l: PermissionLevel) => void): HTMLDivElement {
+        const container = document.createElement('div');
+        container.className = 'permission-level-radio';
+
+        function makeRadio(level: PermissionLevel) {
+            const label = document.createElement('label');
+            label.setAttribute('data-permission-level', `${level}`);
+            switch (level) {
+                case PermissionLevel.AUTOPILOT:
+                    label.innerHTML = '<i class="codicon codicon-check"></i>';
+                    label.title = 'Autopilot - allow';
+                    break;
+                case PermissionLevel.COPILOT:
+                    label.innerHTML = '<i class="codicon codicon-question"></i>';
+                    label.title = 'Copilot - ask for permission';
+                    break;
+                case PermissionLevel.OFF:
+                    label.innerHTML = '<i class="codicon codicon-chrome-close"></i>';
+                    label.title = 'Off - do not allow';
+                    break;
+            }
+
+            const radio = document.createElement('input');
+            radio.type = 'radio';
+            radio.name = name;
+            radio.value = `${level}`;
+            radio.checked = level === currentLevel;
+
+            radio.addEventListener('change', () => onChange(level));
+
+            label.appendChild(radio);
+            return label;
+        }
+
+        container.appendChild(makeRadio(PermissionLevel.AUTOPILOT));
+        container.appendChild(makeRadio(PermissionLevel.COPILOT));
+        container.appendChild(makeRadio(PermissionLevel.OFF));
+
+        return container;
+    }
+
+
+    function renderActionsList() {
         const categories = state.actions.reduce<Record<string, ActionNode[]>>((acc, action) => {
             if (!acc[action.category]) {
                 acc[action.category] = [];
@@ -69,14 +111,20 @@ interface State {
             categoryLabel.textContent = category;
             categoryHeader.appendChild(categoryLabel);
 
-            const autopilotToggle = createCategoryCheckbox(category, categories[category], PermissionLevel.AUTOPILOT);
-            categoryHeader.appendChild(autopilotToggle);
-            const copilotToggle = createCategoryCheckbox(category, categories[category], PermissionLevel.COPILOT);
-            categoryHeader.appendChild(copilotToggle);
-            const offToggle = createCategoryCheckbox(category, categories[category], PermissionLevel.OFF);
-            categoryHeader.appendChild(offToggle);
+            const actionNodes = categories[category];
 
-            for (const actionNode of categories[category]) {
+            let commonLevel: PermissionLevel | undefined = undefined;
+            if (actionNodes.every((n) => n.permissionLevel === PermissionLevel.AUTOPILOT)) commonLevel = PermissionLevel.AUTOPILOT;
+            if (actionNodes.every((n) => n.permissionLevel === PermissionLevel.COPILOT)) commonLevel = PermissionLevel.COPILOT;
+            if (actionNodes.every((n) => n.permissionLevel === PermissionLevel.OFF)) commonLevel = PermissionLevel.OFF;
+
+            categoryHeader.appendChild(createPermissionLevelRadio(`category-${category}`, commonLevel, (level) => vscode.postMessage({
+                type: 'viewToggledPermissions',
+                actionIds: actionNodes.map(a => a.id),
+                newPermissionLevel: level,
+            } satisfies ActionsViewMessage)));
+
+            for (const actionNode of actionNodes) {
                 // <div class="action-entry" id="action-{id}">
                 //   <span class="action-label" title="Action Description">Action Label</span>
                 //   [checkboxes]
@@ -98,66 +146,66 @@ interface State {
                 actionLabel.textContent = actionNode.label;
                 actionEntry.appendChild(actionLabel);
 
-                const autopilotToggle = createActionRadioButton(actionNode, PermissionLevel.AUTOPILOT);
-                actionEntry.appendChild(autopilotToggle);
-                const copilotToggle = createActionRadioButton(actionNode, PermissionLevel.COPILOT);
-                actionEntry.appendChild(copilotToggle);
-                const offToggle = createActionRadioButton(actionNode, PermissionLevel.OFF);
-                actionEntry.appendChild(offToggle);
+                // const autopilotToggle = createActionRadioButton(actionNode, PermissionLevel.AUTOPILOT);
+                actionEntry.appendChild(createPermissionLevelRadio(`action-${actionNode.id}`, actionNode.permissionLevel, (level) => vscode.postMessage({
+                    type: 'viewToggledPermissions',
+                    actionIds: [actionNode.id],
+                    newPermissionLevel: level,
+                } satisfies ActionsViewMessage),
+                ));
 
                 actionsList.appendChild(actionEntry);
             }
         }
+    }
+    function updateActionsList() {
+        const categories = state.actions.reduce<Record<string, ActionNode[]>>((acc, action) => {
+            if (!acc[action.category]) {
+                acc[action.category] = [];
+            }
+            acc[action.category].push(action);
+            return acc;
+        }, {});
 
-        function createCategoryCheckbox(category: string, actionNodes: ActionNode[], permissionLevel: PermissionLevel): HTMLDivElement {
-            // <div class="permission-radio-container">
-            //   <input type="radio" class="permission-radio">
-            // </div>
-            const container = document.createElement('div');
-            container.className = 'permission-radio-container';
+        const actionsList = document.querySelector<HTMLUListElement>('.actions-list')!;
 
-            const radio = document.createElement('input');
-            radio.type = 'radio';
-            radio.className = 'permission-radio';
-            radio.name = `permission-category-${category}`;
-            container.appendChild(radio);
+        const categoryKeys = Object.keys(categories)
+            .sort()
+            .sort((a, b) => a === 'Miscellaneous' ? 1 : b === 'Miscellaneous' ? -1 : 0)
+            .sort((a, b) => a === 'No Category Specified' ? 1 : b === 'No Category Specified' ? -1 : 0);
+        categoryKeys.forEach(c => categories[c].sort((a, b) => a.label.localeCompare(b.label)));
+        for (const category of categoryKeys) {
+            const actionNodes = categories[category];
 
-            radio.checked = actionNodes.every(action => action.permissionLevel === permissionLevel);
+            let commonLevel: PermissionLevel | undefined = undefined;
+            if (actionNodes.every((n) => n.permissionLevel === PermissionLevel.AUTOPILOT)) commonLevel = PermissionLevel.AUTOPILOT;
+            if (actionNodes.every((n) => n.permissionLevel === PermissionLevel.COPILOT)) commonLevel = PermissionLevel.COPILOT;
+            if (actionNodes.every((n) => n.permissionLevel === PermissionLevel.OFF)) commonLevel = PermissionLevel.OFF;
 
-            radio.addEventListener('change', () => {
-                vscode.postMessage({
-                    type: 'viewToggledPermissions',
-                    actionIds: actionNodes.map(a => a.id),
-                    newPermissionLevel: permissionLevel,
-                } satisfies ActionsViewMessage);
+            actionsList.querySelectorAll<HTMLInputElement>(`input[name="category-${category}"]`).forEach((btn) => {
+                const shouldBeChecked = typeof commonLevel !== 'undefined' ? parseInt(btn.value) === commonLevel : false;
+                if (shouldBeChecked !== btn.checked) btn.checked = shouldBeChecked;
             });
 
-            return container;
-        }
+            for (const actionNode of actionNodes) {
+                const container = actionsList.querySelector<HTMLDivElement>(`#action-${actionNode.id}`)!;
+                const label = container.querySelector('.action-label')!;
 
-        function createActionRadioButton(actionNode: ActionNode, permissionLevel: PermissionLevel): HTMLDivElement {
-            // <div class="permission-radio-container">
-            //   <input type="radio" class="permission-radio">
-            // </div>
-            const container = document.createElement('div');
-            container.className = 'permission-radio-container';
+                if (actionNode.modifiedExternally)
+                    label.classList.add('modified-externally');
+                else
+                    label.classList.remove('modified-externally');
 
-            const radio = document.createElement('input');
-            radio.type = 'radio';
-            radio.className = 'permission-radio';
-            radio.checked = actionNode.permissionLevel === permissionLevel;
-            radio.name = `permission-${actionNode.id}`;
-            container.appendChild(radio);
+                if (!actionNode.isRegistered)
+                    label.classList.add('unregistered-action');
+                else
+                    label.classList.remove('unregistered-action');
 
-            radio.addEventListener('change', () => {
-                vscode.postMessage({
-                    type: 'viewToggledPermissions',
-                    actionIds: [actionNode.id],
-                    newPermissionLevel: permissionLevel,
-                } satisfies ActionsViewMessage);
-            });
-
-            return container;
+                container.querySelectorAll<HTMLInputElement>('input').forEach((btn) => {
+                    const shouldBeChecked = parseInt(btn.value) === actionNode.permissionLevel;
+                    if (shouldBeChecked !== btn.checked) btn.checked = shouldBeChecked;
+                });
+            }
         }
     }
 
