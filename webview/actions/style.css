@@ -28,6 +28,14 @@ summary span {
     vertical-align: middle;
 }
 
+.permission-level-description {
+    height: 17px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-bottom: 4px;
+}
+
 .disabled {
     color: var(--vscode-disabledForeground);
 }
@@ -134,7 +142,8 @@ summary span {
 .permission-level-radio label[data-permission-level="0"] {
     --selected-color: var(--vscode-notebookStatusErrorIcon-foreground);
 }
-.permission-level-radio label:has(input:checked) {
+.permission-level-radio label:has(input:checked),
+.permission-level-radio label[data-show-checked] {
     color: var(--selected-color);
     cursor: initial;
 }
@@ -158,7 +167,8 @@ summary span {
     border-radius: 4px;
 }
 
-.permission-level-radio:has(input:checked)::before {
+.permission-level-radio:has(input:checked)::before,
+.permission-level-radio:has(label[data-show-checked])::before {
     opacity: 1;
     width: 20px;
 }
