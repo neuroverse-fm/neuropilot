@@ -11,6 +11,7 @@ Changes between each version before then will not be listed.
 ### New features
 
 - Added a sidebar view for displaying image assets. <!-- TODO: Needs a bit more information -->
+- Added a registration condition for terminals and tasks so they do not get registered in untrusted/virtual workspaces.
 
 ### Changes
 
