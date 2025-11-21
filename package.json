@@ -273,6 +273,7 @@
 					},
 					"neuropilot.terminals": {
 						"type": "array",
+						"tags": ["advanced"],
 						"items": {
 							"type": "object",
 							"properties": {
