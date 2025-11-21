@@ -1,5 +1,5 @@
 import { render } from 'preact';
-import { useState, useEffect } from 'preact/hooks';
+import { useState, useEffect, useMemo, useId } from 'preact/hooks';
 import type { ActionNode, ActionsViewMessage, ActionsViewProviderMessage, SettingsContext } from '@/views/actions';
 import { PermissionLevel } from '@/config';
 
@@ -9,61 +9,37 @@ interface State {
 }
 
 interface PermissionLevelRadioProps {
-    name: string;
     currentLevel: PermissionLevel | undefined;
     onChange: (level: PermissionLevel) => void;
 }
 
-function PermissionLevelRadio({ name, currentLevel, onChange }: PermissionLevelRadioProps) {
-    const levels: { level: PermissionLevel; icon: string; title: string; }[] = [
-        { level: PermissionLevel.AUTOPILOT, icon: 'codicon-check', title: 'Autopilot - allow' },
-        { level: PermissionLevel.COPILOT, icon: 'codicon-question', title: 'Copilot - ask for permission' },
-        { level: PermissionLevel.OFF, icon: 'codicon-chrome-close', title: 'Off - do not allow' },
-    ];
+const levels: { level: PermissionLevel; icon: string; title: string; description: string }[] = [
+    { level: PermissionLevel.AUTOPILOT, icon: 'codicon-check', title: 'Autopilot', description: 'Allow' },
+    { level: PermissionLevel.COPILOT, icon: 'codicon-question', title: 'Copilot', description: 'Ask for permission' },
+    { level: PermissionLevel.OFF, icon: 'codicon-chrome-close', title: 'Off', description: 'Do not allow' },
+];
+
+function PermissionLevelRadio({ currentLevel, onChange }: PermissionLevelRadioProps) {
+    const id = useId();
 
     return (
         <div class="permission-level-radio">
-            {levels.map(({ level, icon, title }) => (
-                <label key={level} data-permission-level={level} title={title}>
+            {levels.map(({ level, icon, title, description }) => (
+                <label
+                    key={level}
+                    data-permission-level={level}
+                    title={`${title} - ${description}`}
+                >
                     <i class={`codicon ${icon}`}></i>
                     <input
                         type="radio"
-                        name={name}
+                        name={id}
                         value={level}
                         checked={level === currentLevel}
                         onChange={() => onChange(level)}
                     />
                 </label>
             ))}
-        </div>
-    );
-}
-
-interface ActionEntryProps {
-    action: ActionNode;
-    onPermissionChange: (actionIds: string[], newLevel: PermissionLevel) => void;
-}
-
-function ActionEntry({ action, onPermissionChange }: ActionEntryProps) {
-    const labelClasses = [
-        'action-label',
-        action.modifiedExternally ? 'modified-externally' : '',
-        !action.isRegistered ? 'unregistered-action' : '',
-    ].filter(Boolean).join(' ');
-
-    return (
-        <div class="action-entry" id={`action-${action.id}`}>
-            <span
-                class={labelClasses}
-                title={action.description || ''}
-            >
-                {action.label}
-            </span>
-            <PermissionLevelRadio
-                name={`action-${action.id}`}
-                currentLevel={action.permissionLevel}
-                onChange={(level) => onPermissionChange([action.id], level)}
-            />
         </div>
     );
 }
@@ -90,17 +66,27 @@ function CategorySection({ category, actions, onPermissionChange }: CategorySect
             <div class="category-header">
                 <span class="category-label">{category}</span>
                 <PermissionLevelRadio
-                    name={`category-${category}`}
                     currentLevel={commonLevel}
                     onChange={(level) => onPermissionChange(actions.map(a => a.id), level)}
                 />
             </div>
             {actions.map((action) => (
-                <ActionEntry
-                    key={action.id}
-                    action={action}
-                    onPermissionChange={onPermissionChange}
-                />
+                <div class="action-entry" key={action.id}>
+                    <span
+                        class={`
+                            action-label
+                            ${action.modifiedExternally ? 'modified-externally' : ''}
+                            ${!action.isRegistered ? 'unregistered-action' : ''}
+                        `}
+                        title={action.description || ''}
+                    >
+                        {action.label}
+                    </span>
+                    <PermissionLevelRadio
+                        currentLevel={action.permissionLevel}
+                        onChange={(level) => onPermissionChange([action.id], level)}
+                    />
+                </div>
             ))}
         </>
     );
@@ -137,12 +123,12 @@ function ContextSwitcher({ currentContext, onContextChange }: ContextSwitcherPro
 }
 
 function ActionsView() {
-    const vscode = acquireVsCodeApi<State>();
+    const vscode = useMemo(() => acquireVsCodeApi<State>(), []);
 
     // Initialize state from saved state or defaults
-    const oldState = vscode.getState();
-    const [actions, setActions] = useState<ActionNode[]>(oldState?.actions || []);
-    const [context, setContext] = useState<SettingsContext>(oldState?.context || 'workspace');
+    const oldState = useMemo(() => vscode.getState(), [vscode]);
+    const [actions, setActions] = useState<ActionNode[]>(oldState?.actions ?? []);
+    const [context, setContext] = useState<SettingsContext>(oldState?.context ?? 'workspace');
 
     // Save state whenever it changes
     useEffect(() => {
@@ -156,7 +142,6 @@ function ActionsView() {
             currentContext: context,
         } satisfies ActionsViewMessage);
 
-        // Listen for messages from the extension
         const messageHandler = (event: MessageEvent<ActionsViewProviderMessage>) => {
             const message = event.data;
             switch (message.type) {
@@ -165,43 +150,32 @@ function ActionsView() {
                     break;
             }
         };
-
+            
+        // Listen for messages from the extension
         window.addEventListener('message', messageHandler);
         return () => window.removeEventListener('message', messageHandler);
     }, [context]);
 
-    const handlePermissionChange = (actionIds: string[], newLevel: PermissionLevel) => {
-        vscode.postMessage({
-            type: 'viewToggledPermissions',
-            actionIds,
-            newPermissionLevel: newLevel,
-        } satisfies ActionsViewMessage);
-    };
-
-    const handleContextChange = (newContext: SettingsContext) => {
-        setContext(newContext);
-        vscode.postMessage({
-            type: 'changeContext',
-            newContext,
-        } satisfies ActionsViewMessage);
-    };
-
     // Organize actions by category
-    const categories = actions.reduce<Record<string, ActionNode[]>>((acc, action) => {
+    const categories = useMemo(() => actions.reduce<Record<string, ActionNode[]>>((acc, action) => {
         if (!acc[action.category]) {
             acc[action.category] = [];
         }
         acc[action.category].push(action);
         return acc;
-    }, {});
+    }, {}), [actions])
 
     // Sort categories and actions
-    const categoryKeys = Object.keys(categories)
-        .sort()
-        .sort((a, b) => a === 'Miscellaneous' ? 1 : b === 'Miscellaneous' ? -1 : 0)
-        .sort((a, b) => a === 'No Category Specified' ? 1 : b === 'No Category Specified' ? -1 : 0);
+    const categoryKeys = useMemo(() => {
+        const categoryKeys = Object.keys(categories)
+            .sort()
+            .sort((a, b) => a === 'Miscellaneous' ? 1 : b === 'Miscellaneous' ? -1 : 0)
+            .sort((a, b) => a === 'No Category Specified' ? 1 : b === 'No Category Specified' ? -1 : 0);
 
-    categoryKeys.forEach(c => categories[c].sort((a, b) => a.label.localeCompare(b.label)));
+        categoryKeys.forEach(c => categories[c].sort((a, b) => a.label.localeCompare(b.label)));
+        
+        return categoryKeys;
+    }, [categories]);
 
     return (
         <>
@@ -214,38 +188,28 @@ function ActionsView() {
                 <p><span class="disabled">Grayed out = Permission is not registered</span></p>
                 <p>Some actions may have secondary registration conditions and not be registered even if permission is granted.</p>
                 <p>
-                    <div class="permission-level-description">
-                        <div class="permission-level-radio">
-                            <label data-show-checked data-permission-level="2">
-                                <i class="codicon codicon-check"></i>
-                            </label>
+                    {levels.map(({level, icon, title, description}) => (
+                        <div class="permission-level-description">
+                            <div class="permission-level-radio">
+                                <label data-show-checked data-permission-level={level}>
+                                    <i class={`codicon ${icon}`}></i>
+                                </label>
+                            </div>
+                            <div>- {title} ({description})</div>
                         </div>
-                        <div>- Autopilot</div>
-                    </div>
-
-                    <div class="permission-level-description">
-                        <div class="permission-level-radio">
-                            <label data-show-checked data-permission-level="1">
-                                <i class="codicon codicon-question"></i>
-                            </label>
-                        </div>
-                        <div>- Copilot</div>
-                    </div>
-
-                    <div class="permission-level-description">
-                        <div class="permission-level-radio">
-                            <label data-show-checked data-permission-level="0">
-                                <i class="codicon codicon-chrome-close"></i>
-                            </label>
-                        </div>
-                        <div>- Off</div>
-                    </div>
+                    ))}
                 </p>
             </details>
 
             <ContextSwitcher
                 currentContext={context}
-                onContextChange={handleContextChange}
+                onContextChange={(newContext) => {
+                    setContext(newContext);
+                    vscode.postMessage({
+                        type: 'changeContext',
+                        newContext,
+                    } satisfies ActionsViewMessage);
+                }}
             />
 
             <div class="actions-list">
@@ -254,7 +218,13 @@ function ActionsView() {
                         key={category}
                         category={category}
                         actions={categories[category]}
-                        onPermissionChange={handlePermissionChange}
+                        onPermissionChange={(actionIds, newLevel) => {
+                            vscode.postMessage({
+                                type: 'viewToggledPermissions',
+                                actionIds,
+                                newPermissionLevel: newLevel,
+                            } satisfies ActionsViewMessage);
+                        }}
                     />
                 ))}
             </div>
@@ -263,4 +233,4 @@ function ActionsView() {
 }
 
 // Render immediately when script loads
-render(<ActionsView />, document.body);
+render(<ActionsView />, document.getElementById("root")!);
