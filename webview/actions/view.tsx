@@ -123,10 +123,10 @@ function ContextSwitcher({ currentContext, onContextChange }: ContextSwitcherPro
 }
 
 function ActionsView() {
-    const vscode = useMemo(() => acquireVsCodeApi<State>(), []);
+    const vscode = useMemo(acquireVsCodeApi<State>, []);
 
     // Initialize state from saved state or defaults
-    const oldState = useMemo(() => vscode.getState(), [vscode]);
+    const oldState = useMemo(vscode.getState, [vscode]);
     const [actions, setActions] = useState<ActionNode[]>(oldState?.actions ?? []);
     const [context, setContext] = useState<SettingsContext>(oldState?.context ?? 'workspace');
 
