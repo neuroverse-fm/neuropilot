@@ -24,7 +24,7 @@ function PermissionLevelRadio({ currentLevel, onChange }: PermissionLevelRadioPr
 
     return (
         <div class="permission-level-radio">
-            {levels.map(({ level, icon, title, description }) => (
+            {levels.map(({ level, icon, title, description }) =>
                 <label
                     key={level}
                     data-permission-level={level}
@@ -38,8 +38,8 @@ function PermissionLevelRadio({ currentLevel, onChange }: PermissionLevelRadioPr
                         checked={level === currentLevel}
                         onChange={() => onChange(level)}
                     />
-                </label>
-            ))}
+                </label>,
+            )}
         </div>
     );
 }
@@ -70,7 +70,7 @@ function CategorySection({ category, actions, onPermissionChange }: CategorySect
                     onChange={(level) => onPermissionChange(actions.map(a => a.id), level)}
                 />
             </div>
-            {actions.map((action) => (
+            {actions.map((action) =>
                 <div class="action-entry" key={action.id}>
                     <span
                         class={`
@@ -86,8 +86,8 @@ function CategorySection({ category, actions, onPermissionChange }: CategorySect
                         currentLevel={action.permissionLevel}
                         onChange={(level) => onPermissionChange([action.id], level)}
                     />
-                </div>
-            ))}
+                </div>,
+            )}
         </>
     );
 }
@@ -150,7 +150,7 @@ function ActionsView() {
                     break;
             }
         };
-            
+
         // Listen for messages from the extension
         window.addEventListener('message', messageHandler);
         return () => window.removeEventListener('message', messageHandler);
@@ -163,7 +163,7 @@ function ActionsView() {
         }
         acc[action.category].push(action);
         return acc;
-    }, {}), [actions])
+    }, {}), [actions]);
 
     // Sort categories and actions
     const categoryKeys = useMemo(() => {
@@ -173,7 +173,7 @@ function ActionsView() {
             .sort((a, b) => a === 'No Category Specified' ? 1 : b === 'No Category Specified' ? -1 : 0);
 
         categoryKeys.forEach(c => categories[c].sort((a, b) => a.label.localeCompare(b.label)));
-        
+
         return categoryKeys;
     }, [categories]);
 
@@ -188,7 +188,7 @@ function ActionsView() {
                 <p><span class="disabled">Grayed out = Permission is not registered</span></p>
                 <p>Some actions may have secondary registration conditions and not be registered even if permission is granted.</p>
                 <p>
-                    {levels.map(({level, icon, title, description}) => (
+                    {levels.map(({level, icon, title, description}) =>
                         <div class="permission-level-description">
                             <div class="permission-level-radio">
                                 <label data-show-checked data-permission-level={level}>
@@ -196,8 +196,8 @@ function ActionsView() {
                                 </label>
                             </div>
                             <div>- {title} ({description})</div>
-                        </div>
-                    ))}
+                        </div>,
+                    )}
                 </p>
             </details>
 
@@ -213,7 +213,7 @@ function ActionsView() {
             />
 
             <div class="actions-list">
-                {categoryKeys.map((category) => (
+                {categoryKeys.map((category) =>
                     <CategorySection
                         key={category}
                         category={category}
@@ -225,12 +225,12 @@ function ActionsView() {
                                 newPermissionLevel: newLevel,
                             } satisfies ActionsViewMessage);
                         }}
-                    />
-                ))}
+                    />,
+                )}
             </div>
         </>
     );
 }
 
 // Render immediately when script loads
-render(<ActionsView />, document.getElementById("root")!);
+render(<ActionsView />, document.getElementById('root')!);

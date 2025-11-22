@@ -49,7 +49,7 @@ export default tseslint.config(
     ...tseslint.configs.stylistic,
     {
         files: [
-            '**/*.{ts,mts,cts}', // Only apply TypeScript rules to TypeScript files
+            '**/*.{ts,mts,cts,tsx}', // Only apply TypeScript rules to TypeScript files
             'webview/**/*.js', // and webview JS files
         ],
         plugins: {
