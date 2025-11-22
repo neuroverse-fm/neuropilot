@@ -24,6 +24,8 @@ Changes between each version before then will not be listed.
 - Improved the UI for the action permissions sidebar. (external contribution, thanks [mlntcandy](https://github.com/mlntcandy)!)
   - The circle dots corresponding to permission levels have been replaced with codicons.
   - There is a sliding animation when switching between permission levels.
+- Moved NeuroPilot's views to the secondary sidebar (where Copilot Chat is) by default.
+  - You can also move the views between the two sidebars. This change may not apply to you if you have previously moved the views.
 
 ### Fixes
 
