@@ -406,7 +406,14 @@ export const gitActions = {
         handler: handleTagHEAD,
         cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `tag the current commit with the name "${actionData.params.name}" and associate it with the "${actionData.params.upstream}" remote.`,
-        validators: [gitValidator],
+        validators: [gitValidator, (actionData: ActionData) => {
+            const tagPattern = /^(?!\.|\/)(?!.*\.\.|@\{|\.lock$|[\s~^:?*[\\\x00-\x1F\x7F])(?!@$)[^\s~^:?*[\\\x00-\x1F\x7F]+(?<![/.])$/;
+            //const _tagPattern = /^(?!\/)(?!.*([/.]\.|\/\/|@\{|\\))(?!.*(?:\.lock$|[/.]$))[^\x00-\x20\x7f ~^:?*[]+$/;
+            if (!tagPattern.test(actionData.params.name)) {
+                return actionValidationFailure('The Git tag\'s does not conform to Git\'s tag naming rules.');
+            }
+            return actionValidationAccept();
+        }],
         registerCondition: () => !!repo,
     },
     delete_tag: {
