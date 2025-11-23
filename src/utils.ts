@@ -1033,3 +1033,15 @@ export function toTitleCase(str: string): string {
         })
         .join(' ');
 }
+
+/**
+ * Checks if the running environment is Windows.
+ * @returns A boolean that returns if the environment is Windows.
+ * @todo Handle differently when the extension becomes UI-side only
+ */
+export function isWindows(): boolean {
+    // Check if appRoot contains backslashes (Windows path separator)
+    // or starts with a drive letter (e.g., C:\)
+    const appRoot = vscode.env.appRoot;
+    return appRoot.includes('\\') || /^[a-zA-Z]:/.test(appRoot);
+}
