@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { NEURO } from '@/constants';
 import { BaseWebviewViewProvider } from './base';
 import { logOutput } from '../utils';
+import { COSMETIC } from '../config';
 
 export interface ImageData {
     name: string;
@@ -67,6 +68,7 @@ export class ImagesViewProvider extends BaseWebviewViewProvider<ImagesViewMessag
     private currentSet: string | null = null;
     private currentImageName: string | null = null;
     private disposables: vscode.Disposable[] = [];
+    private _configListener: vscode.Disposable | null = null;
 
     constructor() {
         super('images/index.html', 'images/main.js', ['images/style.css']);
@@ -83,28 +85,28 @@ export class ImagesViewProvider extends BaseWebviewViewProvider<ImagesViewMessag
         if (this.config === null) {
             try {
                 await this.loadConfig();
-            } catch (err) {
-                console.error('Failed to load config:', err);
+            } catch (erm) {
+                console.error('Failed to load config:', erm);
             }
-    
+
             // Subscribe to configuration changes only once
             if (!this._configListener) {
                 this._configListener = vscode.workspace.onDidChangeConfiguration((e) => {
                     if (e.affectsConfiguration('neuropilot.celebrations')) {
-                        this.sendUpdateToView().catch(err =>
-                            console.error('Failed to send update on config change:', err)
+                        this.sendUpdateToView().catch(erm =>
+                            console.error('Failed to send update on config change:', erm),
                         );
                     }
                 });
                 this.disposables.push(this._configListener);
             }
         }
-    
+
         // Always send update when view becomes ready
         try {
             await this.sendUpdateToView();
-        } catch (err) {
-            console.error('Failed to send initial update:', err);
+        } catch (erm) {
+            console.error('Failed to send initial update:', erm);
         }
     }
 
@@ -254,7 +256,7 @@ export class ImagesViewProvider extends BaseWebviewViewProvider<ImagesViewMessag
     private findImage(name: string): { setName: string; image: GallerySet['images'][0]; } | null {
         if (!this.config) return null;
 
-        const includeRotations = vscode.workspace.getConfiguration('neuropilot').get<boolean>('celebrations', true);
+        const includeRotations = COSMETIC.celebrations;
         const setsForMsg = this.getSetsForMessage(includeRotations);
 
         // Search only in visible sets
