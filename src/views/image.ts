@@ -81,20 +81,31 @@ export class ImagesViewProvider extends BaseWebviewViewProvider<ImagesViewMessag
 
     protected async onViewReady(): Promise<void> {
         if (this.config === null) {
-            await this.loadConfig();
-
-            // Subscribe to configuration changes
-            this.disposables.push(
-                vscode.workspace.onDidChangeConfiguration((e) => {
+            try {
+                await this.loadConfig();
+            } catch (err) {
+                console.error('Failed to load config:', err);
+            }
+    
+            // Subscribe to configuration changes only once
+            if (!this._configListener) {
+                this._configListener = vscode.workspace.onDidChangeConfiguration((e) => {
                     if (e.affectsConfiguration('neuropilot.celebrations')) {
-                        void this.sendUpdateToView();
+                        this.sendUpdateToView().catch(err =>
+                            console.error('Failed to send update on config change:', err)
+                        );
                     }
-                }),
-            );
+                });
+                this.disposables.push(this._configListener);
+            }
         }
-
+    
         // Always send update when view becomes ready
-        void this.sendUpdateToView();
+        try {
+            await this.sendUpdateToView();
+        } catch (err) {
+            console.error('Failed to send initial update:', err);
+        }
     }
 
     /**
