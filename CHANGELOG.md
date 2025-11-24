@@ -16,7 +16,7 @@ Changes between each version before then will not be listed.
 
 - Added a sidebar view for displaying image assets.
   - These image assets are completely cosmetic, and come from the [`VSC-NeuroPilot/image-gallery`](https://github.com/VSC-NeuroPilot/image-gallery) repo.
-  - From time to time, there may be featured image sets that are set to be in rotation, such as subathon images. You can choose to toggle these on using the `neuropilot.cosmetic.celebrations` setting, which will also disable certain cosmetic, non-intrusive easter eggs in the extension.
+  - From time to time, there may be featured image sets that are set to be in rotation, such as subathon images. You can choose to toggle these off by unchecking the `neuropilot.cosmetic.celebrations` setting, which will also disable certain cosmetic, non-intrusive easter eggs in the extension.
 - Added a registration condition for terminals and tasks so they do not get registered in untrusted/virtual workspaces.
 
 ### Changes
