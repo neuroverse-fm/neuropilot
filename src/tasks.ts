@@ -29,7 +29,9 @@ export const taskHandlers = {
         promptGenerator: 'terminate the currently running task.',
         validators: [checkVirtualWorkspace, checkWorkspaceTrust, () => NEURO.currentTaskExecution !== null
             ? actionValidationAccept()
-            : actionValidationFailure('No task to terminate.')],
+            : actionValidationFailure('No task to terminate.'),
+        ],
+        registerCondition: () => checkVirtualWorkspace().success && checkWorkspaceTrust().success,
     },
 } satisfies Record<string, RCEAction>;
 
@@ -128,6 +130,7 @@ export function reloadTasks() {
             handler: handleRunTask,
             promptGenerator: `run the task: ${task.description}`,
             validators: [checkVirtualWorkspace, checkWorkspaceTrust],
+            registerCondition: () => checkVirtualWorkspace().success && checkWorkspaceTrust().success,
         })));
     });
 }

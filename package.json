@@ -273,6 +273,9 @@
 					},
 					"neuropilot.terminals": {
 						"type": "array",
+						"tags": [
+							"advanced"
+						],
 						"items": {
 							"type": "object",
 							"properties": {
@@ -439,6 +442,11 @@
 							"L. {n}: "
 						]
 					},
+					"neuropilot.cosmetic.celebrations": {
+						"type": "boolean",
+						"default": true,
+						"description": "Whether or not to enable celebratory stuff. This is completely cosmetic and will not affect the main extension functionality."
+					},
 					"neuropilot.enableCancelEvents": {
 						"markdownDeprecationMessage": "This setting has been moved to neuropilot.actions.enableCancelEvents."
 					},
@@ -594,7 +602,14 @@
 					"neuropilot.connection.userName": {
 						"type": "string",
 						"default": "Vedal",
-						"description": "The name to indicate who is controlling this VS Code instance alongside the API server. This replaces the default name `Vedal`."
+						"description": "The name to indicate who is controlling this VS Code instance alongside the API server. This replaces the default name `Vedal`.",
+						"examples": [
+							"Vedal",
+							"Alex",
+							"Pasu4",
+							"KTrain",
+							"Frogneko"
+						]
 					},
 					"neuropilot.connection.nameOfAPI": {
 						"type": "string",
@@ -624,6 +639,9 @@
 					},
 					"neuropilot.actionPermissions": {
 						"type": "object",
+						"tags": [
+							"advanced"
+						],
 						"markdownDescription": "The permissions that are currently active. If you want to edit this value, it is recommended to use the sidebar instead.",
 						"additionalProperties": {
 							"enum": [
@@ -687,7 +705,7 @@
 			]
 		},
 		"viewsContainers": {
-			"activitybar": [
+			"secondarySidebar": [
 				{
 					"id": "neuropilot",
 					"title": "NeuroPilot",
@@ -701,12 +719,13 @@
 					"type": "webview",
 					"id": "neuropilot.actionsView",
 					"name": "Action Permissions",
-					"icon": "assets/neuropilot-font.svg"
+					"icon": "assets/neuropilot-font.svg",
+					"visibility": "visible"
 				},
 				{
 					"type": "webview",
-					"id": "neuropilot.testView",
-					"name": "Test",
+					"id": "neuropilot.imagesView",
+					"name": "Images",
 					"icon": "assets/neuropilot-font.svg"
 				}
 			]
@@ -735,9 +754,9 @@
 	"scripts": {
 		"preinstall": "node ./scripts/check-malicious-packages.js",
 		"version:changesets": "changeset version --global-changelog",
-		"push": "tsx ./dual-publish.ts",
 		"vscode:prepublish": "pnpm build",
-		"build": "pnpm types && node ./scripts/esbuild.mjs",
+		"vendor-codicons": "node ./scripts/vendor-codicons.mjs",
+		"build": "pnpm types && pnpm vendor-codicons && node ./scripts/esbuild.mjs",
 		"compile": "cross-env NODE_ENV=0 pnpm build",
 		"package": "cross-env NODE_ENV=1 pnpm build",
 		"lint": "eslint --fix",
@@ -778,9 +797,8 @@
 		"test:desktop:vscode": "vscode-test --coverage --label desktopUnitTest --coverage-output ./coverage-desktop"
 	},
 	"devDependencies": {
-		"@eslint/js": "^9.13.0",
-		"@stylistic/eslint-plugin": "^2.9.0",
-		"@types/eslint__js": "^8.42.3",
+		"@eslint/js": "^9.39.1",
+		"@stylistic/eslint-plugin": "^5.5.0",
 		"@types/glob-to-regexp": "^0.4.4",
 		"@types/json-schema": "^7.0.15",
 		"@types/mocha": "^10.0.10",
@@ -788,34 +806,36 @@
 		"@types/vscode": "^1.95.0",
 		"@types/vscode-webview": "^1.57.5",
 		"@types/ws": "^8.18.0",
-		"@vscode/test-cli": "^0.0.11",
+		"@vscode/test-cli": "^0.0.12",
 		"@vscode/test-electron": "^2.5.2",
 		"@vscode/test-web": "^0.0.75",
-		"@vscode/vsce": "^3.6.2",
-		"chalk": "^5.4.1",
-		"cross-env": "^7.0.3",
-		"esbuild": "^0.25.5",
+		"@vscode/vsce": "^3.7.0",
+		"chalk": "^5.6.2",
+		"cross-env": "^10.1.0",
+		"esbuild": "^0.27.0",
 		"esbuild-plugin-polyfill-node": "^0.3.0",
-		"eslint": "^9.13.0",
-		"eslint-plugin-unicorn": "^60.0.0",
-		"glob": "^11.1.0",
-		"globals": "^16.3.0",
+		"eslint": "^9.39.1",
+		"eslint-plugin-unicorn": "^62.0.0",
+		"glob": "^13.0.0",
+		"globals": "^16.5.0",
 		"husky": "^9.1.7",
-		"mocha": "^11.7.1",
+		"mocha": "^11.7.5",
 		"npm-run-all": "^4.1.5",
-		"ovsx": "^0.10.5",
-		"playwright": "^1.44.0",
+		"ovsx": "^0.10.6",
+		"playwright": "^1.56.1",
 		"ts-mockito": "^2.6.1",
 		"tsx": "^4.20.6",
-		"typescript": "^5.8.2",
-		"typescript-eslint": "^8.26.0"
+		"typescript": "^5.9.3",
+		"typescript-eslint": "^8.46.4"
 	},
 	"dependencies": {
-		"file-type": "^21.0.0",
+		"@vscode/codicons": "^0.0.41",
+		"file-type": "^21.1.0",
 		"glob-to-regexp": "^0.4.1",
 		"ignore": "^7.0.5",
 		"jsonschema": "^1.5.0",
 		"neuro-game-sdk": "^1.0.5",
+		"preact": "^10.27.2",
 		"yaml": "^2.8.1"
 	}
 }

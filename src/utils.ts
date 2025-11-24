@@ -678,7 +678,7 @@ export function clearDecorations(editor: vscode.TextEditor) {
 /**
  * Checks workspace trust settings and returns an ActionValidationResult accordingly.
  */
-export function checkWorkspaceTrust(_actionData: ActionData): ActionValidationResult {
+export function checkWorkspaceTrust(_actionData?: ActionData): ActionValidationResult {
     if (vscode.workspace.isTrusted) {
         return actionValidationAccept();
     }
@@ -711,7 +711,7 @@ export function getProperty(obj: unknown, path: string): unknown {
 /**
  * Checks if the extension is currently on a virtual file system.
  */
-export function checkVirtualWorkspace(_actionData: ActionData): ActionValidationResult {
+export function checkVirtualWorkspace(_actionData?: ActionData): ActionValidationResult {
     if (vscode.workspace.workspaceFolders?.every(f => f.uri.scheme !== 'file')) {
         return actionValidationFailure('You cannot perform this action in a virtual workspace.');
     }
@@ -1032,4 +1032,15 @@ export function toTitleCase(str: string): string {
             }
         })
         .join(' ');
+}
+
+/**
+ * Checks if the running environment is Windows.
+ * Works in both extension host (Node.js) and web (browser) contexts.
+ * @returns true if the environment is Windows
+ * @todo Transform into generalised platform detector later
+ */
+export function isWindows(): boolean {
+    if (vscode.env.uiKind === vscode.UIKind.Web) return false;
+    else return process.platform === 'win32';
 }

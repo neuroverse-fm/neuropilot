@@ -1,6 +1,7 @@
 // @ts-check
 import { context } from 'esbuild';
 import { polyfillNode } from 'esbuild-plugin-polyfill-node';
+import { esbuildProblemMatcherPlugin } from './plugins.js';
 
 /**
  * @param {boolean} prodFlag
@@ -8,7 +9,7 @@ import { polyfillNode } from 'esbuild-plugin-polyfill-node';
  */
 export async function webview(prodFlag, watchFlag) {
     const ctx = await context({
-        entryPoints: ['webview/**/*.ts'],
+        entryPoints: ['webview/**/*.ts', 'webview/**/*.tsx'],
         bundle: true,
         format: 'cjs',
         minify: prodFlag,
@@ -21,6 +22,7 @@ export async function webview(prodFlag, watchFlag) {
         logLevel: 'warning',
         tsconfig: './tsconfig.webview.json',
         treeShaking: true,
+        jsx: 'automatic',
         plugins: [
             polyfillNode({
                 polyfills: { // trying to make the build as small as possible
@@ -55,24 +57,3 @@ export async function webview(prodFlag, watchFlag) {
         await ctx.dispose();
     }
 }
-
-/**
- * @type {import('esbuild').Plugin}
- */
-const esbuildProblemMatcherPlugin = {
-    name: 'esbuild-problem-matcher',
-
-    setup(build) {
-        build.onStart(() => {
-            console.log('[watch] build started');
-        });
-        build.onEnd(result => {
-            result.errors.forEach(({ text, location }) => {
-                console.error(`✘ [ERROR] ${text}`);
-                if (location == null) return;
-                console.error(`    ${location.file}:${location.line}:${location.column}:`);
-            });
-            console.log('[watch] build finished');
-        });
-    },
-};

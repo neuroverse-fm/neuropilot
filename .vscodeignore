@@ -1,12 +1,17 @@
 .*/**
 playground/**
 .gitignore
+.gitmodules
 eslint.config.mjs
 tsconfig.json
 **/tsconfig.*.json
 src/
 node_modules/
 *.vsix
+**/*.tsbuildinfo
+
+# Source .ts files for webviews
+webview/**/*.ts
 
 # Project files
 project-files/
@@ -15,23 +20,23 @@ project-files/
 esbuild-configs/
 
 # Other meta scripts
-/scripts
+scripts/**
 
 # Krita
 *.kra
 *.*~
-
-# Inkscape
-*.svg
 
 # Tony
 .venv
 tony/
 
 # Coverage
-/coverage-*
+coverage-*/**
 
 # Integration testing
 test-playground/
 .vscode-test.mjs
 out/test/**
+
+# Remove pnpm files
+pnpm-*.yaml

@@ -9,6 +9,8 @@ export interface Message {
 export abstract class BaseWebviewViewProvider<TViewMessage extends Message, TProviderMessage extends Message> implements vscode.WebviewViewProvider {
     protected _view?: vscode.WebviewView;
 
+    protected onViewReady?(): void | Promise<void>;
+
     constructor(private _htmlFile: string, private _script: string, private _styles: string[]) { }
 
     async resolveWebviewView(webviewView: vscode.WebviewView, _context: vscode.WebviewViewResolveContext, _token: vscode.CancellationToken): Promise<void> {
@@ -24,14 +26,22 @@ export abstract class BaseWebviewViewProvider<TViewMessage extends Message, TPro
         webviewView.webview.onDidReceiveMessage((data: TViewMessage) => {
             this.handleMessage(data);
         });
+
+        // Call onViewReady if it exists (for subclasses that implement it)
+        void this.onViewReady?.();
     }
 
     protected abstract handleMessage(message: TViewMessage): void;
 
     protected async _getHtmlForWebview(webview: vscode.Webview, format?: Record<string, unknown>): Promise<string> {
+        const codiconsStyleUri = webview.asWebviewUri(vscode.Uri.joinPath(NEURO.context!.extensionUri, 'media', 'codicons', 'codicon.css'));
+        const vscodeStyleUri = webview.asWebviewUri(vscode.Uri.joinPath(NEURO.context!.extensionUri, 'webview', 'vscode.css'));
+
         const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(NEURO.context!.extensionUri, 'out', 'webview', this._script));
         const styleUris = this._styles.map(style => webview.asWebviewUri(vscode.Uri.joinPath(NEURO.context!.extensionUri, 'webview', style)));
-        const styles = styleUris.map(styleUri => `<link href="${styleUri}" rel="stylesheet">`).join('\n');
+        const styles = [codiconsStyleUri, vscodeStyleUri, ...styleUris]
+            .map(styleUri => `<link href="${styleUri}" rel="stylesheet">`)
+            .join('\n');
         const nonce = getNonce();
 
         // Load HTML file
