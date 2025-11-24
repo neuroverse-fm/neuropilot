@@ -30,7 +30,8 @@ Changes between each version before then will not be listed.
 ### Fixes
 
 - Removed a test sidebar view that was left in by accident.
-- Fixed a *small* typo in RCE's try-catch
+- Fixed a *small* typo in RCE's try-catch.
+- Git tag names are now validated at validation layer to ensure they conform to Git's tag naming rules.
 
 ## 2.3.2
 
