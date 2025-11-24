@@ -407,7 +407,7 @@ export const gitActions = {
         cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `tag the current commit with the name "${actionData.params.name}" and associate it with the "${actionData.params.upstream}" remote.`,
         validators: [gitValidator, (actionData: ActionData) => {
-            const tagPattern = /^(?![/.@])(?!.*[/.@]$)(?!.*[/.@]{2,})(?:[a-z]+(?:[/.@][a-z]+)*)$/gm;
+            const tagPattern = /^(?![/.@])(?!.*[/.@]$)(?!.*[/.@]{2,})(?:[a-z]+(?:[/.@][a-z]+)*)$/;
             if (!tagPattern.test(actionData.params.name)) {
                 return actionValidationFailure('The Git tag does not conform to Git\'s tag naming rules.');
             }
