@@ -1036,12 +1036,28 @@ export function toTitleCase(str: string): string {
 
 /**
  * Checks if the running environment is Windows.
- * @returns A boolean that returns if the environment is Windows.
- * @todo Handle differently when the extension becomes UI-side only
+ * Works in both extension host (Node.js) and web (browser) contexts.
+ * @returns true if the environment is Windows
  */
 export function isWindows(): boolean {
-    // Check if appRoot contains backslashes (Windows path separator)
-    // or starts with a drive letter (e.g., C:\)
-    const appRoot = vscode.env.appRoot;
+    // --- Extension host / Node.js ---
+    // process.platform is the canonical way to detect OS in Node
+    if (typeof process !== 'undefined' && process.platform) {
+        return process.platform === 'win32';
+    }
+
+    // --- Web / Browser ---
+    // navigator.platform and userAgent are available in web extensions
+    if (typeof navigator !== 'undefined') {
+        const platform = navigator.platform.toLowerCase();
+        const ua = navigator.userAgent.toLowerCase();
+        if (platform.includes('win') || ua.includes('windows')) {
+            return true;
+        }
+    }
+
+    // --- Fallback: original appRoot heuristic ---
+    // Only used if neither process nor navigator are available
+    const appRoot = (typeof vscode !== 'undefined' && vscode.env?.appRoot) || '';
     return appRoot.includes('\\') || /^[a-zA-Z]:/.test(appRoot);
 }
