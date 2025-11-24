@@ -92,7 +92,7 @@ export class ImagesViewProvider extends BaseWebviewViewProvider<ImagesViewMessag
             // Subscribe to configuration changes only once
             if (!this._configListener) {
                 this._configListener = vscode.workspace.onDidChangeConfiguration((e) => {
-                    if (e.affectsConfiguration('neuropilot.celebrations')) {
+                    if (e.affectsConfiguration('neuropilot.cosmetic.celebrations')) {
                         this.sendUpdateToView().catch(erm =>
                             console.error('Failed to send update on config change:', erm),
                         );
@@ -163,7 +163,7 @@ export class ImagesViewProvider extends BaseWebviewViewProvider<ImagesViewMessag
 
         if (!this.config) return;
 
-        const includeRotations = vscode.workspace.getConfiguration('neuropilot').get<boolean>('celebrations', true);
+        const includeRotations = COSMETIC.celebrations;
         const setsForMsg = this.getSetsForMessage(includeRotations);
 
         // Check whether current image still exists in filtered sets
@@ -290,7 +290,7 @@ export class ImagesViewProvider extends BaseWebviewViewProvider<ImagesViewMessag
         if (!image) return;
 
         // Check if this set is filtered out
-        const includeRotations = vscode.workspace.getConfiguration('neuropilot').get<boolean>('celebrations', true);
+        const includeRotations = COSMETIC.celebrations;
         const setsForMsg = this.getSetsForMessage(includeRotations);
 
         // If the set is filtered out, don't show the image
@@ -339,7 +339,7 @@ export class ImagesViewProvider extends BaseWebviewViewProvider<ImagesViewMessag
         const imageNameToFind = currentImageName || this.currentImageName;
         if (!imageNameToFind) return;
 
-        const includeRotations = vscode.workspace.getConfiguration('neuropilot').get<boolean>('celebrations', true);
+        const includeRotations = COSMETIC.celebrations;
         const setsForMsg = this.getSetsForMessage(includeRotations);
 
         // Check if current set is still available after filtering
