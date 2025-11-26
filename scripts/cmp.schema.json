@@ -13,7 +13,7 @@
         "date": {
             "type": "string",
             "description": "The date of the compromise, using the extended ISO 8601 standard format (ex 2021-09-20).",
-            "pattern": "^d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]d|3[01])$"
+            "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
         },
         "packages": {
             "type": "object",
@@ -21,11 +21,14 @@
             "patternProperties": {
                 "^(?:(?:@(?:[a-z0-9-*~][a-z0-9-*._~]*)?/[a-z0-9-._~])|[a-z0-9-~])[a-z0-9-._~]*$": {
                     "type": "array",
+                    "description": "The compromised package's name. Must follow npm's package naming scheme.",
                     "items": {
-                        "type": "string"
+                        "type": "string",
+                        "description": "Compromised package versions."
                     }
                 }
             }
         }
-    }
+    },
+    "required": ["name", "packages"]
 }

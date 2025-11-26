@@ -575,12 +575,8 @@ const comp2 = {
 
 /** @type {{[packageName: string]: string[]}} */
 const maliciousPackages = {
-  // #region Sep 16 compromise
   ...comp1,
-  // #endregion
-  // #region Nov 14 compromise
   ...comp2,
-  // #endregion
 };
 
 let found = false;
