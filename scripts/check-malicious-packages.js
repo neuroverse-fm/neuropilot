@@ -12,7 +12,7 @@
  * Cross-platform compatible: works on Windows, macOS, and Linux.
  *
  * Usage:
- *   1. Run `npm install jsonschema` to install the JSON schema validator.
+ *   1. Run `npm install jsonschema yaml` to install dependencies.
  *   2. Execute with `node check-malicious-packages.js [config-file]` from your project root.
  *      If no config file is provided, it will look for *.cmp.json files in the scripts directory.
  */
@@ -21,6 +21,7 @@
 const fs = require('fs');
 const path = require('path');
 const { Validator } = require('jsonschema');
+const yaml = require('yaml');
 
 /**
  * Load and validate a compromise configuration file
@@ -108,6 +109,86 @@ function mergeCompromiseConfigs(configPaths) {
   return merged;
 }
 
+/**
+ * Check pnpm-lock.yaml for malicious packages by parsing the YAML structure
+ * @param {string} lockPath - Path to pnpm-lock.yaml
+ * @param {{[packageName: string]: string[]}} maliciousPackages - Map of package names to malicious versions
+ * @returns {boolean} True if any malicious packages were found
+ */
+function checkPnpmLockYaml(lockPath, maliciousPackages) {
+  let found = false;
+
+  try {
+    const lockContent = fs.readFileSync(lockPath, 'utf8');
+    const lockData = yaml.parse(lockContent);
+
+    // Check packages in the lockfile
+    // pnpm-lock.yaml can have packages in different structures depending on version
+    const packages = lockData.packages || lockData.dependencies || {};
+
+    for (const [pkgKey, pkgInfo] of Object.entries(packages)) {
+      // Package keys can be in formats like:
+      // - "/@scope/package@1.0.0"
+      // - "/package@1.0.0"
+      // - "@scope/package@1.0.0"
+      // - "package@1.0.0"
+      const match = pkgKey.match(/^(?:\/)?(.+?)@(.+?)(?:\(|$)/);
+      if (!match) {
+        continue;
+      }
+
+      const [, pkgName, version] = match;
+      const versions = maliciousPackages[pkgName];
+
+      if (versions && versions.includes(version)) {
+        console.log(`⚠️  Found in pnpm-lock.yaml: ${pkgName}@${version}`);
+        found = true;
+      }
+    }
+
+    // Also check importers section for workspace dependencies
+    if (lockData.importers) {
+      for (const [importerPath, importerData] of Object.entries(lockData.importers)) {
+        const allDeps = {
+          ...(importerData.dependencies || {}),
+          ...(importerData.devDependencies || {}),
+          ...(importerData.optionalDependencies || {}),
+        };
+
+        for (const [pkgName, depInfo] of Object.entries(allDeps)) {
+          // Extract version from dependency info (can be a string or object)
+          let version;
+          if (typeof depInfo === 'string') {
+            version = depInfo;
+          } else if (depInfo && typeof depInfo === 'object' && 'version' in depInfo) {
+            version = depInfo.version;
+          }
+
+          if (version) {
+            // Remove any specifier characters
+            const cleanVersion = version.replace(/^[~^>=<]/, '');
+            const versions = maliciousPackages[pkgName];
+
+            if (versions && versions.includes(cleanVersion)) {
+              console.log(`⚠️  Found in pnpm-lock.yaml (${importerPath}): ${pkgName}@${cleanVersion}`);
+              found = true;
+            }
+          }
+        }
+      }
+    }
+  } catch (erm) {
+    if (erm instanceof Error) {
+      console.error(`❌ Failed to parse pnpm-lock.yaml: ${erm.message}`);
+    } else {
+      console.error('❌ Failed to parse pnpm-lock.yaml:', String(erm));
+    }
+    process.exit(1);
+  }
+
+  return found;
+}
+
 // Main execution
 let maliciousPackages;
 const args = process.argv.slice(2);
@@ -134,29 +215,10 @@ console.log(`🎯 Checking for ${totalVersions} compromised versions across ${to
 
 let found = false;
 
-// Check pnpm-lock.yaml without external deps (safe for preinstall)
+// Check pnpm-lock.yaml using YAML parser
 const lockPath = path.join(process.cwd(), 'pnpm-lock.yaml');
 if (fs.existsSync(lockPath)) {
-  const lockContent = fs.readFileSync(lockPath, 'utf8');
-  /**
-   * Escape special regex characters
-   * @param {string} s - String to escape
-   * @returns {string}
-   */
-  const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
-  for (const [pkgName, versions] of Object.entries(maliciousPackages)) {
-    for (const version of versions) {
-      const pattern = new RegExp(
-        `(^|\\n)\\s{0,6}(?:/)?${escapeRegex(pkgName)}@${escapeRegex(version)}\\s*:`,
-        'm',
-      );
-      if (pattern.test(lockContent)) {
-        console.log(`⚠️  Found in pnpm-lock.yaml: ${pkgName}@${version}`);
-        found = true;
-      }
-    }
-  }
+  found = checkPnpmLockYaml(lockPath, maliciousPackages);
 } else {
   console.log('📦 pnpm-lock.yaml not found.');
   // Check node_modules

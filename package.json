@@ -826,7 +826,8 @@
 		"ts-mockito": "^2.6.1",
 		"tsx": "^4.20.6",
 		"typescript": "^5.9.3",
-		"typescript-eslint": "^8.47.0"
+		"typescript-eslint": "^8.47.0",
+		"yaml": "^2.8.1"
 	},
 	"dependencies": {
 		"@vscode/codicons": "^0.0.43",
@@ -835,7 +836,6 @@
 		"ignore": "^7.0.5",
 		"jsonschema": "^1.5.0",
 		"neuro-game-sdk": "^1.0.5",
-		"preact": "^10.27.2",
-		"yaml": "^2.8.1"
+		"preact": "^10.27.2"
 	}
 }
