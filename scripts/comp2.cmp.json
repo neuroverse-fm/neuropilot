@@ -3,9 +3,6 @@
     "name": "Shai-Hulud #2",
     "date": "2025-11-24",
     "packages": {
-        "02-echo": [
-            "0.0.7"
-        ],
         "@accordproject/concerto-analysis": [
             "3.24.1"
         ],
@@ -72,6 +69,27 @@
         "@actbase/react-native-tiktok": [
             "1.1.3"
         ],
+        "@afetcan/api": [
+            "0.0.13"
+        ],
+        "@afetcan/storage": [
+            "0.0.27"
+        ],
+        "@alaan/s2s-auth": [
+            "2.0.3"
+        ],
+        "@alexadark/amadeus-api": [
+            "1.0.4"
+        ],
+        "@alexadark/gatsby-theme-events": [
+            "1.0.1"
+        ],
+        "@alexadark/gatsby-theme-wordpress-blog": [
+            "2.0.1"
+        ],
+        "@alexadark/reusable-functions": [
+            "1.5.1"
+        ],
         "@alexcolls/nuxt-socket.io": [
             "0.0.7",
             "0.0.8"
@@ -98,6 +116,26 @@
         "@aryanhussain/my-angular-lib": [
             "0.0.23"
         ],
+        "@asyncapi/avro-schema-parser": [
+            "3.0.25",
+            "3.0.26"
+        ],
+        "@asyncapi/bundler": [
+            "0.6.5",
+            "0.6.6"
+        ],
+        "@asyncapi/cli": [
+            "4.1.3",
+            "4.1.2"
+        ],
+        "@asyncapi/converter": [
+            "1.6.3",
+            "1.6.4"
+        ],
+        "@asyncapi/diff": [
+            "0.5.1",
+            "0.5.2"
+        ],
         "@asyncapi/dotnet-rabbitmq-template": [
             "1.0.2",
             "1.0.1"
@@ -106,9 +144,37 @@
             "1.2.2",
             "1.2.1"
         ],
+        "@asyncapi/generator": [
+            "2.8.5",
+            "2.8.6"
+        ],
+        "@asyncapi/generator-components": [
+            "0.3.2",
+            "0.3.3"
+        ],
+        "@asyncapi/generator-helpers": [
+            "0.2.1",
+            "0.2.2"
+        ],
+        "@asyncapi/generator-react-sdk": [
+            "1.1.5",
+            "1.1.4"
+        ],
         "@asyncapi/go-watermill-template": [
             "0.2.76",
             "0.2.77"
+        ],
+        "@asyncapi/html-template": [
+            "3.3.2",
+            "3.3.3"
+        ],
+        "@asyncapi/java-spring-cloud-stream-template": [
+            "0.13.5",
+            "0.13.6"
+        ],
+        "@asyncapi/java-spring-template": [
+            "1.6.2",
+            "1.6.1"
         ],
         "@asyncapi/java-template": [
             "0.3.6",
@@ -118,17 +184,76 @@
             "0.0.3",
             "0.0.2"
         ],
+        "@asyncapi/markdown-template": [
+            "1.6.8",
+            "1.6.9"
+        ],
+        "@asyncapi/modelina": [
+            "5.10.3",
+            "5.10.2"
+        ],
+        "@asyncapi/modelina-cli": [
+            "5.10.3",
+            "5.10.2"
+        ],
+        "@asyncapi/multi-parser": [
+            "2.2.1",
+            "2.2.2"
+        ],
+        "@asyncapi/nodejs-template": [
+            "3.0.6",
+            "3.0.5"
+        ],
+        "@asyncapi/nodejs-ws-template": [
+            "0.10.1",
+            "0.10.2"
+        ],
+        "@asyncapi/nunjucks-filters": [
+            "2.1.1",
+            "2.1.2"
+        ],
+        "@asyncapi/openapi-schema-parser": [
+            "3.0.25",
+            "3.0.26"
+        ],
+        "@asyncapi/optimizer": [
+            "1.0.6",
+            "1.0.5"
+        ],
+        "@asyncapi/parser": [
+            "3.4.1",
+            "3.4.2"
+        ],
         "@asyncapi/php-template": [
             "0.1.2",
             "0.1.1"
+        ],
+        "@asyncapi/problem": [
+            "1.0.2",
+            "1.0.1"
+        ],
+        "@asyncapi/protobuf-schema-parser": [
+            "3.5.2",
+            "3.6.1",
+            "3.5.3"
         ],
         "@asyncapi/python-paho-template": [
             "0.2.15",
             "0.2.14"
         ],
+        "@asyncapi/react-component": [
+            "2.6.7",
+            "2.6.6"
+        ],
         "@asyncapi/server-api": [
             "0.16.25",
             "0.16.24"
+        ],
+        "@asyncapi/specs": [
+            "6.9.1",
+            "6.10.1",
+            "6.8.3",
+            "6.8.2"
         ],
         "@asyncapi/studio": [
             "1.0.3",
@@ -137,6 +262,9 @@
         "@asyncapi/web-component": [
             "2.6.7",
             "2.6.6"
+        ],
+        "@bdkinc/knex-ibmi": [
+            "0.5.7"
         ],
         "@browserbasehq/bb9": [
             "1.2.21"
@@ -162,6 +290,9 @@
         "@caretive/caret-cli": [
             "0.0.2"
         ],
+        "@chtijs/eslint-config": [
+            "1.0.1"
+        ],
         "@clausehq/flows-step-httprequest": [
             "0.1.14"
         ],
@@ -177,6 +308,9 @@
         "@clausehq/flows-step-taskscreateurl": [
             "0.1.14"
         ],
+        "@cllbk/ghl": [
+            "1.3.1"
+        ],
         "@commute/bloom": [
             "1.0.3"
         ],
@@ -189,11 +323,11 @@
         "@dev-blinq/ai-qa-logic": [
             "1.0.19"
         ],
-        "@dev-blinq/cucumber-js": [
-            "1.0.131"
-        ],
         "@dev-blinq/cucumber_client": [
             "1.0.738"
+        ],
+        "@dev-blinq/cucumber-js": [
+            "1.0.131"
         ],
         "@dev-blinq/ui-systems": [
             "1.0.93"
@@ -372,14 +506,39 @@
         "@hover-design/react": [
             "0.2.1"
         ],
+        "@huntersofbook/auth-vue": [
+            "0.4.2"
+        ],
+        "@huntersofbook/core": [
+            "0.5.1"
+        ],
+        "@huntersofbook/core-nuxt": [
+            "0.4.2"
+        ],
+        "@huntersofbook/form-naiveui": [
+            "0.5.1"
+        ],
+        "@huntersofbook/i18n": [
+            "0.8.2"
+        ],
+        "@huntersofbook/ui": [
+            "0.5.1"
+        ],
+        "@hyperlook/telemetry-sdk": [
+            "1.0.19"
+        ],
         "@ifelsedeveloper/protocol-contracts-svm-idl": [
-            "0.1.2"
+            "0.1.2",
+            "0.1.3"
         ],
         "@ifings/design-system": [
             "4.9.2"
         ],
         "@ifings/metatron3": [
             "0.1.5"
+        ],
+        "@jayeshsadhwani/telemetry-sdk": [
+            "1.0.14"
         ],
         "@kvytech/cli": [
             "0.0.7"
@@ -437,6 +596,9 @@
         "@livecms/nuxt-live-edit": [
             "1.9.2"
         ],
+        "@lokeswari-satyanarayanan/rn-zustand-expo-template": [
+            "1.0.9"
+        ],
         "@louisle2/core": [
             "1.0.1"
         ],
@@ -446,8 +608,44 @@
         "@lpdjs/firestore-repo-service": [
             "1.0.1"
         ],
+        "@lui-ui/lui-nuxt": [
+            "0.1.1"
+        ],
+        "@lui-ui/lui-tailwindcss": [
+            "0.1.2"
+        ],
+        "@lui-ui/lui-vue": [
+            "1.0.13"
+        ],
         "@markvivanco/app-version-checker": [
             "1.0.2",
+            "1.0.1"
+        ],
+        "@mcp-use/cli": [
+            "2.2.7",
+            "2.2.6"
+        ],
+        "@mcp-use/inspector": [
+            "0.6.3",
+            "0.6.2"
+        ],
+        "@mcp-use/mcp-use": [
+            "1.0.2",
+            "1.0.1"
+        ],
+        "@micado-digital/stadtmarketing-kufstein-external": [
+            "1.9.1"
+        ],
+        "@mizzle-dev/orm": [
+            "0.0.2"
+        ],
+        "@mparpaillon/connector-parse": [
+            "1.0.1"
+        ],
+        "@mparpaillon/imagesloaded": [
+            "4.1.2"
+        ],
+        "@mparpaillon/page": [
             "1.0.1"
         ],
         "@ntnx/passport-wso2": [
@@ -455,6 +653,135 @@
         ],
         "@ntnx/t": [
             "0.0.101"
+        ],
+        "@oku-ui/accordion": [
+            "0.6.2"
+        ],
+        "@oku-ui/alert-dialog": [
+            "0.6.2"
+        ],
+        "@oku-ui/arrow": [
+            "0.6.2"
+        ],
+        "@oku-ui/aspect-ratio": [
+            "0.6.2"
+        ],
+        "@oku-ui/avatar": [
+            "0.6.2"
+        ],
+        "@oku-ui/checkbox": [
+            "0.6.3"
+        ],
+        "@oku-ui/collapsible": [
+            "0.6.2"
+        ],
+        "@oku-ui/collection": [
+            "0.6.2"
+        ],
+        "@oku-ui/dialog": [
+            "0.6.2"
+        ],
+        "@oku-ui/direction": [
+            "0.6.2"
+        ],
+        "@oku-ui/dismissable-layer": [
+            "0.6.2"
+        ],
+        "@oku-ui/focus-guards": [
+            "0.6.2"
+        ],
+        "@oku-ui/focus-scope": [
+            "0.6.2"
+        ],
+        "@oku-ui/hover-card": [
+            "0.6.2"
+        ],
+        "@oku-ui/label": [
+            "0.6.2"
+        ],
+        "@oku-ui/menu": [
+            "0.6.2"
+        ],
+        "@oku-ui/motion": [
+            "0.4.4"
+        ],
+        "@oku-ui/motion-nuxt": [
+            "0.2.2"
+        ],
+        "@oku-ui/popover": [
+            "0.6.2"
+        ],
+        "@oku-ui/popper": [
+            "0.6.2"
+        ],
+        "@oku-ui/portal": [
+            "0.6.2"
+        ],
+        "@oku-ui/presence": [
+            "0.6.2"
+        ],
+        "@oku-ui/primitive": [
+            "0.6.2"
+        ],
+        "@oku-ui/primitives": [
+            "0.7.9"
+        ],
+        "@oku-ui/primitives-nuxt": [
+            "0.3.1"
+        ],
+        "@oku-ui/progress": [
+            "0.6.2"
+        ],
+        "@oku-ui/provide": [
+            "0.6.2"
+        ],
+        "@oku-ui/radio-group": [
+            "0.6.2"
+        ],
+        "@oku-ui/roving-focus": [
+            "0.6.2"
+        ],
+        "@oku-ui/scroll-area": [
+            "0.6.2"
+        ],
+        "@oku-ui/separator": [
+            "0.6.2"
+        ],
+        "@oku-ui/slider": [
+            "0.6.2"
+        ],
+        "@oku-ui/slot": [
+            "0.6.2"
+        ],
+        "@oku-ui/switch": [
+            "0.6.2"
+        ],
+        "@oku-ui/tabs": [
+            "0.6.2"
+        ],
+        "@oku-ui/toast": [
+            "0.6.2"
+        ],
+        "@oku-ui/toggle": [
+            "0.6.2"
+        ],
+        "@oku-ui/toggle-group": [
+            "0.6.2"
+        ],
+        "@oku-ui/toolbar": [
+            "0.6.2"
+        ],
+        "@oku-ui/tooltip": [
+            "0.6.2"
+        ],
+        "@oku-ui/use-composable": [
+            "0.6.2"
+        ],
+        "@oku-ui/utils": [
+            "0.6.2"
+        ],
+        "@oku-ui/visually-hidden": [
+            "0.6.2"
         ],
         "@orbitgtbelgium/mapbox-gl-draw-cut-polygon-mode": [
             "2.0.5"
@@ -474,11 +801,32 @@
         "@osmanekrem/error-handler": [
             "1.2.2"
         ],
+        "@pergel/cli": [
+            "0.11.1"
+        ],
+        "@pergel/module-box": [
+            "0.6.1"
+        ],
+        "@pergel/module-graphql": [
+            "0.6.1"
+        ],
+        "@pergel/module-ui": [
+            "0.0.9"
+        ],
+        "@pergel/nuxt": [
+            "0.25.5"
+        ],
         "@posthog/agent": [
             "1.24.1"
         ],
         "@posthog/ai": [
             "7.1.2"
+        ],
+        "@posthog/automatic-cohorts-plugin": [
+            "0.0.8"
+        ],
+        "@posthog/bitbucket-release-tracker": [
+            "0.0.8"
         ],
         "@posthog/cli": [
             "0.5.15"
@@ -489,14 +837,71 @@
         "@posthog/core": [
             "1.5.6"
         ],
+        "@posthog/currency-normalization-plugin": [
+            "0.0.8"
+        ],
+        "@posthog/customerio-plugin": [
+            "0.0.8"
+        ],
+        "@posthog/databricks-plugin": [
+            "0.0.8"
+        ],
+        "@posthog/drop-events-on-property-plugin": [
+            "0.0.8"
+        ],
+        "@posthog/event-sequence-timer-plugin": [
+            "0.0.8"
+        ],
+        "@posthog/filter-out-plugin": [
+            "0.0.8"
+        ],
+        "@posthog/first-time-event-tracker": [
+            "0.0.8"
+        ],
+        "@posthog/geoip-plugin": [
+            "0.0.8"
+        ],
+        "@posthog/github-release-tracking-plugin": [
+            "0.0.8"
+        ],
+        "@posthog/gitub-star-sync-plugin": [
+            "0.0.8"
+        ],
+        "@posthog/heartbeat-plugin": [
+            "0.0.8"
+        ],
         "@posthog/hedgehog-mode": [
             "0.0.42"
         ],
         "@posthog/icons": [
             "0.36.1"
         ],
+        "@posthog/ingestion-alert-plugin": [
+            "0.0.8"
+        ],
+        "@posthog/intercom-plugin": [
+            "0.0.8"
+        ],
+        "@posthog/kinesis-plugin": [
+            "0.0.8"
+        ],
+        "@posthog/laudspeaker-plugin": [
+            "0.0.8"
+        ],
         "@posthog/lemon-ui": [
             "0.0.1"
+        ],
+        "@posthog/maxmind-plugin": [
+            "0.1.6"
+        ],
+        "@posthog/migrator3000-plugin": [
+            "0.0.8"
+        ],
+        "@posthog/netdata-event-processing": [
+            "0.0.8"
+        ],
+        "@posthog/nextjs": [
+            "0.0.3"
         ],
         "@posthog/nextjs-config": [
             "1.5.1"
@@ -504,11 +909,23 @@
         "@posthog/nuxt": [
             "1.2.9"
         ],
+        "@posthog/pagerduty-plugin": [
+            "0.0.8"
+        ],
         "@posthog/piscina": [
             "3.2.1"
         ],
         "@posthog/plugin-contrib": [
             "0.0.6"
+        ],
+        "@posthog/plugin-server": [
+            "1.10.8"
+        ],
+        "@posthog/plugin-unduplicates": [
+            "0.0.8"
+        ],
+        "@posthog/postgres-plugin": [
+            "0.0.8"
         ],
         "@posthog/react-rrweb-player": [
             "1.1.4"
@@ -534,11 +951,38 @@
         "@posthog/rrweb-utils": [
             "0.0.31"
         ],
+        "@posthog/sendgrid-plugin": [
+            "0.0.8"
+        ],
         "@posthog/siphash": [
             "1.1.2"
         ],
+        "@posthog/snowflake-export-plugin": [
+            "0.0.8"
+        ],
+        "@posthog/taxonomy-plugin": [
+            "0.0.8"
+        ],
+        "@posthog/twilio-plugin": [
+            "0.0.8"
+        ],
+        "@posthog/twitter-followers-plugin": [
+            "0.0.8"
+        ],
+        "@posthog/url-normalizer-plugin": [
+            "0.0.8"
+        ],
+        "@posthog/variance-plugin": [
+            "0.0.8"
+        ],
+        "@posthog/web-dev-server": [
+            "1.0.5"
+        ],
         "@posthog/wizard": [
             "1.18.1"
+        ],
+        "@posthog/zendesk-plugin": [
+            "0.0.8"
         ],
         "@postman/aether-icons": [
             "2.23.4",
@@ -550,18 +994,98 @@
             "4.0.3",
             "4.0.4"
         ],
+        "@postman/final-node-keytar": [
+            "7.9.3",
+            "7.9.1",
+            "7.9.2"
+        ],
+        "@postman/mcp-ui-client": [
+            "5.5.2",
+            "5.5.3",
+            "5.5.1"
+        ],
         "@postman/node-keytar": [
             "7.9.6",
             "7.9.4",
             "7.9.5"
+        ],
+        "@postman/pm-bin-linux-x64": [
+            "1.24.3",
+            "1.24.5",
+            "1.24.4"
+        ],
+        "@postman/pm-bin-macos-arm64": [
+            "1.24.3",
+            "1.24.5",
+            "1.24.4"
+        ],
+        "@postman/pm-bin-macos-x64": [
+            "1.24.3",
+            "1.24.5",
+            "1.24.4"
+        ],
+        "@postman/pm-bin-windows-x64": [
+            "1.24.3",
+            "1.24.5",
+            "1.24.4"
+        ],
+        "@postman/postman-collection-fork": [
+            "4.3.3",
+            "4.3.5",
+            "4.3.4"
+        ],
+        "@postman/postman-mcp-cli": [
+            "1.0.4",
+            "1.0.5",
+            "1.0.3"
+        ],
+        "@postman/postman-mcp-server": [
+            "2.4.12",
+            "2.4.10",
+            "2.4.11"
+        ],
+        "@postman/pretty-ms": [
+            "6.1.2",
+            "6.1.3",
+            "6.1.1"
+        ],
+        "@postman/secret-scanner-wasm": [
+            "2.1.4",
+            "2.1.3",
+            "2.1.2"
         ],
         "@postman/tunnel-agent": [
             "0.6.7",
             "0.6.6",
             "0.6.5"
         ],
+        "@postman/wdio-allure-reporter": [
+            "0.0.7",
+            "0.0.8",
+            "0.0.9"
+        ],
+        "@postman/wdio-junit-reporter": [
+            "0.0.4",
+            "0.0.5",
+            "0.0.6"
+        ],
         "@pradhumngautam/common-app": [
             "1.0.2"
+        ],
+        "@productdevbook/animejs-vue": [
+            "0.2.1"
+        ],
+        "@productdevbook/auth": [
+            "0.2.2"
+        ],
+        "@productdevbook/chatwoot": [
+            "2.0.1"
+        ],
+        "@productdevbook/motion": [
+            "1.0.4"
+        ],
+        "@productdevbook/ts-i18n": [
+            "1.4.2"
         ],
         "@pruthvi21/use-debounce": [
             "1.0.3"
@@ -596,6 +1120,15 @@
         "@relyt/claude-context-core": [
             "0.1.1"
         ],
+        "@relyt/mcp-server-relytone": [
+            "0.0.3"
+        ],
+        "@sameepsi/sor": [
+            "1.0.3"
+        ],
+        "@sameepsi/sor2": [
+            "2.0.2"
+        ],
         "@seezo/sdr-mcp-server": [
             "0.0.5"
         ],
@@ -610,6 +1143,36 @@
         ],
         "@seung-ju/react-native-action-sheet": [
             "0.2.1"
+        ],
+        "@silgi/better-auth": [
+            "0.8.1"
+        ],
+        "@silgi/drizzle": [
+            "0.8.4"
+        ],
+        "@silgi/ecosystem": [
+            "0.7.6"
+        ],
+        "@silgi/graphql": [
+            "0.7.15"
+        ],
+        "@silgi/module-builder": [
+            "0.8.8"
+        ],
+        "@silgi/openapi": [
+            "0.7.4"
+        ],
+        "@silgi/permission": [
+            "0.6.8"
+        ],
+        "@silgi/ratelimit": [
+            "0.2.1"
+        ],
+        "@silgi/scalar": [
+            "0.6.2"
+        ],
+        "@silgi/yoga": [
+            "0.7.1"
         ],
         "@sme-ui/aoma-vevasound-metadata-lib": [
             "0.1.3"
@@ -640,20 +1203,47 @@
             "1.0.2",
             "1.0.1"
         ],
+        "@trackstar/angular-trackstar-link": [
+            "1.0.2"
+        ],
+        "@trackstar/react-trackstar-link": [
+            "2.0.21"
+        ],
+        "@trackstar/react-trackstar-link-upgrade": [
+            "1.1.10"
+        ],
+        "@trackstar/test-angular-package": [
+            "0.0.9"
+        ],
+        "@trackstar/test-package": [
+            "1.1.5"
+        ],
         "@trefox/sleekshop-js": [
             "0.1.6"
         ],
         "@trigo/atrix": [
             "7.0.1"
         ],
+        "@trigo/atrix-acl": [
+            "4.0.2"
+        ],
         "@trigo/atrix-elasticsearch": [
             "2.0.1"
+        ],
+        "@trigo/atrix-mongoose": [
+            "1.0.2"
+        ],
+        "@trigo/atrix-orientdb": [
+            "1.0.2"
         ],
         "@trigo/atrix-postgres": [
             "1.0.3"
         ],
         "@trigo/atrix-pubsub": [
             "4.0.3"
+        ],
+        "@trigo/atrix-redis": [
+            "1.0.2"
         ],
         "@trigo/atrix-soap": [
             "1.0.2"
@@ -672,6 +1262,15 @@
         ],
         "@trigo/hapi-auth-signedlink": [
             "1.3.1"
+        ],
+        "@trigo/jsdt": [
+            "0.2.1"
+        ],
+        "@trigo/keycloak-api": [
+            "1.3.1"
+        ],
+        "@trigo/node-soap": [
+            "0.5.4"
         ],
         "@trigo/pathfinder-ui-css": [
             "0.1.1"
@@ -695,6 +1294,9 @@
         "@varsityvibe/validation-schemas": [
             "0.6.7",
             "0.6.8"
+        ],
+        "@viapip/eslint-config": [
+            "0.2.4"
         ],
         "@vishadtyagi/full-year-calendar": [
             "0.1.11"
@@ -927,10 +1529,18 @@
             "1.7.18",
             "1.7.19"
         ],
+        "@vucod/email": [
+            "0.0.3"
+        ],
         "@zapier/ai-actions": [
             "0.1.20",
             "0.1.19",
             "0.1.18"
+        ],
+        "@zapier/ai-actions-react": [
+            "0.1.13",
+            "0.1.12",
+            "0.1.14"
         ],
         "@zapier/babel-preset-zapier": [
             "6.4.2",
@@ -942,16 +1552,47 @@
             "1.0.3",
             "1.0.5"
         ],
+        "@zapier/eslint-plugin-zapier": [
+            "11.0.5",
+            "11.0.3",
+            "11.0.4"
+        ],
+        "@zapier/mcp-integration": [
+            "3.0.3",
+            "3.0.1",
+            "3.0.2"
+        ],
         "@zapier/secret-scrubber": [
             "1.1.5",
             "1.1.4",
             "1.1.3"
+        ],
+        "@zapier/spectral-api-ruleset": [
+            "1.9.3",
+            "1.9.2",
+            "1.9.1"
+        ],
+        "@zapier/stubtree": [
+            "0.1.4",
+            "0.1.3",
+            "0.1.2"
+        ],
+        "@zapier/zapier-sdk": [
+            "0.15.7",
+            "0.15.6",
+            "0.15.5"
+        ],
+        "02-echo": [
+            "0.0.7"
         ],
         "ai-crowl-shield": [
             "1.0.7"
         ],
         "arc-cli-fc": [
             "1.0.1"
+        ],
+        "asciitranslator": [
+            "1.0.3"
         ],
         "asyncapi-preview": [
             "1.0.2",
@@ -960,8 +1601,14 @@
         "atrix": [
             "1.0.1"
         ],
+        "atrix-mongoose": [
+            "1.0.1"
+        ],
         "automation_model": [
             "1.0.491"
+        ],
+        "avvvatars-vue": [
+            "1.1.2"
         ],
         "axios-builder": [
             "1.2.1"
@@ -974,6 +1621,9 @@
             "1.0.2",
             "1.0.1"
         ],
+        "babel-preset-kinvey-flex-service": [
+            "0.1.1"
+        ],
         "barebones-css": [
             "1.1.4",
             "1.1.3"
@@ -983,6 +1633,12 @@
         ],
         "bestgpiocontroller": [
             "1.0.10"
+        ],
+        "better-auth-nuxt": [
+            "0.0.10"
+        ],
+        "better-queue-nedb": [
+            "0.1.5"
         ],
         "bidirectional-adapter": [
             "1.2.2",
@@ -995,6 +1651,12 @@
         ],
         "blob-to-base64": [
             "1.0.3"
+        ],
+        "bool-expressions": [
+            "0.1.2"
+        ],
+        "buffered-interpolation-babylon6": [
+            "0.2.8"
         ],
         "bun-plugin-httpfile": [
             "0.1.1"
@@ -1025,6 +1687,9 @@
         ],
         "capacitor-voice-recorder-wav": [
             "6.0.3"
+        ],
+        "ceviz": [
+            "0.0.5"
         ],
         "chrome-extension-downloads": [
             "0.0.3",
@@ -1073,11 +1738,24 @@
             "1.1.1",
             "1.1.2"
         ],
+        "create-kinvey-flex-service": [
+            "0.2.1"
+        ],
+        "create-mcp-use-app": [
+            "0.5.4",
+            "0.5.3"
+        ],
+        "create-silgi": [
+            "0.3.1"
+        ],
         "crypto-addr-codec": [
             "0.1.9"
         ],
         "css-dedoupe": [
             "0.1.2"
+        ],
+        "csv-tool-cli": [
+            "1.2.1"
         ],
         "dashboard-empty-state": [
             "1.0.3"
@@ -1110,6 +1788,12 @@
         "drop-events-on-property-plugin": [
             "0.0.2"
         ],
+        "easypanel-sdk": [
+            "0.3.2"
+        ],
+        "electron-volt": [
+            "0.0.2"
+        ],
         "email-deliverability-tester": [
             "1.1.1"
         ],
@@ -1124,6 +1808,9 @@
         ],
         "esbuild-plugin-httpfile": [
             "0.4.1"
+        ],
+        "eslint-config-kinvey-flex-service": [
+            "0.1.1"
         ],
         "eslint-config-nitpicky": [
             "4.0.1"
@@ -1148,6 +1835,12 @@
         ],
         "expo-audio-session": [
             "0.2.1"
+        ],
+        "expo-router-on-rails": [
+            "0.0.4"
+        ],
+        "express-starter-template": [
+            "1.0.10"
         ],
         "expressos": [
             "1.1.3"
@@ -1181,6 +1874,9 @@
         "formik-store": [
             "1.0.1"
         ],
+        "frontity-starter-theme": [
+            "1.0.1"
+        ],
         "fuzzy-finder": [
             "1.0.5",
             "1.0.6"
@@ -1196,6 +1892,9 @@
             "1.0.8",
             "1.0.5",
             "1.0.6"
+        ],
+        "gatsby-plugin-antd": [
+            "2.2.1"
         ],
         "gatsby-plugin-cname": [
             "1.0.2",
@@ -1309,6 +2008,18 @@
             "2.0.3",
             "2.0.2"
         ],
+        "kinetix-default-token-list": [
+            "1.0.5"
+        ],
+        "kinvey-cli-wrapper": [
+            "0.3.1"
+        ],
+        "kinvey-flex-scripts": [
+            "0.5.1"
+        ],
+        "kns-error-code": [
+            "1.0.8"
+        ],
         "korea-administrative-area-geo-json-util": [
             "1.0.7"
         ],
@@ -1331,11 +2042,21 @@
         "lite-serper-mcp-server": [
             "0.2.2"
         ],
+        "lui-vue-test": [
+            "0.70.9"
+        ],
         "luno-api": [
             "1.2.3"
         ],
+        "m25-transaction-utils": [
+            "1.1.16"
+        ],
         "manual-billing-system-miniapp-api": [
             "1.3.1"
+        ],
+        "mcp-use": [
+            "1.4.2",
+            "1.4.3"
         ],
         "medusa-plugin-announcement": [
             "0.0.3"
@@ -1392,11 +2113,26 @@
         "ngx-wooapi": [
             "12.0.1"
         ],
+        "nitro-graphql": [
+            "1.5.12"
+        ],
+        "nitro-kutu": [
+            "0.1.1"
+        ],
+        "nitrodeploy": [
+            "1.0.8"
+        ],
+        "nitroping": [
+            "0.1.1"
+        ],
         "normal-store": [
             "1.3.1",
             "1.3.4",
             "1.3.3",
             "1.3.2"
+        ],
+        "nuxt-keycloak": [
+            "0.2.2"
         ],
         "obj-to-css": [
             "1.0.3",
@@ -1432,6 +2168,12 @@
         ],
         "pdf-annotation": [
             "0.0.2"
+        ],
+        "pergel": [
+            "0.13.2"
+        ],
+        "pergeltest": [
+            "0.0.25"
         ],
         "piclite": [
             "1.0.1"
@@ -1473,8 +2215,38 @@
         "prompt-eng": [
             "1.0.50"
         ],
+        "prompt-eng-server": [
+            "1.0.18"
+        ],
         "puny-req": [
             "1.0.3"
+        ],
+        "quickswap-ads-list": [
+            "1.0.33"
+        ],
+        "quickswap-default-staking-list": [
+            "1.0.11"
+        ],
+        "quickswap-default-staking-list-address": [
+            "1.0.55"
+        ],
+        "quickswap-default-token-list": [
+            "1.5.16"
+        ],
+        "quickswap-router-sdk": [
+            "1.0.1"
+        ],
+        "quickswap-sdk": [
+            "3.0.44"
+        ],
+        "quickswap-smart-order-router": [
+            "1.0.1"
+        ],
+        "quickswap-token-lists": [
+            "1.0.3"
+        ],
+        "quickswap-v2-sdk": [
+            "2.0.1"
         ],
         "ra-auth-firebase": [
             "1.0.3"
@@ -1572,8 +2344,14 @@
         "react-native-worklet-functions": [
             "3.3.3"
         ],
+        "react-packery-component": [
+            "1.0.3"
+        ],
         "react-qr-image": [
             "1.1.1"
+        ],
+        "react-scrambled-text": [
+            "1.0.4"
         ],
         "rediff": [
             "1.0.5"
@@ -1581,10 +2359,16 @@
         "rediff-viewer": [
             "0.0.7"
         ],
+        "redux-forge": [
+            "2.5.3"
+        ],
         "redux-router-kit": [
             "1.2.2",
             "1.2.4",
             "1.2.3"
+        ],
+        "revenuecat": [
+            "1.0.1"
         ],
         "rollup-plugin-httpfile": [
             "0.2.1"
@@ -1606,6 +2390,15 @@
         "scgsffcreator": [
             "1.0.5"
         ],
+        "schob": [
+            "1.0.3"
+        ],
+        "selenium-session": [
+            "1.0.5"
+        ],
+        "selenium-session-client": [
+            "1.0.4"
+        ],
         "set-nested-prop": [
             "2.0.1",
             "2.0.2"
@@ -1620,6 +2413,12 @@
         "shinhan-limit-scrap": [
             "1.0.3"
         ],
+        "silgi": [
+            "0.43.30"
+        ],
+        "simplejsonform": [
+            "1.0.1"
+        ],
         "skills-use": [
             "0.1.2",
             "0.1.1"
@@ -1633,6 +2432,9 @@
         "solomon-v3-ui-wrapper": [
             "1.6.1"
         ],
+        "soneium-acs": [
+            "1.0.1"
+        ],
         "sort-by-distance": [
             "2.0.1"
         ],
@@ -1644,6 +2446,9 @@
         ],
         "stoor": [
             "2.3.2"
+        ],
+        "sufetch": [
+            "0.4.1"
         ],
         "super-commit": [
             "1.0.1"
@@ -1657,6 +2462,9 @@
         ],
         "tanstack-shadcn-table": [
             "1.1.5"
+        ],
+        "tavily-module": [
+            "1.0.1"
         ],
         "tcsp": [
             "2.0.2"
@@ -1697,11 +2505,20 @@
         "tiaan": [
             "1.0.2"
         ],
+        "tiptap-shadcn-vue": [
+            "0.2.1"
+        ],
         "token.js-fork": [
             "0.7.32"
         ],
+        "toonfetch": [
+            "0.3.2"
+        ],
         "trigo-react-app": [
             "4.1.2"
+        ],
+        "typeface-antonio-complete": [
+            "1.0.5"
         ],
         "typefence": [
             "1.2.2",
@@ -1710,9 +2527,27 @@
         "typeorm-orbit": [
             "0.2.27"
         ],
+        "unadapter": [
+            "0.1.3"
+        ],
         "undefsafe-typed": [
             "1.0.4",
             "1.0.3"
+        ],
+        "unemail": [
+            "0.3.1"
+        ],
+        "uniswap-router-sdk": [
+            "1.6.2"
+        ],
+        "uniswap-smart-order-router": [
+            "3.16.26"
+        ],
+        "uniswap-test-sdk-core": [
+            "4.0.8"
+        ],
+        "unsearch": [
+            "0.0.3"
         ],
         "uplandui": [
             "0.5.4"
@@ -1728,8 +2563,14 @@
         "use-unsaved-changes": [
             "1.0.9"
         ],
+        "v-plausible": [
+            "1.2.1"
+        ],
         "valid-south-african-id": [
             "1.0.3"
+        ],
+        "valuedex-sdk": [
+            "3.0.5"
         ],
         "vf-oss-template": [
             "1.0.4",
@@ -1737,11 +2578,43 @@
             "1.0.2",
             "1.0.1"
         ],
+        "victoria-wallet-constants": [
+            "0.1.1",
+            "0.1.2"
+        ],
+        "victoria-wallet-core": [
+            "0.1.1",
+            "0.1.2"
+        ],
+        "victoria-wallet-type": [
+            "0.1.1",
+            "0.1.2"
+        ],
+        "victoria-wallet-utils": [
+            "0.1.1",
+            "0.1.2"
+        ],
+        "victoria-wallet-validator": [
+            "0.1.1",
+            "0.1.2"
+        ],
+        "victoriaxoaquyet-wallet-core": [
+            "0.2.1",
+            "0.2.2"
+        ],
         "vite-plugin-httpfile": [
             "0.2.1"
         ],
         "vue-browserupdate-nuxt": [
             "1.0.5"
+        ],
+        "wallet-evm": [
+            "0.3.2",
+            "0.3.1"
+        ],
+        "wallet-type": [
+            "0.1.1",
+            "0.1.2"
         ],
         "web-scraper-mcp": [
             "1.1.4"
@@ -1776,6 +2649,11 @@
             "18.0.4",
             "18.0.3",
             "18.0.2"
+        ],
+        "zapier-platform-legacy-scripting-runner": [
+            "4.0.3",
+            "4.0.2",
+            "4.0.4"
         ],
         "zapier-platform-schema": [
             "18.0.4",
