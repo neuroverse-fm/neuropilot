@@ -15,6 +15,14 @@
             "description": "The date of the compromise, using the extended ISO 8601 standard format (ex 2021-09-20).",
             "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
         },
+        "help": {
+            "type": "array",
+            "description": "Links to info/help resources if a compromised package was detected.",
+            "items": {
+                "type": "string",
+                "examples": ["https://example.com"]
+            }
+        },
         "packages": {
             "type": "object",
             "additionalProperties": false,

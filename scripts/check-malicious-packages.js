@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 /**
  * This script scans a Node.js project for known malicious package versions
  *
@@ -70,14 +71,15 @@ function loadCompromiseConfig(configPath) {
 
 /**
  * Find all .cmp.json files in the scripts directory
+ * @param {string} dir Relative path.
  * @returns {string[]} Array of file paths
  */
-function findCompromiseConfigs() {
-  const scriptsDir = __dirname;
-  const files = fs.readdirSync(scriptsDir);
+function findCompromiseConfigs(dir = 'scripts') {
+  const dirToSearch = path.join(process.cwd(), dir);
+  const files = fs.readdirSync(dirToSearch);
   return files
     .filter((file) => file.endsWith('.cmp.json'))
-    .map((file) => path.join(scriptsDir, file));
+    .map((file) => path.join(dirToSearch, file));
 }
 
 /**
@@ -111,8 +113,8 @@ function mergeCompromiseConfigs(configPaths) {
 
 /**
  * Check pnpm-lock.yaml for malicious packages by parsing the YAML structure
- * @param {string} lockPath - Path to pnpm-lock.yaml
- * @param {{[packageName: string]: string[]}} maliciousPackages - Map of package names to malicious versions
+ * @param {string} lockPath Path to pnpm-lock.yaml
+ * @param {{[packageName: string]: string[]}} maliciousPackages Map of package names to malicious versions
  * @returns {boolean} True if any malicious packages were found
  */
 function checkPnpmLockYaml(lockPath, maliciousPackages) {
@@ -244,7 +246,8 @@ if (!found) {
   console.log('✅ No malicious packages detected.');
 } else {
   console.log('\n❌ MALICIOUS PACKAGES DETECTED!');
-  console.log('Please remove the compromised packages immediately.');
+  console.log('Your pnpm-lock.yaml and/or node_modules folder has a compromised dependency!');
+  console.log('Please remove the compromised packages immediately, and perform compromise checks on your system.')
   // Abort install if run in a lifecycle script
   process.exit(1);
 }
