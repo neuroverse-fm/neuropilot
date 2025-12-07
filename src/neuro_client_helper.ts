@@ -8,6 +8,7 @@ import { logOutput, turtleSafari } from '@/utils';
 import { PromptGenerator } from '@/rce';
 import { RCECancelEvent } from '@events/utils';
 import { JSONSchema7 } from 'json-schema';
+import { Disposable } from 'vscode';
 
 /** Data used by an action handler. */
 export interface ActionData {
@@ -41,10 +42,21 @@ export interface RCEAction<T = unknown> extends TypedAction {
     displayName?: string;
     /** The JSON schema for validating the action parameters if experimental schemas are disabled. */
     schemaFallback?: JSONSchema7;
-    /** The function to validate the action data *after* checking the schema. */
-    //validators?: ((actionData: ActionData) => ActionValidationResult | Promise<ActionValidationResult>)[];
+    /**
+     * An object that defines an array of functions to validate the action's "environment".
+     * Validators run before requests/executions to ensure environment/input validity.
+     */
     validators?: {
+        /** 
+         * Synchronous validators that will block execution of the rest of the thread.
+         * As this delays the action result to Neuro, any promises must resolve quickly so as to be effectively synchronous speed-wise. 
+         */
         sync?: ((actionData: ActionData) => ActionValidationResult | Promise<ActionValidationResult>)[],
+        /**
+         * Asynchronous validators that will be ran  in parallel to each other.
+         * These will be executed after an action result, so it's perfect for long-running validators.
+         * Async validators will time out (and as a consequence, fail) after 1 second.
+         */
         async?: ((actionData: ActionData) => Promise<ActionValidationResult>)[];
     }
     /**
@@ -55,6 +67,12 @@ export interface RCEAction<T = unknown> extends TypedAction {
      * Following VS Code's pattern, Disposables will not be awaited if async.
      */
     cancelEvents?: ((actionData: ActionData) => RCECancelEvent<T> | null)[];
+    /**
+     * A function that is used to preview the action's effects.
+     * This function will be called while awaiting user approval, if the action is set to Copilot permission.
+     * The action must always return a {@link Disposable Disposable class}. If your preview effect does not need a dispose function to be called, return a no-op disposable.
+     */
+    preview?: (actionData: ActionData) => Disposable;
     /** The function to handle the action. */
     handler: RCEHandler;
     /** 
