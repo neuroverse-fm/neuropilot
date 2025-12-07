@@ -462,13 +462,16 @@ export async function RCEActionHandler(actionData: ActionData) {
 
             // Validate custom
             if (action.validators) {
-                for (const validate of action.validators) {
-                    const actionResult = await validate(actionData);
-                    if (!actionResult.success) {
-                        NEURO.client?.sendActionResult(actionData.id, !(actionResult.retry ?? false), actionResult.message);
-                        return;
+                if (action.validators.sync) {
+                    for (const validate of action.validators.sync) {
+                        const actionResult = await validate(actionData);
+                        if (!actionResult.success) {
+                            NEURO.client?.sendActionResult(actionData.id, !(actionResult.retry ?? false), actionResult.message);
+                            return;
+                        }
                     }
                 }
+                if (action.validators.async) vscode.window.showInformationMessage(`Action "${actionData.name}" uses asynchronous validators, which have not been implemented yet.`); // implementation needs this to be moved to be *after* setup of cancel events (and action result obv).
             }
 
             const eventArray: vscode.Disposable[] = [];

@@ -83,14 +83,16 @@ export const lintActions = {
         cancelEvents: [
             (actionData: ActionData) => targetedFileLintingResolvedEvent(actionData.params?.file),
         ],
-        validators: [validateDirectoryAccess, (actionData: ActionData) => {
-            const relativePath = actionData.params.file;
-            const workspaceUri = getWorkspaceUri()!;
-            const normalizedPath = normalizePath(workspaceUri.fsPath + '/' + relativePath);
-            const rawDiagnostics = vscode.languages.getDiagnostics(workspaceUri.with({ path: normalizedPath }));
-            if (rawDiagnostics.length === 0) return actionValidationFailure(`No linting problems found for file ${relativePath}.`);
-            else return actionValidationAccept();
-        }],
+        validators: {
+            sync: [validateDirectoryAccess, (actionData: ActionData) => {
+                const relativePath = actionData.params.file;
+                const workspaceUri = getWorkspaceUri()!;
+                const normalizedPath = normalizePath(workspaceUri.fsPath + '/' + relativePath);
+                const rawDiagnostics = vscode.languages.getDiagnostics(workspaceUri.with({ path: normalizedPath }));
+                if (rawDiagnostics.length === 0) return actionValidationFailure(`No linting problems found for file ${relativePath}.`);
+                else return actionValidationAccept();
+            }],
+        },
         promptGenerator: (actionData: ActionData) => `get linting diagnostics for "${actionData.params.file}".`,
     },
     get_folder_lint_problems: {
@@ -109,20 +111,22 @@ export const lintActions = {
         cancelEvents: [
             (actionData: ActionData) => targetedFolderLintingResolvedEvent(actionData.params?.folder),
         ],
-        validators: [validateDirectoryAccess, (actionData: ActionData) => {
-            const relativeFolder = actionData?.params.folder;
-            const workspacePath = getWorkspacePath();
-            assert(workspacePath);
-            const normalizedFolderPath = normalizePath(workspacePath + '/' + relativeFolder);
-            const diagnostics = vscode.languages.getDiagnostics();
-            const folderDiagnostics = diagnostics.filter(async ([diagUri, diags]) => {
-                return normalizePath(diagUri.fsPath).startsWith(normalizedFolderPath) &&
+        validators: {
+            sync: [validateDirectoryAccess, (actionData: ActionData) => {
+                const relativeFolder = actionData?.params.folder;
+                const workspacePath = getWorkspacePath();
+                assert(workspacePath);
+                const normalizedFolderPath = normalizePath(workspacePath + '/' + relativeFolder);
+                const diagnostics = vscode.languages.getDiagnostics();
+                const folderDiagnostics = diagnostics.filter(async ([diagUri, diags]) => {
+                    return normalizePath(diagUri.fsPath).startsWith(normalizedFolderPath) &&
                 isPathNeuroSafe(diagUri.fsPath) && diags.length > 0;
-            });
+                });
 
-            if (folderDiagnostics.length === 0) return actionValidationFailure(`No linting problems found for folder "${relativeFolder}".`);
-            else return actionValidationAccept();
-        }],
+                if (folderDiagnostics.length === 0) return actionValidationFailure(`No linting problems found for folder "${relativeFolder}".`);
+                else return actionValidationAccept();
+            }],
+        },
         promptGenerator: (actionData: ActionData) => `get linting diagnostics for "${actionData.params.folder}".`,
     },
     get_workspace_lint_problems: {
@@ -133,22 +137,24 @@ export const lintActions = {
         cancelEvents: [
             workspaceLintingResolvedEvent,
         ],
-        validators: [async () => {
-            const workspace = getWorkspacePath();
-            if (!workspace) {
-                return actionValidationFailure('Unable to get current workspace.');
-            }
-            return await validatePath(workspace, 'workspace');
-        }, () => {
-            const diagnostics = vscode.languages.getDiagnostics();
-            // Filter for diagnostics on safe files with errors.
-            const safeDiagnostics = diagnostics.filter(
-                ([uri, diags]) => isPathNeuroSafe(uri.fsPath) && diags.length > 0,
-            );
+        validators: {
+            sync: [async () => {
+                const workspace = getWorkspacePath();
+                if (!workspace) {
+                    return actionValidationFailure('Unable to get current workspace.');
+                }
+                return await validatePath(workspace, 'workspace');
+            }, () => {
+                const diagnostics = vscode.languages.getDiagnostics();
+                // Filter for diagnostics on safe files with errors.
+                const safeDiagnostics = diagnostics.filter(
+                    ([uri, diags]) => isPathNeuroSafe(uri.fsPath) && diags.length > 0,
+                );
 
-            if (safeDiagnostics.length === 0) return actionValidationFailure('No linting problems found for the current workspace.');
-            else return actionValidationAccept();
-        }],
+                if (safeDiagnostics.length === 0) return actionValidationFailure('No linting problems found for the current workspace.');
+                else return actionValidationAccept();
+            }],
+        },
         promptGenerator: () => 'get linting diagnostics for the current workspace.',
     },
 } satisfies Record<string, RCEAction>;

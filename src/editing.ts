@@ -203,7 +203,9 @@ export const editingActions = {
             description: undefined,
         },
         handler: handlePlaceCursor,
-        validators: [checkCurrentFile, createPositionValidator()],
+        validators: {
+            sync: [checkCurrentFile, createPositionValidator()],
+        },
         cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `${actionData.params.type === 'absolute' ? 'place her cursor at' : 'move her cursor by'} (${actionData.params.line}:${actionData.params.column}).`,
     },
@@ -212,7 +214,9 @@ export const editingActions = {
         description: 'Get your current cursor position and the text surrounding it.',
         category: CATEGORY_EDITING,
         handler: handleGetCursor,
-        validators: [checkCurrentFile],
+        validators: {
+            sync: [checkCurrentFile],
+        },
         cancelEvents: commonCancelEventsWithCursor,
         promptGenerator: 'get her current cursor position and the text surrounding it.',
     },
@@ -225,7 +229,9 @@ export const editingActions = {
             cancelOnDidChangeTextDocument,
         ],
         promptGenerator: 'get the current file\'s contents.',
-        validators: [checkCurrentFile],
+        validators: {
+            sync: [checkCurrentFile],
+        },
     },
     insert_text: {
         name: 'insert_text',
@@ -252,7 +258,9 @@ export const editingActions = {
                 return actionData.params.position ? null : createCursorPositionChangedEvent();
             },
         ],
-        validators: [checkCurrentFile, createPositionValidator('position'), createStringValidator(['text'])],
+        validators: {
+            sync: [checkCurrentFile, createPositionValidator('position'), createStringValidator(['text'])],
+        },
         promptGenerator: (actionData: ActionData) => {
             const lineCount = actionData.params.text.trim().split('\n').length;
             let text = `insert ${lineCount} line${lineCount === 1 ? '' : 's'} of code`;
@@ -302,7 +310,9 @@ export const editingActions = {
                 return actionData.params.position ? null : createCursorPositionChangedEvent();
             },
         ],
-        validators: [checkCurrentFile, createStringValidator(['lines'])],
+        validators: {
+            sync: [checkCurrentFile, createStringValidator(['lines'])],
+        },
         promptGenerator: (actionData: ActionData) => {
             const lines = actionData.params.text.trim().split('\n').length;
             const insertUnder = actionData.params.insertUnder;
@@ -329,7 +339,9 @@ export const editingActions = {
         },
         handler: handleReplaceText,
         cancelEvents: [cancelOnDidChangeActiveTextEditor],
-        validators: [checkCurrentFile, createStringValidator(['find', 'replaceWith']), createLineRangeValidator('lineRange')],
+        validators: {
+            sync: [checkCurrentFile, createStringValidator(['find', 'replaceWith']), createLineRangeValidator('lineRange')],
+        },
         promptGenerator: (actionData: ActionData) => {
             let text = 'replace ';
             const target = actionData.params.useRegex ? escapeRegExp(actionData.params.find) : actionData.params.find;
@@ -384,7 +396,9 @@ export const editingActions = {
         },
         handler: handleDeleteText,
         cancelEvents: [cancelOnDidChangeActiveTextEditor],
-        validators: [checkCurrentFile, createStringValidator(['find']), createLineRangeValidator('lineRange')],
+        validators: {
+            sync: [checkCurrentFile, createStringValidator(['find']), createLineRangeValidator('lineRange')],
+        },
         promptGenerator: (actionData: ActionData) => {
             let text = 'delete ';
             const target = actionData.params.useRegex ? escapeRegExp(actionData.params.find) : actionData.params.find;
@@ -445,7 +459,9 @@ export const editingActions = {
         },
         handler: handleFindText,
         cancelEvents: [cancelOnDidChangeActiveTextEditor],
-        validators: [checkCurrentFile, createStringValidator(['find']), createLineRangeValidator('lineRange')],
+        validators: {
+            sync: [checkCurrentFile, createStringValidator(['find']), createLineRangeValidator('lineRange')],
+        },
         promptGenerator: (actionData: ActionData) => {
             let text = 'find ';
             const target = actionData.params.useRegex ? escapeRegExp(actionData.params.find) : actionData.params.find;
@@ -494,7 +510,9 @@ export const editingActions = {
         category: CATEGORY_EDITING,
         handler: handleUndo,
         cancelEvents: commonCancelEvents,
-        validators: [checkCurrentFile],
+        validators: {
+            sync: [checkCurrentFile],
+        },
         promptGenerator: 'undo the last action.',
     },
     save: {
@@ -511,7 +529,9 @@ export const editingActions = {
                 ],
             }),
         ],
-        validators: [checkCurrentFile],
+        validators: {
+            sync: [checkCurrentFile],
+        },
         promptGenerator: 'save.',
         registerCondition: () => vscode.workspace.getConfiguration('files').get<string>('autoSave') !== 'afterDelay',
     },
@@ -529,7 +549,9 @@ export const editingActions = {
         },
         handler: handleRewriteAll,
         cancelEvents: [cancelOnDidChangeActiveTextEditor],
-        validators: [checkCurrentFile, createStringValidator(['content'])],
+        validators: {
+            sync: [checkCurrentFile, createStringValidator(['content'])],
+        },
         promptGenerator: (actionData: ActionData) => {
             const lineCount = actionData.params.content.trim().split('\n').length;
             return `rewrite the entire file with ${lineCount} line${lineCount === 1 ? '' : 's'} of content.`;
@@ -552,7 +574,9 @@ export const editingActions = {
         },
         handler: handleRewriteLines,
         cancelEvents: commonCancelEvents,
-        validators: [checkCurrentFile, createLineRangeValidator(), createStringValidator(['content'])],
+        validators: {
+            sync: [checkCurrentFile, createLineRangeValidator(), createStringValidator(['content'])],
+        },
         promptGenerator: (actionData: ActionData) => {
             const lineCount = actionData.params.content.trim().split('\n').length;
             return `rewrite lines ${actionData.params.startLine}-${actionData.params.endLine} with ${lineCount} line${lineCount === 1 ? '' : 's'} of content.`;
@@ -567,7 +591,9 @@ export const editingActions = {
         schema: LINE_RANGE_SCHEMA,
         handler: handleDeleteLines,
         cancelEvents: commonCancelEvents,
-        validators: [checkCurrentFile, createLineRangeValidator()],
+        validators: {
+            sync: [checkCurrentFile, createLineRangeValidator()],
+        },
         promptGenerator: (actionData: ActionData) => {
             return `delete lines ${actionData.params.startLine}-${actionData.params.endLine}.`;
         },
@@ -582,7 +608,9 @@ export const editingActions = {
         schema: LINE_RANGE_SCHEMA,
         handler: handleHighlightLines,
         cancelEvents: commonCancelEvents,
-        validators: [checkCurrentFile, createLineRangeValidator()],
+        validators: {
+            sync: [checkCurrentFile, createLineRangeValidator()],
+        },
         promptGenerator: (actionData: ActionData) => `highlight lines ${actionData.params.startLine}-${actionData.params.endLine}.`,
     },
     get_user_selection: {
@@ -591,7 +619,9 @@ export const editingActions = {
             + ' This will not move your own cursor.',
         category: CATEGORY_EDITING,
         handler: handleGetUserSelection,
-        validators: [checkCurrentFile],
+        validators: {
+            sync: [checkCurrentFile],
+        },
         promptGenerator: 'get your cursor position and surrounding text.',
     },
     replace_user_selection: {
@@ -622,17 +652,19 @@ export const editingActions = {
                 return null;
             },
         ],
-        validators: [
-            checkCurrentFile,
-            createStringValidator(['content']),
-            (actionData: ActionData) => { // Validate that the selection is known and unchanged if required
-                if (!actionData.params.requireSelectionUnchanged)
+        validators: {
+            sync: [
+                checkCurrentFile,
+                createStringValidator(['content']),
+                (actionData: ActionData) => { // Validate that the selection is known and unchanged if required
+                    if (!actionData.params.requireSelectionUnchanged)
+                        return actionValidationAccept();
+                    if (NEURO.lastKnownUserSelection === null || NEURO.lastKnownUserSelection !== vscode.window.activeTextEditor?.selection)
+                        return actionValidationFailure(`${CONNECTION.userName}'s selection has changed since it was last obtained.`);
                     return actionValidationAccept();
-                if (NEURO.lastKnownUserSelection === null || NEURO.lastKnownUserSelection !== vscode.window.activeTextEditor?.selection)
-                    return actionValidationFailure(`${CONNECTION.userName}'s selection has changed since it was last obtained.`);
-                return actionValidationAccept();
-            },
-        ],
+                },
+            ],
+        },
         promptGenerator: (actionData: ActionData) => {
             const lineCount = actionData.params.content.trim().split('\n').length;
             return `replace your current selection with ${lineCount} line${lineCount === 1 ? '' : 's'} of content.`;
@@ -667,27 +699,29 @@ export const editingActions = {
             additionalProperties: false,
         },
         handler: handleDiffPatch,
-        validators: [checkCurrentFile, (actionData: ActionData) => {
-            const patch = parseDiffPatch(actionData.params.diff);
-            if (!patch) {
-                return actionValidationFailure('Invalid diff format. Expected format:\n\n```\n>>>>>> SEARCH\n[code to find]\n======\n[replacement code]\n<<<<<< REPLACE\n```');
-            }
+        validators: {
+            sync: [checkCurrentFile, (actionData: ActionData) => {
+                const patch = parseDiffPatch(actionData.params.diff);
+                if (!patch) {
+                    return actionValidationFailure('Invalid diff format. Expected format:\n\n```\n>>>>>> SEARCH\n[code to find]\n======\n[replacement code]\n<<<<<< REPLACE\n```');
+                }
 
-            const { search } = patch;
+                const { search } = patch;
 
-            if (search.length === 0) {
-                return actionValidationFailure('Search content cannot be empty.');
-            }
+                if (search.length === 0) {
+                    return actionValidationFailure('Search content cannot be empty.');
+                }
 
-            const document = vscode.window.activeTextEditor?.document;
-            if (document === undefined)
-                return actionValidationFailure(CONTEXT_NO_ACTIVE_DOCUMENT);
-            const fileContent = filterFileContents(document.getText());
-            if (!fileContent.includes(filterFileContents(search)))
-                return actionValidationFailure('The search content was not found in the current document.');
+                const document = vscode.window.activeTextEditor?.document;
+                if (document === undefined)
+                    return actionValidationFailure(CONTEXT_NO_ACTIVE_DOCUMENT);
+                const fileContent = filterFileContents(document.getText());
+                if (!fileContent.includes(filterFileContents(search)))
+                    return actionValidationFailure('The search content was not found in the current document.');
 
-            return actionValidationAccept();
-        }],
+                return actionValidationAccept();
+            }],
+        },
         cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => {
             const patch = parseDiffPatch(actionData.params.diff)!;
