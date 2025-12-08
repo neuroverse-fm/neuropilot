@@ -8,7 +8,6 @@ import { logOutput, turtleSafari } from '@/utils';
 import { PromptGenerator } from '@/rce';
 import { RCECancelEvent } from '@events/utils';
 import { JSONSchema7 } from 'json-schema';
-import { Disposable } from 'vscode';
 
 /** Data used by an action handler. */
 export interface ActionData {
@@ -53,9 +52,9 @@ export interface RCEAction<T = unknown> extends TypedAction {
          */
         sync?: ((actionData: ActionData) => ActionValidationResult | Promise<ActionValidationResult>)[],
         /**
-         * Asynchronous validators that will be ran  in parallel to each other.
+         * Asynchronous validators that will be ran in parallel to each other.
          * These will be executed after an action result, so it's perfect for long-running validators.
-         * Async validators will time out (and as a consequence, fail) after 1 second.
+         * Async validators will time out (and consequently fail) after 1 second (1000ms).
          */
         async?: ((actionData: ActionData) => Promise<ActionValidationResult>)[];
     }
@@ -70,9 +69,14 @@ export interface RCEAction<T = unknown> extends TypedAction {
     /**
      * A function that is used to preview the action's effects.
      * This function will be called while awaiting user approval, if the action is set to Copilot permission.
-     * The action must always return a {@link Disposable Disposable class}. If your preview effect does not need a dispose function to be called, return a no-op disposable.
+     * 
+     * The action must return a Disposable-like object. The disposable will not be awaited if async.
+     * If your preview function does not require a dispose function to be called, return a no-op Disposable-like.
+     * @example return { dispose: () => undefined } // for no-ops
      */
-    preview?: (actionData: ActionData) => Disposable;
+    // The type must be `any`, using `never` causes it to return type errors. 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    preview?: (actionData: ActionData) => { dispose: () => any };
     /** The function to handle the action. */
     handler: RCEHandler;
     /** 
