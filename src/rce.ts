@@ -474,14 +474,14 @@ export async function RCEActionHandler(actionData: ActionData) {
             const eventArray: vscode.Disposable[] = [];
 
             if (ACTIONS_CONFIG.enableCancelEvents && action.cancelEvents) {
-                const eventListener = (eventObject: RCECancelEvent) => {
+                const eventListener = (eventObject: RCECancelEvent, eventData: unknown) => {
                     let createdReason: string;
                     let createdLogReason: string;
                     const reason = eventObject.reason;
                     if (typeof reason === 'string') {
                         createdReason = reason.trim();
                     } else if (typeof reason === 'function') {
-                        createdReason = reason(actionData).trim();
+                        createdReason = reason(actionData, eventData).trim();
                     } else {
                         createdReason = 'a cancellation event was fired.';
                     };
@@ -489,7 +489,7 @@ export async function RCEActionHandler(actionData: ActionData) {
                     if (typeof logReason === 'string') {
                         createdLogReason = logReason.trim();
                     } else if (typeof logReason === 'function') {
-                        createdLogReason = logReason(actionData).trim();
+                        createdLogReason = logReason(actionData, eventData).trim();
                     } else {
                         createdLogReason = createdReason;
                     }
@@ -500,7 +500,7 @@ export async function RCEActionHandler(actionData: ActionData) {
                 for (const eventObject of action.cancelEvents) {
                     const eventDetails = eventObject(actionData);
                     if (eventDetails) {
-                        eventArray.push(eventDetails.event(() => eventListener(eventDetails)), eventDetails.disposable);
+                        eventArray.push(eventDetails.event((eventData) => eventListener(eventDetails, eventData)), eventDetails.disposable);
                     }
                 }
             }

@@ -36,7 +36,8 @@ export interface ActionValidationResult {
 type TypedAction = Omit<Action, 'schema'> & { schema?: JSONSchema7 };
 
 /** ActionHandler to use with constants for records of actions and their corresponding handlers */
-export interface RCEAction<T = unknown> extends TypedAction {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export interface RCEAction<T = any> extends TypedAction {
     /** A human-friendly name for the action. If not provided, the action's name converted to Title Case will be used. */
     displayName?: string;
     /** The JSON schema for validating the action parameters if experimental schemas are disabled. */
