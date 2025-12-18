@@ -1,16 +1,19 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import * as vscode from 'vscode';
-import { PromptGenerator } from '../rce';
+import { ActionData } from '../neuro_client_helper';
 
-export interface RCECancelEventInitializer<T = unknown> {
+type ReasonGenerator<T = any> = string | ((actionData: ActionData, data: T) => string);
+
+export interface RCECancelEventInitializer<T = any> {
     /** The reason that will be used to send to Neuro-sama. */
-    reason?: PromptGenerator;
+    reason?: ReasonGenerator<T>;
     /** The reason that will be used to log the cancellation. */
-    logReason?: PromptGenerator;
+    logReason?: ReasonGenerator<T>;
     /** Events that will trigger the cancellation. If the predicate is null, the event will always trigger the cancellation. */
     events?: [vscode.Event<T>, ((data: T) => boolean | Promise<boolean>) | null][];
 }
 
-export class RCECancelEvent<T = unknown> {
+export class RCECancelEvent<T = any> {
     /**
      * Private emitter constructed by the class constructor.
      */
@@ -29,12 +32,12 @@ export class RCECancelEvent<T = unknown> {
     /**
      * The reason that will be used to send to Neuro-sama.
      */
-    public readonly reason?: PromptGenerator;
+    public readonly reason?: ReasonGenerator<T>;
 
     /**
      * The reason that will be used to log the cancellation.
      */
-    public readonly logReason?: PromptGenerator;
+    public readonly logReason?: ReasonGenerator<T>;
 
     /**
      * Fires the event.
