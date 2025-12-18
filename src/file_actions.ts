@@ -180,21 +180,23 @@ export const fileActions = {
         },
         category: CATEGORY_FILE_ACTIONS,
         handler: handleGetWorkspaceFiles,
-        validators: [async (actionData: ActionData) => {
-            const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-            if (workspaceFolder === undefined)
-                return actionValidationFailure('No open workspace to get files from.');
-            let folder = actionData.params?.folder as string;
-            if (folder) {
-                folder = stripTailSlashes(folder);
-                const relativeFolderPath = normalizePath(folder);
-                const pathValidated = await validatePath(relativeFolderPath, true, 'folder');
-                if (!pathValidated.success) return pathValidated;
-                const stat = await vscode.workspace.fs.stat(vscode.Uri.joinPath(workspaceFolder.uri, relativeFolderPath));
-                if (stat.type !== vscode.FileType.Directory) return actionValidationFailure('The specified path is not a directory.');
-            }
-            return actionValidationAccept();
-        }],
+        validators: {
+            sync: [async (actionData: ActionData) => {
+                const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+                if (workspaceFolder === undefined)
+                    return actionValidationFailure('No open workspace to get files from.');
+                let folder = actionData.params?.folder as string;
+                if (folder) {
+                    folder = stripTailSlashes(folder);
+                    const relativeFolderPath = normalizePath(folder);
+                    const pathValidated = await validatePath(relativeFolderPath, true, 'folder');
+                    if (!pathValidated.success) return pathValidated;
+                    const stat = await vscode.workspace.fs.stat(vscode.Uri.joinPath(workspaceFolder.uri, relativeFolderPath));
+                    if (stat.type !== vscode.FileType.Directory) return actionValidationFailure('The specified path is not a directory.');
+                }
+                return actionValidationAccept();
+            }],
+        },
         cancelEvents: [
             (actionData: ActionData) => {
                 if (actionData.params?.folder) {
@@ -218,7 +220,9 @@ export const fileActions = {
         },
         handler: handleOpenFile,
         cancelEvents: commonFileEvents,
-        validators: [neuroSafeValidation, binaryFileValidation, validateIsAFile],
+        validators: {
+            sync: [neuroSafeValidation, binaryFileValidation, validateIsAFile],
+        },
         promptGenerator: (actionData: ActionData) => `open the file "${actionData.params?.filePath}".`,
     },
     read_file: {
@@ -235,7 +239,9 @@ export const fileActions = {
         },
         handler: handleReadFile,
         cancelEvents: commonFileEvents,
-        validators: [neuroSafeValidation, binaryFileValidation, validateIsAFile],
+        validators: {
+            sync: [neuroSafeValidation, binaryFileValidation, validateIsAFile],
+        },
         promptGenerator: (actionData: ActionData) => `read the file "${actionData.params?.filePath}" (without opening it).`,
     },
     create_file: {
@@ -252,7 +258,9 @@ export const fileActions = {
         },
         handler: handleCreateFile,
         cancelEvents: commonFileEvents,
-        validators: [neuroSafeValidation],
+        validators: {
+            sync: [neuroSafeValidation],
+        },
         promptGenerator: (actionData: ActionData) => `create the file "${actionData.params?.filePath}".`,
     },
     create_folder: {
@@ -271,7 +279,9 @@ export const fileActions = {
         cancelEvents: [
             (actionData: ActionData) => targetedFileCreatedEvent(actionData.params?.folderPath),
         ],
-        validators: [neuroSafeValidation],
+        validators: {
+            sync: [neuroSafeValidation],
+        },
         promptGenerator: (actionData: ActionData) => `create the folder "${actionData.params?.folderPath}".`,
     },
     rename_file_or_folder: {
@@ -292,7 +302,9 @@ export const fileActions = {
             (actionData: ActionData) => targetedFileCreatedEvent(actionData.params?.newPath),
             (actionData: ActionData) => targetedFileDeletedEvent(actionData.params?.oldPath),
         ],
-        validators: [neuroSafeRenameValidation],
+        validators: {
+            sync: [neuroSafeRenameValidation],
+        },
         promptGenerator: (actionData: ActionData) => `rename "${actionData.params?.oldPath}" to "${actionData.params?.newPath}".`,
     },
     delete_file_or_folder: {
@@ -312,7 +324,9 @@ export const fileActions = {
         cancelEvents: [
             (actionData: ActionData) => targetedFileDeletedEvent(actionData.params?.path),
         ],
-        validators: [neuroSafeDeleteValidation],
+        validators: {
+            sync: [neuroSafeDeleteValidation],
+        },
         promptGenerator: (actionData: ActionData) => `delete "${actionData.params?.path}".`,
     },
 } satisfies Record<string, RCEAction>;

@@ -135,10 +135,12 @@ export const gitActions = {
         handler: handleNewGitRepo,
         promptGenerator: 'initialize a Git repository in the workspace.',
         cancelEvents: commonCancelEvents,
-        validators: [(_actionData: ActionData) => {
-            if (!git) return actionValidationFailure('Git extension not available.');
-            return actionValidationAccept();
-        }],
+        validators: {
+            sync: [(_actionData: ActionData) => {
+                if (!git) return actionValidationFailure('Git extension not available.');
+                return actionValidationAccept();
+            }],
+        },
     },
     add_file_to_git: {
         name: 'add_file_to_git',
@@ -161,7 +163,9 @@ export const gitActions = {
         handler: handleAddFileToGit,
         cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `add the file "${actionData.params.filePath}" to the staging area.`,
-        validators: [gitValidator, filePathGitValidator],
+        validators: {
+            sync: [gitValidator, filePathGitValidator],
+        },
         registerCondition: () => !!repo,
     },
     make_git_commit: {
@@ -184,7 +188,9 @@ export const gitActions = {
         handler: handleMakeGitCommit,
         cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `commit changes with the message "${actionData.params.message}".`,
-        validators: [gitValidator],
+        validators: {
+            sync: [gitValidator],
+        },
         registerCondition: () => !!repo,
     },
     merge_to_current_branch: {
@@ -202,7 +208,9 @@ export const gitActions = {
         handler: handleGitMerge,
         cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `merge "${actionData.params.ref_to_merge}" into the current branch.`,
-        validators: [gitValidator],
+        validators: {
+            sync: [gitValidator],
+        },
         registerCondition: () => !!repo,
     },
     git_status: {
@@ -212,7 +220,9 @@ export const gitActions = {
         handler: handleGitStatus,
         cancelEvents: commonCancelEvents,
         promptGenerator: 'get the repository\'s Git status.',
-        validators: [gitValidator],
+        validators: {
+            sync: [gitValidator],
+        },
         registerCondition: () => !!repo,
     },
     remove_file_from_git: {
@@ -236,7 +246,9 @@ export const gitActions = {
         handler: handleRemoveFileFromGit,
         cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `remove the file "${actionData.params.filePath}" from the staging area.`,
-        validators: [gitValidator, filePathGitValidator],
+        validators: {
+            sync: [gitValidator, filePathGitValidator],
+        },
         registerCondition: () => !!repo,
     },
     delete_git_branch: {
@@ -255,7 +267,9 @@ export const gitActions = {
         handler: handleDeleteGitBranch,
         cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `delete the branch "${actionData.params.branchName}".`,
-        validators: [gitValidator],
+        validators: {
+            sync: [gitValidator],
+        },
         registerCondition: () => !!repo,
     },
     switch_git_branch: {
@@ -273,7 +287,9 @@ export const gitActions = {
         handler: handleSwitchGitBranch,
         cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `switch to the branch "${actionData.params.branchName}".`,
-        validators: [gitValidator],
+        validators: {
+            sync: [gitValidator],
+        },
         registerCondition: () => !!repo,
     },
     new_git_branch: {
@@ -291,7 +307,9 @@ export const gitActions = {
         handler: handleNewGitBranch,
         cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `create a new branch "${actionData.params.branchName}".`,
-        validators: [gitValidator],
+        validators: {
+            sync: [gitValidator],
+        },
         registerCondition: () => !!repo,
     },
     diff_files: {
@@ -313,7 +331,7 @@ export const gitActions = {
                     properties: {
                         ref1: { type: 'string', description: 'The ref to diff with.' },
                         filePath: { type: 'string', description: 'A file to run diffs against. If omitted, will diff the entire ref.' },
-                        diffType: { type: 'string', enum: ['diffWith', 'diffIndexWith'], description: 'The type of diff to run.'},
+                        diffType: { type: 'string', enum: ['diffWith', 'diffIndexWith'], description: 'The type of diff to run.' },
                     },
                     required: ['ref1', 'diffType'],
                     additionalProperties: false,
@@ -346,7 +364,9 @@ export const gitActions = {
         handler: handleDiffFiles,
         cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `obtain ${actionData.params?.filePath ? `"${actionData.params.filePath}"'s` : 'a'} Git diff${actionData.params?.ref1 && actionData.params?.ref2 ? ` between ${actionData.params.ref1} and ${actionData.params.ref2}` : actionData.params?.ref1 ? ` at ref ${actionData.params.ref1}` : ''}${actionData.params?.diffType ? ` (of type "${actionData.params.diffType}")` : ''}.`,
-        validators: [gitValidator, filePathGitValidator, gitDiffValidator],
+        validators: {
+            sync: [gitValidator, filePathGitValidator, gitDiffValidator],
+        },
         registerCondition: () => !!repo,
     },
     git_log: {
@@ -367,7 +387,9 @@ export const gitActions = {
         handler: handleGitLog,
         cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `get the ${actionData.params?.log_limit ? `${actionData.params.log_limit} most recent commits in the ` : ''}Git log.`,
-        validators: [gitValidator],
+        validators: {
+            sync: [gitValidator],
+        },
         registerCondition: () => !!repo,
     },
     git_blame: {
@@ -385,7 +407,9 @@ export const gitActions = {
         handler: handleGitBlame,
         cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `get the Git blame for the file "${actionData.params.filePath}".`,
-        validators: [gitValidator, filePathGitValidator],
+        validators: {
+            sync: [gitValidator, filePathGitValidator],
+        },
         registerCondition: () => !!repo,
     },
 
@@ -406,13 +430,15 @@ export const gitActions = {
         handler: handleTagHEAD,
         cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `tag the current commit with the name "${actionData.params.name}" and associate it with the "${actionData.params.upstream}" remote.`,
-        validators: [gitValidator, (actionData: ActionData) => {
-            const tagPattern = /^(?![/.@])(?!.*[/.@]$)(?!.*[/.@]{2,})(?:[a-z]+(?:[/.@][a-z]+)*)$/;
-            if (!tagPattern.test(actionData.params.name)) {
-                return actionValidationFailure('The Git tag does not conform to Git\'s tag naming rules.');
-            }
-            return actionValidationAccept();
-        }],
+        validators: {
+            sync: [gitValidator, (actionData: ActionData) => {
+                const tagPattern = /^(?![/.@])(?!.*[/.@]$)(?!.*[/.@]{2,})(?:[a-z]+(?:[/.@][a-z]+)*)$/;
+                if (!tagPattern.test(actionData.params.name)) {
+                    return actionValidationFailure('The Git tag does not conform to Git\'s tag naming rules.');
+                }
+                return actionValidationAccept();
+            }],
+        },
         registerCondition: () => !!repo,
     },
     delete_tag: {
@@ -430,7 +456,9 @@ export const gitActions = {
         handler: handleDeleteTag,
         cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `delete the tag "${actionData.params.name}".`,
-        validators: [gitValidator],
+        validators: {
+            sync: [gitValidator],
+        },
         registerCondition: () => !!repo,
     },
 
@@ -451,7 +479,9 @@ export const gitActions = {
         handler: handleSetGitConfig,
         cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `set the Git config key "${actionData.params.key}" to "${actionData.params.value}".`,
-        validators: [gitValidator],
+        validators: {
+            sync: [gitValidator],
+        },
         registerCondition: () => !!repo,
     },
     get_git_config: {
@@ -468,7 +498,9 @@ export const gitActions = {
         handler: handleGetGitConfig,
         cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => actionData.params?.key ? `get the Git config key "${actionData.params.key}".` : 'get the Git config.',
-        validators: [gitValidator],
+        validators: {
+            sync: [gitValidator],
+        },
         registerCondition: () => !!repo,
     },
 
@@ -496,7 +528,9 @@ export const gitActions = {
                 return `fetch commits from ${actionData.params.branchName}.`;
             return 'fetch commits.';
         },
-        validators: [gitValidator],
+        validators: {
+            sync: [gitValidator],
+        },
         registerCondition: () => !!repo,
     },
     pull_git_commits: {
@@ -506,7 +540,9 @@ export const gitActions = {
         handler: handlePullGitCommits,
         cancelEvents: commonCancelEvents,
         promptGenerator: 'pull commits.',
-        validators: [gitValidator],
+        validators: {
+            sync: [gitValidator],
+        },
         registerCondition: () => !!repo,
     },
     push_git_commits: {
@@ -534,7 +570,9 @@ export const gitActions = {
                 return `${force}push commits to ${actionData.params.branchName}.`;
             return `${force}push commits.`;
         },
-        validators: [gitValidator],
+        validators: {
+            sync: [gitValidator],
+        },
         registerCondition: () => !!repo,
     },
 
@@ -555,7 +593,9 @@ export const gitActions = {
         handler: handleAddGitRemote,
         cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `add a new remote "${actionData.params.remoteName}" with URL "${actionData.params.remoteURL}".`,
-        validators: [gitValidator],
+        validators: {
+            sync: [gitValidator],
+        },
         registerCondition: () => !!repo,
     },
     remove_git_remote: {
@@ -573,7 +613,9 @@ export const gitActions = {
         handler: handleRemoveGitRemote,
         cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `remove the remote "${actionData.params.remoteName}".`,
-        validators: [gitValidator],
+        validators: {
+            sync: [gitValidator],
+        },
         registerCondition: () => !!repo,
     },
     rename_git_remote: {
@@ -592,7 +634,9 @@ export const gitActions = {
         handler: handleRenameGitRemote,
         cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `rename the remote "${actionData.params.oldRemoteName}" to "${actionData.params.newRemoteName}".`,
-        validators: [gitValidator],
+        validators: {
+            sync: [gitValidator],
+        },
         registerCondition: () => !!repo,
     },
     // Special: Only registered during a merge conflict
@@ -603,7 +647,9 @@ export const gitActions = {
         handler: handleAbortMerge,
         cancelEvents: commonCancelEvents,
         promptGenerator: 'abort the current merge operation.',
-        validators: [gitValidator],
+        validators: {
+            sync: [gitValidator],
+        },
         autoRegister: false,
     },
 } satisfies Record<string, RCEAction>;

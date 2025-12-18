@@ -41,8 +41,23 @@ export interface RCEAction<T = unknown> extends TypedAction {
     displayName?: string;
     /** The JSON schema for validating the action parameters if experimental schemas are disabled. */
     schemaFallback?: JSONSchema7;
-    /** The function to validate the action data *after* checking the schema. */
-    validators?: ((actionData: ActionData) => ActionValidationResult | Promise<ActionValidationResult>)[];
+    /**
+     * An object that defines an array of functions to validate the action's "environment".
+     * Validators run before requests/executions to ensure environment/input validity.
+     */
+    validators?: {
+        /** 
+         * Synchronous validators that will block execution of the rest of the thread.
+         * As this delays the action result to Neuro, any promises must resolve quickly so as to be effectively synchronous speed-wise. 
+         */
+        sync?: ((actionData: ActionData) => ActionValidationResult | Promise<ActionValidationResult>)[],
+        /**
+         * Asynchronous validators that will be ran in parallel to each other.
+         * These will be executed after an action result, so it's perfect for long-running validators.
+         * Async validators will time out (and consequently fail) after 1 second (1000ms).
+         */
+        async?: ((actionData: ActionData) => Promise<ActionValidationResult>)[];
+    }
     /**
      * Cancellation events attached to the action that will be automatically set up.
      * Each cancellation event will be setup in parallel to each other.
@@ -51,6 +66,17 @@ export interface RCEAction<T = unknown> extends TypedAction {
      * Following VS Code's pattern, Disposables will not be awaited if async.
      */
     cancelEvents?: ((actionData: ActionData) => RCECancelEvent<T> | null)[];
+    /**
+     * A function that is used to preview the action's effects.
+     * This function will be called while awaiting user approval, if the action is set to Copilot permission.
+     * 
+     * The action must return a Disposable-like object. The disposable will not be awaited if async.
+     * If your preview function does not require a dispose function to be called, return a no-op Disposable-like.
+     * @example return { dispose: () => undefined } // for no-ops
+     */
+    // The type must be `any`, using `never` causes it to return type errors. 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    preview?: (actionData: ActionData) => { dispose: () => any };
     /** The function to handle the action. */
     handler: RCEHandler;
     /** 
