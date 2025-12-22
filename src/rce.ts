@@ -50,7 +50,16 @@ export interface RceRequest {
     /**
      * Disposable events
      */
-    cancelEvents?: vscode.Disposable[]
+    cancelEvents?: vscode.Disposable[];
+    /**
+     * The function to call for preview effects.
+     */
+    preview?: (actionData: ActionData) => vscode.Disposable;
+    /**
+     * Preview effect disposable.
+     * @todo redesign how this works later.
+     */
+    previewDisposable?: vscode.Disposable;
     /**
      * The action data associated with this request.
      */
@@ -109,6 +118,7 @@ export function clearRceRequest(): void {
             try { disposable.dispose(); } catch (erm: unknown) { logOutput('ERROR', `Failed to dispose a cancellation event: ${erm}. This could contribute to a memory leak.`); }
         }
     }
+    NEURO.rceRequest.previewDisposable?.dispose();
     NEURO.rceRequest = null;
     NEURO.client?.unregisterActions([cancelRequestAction.name]);
     NEURO.statusBarItem!.tooltip = 'No active request';
@@ -122,12 +132,14 @@ export function clearRceRequest(): void {
  * @param callback The callback function to be executed when the request is accepted.
  * @param actionData The action data associated with this request.
  * @param cancelEvents Optional array of disposables for cancellation events.
+ * @param preview Optional preview effects function.
  */
 export function createRceRequest(
     prompt: string,
     callback: RCEHandler,
     actionData: ActionData,
     cancelEvents?: vscode.Disposable[],
+    preview?: (actionData: ActionData) => vscode.Disposable,
 ): void {
     NEURO.rceRequest = {
         prompt,
@@ -139,6 +151,7 @@ export function createRceRequest(
         attachNotification: async () => { },
         cancelEvents,
         actionData,
+        preview,
     };
 
     const promise = new Promise<void>((resolve) => {
@@ -209,6 +222,7 @@ export function revealRceNotification(): void {
         return;
 
     NEURO.rceRequest.notificationVisible = true;
+    NEURO.rceRequest.previewDisposable = NEURO.rceRequest.preview?.(NEURO.rceRequest.actionData);
 
     // weirdly enough, a "notification" isn't actually a thing in vscode.
     // it's either a message, or in this case, progress report that takes shape of a notification
@@ -462,26 +476,29 @@ export async function RCEActionHandler(actionData: ActionData) {
 
             // Validate custom
             if (action.validators) {
-                for (const validate of action.validators) {
-                    const actionResult = await validate(actionData);
-                    if (!actionResult.success) {
-                        NEURO.client?.sendActionResult(actionData.id, !(actionResult.retry ?? false), actionResult.message);
-                        return;
+                if (action.validators.sync) {
+                    for (const validate of action.validators.sync) {
+                        const actionResult = await validate(actionData);
+                        if (!actionResult.success) {
+                            NEURO.client?.sendActionResult(actionData.id, !(actionResult.retry ?? false), actionResult.message);
+                            return;
+                        }
                     }
                 }
+                if (action.validators.async) vscode.window.showInformationMessage(`Action "${actionData.name}" uses asynchronous validators, which have not been implemented yet.`); // implementation needs this to be moved to be *after* setup of cancel events (and action result obv).
             }
 
             const eventArray: vscode.Disposable[] = [];
 
             if (ACTIONS_CONFIG.enableCancelEvents && action.cancelEvents) {
-                const eventListener = (eventObject: RCECancelEvent) => {
+                const eventListener = (eventObject: RCECancelEvent, eventData: unknown) => {
                     let createdReason: string;
                     let createdLogReason: string;
                     const reason = eventObject.reason;
                     if (typeof reason === 'string') {
                         createdReason = reason.trim();
                     } else if (typeof reason === 'function') {
-                        createdReason = reason(actionData).trim();
+                        createdReason = reason(actionData, eventData).trim();
                     } else {
                         createdReason = 'a cancellation event was fired.';
                     };
@@ -489,7 +506,7 @@ export async function RCEActionHandler(actionData: ActionData) {
                     if (typeof logReason === 'string') {
                         createdLogReason = logReason.trim();
                     } else if (typeof logReason === 'function') {
-                        createdLogReason = logReason(actionData).trim();
+                        createdLogReason = logReason(actionData, eventData).trim();
                     } else {
                         createdLogReason = createdReason;
                     }
@@ -500,7 +517,7 @@ export async function RCEActionHandler(actionData: ActionData) {
                 for (const eventObject of action.cancelEvents) {
                     const eventDetails = eventObject(actionData);
                     if (eventDetails) {
-                        eventArray.push(eventDetails.event(() => eventListener(eventDetails)), eventDetails.disposable);
+                        eventArray.push(eventDetails.event((eventData) => eventListener(eventDetails, eventData)), eventDetails.disposable);
                     }
                 }
             }
@@ -527,6 +544,7 @@ export async function RCEActionHandler(actionData: ActionData) {
                     action.handler,
                     actionData,
                     eventArray,
+                    action.preview,
                 );
 
                 NEURO.statusBarItem!.tooltip = new vscode.MarkdownString(prompt);

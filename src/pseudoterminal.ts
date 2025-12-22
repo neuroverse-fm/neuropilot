@@ -57,7 +57,9 @@ export const terminalAccessHandlers = {
         cancelEvents: [
             (actionData: ActionData) => notifyOnTerminalClose(actionData.params?.shell),
         ],
-        validators: [checkVirtualWorkspace, checkWorkspaceTrust],
+        validators: {
+            sync: [checkVirtualWorkspace, checkWorkspaceTrust],
+        },
         promptGenerator: (actionData: ActionData) => `run "${actionData.params?.command}" in the "${actionData.params?.shell}" shell.`,
         registerCondition: () => checkVirtualWorkspace().success && checkWorkspaceTrust().success,
     },
@@ -77,7 +79,9 @@ export const terminalAccessHandlers = {
         cancelEvents: [
             (actionData: ActionData) => notifyOnTerminalClose(actionData.params?.shell),
         ],
-        validators: [checkLiveTerminals, checkVirtualWorkspace, checkWorkspaceTrust],
+        validators: {
+            sync: [checkLiveTerminals, checkVirtualWorkspace, checkWorkspaceTrust],
+        },
         promptGenerator: (actionData: ActionData) => `kill the "${actionData.params?.shell}" shell.`,
         registerCondition: () => checkVirtualWorkspace().success && checkWorkspaceTrust().success,
     },
@@ -86,7 +90,9 @@ export const terminalAccessHandlers = {
         description: 'Get the list of terminal processes that are spawned.',
         category: CATEGORY_TERMINAL,
         handler: handleGetCurrentlyRunningShells,
-        validators: [checkVirtualWorkspace, checkWorkspaceTrust],
+        validators: {
+            sync: [checkVirtualWorkspace, checkWorkspaceTrust],
+        },
         promptGenerator: 'get the list of currently running shells.',
         registerCondition: () => checkVirtualWorkspace().success && checkWorkspaceTrust().success,
     },
