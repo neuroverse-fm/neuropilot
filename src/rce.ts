@@ -4,7 +4,7 @@
  */
 
 import * as vscode from 'vscode';
-import { ActionData, RCEAction, stripToAction } from '@/neuro_client_helper';
+import { ActionData, RCEAction, stripToAction, RCEHandler } from '@/neuro_client_helper';
 import { NEURO } from '@/constants';
 import { logOutput, notifyOnCaughtException } from '@/utils';
 import { ACTIONS as ACTIONS_CONFIG, CONFIG, CONNECTION, getAllPermissions, getPermissionLevel, PermissionLevel, stringToPermissionLevel } from '@/config';
@@ -32,7 +32,7 @@ export interface RceRequest {
     /**
      * The callback function to be executed when the request is accepted.
      */
-    callback: () => string | undefined | void;
+    callback: RCEHandler;
     /**
      * Resolve the request, closing all attached notifications and clearing timers.
      */
@@ -125,7 +125,7 @@ export function clearRceRequest(): void {
  */
 export function createRceRequest(
     prompt: string,
-    callback: () => string | undefined | void,
+    callback: RCEHandler,
     actionData: ActionData,
     cancelEvents?: vscode.Disposable[],
 ): void {
@@ -242,7 +242,7 @@ export function acceptRceRequest(): void {
     NEURO.client?.sendContext(`${CONNECTION.userName} has accepted your request.`);
 
     try {
-        const result = NEURO.rceRequest.callback();
+        const result = NEURO.rceRequest.callback(NEURO.rceRequest.actionData);
         if (result)
             NEURO.client?.sendContext(result);
     } catch (erm: unknown) {
@@ -524,7 +524,7 @@ export async function RCEActionHandler(actionData: ActionData) {
 
                 createRceRequest(
                     prompt,
-                    () => action.handler(actionData),
+                    action.handler,
                     actionData,
                     eventArray,
                 );

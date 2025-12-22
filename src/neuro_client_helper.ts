@@ -73,7 +73,7 @@ export interface RCEAction<T = unknown> extends TypedAction {
     registerCondition?: () => boolean;
 }
 
-type RCEHandler = (actionData: ActionData) => string | undefined | void;
+export type RCEHandler = (actionData: ActionData) => string | undefined | void;
 
 /**
  * Strips an action to the form expected by the API.
