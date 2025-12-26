@@ -549,7 +549,7 @@ export async function RCEActionHandler(actionData: ActionData) {
                     }
                     logOutput('WARN', `${CONNECTION.nameOfAPI}'${CONNECTION.nameOfAPI.endsWith('s') ? '' : 's'} action ${action.name} was cancelled because ${createdLogReason}`);
                     NEURO.client?.sendContext(`Your request was cancelled because ${createdReason}`);
-                    updateActionStatus(actionData, 'failure', `Cancelled: ${createdLogReason}`);
+                    updateActionStatus(actionData, 'failure', `Cancelled because ${createdLogReason}`);
                     clearRceRequest();
                 };
                 for (const eventObject of action.cancelEvents) {
