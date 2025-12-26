@@ -232,7 +232,7 @@ function disableAllPermissions() {
     }
 
     if (NEURO.currentTaskExecution) {
-        NEURO.currentTaskExecution.terminate();
+        NEURO.currentTaskExecution.task.terminate();
         NEURO.currentTaskExecution = null;
     }
     emergencyDenyRequests();
