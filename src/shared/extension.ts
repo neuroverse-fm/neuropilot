@@ -287,10 +287,6 @@ export function obtainExtensionState(): void {
 
 export function deactivate() {
     NEURO.client?.sendContext(`NeuroPilot is being deactivated, or ${CONNECTION.gameName} is closing. See you next time, ${NEURO.currentController}!`);
-
-    // Mark all pending executions as failed before deactivating
-    NEURO.viewProviders.execute?.markAllPendingAsFailed('Extension deactivated before action could be processed fully');
-
     clearRceRequest();
 }
 

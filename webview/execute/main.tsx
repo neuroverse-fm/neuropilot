@@ -9,6 +9,7 @@ interface ExecutionHistoryItem {
     message?: string;
     timestamp: number;
     executionId: string;
+    sessionId: string;
 }
 
 interface State {
@@ -46,7 +47,14 @@ function ExecutionWindow() {
     useEffect(() => {
         const messageHandler = (event: MessageEvent<ExecuteViewProviderMessage>) => {
             const message = event.data;
-            if (message.type === 'executionResult') {
+            if (message.type === 'currentSession') {
+                // Mark any pending items from previous sessions as failed
+                setHistory(prev => prev.map(item =>
+                    item.status === 'pending' && item.sessionId !== message.sessionId
+                        ? { ...item, status: 'failure' as const, message: 'Extension deactivated before action could be processed fully' }
+                        : item,
+                ));
+            } else if (message.type === 'executionResult') {
                 setHistory(prev => {
                     // Check if execution ID already exists
                     const existingIndex = prev.findIndex(item => item.executionId === message.result.executionId);

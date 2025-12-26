@@ -6,6 +6,7 @@ export interface ExecuteResult {
     action: string;
     message?: string;
     executionId: string;
+    sessionId: string;
 }
 
 export type ExecuteViewProviderMessage = {
@@ -19,9 +20,14 @@ export type ExecuteViewProviderMessage = {
 } | {
     type: 'markAllPendingAsFailed';
     message: string;
+} | {
+    type: 'currentSession';
+    sessionId: string;
 };
 
 export class ExecuteViewProvider extends BaseWebviewViewProvider<Message, ExecuteViewProviderMessage> {
+    private static sessionId = `session_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+
     constructor() {
         super('execute/index.html', 'execute/main.js', ['execute/style.css']);
     }
@@ -29,10 +35,19 @@ export class ExecuteViewProvider extends BaseWebviewViewProvider<Message, Execut
     protected handleMessage(_message: Message): void { }
 
     protected onViewReady(): void {
+        // Send current session ID to webview
+        this.postMessage({
+            type: 'currentSession',
+            sessionId: ExecuteViewProvider.sessionId,
+        });
+
         // Listen to action execution events and send them to the webview
         // The webview will handle deduplication using its persisted state
         onDidAttemptAction((data: ActionsEventData) => {
-            this.sendExecutionResult(data);
+            this.sendExecutionResult({
+                ...data,
+                sessionId: ExecuteViewProvider.sessionId,
+            });
         });
     }
 
