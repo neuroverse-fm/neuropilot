@@ -2,7 +2,7 @@ import { Disposable, EventEmitter } from 'vscode';
 
 export interface ActionsEventData {
     action: string;
-    success: string;
+    success: boolean;
     message?: string;
 }
 

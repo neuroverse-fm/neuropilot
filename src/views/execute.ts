@@ -23,7 +23,7 @@ export class ExecuteViewProvider extends BaseWebviewViewProvider<Message, Execut
         // Listen to action execution events and send them to the webview
         onDidExecuteAction((data: ActionsEventData) => {
             this.sendExecutionResult({
-                success: data.success === 'true',
+                success: data.success === true,
                 action: data.action,
                 message: data.message,
             });

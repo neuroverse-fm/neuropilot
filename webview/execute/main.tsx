@@ -15,7 +15,19 @@ interface State {
 
 function formatTime(timestamp: number): string {
     const date = new Date(timestamp);
-    return date.toLocaleTimeString();
+    const now = new Date();
+    const isToday = date.toDateString() === now.toDateString();
+
+    if (isToday) {
+        return date.toLocaleTimeString();
+    }
+
+    return date.toLocaleString(undefined, {
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+    });
 }
 
 function ExecutionWindow() {

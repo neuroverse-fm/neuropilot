@@ -264,7 +264,7 @@ export function acceptRceRequest(): void {
         // Track execution success
         fireOnActionExecute({
             action: NEURO.rceRequest.actionData.name,
-            success: 'true',
+            success: true,
             message: result || undefined,
         });
     } catch (erm: unknown) {
@@ -275,7 +275,7 @@ export function acceptRceRequest(): void {
         // Track execution failure
         fireOnActionExecute({
             action: actionName,
-            success: 'false',
+            success: false,
             message: 'Execution error occurred',
         });
     }
@@ -298,8 +298,8 @@ export function denyRceRequest(): void {
     // Track denial
     fireOnActionExecute({
         action: NEURO.rceRequest.actionData.name,
-        success: 'false',
-        message: 'Request denied by user',
+        success: false,
+        message: `Request denied by ${CONNECTION.userName}`,
     });
 
     clearRceRequest();
@@ -478,7 +478,7 @@ export async function RCEActionHandler(actionData: ActionData) {
                 NEURO.client?.sendActionResult(actionData.id, true, 'Action failed: You don\'t have permission to execute this action.');
                 fireOnActionExecute({
                     action: actionData.name,
-                    success: 'false',
+                    success: false,
                     message: 'Permission denied',
                 });
                 return;
@@ -555,7 +555,7 @@ export async function RCEActionHandler(actionData: ActionData) {
                 NEURO.client?.sendActionResult(actionData.id, true, result ?? undefined);
                 fireOnActionExecute({
                     action: actionData.name,
-                    success: 'true',
+                    success: true,
                     message: result || undefined,
                 });
             }
