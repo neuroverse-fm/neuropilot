@@ -7,7 +7,7 @@ export interface Message {
 }
 
 export abstract class BaseWebviewViewProvider<TViewMessage extends Message, TProviderMessage extends Message> implements vscode.WebviewViewProvider {
-    // defaults to test view, override when extending this
+    /** defaults to test view, override with its own dedicated view when extending this */
     public static viewType = 'neuropilot.testView';
 
     protected _view?: vscode.WebviewView;
