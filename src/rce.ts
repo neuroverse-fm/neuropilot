@@ -186,6 +186,7 @@ export function createRceRequest(
             timeout = setTimeout(() => {
                 clearRceRequest();
                 NEURO.client?.sendContext('Request expired.');
+                updateActionStatus(actionData, 'failure', `Timed out waiting for approval from ${CONNECTION.userName}`);
             }, timeoutDuration);
         }
 

@@ -29,12 +29,7 @@ export class ExecuteViewProvider extends BaseWebviewViewProvider<Message, Execut
         // Listen to action execution events and send them to the webview
         // The webview will handle deduplication using its persisted state
         onDidAttemptAction((data: ActionsEventData) => {
-            this.sendExecutionResult({
-                status: data.status,
-                action: data.action,
-                message: data.message,
-                executionId: data.executionId,
-            });
+            this.sendExecutionResult(data);
         });
     }
 
