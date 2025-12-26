@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { NEURO } from '@/constants';
 import { normalizePath, getWorkspacePath, logOutput, isPathNeuroSafe, getWorkspaceUri } from '@/utils';
 import { CONFIG } from '@/config';
-import { ActionData, actionValidationAccept, actionValidationFailure, ActionValidationResult, RCEAction, contextFailure } from '@/neuro_client_helper';
+import { ActionData, actionValidationAccept, actionValidationFailure, ActionValidationResult, RCEAction, contextFailure, actionValidationRetry } from '@/neuro_client_helper';
 import assert from 'node:assert';
 import { targetedFileLintingResolvedEvent, targetedFolderLintingResolvedEvent, workspaceLintingResolvedEvent } from '@events/linting';
 import { addActions } from './rce';
@@ -17,20 +17,20 @@ const CATEGORY_LINTING = 'Linting';
  */
 async function validatePath(path: string, directoryType: string): Promise<ActionValidationResult> {
     if (path === '') {
-        return actionValidationFailure('No file path specified.', true);
+        return actionValidationRetry('No file path specified.', 'File path left unspecified');
     };
     const workspaceUri = getWorkspaceUri();
     if (!workspaceUri) {
-        return actionValidationFailure('Unable to get current workspace.');
+        return actionValidationFailure('Unable to get current workspace.', 'Can\'t get current workspace');
     }
     const absolutePath = normalizePath(workspaceUri.fsPath + '/' + path.replace(/^\/|\/$/g, ''));
     if (!isPathNeuroSafe(absolutePath)) {
-        return actionValidationFailure(`You are not allowed to access this ${directoryType}.`);
+        return actionValidationFailure(`You are not allowed to access this ${directoryType}.`, `Access to the ${directoryType} disallowed.`);
     }
 
     const existence = await getUriExistence(workspaceUri.with({ path: absolutePath }));
     if (existence === false) {
-        return actionValidationFailure(`${directoryType} "${path}" does not exist.`);
+        return actionValidationFailure(`${directoryType} "${path}" does not exist.`, `Path to targeted ${directoryType} does not exist.`);
     }
 
     return actionValidationAccept();

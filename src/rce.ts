@@ -516,7 +516,7 @@ export async function RCEActionHandler(actionData: ActionData) {
                             fireOnActionAttempt({
                                 action: actionData.name,
                                 success: false,
-                                message: 'Synchronous validators failed',
+                                message: actionResult.historyNote ? `Synchronous validator failed: ${actionResult.historyNote}` : 'Synchronous validator failed.' + actionResult.retry ? '\nPrompting retry from Neuro.' : '',
                             });
                             return;
                         }

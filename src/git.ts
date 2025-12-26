@@ -32,9 +32,9 @@ export function getGitExtension() {
 
 function gitValidator(_actionData: ActionData): ActionValidationResult {
     if (!git)
-        return actionValidationFailure('Git extension not available.');
+        return actionValidationFailure('Git extension not available.', 'Git extension not activated');
     if (!repo)
-        return actionValidationFailure('You are not in a repository.');
+        return actionValidationFailure('You are not in a repository.', 'Not in a repo');
 
     return actionValidationAccept();
 }
@@ -42,7 +42,7 @@ function gitValidator(_actionData: ActionData): ActionValidationResult {
 async function neuroSafeValidationHelper(filePath: string): Promise<ActionValidationResult> {
     const absolutePath = getAbsoluteFilePath(filePath);
     if (!isPathNeuroSafe(absolutePath)) {
-        return actionValidationFailure('You are not allowed to access this file path.');
+        return actionValidationFailure('You are not allowed to access this file path.', 'Access to targeted file disallowed');
     }
 
     const fileUri = vscode.Uri.file(absolutePath);
@@ -50,13 +50,13 @@ async function neuroSafeValidationHelper(filePath: string): Promise<ActionValida
         await vscode.workspace.fs.stat(fileUri);
         return actionValidationAccept();
     } catch {
-        return actionValidationFailure(`File ${filePath} does not exist.`);
+        return actionValidationFailure(`File ${filePath} does not exist.`, 'Targeted file does not exist');
     }
 }
 
 async function filePathGitValidator(actionData: ActionData): Promise<ActionValidationResult> {
     if (actionData.params.filePath === '') {
-        return actionValidationFailure('No file path specified.', true);
+        return actionValidationRetry('No file path specified.');
     };
 
     const filePath: string | string[] = actionData.params?.filePath;
@@ -76,6 +76,7 @@ async function filePathGitValidator(actionData: ActionData): Promise<ActionValid
 
 function gitDiffValidator(actionData: ActionData): ActionValidationResult {
     const diffType: string = actionData.params?.diffType ?? 'diffWithHEAD';
+    const FAIL_NOTE = `Inputs did not match what was necessary to make a ${diffType}-type diff`;
     switch (diffType) {
         case 'diffWithHEAD':
             if (actionData.params?.ref1 || actionData.params?.ref2) {
@@ -86,7 +87,7 @@ function gitDiffValidator(actionData: ActionData): ActionValidationResult {
             if (actionData.params?.ref1 && actionData.params?.ref2) {
                 return actionValidationAccept('Only "ref1" is needed for the "diffWith" diff type.');
             } else if (!actionData.params?.ref1) {
-                return actionValidationRetry('"ref1" is required for the diff type of "diffWith"');
+                return actionValidationRetry('"ref1" is required for the diff type of "diffWith"', FAIL_NOTE);
             } else {
                 return actionValidationAccept();
             }
@@ -99,13 +100,13 @@ function gitDiffValidator(actionData: ActionData): ActionValidationResult {
             if (actionData.params?.ref1 && actionData.params?.ref2) {
                 return actionValidationAccept('Only "ref1" is needed for the "diffIndexWith" diff type.');
             } else if (!actionData.params?.ref1) {
-                return actionValidationRetry('"ref1" is required for the diff type of "diffIndexWith"');
+                return actionValidationRetry('"ref1" is required for the diff type of "diffIndexWith"', FAIL_NOTE);
             } else {
                 return actionValidationAccept();
             }
         case 'diffBetween':
             if (!actionData.params?.ref1 || !actionData.params?.ref2) {
-                return actionValidationRetry('"ref1" AND "ref2" is required for the diff type of "diffWith"');
+                return actionValidationRetry('"ref1" AND "ref2" is required for the diff type of "diffWith"', FAIL_NOTE);
             } else {
                 return actionValidationAccept();
             }
@@ -115,7 +116,7 @@ function gitDiffValidator(actionData: ActionData): ActionValidationResult {
             }
             return actionValidationAccept();
         default:
-            return actionValidationFailure('Unknown diff type.');
+            return actionValidationFailure('Unknown diff type.', 'Unknown/unhandled diff type specified');
     }
 }
 const commonCancelEvents: ((actionData: ActionData) => RCECancelEvent | null)[] = [
