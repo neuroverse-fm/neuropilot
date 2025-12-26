@@ -221,7 +221,7 @@ export const fileActions = {
                 } else return null;
             },
         ],
-        promptGenerator: (actionData: ActionData) => `${actionData.params?.recursive ? 'Recursively get' : 'Get'} a list of files in ${actionData.params?.folder ? `"${stripTailSlashes(actionData.params.folder)}"` : 'the workspace'}.`,
+        promptGenerator: (actionData: ActionData) => `${actionData.params?.recursive ? 'recursively get' : 'get'} a list of files in ${actionData.params?.folder ? `"${stripTailSlashes(actionData.params.folder)}"` : 'the workspace'}.`,
     },
     open_file: {
         name: 'open_file',
