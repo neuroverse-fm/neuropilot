@@ -128,9 +128,9 @@ export function setupCommonProviders() {
             new NeuroCodeActionsProvider(),
             { providedCodeActionKinds: NeuroCodeActionsProvider.providedCodeActionKinds },
         ),
-        vscode.window.registerWebviewViewProvider(ActionsViewProvider.viewType, NEURO.viewProviders.actions),
-        vscode.window.registerWebviewViewProvider(ImagesViewProvider.viewType, NEURO.viewProviders.images),
-        vscode.window.registerWebviewViewProvider(ExecuteViewProvider.viewType, NEURO.viewProviders.execute),
+        vscode.window.registerWebviewViewProvider(ActionsViewProvider.viewId, NEURO.viewProviders.actions),
+        vscode.window.registerWebviewViewProvider(ImagesViewProvider.viewId, NEURO.viewProviders.images),
+        vscode.window.registerWebviewViewProvider(ExecuteViewProvider.viewId, NEURO.viewProviders.execute),
     ];
 
     return providers;
