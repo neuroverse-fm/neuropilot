@@ -26,7 +26,7 @@ export type ExecuteViewProviderMessage = {
 };
 
 export class ExecuteViewProvider extends BaseWebviewViewProvider<Message, ExecuteViewProviderMessage> {
-    private static sessionId = `session_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+    private static readonly sessionId = `session_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 
     constructor() {
         super('execute/index.html', 'execute/main.js', ['execute/style.css']);
