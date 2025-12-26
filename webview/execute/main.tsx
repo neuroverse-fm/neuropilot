@@ -65,6 +65,12 @@ function ExecutionWindow() {
                         return [message.result, ...prev].slice(0, 100); // Keep last 100 items
                     }
                 });
+            } else if (message.type === 'markAllPendingAsFailed') {
+                setHistory(prev => prev.map(item =>
+                    item.status === 'pending'
+                        ? { ...item, status: 'failure' as const, message: message.message }
+                        : item,
+                ));
             }
         };
 
