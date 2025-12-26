@@ -7,14 +7,14 @@ import * as vscode from 'vscode';
 import { ActionData, RCEAction, stripToAction, RCEHandler } from '@/neuro_client_helper';
 import { NEURO } from '@/constants';
 import { logOutput, notifyOnCaughtException } from '@/utils';
-import { ACTIONS as ACTIONS_CONFIG, CONFIG, CONNECTION, getAllPermissions, getPermissionLevel, PermissionLevel, stringToPermissionLevel } from '@/config';
+import { ACTIONS, CONFIG, CONNECTION, getAllPermissions, getPermissionLevel, PermissionLevel, stringToPermissionLevel } from '@/config';
 import { validate } from 'jsonschema';
 import type { RCECancelEvent } from '@events/utils';
 import { fireOnActionStart, updateActionStatus } from '@events/actions';
 
 export const CATEGORY_MISC = 'Miscellaneous';
 
-const ACTIONS: RCEAction[] = [];
+const ACTIONS_ARRAY: RCEAction[] = [];
 const REGISTERED_ACTIONS: Set<string> = /* @__PURE__ */ new Set<string>();
 
 /**
@@ -313,16 +313,16 @@ export function denyRceRequest(): void {
  * @param register Whether to register the actions with Neuro immediately if the permissions allow.
  */
 export function addActions(actions: RCEAction[], register = true): void {
-    const actionsToAdd = actions.filter(a => !ACTIONS.some(existing => existing.name === a.name));
+    const actionsToAdd = actions.filter(a => !ACTIONS_ARRAY.some(existing => existing.name === a.name));
     const actionsNotToAdd = actions.filter(a => !actionsToAdd.includes(a));
     if (actionsNotToAdd.length > 0) {
         logOutput('WARN', `Tried to add actions that are already registered: ${actionsNotToAdd.map(a => a.name).join(', ')}`);
     }
-    ACTIONS.push(...actionsToAdd);
+    ACTIONS_ARRAY.push(...actionsToAdd);
     if (register && NEURO.connected) {
         const actionNames = actionsToAdd.map(a => a.name);
         const actionsToRegister = actionNames
-            .map(name => ACTIONS.find(a => a.name === name)!)
+            .map(name => ACTIONS_ARRAY.find(a => a.name === name)!)
             .filter((action) => getPermissionLevel(action.name) && action.registerCondition?.() !== false)
             .map(stripToAction);
         actionsToRegister.forEach(a => REGISTERED_ACTIONS.add(a.name));
@@ -338,9 +338,9 @@ export function addActions(actions: RCEAction[], register = true): void {
  */
 export function removeActions(actionNames: string[]): void {
     for (const actionName of actionNames) {
-        const actionIndex = ACTIONS.findIndex(a => a.name === actionName);
+        const actionIndex = ACTIONS_ARRAY.findIndex(a => a.name === actionName);
         if (actionIndex !== -1) {
-            ACTIONS.splice(actionIndex, 1);
+            ACTIONS_ARRAY.splice(actionIndex, 1);
         }
     }
     if (NEURO.connected) {
@@ -357,7 +357,7 @@ export function removeActions(actionNames: string[]): void {
  * @param actionName The name of the action to register.
  */
 export function registerAction(actionName: string): void {
-    const action = ACTIONS.find(a => a.name === actionName);
+    const action = ACTIONS_ARRAY.find(a => a.name === actionName);
     if (action && NEURO.connected && !REGISTERED_ACTIONS.has(action.name)) {
         NEURO.client!.registerActions([stripToAction(action)]);
         REGISTERED_ACTIONS.add(action.name);
@@ -392,10 +392,10 @@ export function reregisterAllActions(conservative: boolean): void {
 
     const permissions = getAllPermissions();
     const actionsToUnregister = conservative
-        ? ACTIONS
+        ? ACTIONS_ARRAY
             .filter(a => REGISTERED_ACTIONS.has(a.name) && !shouldBeRegistered(a))
             .map(a => a.name)
-        : ACTIONS.map(a => a.name);
+        : ACTIONS_ARRAY.map(a => a.name);
 
     // Unregister actions
     if (actionsToUnregister.length > 0)
@@ -403,7 +403,7 @@ export function reregisterAllActions(conservative: boolean): void {
     actionsToUnregister.forEach(a => REGISTERED_ACTIONS.delete(a));
 
     // Determine which actions to register
-    const actionsToRegister = ACTIONS
+    const actionsToRegister = ACTIONS_ARRAY
         // Skip actions that are already registered
         .filter(a => !REGISTERED_ACTIONS.has(a.name))
         .filter(shouldBeRegistered)
@@ -437,17 +437,17 @@ export function reregisterAllActions(conservative: boolean): void {
  * @returns The list of registered actions.
  */
 export function getActions(): readonly RCEAction[] {
-    return ACTIONS;
+    return ACTIONS_ARRAY;
 }
 
 export function getAction(actionName: string): RCEAction | undefined {
-    return ACTIONS.find(a => a.name === actionName);
+    return ACTIONS_ARRAY.find(a => a.name === actionName);
 }
 
 export function getExtendedActionsInfo(): ExtendedActionInfo[] {
     const configuration = vscode.workspace.getConfiguration('neuropilot');
     const { workspaceValue, globalValue } = configuration.inspect<Record<string, string>>('actionPermissions') || {};
-    return ACTIONS.map(action => {
+    return ACTIONS_ARRAY.map(action => {
         const configuredWorkspacePermission = workspaceValue?.[action.name] !== undefined ? stringToPermissionLevel(workspaceValue[action.name]) : undefined;
         const configuredGlobalPermission = globalValue?.[action.name] !== undefined ? stringToPermissionLevel(globalValue[action.name]) : undefined;
         return {
@@ -488,7 +488,8 @@ export async function RCEActionHandler(actionData: ActionData) {
             // Validate schema
             if (action.schema) {
                 updateActionStatus(actionData, 'pending', 'Validating schema...');
-                const schemaValidationResult = validate(actionData.params, action.schema, { required: true });
+                const schema = ACTIONS.experimentalSchemas ? action.schema ?? action.schemaFallback : action.schema;
+                const schemaValidationResult = validate(actionData.params, schema, { required: true });
                 if (!schemaValidationResult.valid) {
                     const messagesArray: string[] = [];
                     schemaValidationResult.errors.map((erm) => {
@@ -526,7 +527,7 @@ export async function RCEActionHandler(actionData: ActionData) {
 
             const eventArray: vscode.Disposable[] = [];
 
-            if (ACTIONS_CONFIG.enableCancelEvents && action.cancelEvents) {
+            if (ACTIONS.enableCancelEvents && action.cancelEvents) {
                 const eventListener = (eventObject: RCECancelEvent, eventData: unknown) => {
                     let createdReason: string;
                     let createdLogReason: string;
@@ -594,7 +595,7 @@ export async function RCEActionHandler(actionData: ActionData) {
                 NEURO.statusBarItem!.color = new vscode.ThemeColor('statusBarItem.warningForeground');
 
                 // Show the RCE dialog immediately if the config says so
-                if (!ACTIONS_CONFIG.hideCopilotRequests)
+                if (!ACTIONS.hideCopilotRequests)
                     revealRceNotification();
 
                 // End of added code.
