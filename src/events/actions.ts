@@ -7,9 +7,9 @@ export interface ActionsEventData {
 }
 
 const actionsEventEmitter = new EventEmitter<ActionsEventData>();
-export const onDidExecuteAction = actionsEventEmitter.event;
+export const onDidAttemptAction = actionsEventEmitter.event;
 export const actionsEventEmitterDisposable = Disposable.from(actionsEventEmitter);
 
-export function fireOnActionExecute(data: ActionsEventData) {
+export function fireOnActionAttempt(data: ActionsEventData) {
     actionsEventEmitter.fire(data);
 }

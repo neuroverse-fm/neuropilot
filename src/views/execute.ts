@@ -1,5 +1,5 @@
 import { BaseWebviewViewProvider, Message } from './base';
-import { onDidExecuteAction, type ActionsEventData } from '../events/actions';
+import { onDidAttemptAction, type ActionsEventData } from '../events/actions';
 
 export interface ExecuteResult {
     success: boolean;
@@ -21,7 +21,7 @@ export class ExecuteViewProvider extends BaseWebviewViewProvider<Message, Execut
 
     protected onViewReady(): void {
         // Listen to action execution events and send them to the webview
-        onDidExecuteAction((data: ActionsEventData) => {
+        onDidAttemptAction((data: ActionsEventData) => {
             this.sendExecutionResult({
                 success: data.success === true,
                 action: data.action,
