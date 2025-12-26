@@ -7,6 +7,7 @@ import { CONFIG, PermissionLevel, getPermissionLevel } from '@/config';
 import { targetedFileCreatedEvent, targetedFileDeletedEvent } from '@events/files';
 import { RCECancelEvent } from '@events/utils';
 import { addActions } from './rce';
+import { updateActionStatus } from '@events/actions';
 
 const CATEGORY_FILE_ACTIONS = 'File Actions';
 const ACTION_FAIL_NOTES = {
@@ -582,11 +583,10 @@ export function handleDeleteFileOrFolder(actionData: ActionData): string | undef
 }
 
 export function handleGetWorkspaceFiles(actionData: ActionData): string | undefined {
-    const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-    if (!workspaceFolder) {
-        logOutput('WARN', 'handleGetWorkspaceFiles called without an open workspace.');
-        return undefined;
-    }
+    const workspaceFolder = vscode.workspace.workspaceFolders![0];
+
+    // Start tracking execution
+    updateActionStatus(actionData, 'pending', 'Listing workspace files...');
 
     let folderUri = workspaceFolder.uri;
     const folder = actionData.params?.folder;
@@ -619,10 +619,12 @@ export function handleGetWorkspaceFiles(actionData: ActionData): string | undefi
             const displayFolder = folder ? `"${stripTailSlashes(folder)}"` : 'workspace';
             logOutput('INFO', `Sending list of files in ${displayFolder} to Neuro`);
             NEURO.client?.sendContext(`Files in ${displayFolder}:\n\n${paths.join('\n')}`);
+            updateActionStatus(actionData, 'success', `Listed ${paths.length} files`);
         },
         (erm: unknown) => {
             logOutput('ERROR', `Could not list workspace files: ${String(erm)}`);
             NEURO.client?.sendContext('Unable to list workspace files.');
+            updateActionStatus(actionData, 'failure', 'Error thrown while listing the workspace. Hint: check logs');
         },
     );
 

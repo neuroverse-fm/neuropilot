@@ -1,12 +1,14 @@
 import { render } from 'preact';
 import { useState, useEffect, useMemo } from 'preact/hooks';
 import type { ExecuteViewProviderMessage } from '@/views/execute';
+import type { ActionStatus } from '@/events/actions';
 
 interface ExecutionHistoryItem {
-    success: boolean;
+    status: ActionStatus;
     action: string;
     message?: string;
     timestamp: number;
+    executionId: string;
 }
 
 interface State {
@@ -45,7 +47,24 @@ function ExecutionWindow() {
         const messageHandler = (event: MessageEvent<ExecuteViewProviderMessage>) => {
             const message = event.data;
             if (message.type === 'executionResult') {
-                setHistory(prev => [message.result, ...prev].slice(0, 100)); // Keep last 100 items
+                setHistory(prev => {
+                    // Check if execution ID already exists
+                    const existingIndex = prev.findIndex(item => item.executionId === message.result.executionId);
+
+                    if (existingIndex !== -1) {
+                        // Update existing entry
+                        const updated = [...prev];
+                        updated[existingIndex] = {
+                            ...updated[existingIndex],
+                            status: message.result.status,
+                            message: message.result.message,
+                        };
+                        return updated;
+                    } else {
+                        // Add new entry
+                        return [message.result, ...prev].slice(0, 100); // Keep last 100 items
+                    }
+                });
             }
         };
 
@@ -76,11 +95,14 @@ function ExecutionWindow() {
                 <div class="history-list">
                     {history.map((item, index) =>
                         <div
-                            key={`${item.timestamp}-${index}`}
-                            class={`history-item ${item.success ? 'success' : 'failure'}`}
+                            key={`${item.executionId}-${index}`}
+                            class={`history-item ${item.status}`}
                         >
                             <div class="item-header">
-                                <i class={`codicon ${item.success ? 'codicon-pass' : 'codicon-error'}`}></i>
+                                <i class={`codicon ${item.status === 'success' ? 'codicon-pass' :
+                                item.status === 'failure' ? 'codicon-error' :
+                                'codicon-loading codicon-modifier-spin'
+                                }`}></i>
                                 <span class="action-name">{item.action}</span>
                                 <span class="timestamp">{formatTime(item.timestamp)}</span>
                             </div>

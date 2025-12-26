@@ -1,16 +1,22 @@
 import { BaseWebviewViewProvider, Message } from './base';
-import { onDidAttemptAction, type ActionsEventData } from '../events/actions';
+import { onDidAttemptAction, type ActionsEventData, type ActionStatus } from '../events/actions';
 
 export interface ExecuteResult {
-    success: boolean;
+    status: ActionStatus;
     action: string;
     message?: string;
+    executionId: string;
 }
 
-export interface ExecuteViewProviderMessage extends Message {
+export type ExecuteViewProviderMessage = {
     type: 'executionResult';
     result: ExecuteResult & { timestamp: number };
-}
+} | {
+    type: 'updateStatus';
+    executionId: string;
+    status: ActionStatus;
+    message?: string;
+};
 
 export class ExecuteViewProvider extends BaseWebviewViewProvider<Message, ExecuteViewProviderMessage> {
     constructor() {
@@ -21,17 +27,20 @@ export class ExecuteViewProvider extends BaseWebviewViewProvider<Message, Execut
 
     protected onViewReady(): void {
         // Listen to action execution events and send them to the webview
+        // The webview will handle deduplication using its persisted state
         onDidAttemptAction((data: ActionsEventData) => {
             this.sendExecutionResult({
-                success: data.success === true,
+                status: data.status,
                 action: data.action,
                 message: data.message,
+                executionId: data.executionId,
             });
         });
     }
 
     /**
-     * Sends the execution result to the execute view.
+     * Sends an execution result to the execute view.
+     * The webview will determine whether to create a new entry or update an existing one.
      */
     public sendExecutionResult(result: ExecuteResult) {
         if (!this._view) {

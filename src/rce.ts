@@ -10,7 +10,7 @@ import { logOutput, notifyOnCaughtException } from '@/utils';
 import { ACTIONS as ACTIONS_CONFIG, CONFIG, CONNECTION, getAllPermissions, getPermissionLevel, PermissionLevel, stringToPermissionLevel } from '@/config';
 import { validate } from 'jsonschema';
 import type { RCECancelEvent } from '@events/utils';
-import { fireOnActionAttempt } from '@events/actions';
+import { fireOnActionStart, updateActionStatus } from '@events/actions';
 
 export const CATEGORY_MISC = 'Miscellaneous';
 
@@ -256,28 +256,29 @@ export function acceptRceRequest(): void {
 
     NEURO.client?.sendContext(`${CONNECTION.userName} has accepted your request.`);
 
+    const actionData = NEURO.rceRequest.actionData;
+    updateActionStatus(actionData, 'pending', 'Executing...');
+
     try {
-        const result = NEURO.rceRequest.callback(NEURO.rceRequest.actionData);
+        const result = NEURO.rceRequest.callback(actionData);
         if (result)
             NEURO.client?.sendContext(result);
 
-        // Track execution success
-        fireOnActionAttempt({
-            action: NEURO.rceRequest.actionData.name,
-            success: true,
-            message: result || undefined,
-        });
+        // Track execution result
+        if (result === undefined) {
+            // Handler returned undefined, keep as pending (handler will update later)
+            updateActionStatus(actionData, 'pending', 'Processing...');
+        } else {
+            // Handler returned a result, mark as success
+            updateActionStatus(actionData, 'success', result);
+        }
     } catch (erm: unknown) {
-        const actionName = NEURO.rceRequest.actionData.name;
+        const actionName = actionData.name;
         notifyOnCaughtException(actionName, erm);
-        NEURO.client?.sendActionResult(NEURO.rceRequest.actionData.id, true, `An error occurred while executing the action "${actionName}". You can retry if you like, but it may be better to ask ${CONNECTION.userName} to check what's up.`);
+        NEURO.client?.sendActionResult(actionData.id, true, `An error occurred while executing the action "${actionName}". You can retry if you like, but it may be better to ask ${CONNECTION.userName} to check what's up.`);
 
         // Track execution failure
-        fireOnActionAttempt({
-            action: actionName,
-            success: false,
-            message: 'Execution error occurred',
-        });
+        updateActionStatus(actionData, 'failure', 'Execution error occurred');
     }
 
     clearRceRequest();
@@ -296,11 +297,11 @@ export function denyRceRequest(): void {
     NEURO.client?.sendContext(`${CONNECTION.userName} has denied your request.`);
 
     // Track denial
-    fireOnActionAttempt({
-        action: NEURO.rceRequest.actionData.name,
-        success: false,
-        message: `Request denied by ${CONNECTION.userName}`,
-    });
+    updateActionStatus(
+        NEURO.rceRequest.actionData,
+        'failure',
+        `Denied by ${CONNECTION.userName}`,
+    );
 
     clearRceRequest();
 }
@@ -471,21 +472,21 @@ export async function RCEActionHandler(actionData: ActionData) {
         if (REGISTERED_ACTIONS.has(actionData.name)) {
             NEURO.actionHandled = true;
 
+            // Start tracking execution immediately
+            fireOnActionStart(actionData, 'Validating action...');
+
             const action = getAction(actionData.name)!;
 
             const effectivePermission = getPermissionLevel(action.name);
             if (effectivePermission === PermissionLevel.OFF) {
                 NEURO.client?.sendActionResult(actionData.id, true, 'Action failed: You don\'t have permission to execute this action.');
-                fireOnActionAttempt({
-                    action: actionData.name,
-                    success: false,
-                    message: 'Permission denied',
-                });
+                updateActionStatus(actionData, 'failure', 'Permission denied');
                 return;
             }
 
             // Validate schema
             if (action.schema) {
+                updateActionStatus(actionData, 'pending', 'Validating schema...');
                 const schemaValidationResult = validate(actionData.params, action.schema, { required: true });
                 if (!schemaValidationResult.valid) {
                     const messagesArray: string[] = [];
@@ -497,11 +498,7 @@ export async function RCEActionHandler(actionData: ActionData) {
                     const schemaFailures = `- ${messagesArray.join('\n- ')}`;
                     const message = 'Action failed, your inputs did not pass schema validation due to these problems:\n\n' + schemaFailures + '\n\nPlease pay attention to the schema and the above errors if you choose to retry.';
                     NEURO.client?.sendActionResult(actionData.id, false, message);
-                    fireOnActionAttempt({
-                        action: actionData.name,
-                        success: false,
-                        message: 'Inputs did not satisfy schema',
-                    });
+                    updateActionStatus(actionData, 'failure', 'Schema validation failed');
                     return;
                 }
             }
@@ -509,15 +506,16 @@ export async function RCEActionHandler(actionData: ActionData) {
             // Validate custom
             if (action.validators) {
                 if (action.validators.sync) {
+                    updateActionStatus(actionData, 'pending', 'Running validators...');
                     for (const validate of action.validators.sync) {
                         const actionResult = await validate(actionData);
                         if (!actionResult.success) {
                             NEURO.client?.sendActionResult(actionData.id, !(actionResult.retry ?? false), actionResult.message);
-                            fireOnActionAttempt({
-                                action: actionData.name,
-                                success: false,
-                                message: actionResult.historyNote ? `Synchronous validator failed: ${actionResult.historyNote}` : 'Synchronous validator failed.' + actionResult.retry ? '\nPrompting retry from Neuro.' : '',
-                            });
+                            updateActionStatus(
+                                actionData,
+                                'failure',
+                                actionResult.historyNote ? `Validator failed: ${actionResult.historyNote}` : 'Validator failed',
+                            );
                             return;
                         }
                     }
@@ -549,11 +547,7 @@ export async function RCEActionHandler(actionData: ActionData) {
                     }
                     logOutput('WARN', `${CONNECTION.nameOfAPI}'${CONNECTION.nameOfAPI.endsWith('s') ? '' : 's'} action ${action.name} was cancelled because ${createdLogReason}`);
                     NEURO.client?.sendContext(`Your request was cancelled because ${createdReason}`);
-                    fireOnActionAttempt({
-                        action: actionData.name,
-                        success: false,
-                        message: `Cancelled because ${logReason}`,
-                    });
+                    updateActionStatus(actionData, 'failure', `Cancelled: ${createdLogReason}`);
                     clearRceRequest();
                 };
                 for (const eventObject of action.cancelEvents) {
@@ -565,20 +559,19 @@ export async function RCEActionHandler(actionData: ActionData) {
             }
 
             if (effectivePermission === PermissionLevel.AUTOPILOT) {
+                updateActionStatus(actionData, 'pending', 'Executing handler...');
                 for (const d of eventArray) d.dispose();
                 const result = action.handler(actionData);
                 NEURO.client?.sendActionResult(actionData.id, true, result ?? undefined);
-                fireOnActionAttempt({
-                    action: actionData.name,
-                    success: true,
-                    message: result ?? undefined,
-                });
             }
             else { // effectivePermission === PermissionLevel.COPILOT
                 if (NEURO.rceRequest) {
                     NEURO.client?.sendActionResult(actionData.id, true, 'Action failed: Already waiting for permission to run another action.');
+                    updateActionStatus(actionData, 'failure', 'Another action pending approval');
                     return;
                 }
+
+                updateActionStatus(actionData, 'pending', `Waiting for approval from ${CONNECTION.userName}`);
 
                 const prompt = (NEURO.currentController
                     ? NEURO.currentController
@@ -611,6 +604,9 @@ export async function RCEActionHandler(actionData: ActionData) {
         const actionName = actionData.name;
         notifyOnCaughtException(actionName, erm);
         NEURO.client?.sendActionResult(actionData.id, true, `An error occurred while executing the action "${actionName}". You can retry if you like, but it may be better to ask Vedal to check what's up.`);
+
+        // Track execution error
+        updateActionStatus(actionData, 'failure', 'Unexpected error occurred');
         return;
     }
 }
