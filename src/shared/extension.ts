@@ -17,6 +17,7 @@ import { loadIgnoreFiles } from '@/ignore_files_utils';
 import { getWorkspacePath, normalizePath } from '@/utils';
 import { ActionsViewProvider } from '@/views/actions';
 import { ImagesViewProvider } from '../views/image';
+import { ExecuteViewProvider } from '@/views/execute';
 
 // Shared commands
 export function registerCommonCommands() {
@@ -119,6 +120,7 @@ export function initializeCommonState(context: vscode.ExtensionContext) {
 export function setupCommonProviders() {
     NEURO.viewProviders.actions = new ActionsViewProvider();
     NEURO.viewProviders.images = new ImagesViewProvider();
+    NEURO.viewProviders.execute = new ExecuteViewProvider();
     const providers = [
         vscode.languages.registerInlineCompletionItemProvider({ pattern: '**' }, completionsProvider),
         vscode.languages.registerCodeActionsProvider(
@@ -128,6 +130,7 @@ export function setupCommonProviders() {
         ),
         vscode.window.registerWebviewViewProvider(ActionsViewProvider.viewType, NEURO.viewProviders.actions),
         vscode.window.registerWebviewViewProvider(ImagesViewProvider.viewType, NEURO.viewProviders.images),
+        vscode.window.registerWebviewViewProvider(ExecuteViewProvider.viewType, NEURO.viewProviders.execute),
     ];
 
     return providers;

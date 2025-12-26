@@ -1,0 +1,112 @@
+.execution-container {
+    padding: 8px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--vscode-panel-border);
+}
+
+.header h3 {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.clear-button {
+    background: transparent;
+    border: none;
+    color: var(--vscode-foreground);
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.clear-button:hover {
+    background: var(--vscode-toolbar-hoverBackground);
+}
+
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 32px;
+    color: var(--vscode-descriptionForeground);
+    gap: 8px;
+}
+
+.empty-state .codicon {
+    font-size: 32px;
+}
+
+.empty-state p {
+    margin: 0;
+}
+
+.history-list {
+    overflow-y: auto;
+    flex: 1;
+}
+
+.history-item {
+    padding: 8px;
+    margin-bottom: 4px;
+    border-radius: 4px;
+    border-left: 3px solid transparent;
+}
+
+.history-item.success {
+    background: var(--vscode-testing-iconPassed);
+    background: color-mix(in srgb, var(--vscode-testing-iconPassed) 15%, transparent);
+    border-left-color: var(--vscode-testing-iconPassed);
+}
+
+.history-item.failure {
+    background: var(--vscode-testing-iconFailed);
+    background: color-mix(in srgb, var(--vscode-testing-iconFailed) 15%, transparent);
+    border-left-color: var(--vscode-testing-iconFailed);
+}
+
+.item-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+}
+
+.item-header .codicon {
+    flex-shrink: 0;
+}
+
+.action-name {
+    flex: 1;
+    font-weight: 500;
+    font-family: var(--vscode-editor-font-family);
+}
+
+.timestamp {
+    font-size: 11px;
+    color: var(--vscode-descriptionForeground);
+    flex-shrink: 0;
+}
+
+.item-message {
+    margin-top: 4px;
+    padding-left: 22px;
+    font-size: 11px;
+    color: var(--vscode-foreground);
+    opacity: 0.9;
+    white-space: pre-wrap;
+    word-break: break-word;
+}

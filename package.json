@@ -727,6 +727,14 @@
 					"id": "neuropilot.imagesView",
 					"name": "Images",
 					"icon": "assets/neuropilot-font.svg"
+				},
+				{
+					"type": "webview",
+					"id": "neuropilot.testView",
+					"name": "Test View",
+					"icon": "assets/neuropilot-font.svg",
+					"when": "isDevelopment",
+					"visibility": "collapsed"
 				}
 			]
 		}

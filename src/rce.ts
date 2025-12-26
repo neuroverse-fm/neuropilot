@@ -10,6 +10,7 @@ import { logOutput, notifyOnCaughtException } from '@/utils';
 import { ACTIONS as ACTIONS_CONFIG, CONFIG, CONNECTION, getAllPermissions, getPermissionLevel, PermissionLevel, stringToPermissionLevel } from '@/config';
 import { validate } from 'jsonschema';
 import type { RCECancelEvent } from '@events/utils';
+import { fireOnActionExecute } from '@events/actions';
 
 export const CATEGORY_MISC = 'Miscellaneous';
 
@@ -259,10 +260,24 @@ export function acceptRceRequest(): void {
         const result = NEURO.rceRequest.callback(NEURO.rceRequest.actionData);
         if (result)
             NEURO.client?.sendContext(result);
+
+        // Track execution success
+        fireOnActionExecute({
+            action: NEURO.rceRequest.actionData.name,
+            success: 'true',
+            message: result || undefined,
+        });
     } catch (erm: unknown) {
         const actionName = NEURO.rceRequest.actionData.name;
         notifyOnCaughtException(actionName, erm);
         NEURO.client?.sendActionResult(NEURO.rceRequest.actionData.id, true, `An error occurred while executing the action "${actionName}". You can retry if you like, but it may be better to ask ${CONNECTION.userName} to check what's up.`);
+
+        // Track execution failure
+        fireOnActionExecute({
+            action: actionName,
+            success: 'false',
+            message: 'Execution error occurred',
+        });
     }
 
     clearRceRequest();
@@ -279,6 +294,13 @@ export function denyRceRequest(): void {
     }
 
     NEURO.client?.sendContext(`${CONNECTION.userName} has denied your request.`);
+
+    // Track denial
+    fireOnActionExecute({
+        action: NEURO.rceRequest.actionData.name,
+        success: 'false',
+        message: 'Request denied by user',
+    });
 
     clearRceRequest();
 }
@@ -454,6 +476,11 @@ export async function RCEActionHandler(actionData: ActionData) {
             const effectivePermission = getPermissionLevel(action.name);
             if (effectivePermission === PermissionLevel.OFF) {
                 NEURO.client?.sendActionResult(actionData.id, true, 'Action failed: You don\'t have permission to execute this action.');
+                fireOnActionExecute({
+                    action: actionData.name,
+                    success: 'false',
+                    message: 'Permission denied',
+                });
                 return;
             }
 
@@ -526,6 +553,11 @@ export async function RCEActionHandler(actionData: ActionData) {
                 for (const d of eventArray) d.dispose();
                 const result = action.handler(actionData);
                 NEURO.client?.sendActionResult(actionData.id, true, result ?? undefined);
+                fireOnActionExecute({
+                    action: actionData.name,
+                    success: 'true',
+                    message: result || undefined,
+                });
             }
             else { // effectivePermission === PermissionLevel.COPILOT
                 if (NEURO.rceRequest) {
@@ -536,8 +568,8 @@ export async function RCEActionHandler(actionData: ActionData) {
                 const prompt = (NEURO.currentController
                     ? NEURO.currentController
                     : 'The Neuro API server') +
-                ' wants to ' +
-                (typeof action.promptGenerator === 'string' ? action.promptGenerator : action.promptGenerator(actionData)).trim();
+                    ' wants to ' +
+                    (typeof action.promptGenerator === 'string' ? action.promptGenerator : action.promptGenerator(actionData)).trim();
 
                 createRceRequest(
                     prompt,
@@ -560,7 +592,7 @@ export async function RCEActionHandler(actionData: ActionData) {
                 NEURO.client?.sendActionResult(actionData.id, true, 'Requested permission to run action.');
             }
         }
-    } catch(erm: unknown) {
+    } catch (erm: unknown) {
         const actionName = actionData.name;
         notifyOnCaughtException(actionName, erm);
         NEURO.client?.sendActionResult(actionData.id, true, `An error occurred while executing the action "${actionName}". You can retry if you like, but it may be better to ask Vedal to check what's up.`);

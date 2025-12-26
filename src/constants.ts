@@ -5,6 +5,7 @@ import { RceRequest } from './rce';
 import type { GitExtension } from '@typing/git.d';
 import { ActionsViewProvider } from './views/actions';
 import { ImagesViewProvider } from './views/image';
+import type { ExecuteViewProvider } from './views/execute';
 
 export interface NeuroTask {
     id: string;
@@ -15,6 +16,7 @@ export interface NeuroTask {
 interface NeuroViewProviders {
     actions: ActionsViewProvider | null;
     images: ImagesViewProvider | null;
+    execute: ExecuteViewProvider | null;
 }
 
 interface Neuro {
@@ -123,6 +125,7 @@ export const NEURO: Neuro = {
     viewProviders: {
         actions: null,
         images: null,
+        execute: null,
     },
 };
 
