@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 
 import { NEURO } from '@/constants';
 import { formatContext, getFence, getPositionContext, getVirtualCursor, getWorkspacePath, getWorkspaceUri, isBinary, isPathNeuroSafe, logOutput, normalizePath, notifyOnCaughtException, stripTailSlashes } from '@/utils';
-import { ActionData, contextNoAccess, RCEAction, actionValidationFailure, actionValidationAccept, ActionValidationResult } from '@/neuro_client_helper';
+import { ActionData, contextNoAccess, RCEAction, actionValidationFailure, actionValidationAccept, ActionValidationResult, actionValidationRetry } from '@/neuro_client_helper';
 import { CONFIG, PermissionLevel, getPermissionLevel } from '@/config';
 import { targetedFileCreatedEvent, targetedFileDeletedEvent } from '@events/files';
 import { RCECancelEvent } from '@events/utils';
@@ -31,7 +31,7 @@ const ACTION_FAIL_NOTES = {
  */
 async function validatePath(path: string, shouldExist: boolean, pathType: string): Promise<ActionValidationResult> {
     if (path === '') {
-        return actionValidationFailure('No file path specified.', ACTION_FAIL_NOTES.noFilePath);
+        return actionValidationRetry('No file path specified.', ACTION_FAIL_NOTES.noFilePath);
     };
     const relativePath = normalizePath(path).replace(/^\/|\/$/g, '');
     const absolutePath = (getWorkspacePath() ?? '') + '/' + relativePath;
