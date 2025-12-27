@@ -45,9 +45,9 @@ async function validatePath(path: string, shouldExist: boolean, pathType: string
 
     const doesExist = await getUriExistence(vscode.Uri.joinPath(base, relativePath));
     if (!shouldExist && doesExist) {
-        return actionValidationFailure(`${pathType} "${path}" already exists.`, ACTION_FAIL_NOTES.alreadyExists.replaceAll('path', pathType));
+        return actionValidationFailure(`${pathType} "${path}" already exists.`, ACTION_FAIL_NOTES.alreadyExists.replace('path', pathType));
     } else if (shouldExist && !doesExist) {
-        return actionValidationFailure(`${pathType} "${path}" doesn't exist.`, ACTION_FAIL_NOTES.doesntExist.replaceAll('path', pathType));
+        return actionValidationFailure(`${pathType} "${path}" doesn't exist.`, ACTION_FAIL_NOTES.doesntExist.replace('path', pathType));
     }
 
     return actionValidationAccept();
