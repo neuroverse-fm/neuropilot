@@ -1567,7 +1567,9 @@ export function handleDiffPatch(actionData: ActionData): string | undefined {
                 position2: newEndPosition,
             });
 
-            updateActionStatus(actionData, 'success', 'Applied diff patch');
+            const { linesAdded, linesRemoved } = countLineDifferences(parsedDiff.search, parsedDiff.replace);
+
+            updateActionStatus(actionData, 'success', `Applied diff patch [+${linesAdded} | -${linesRemoved}]`);
             NEURO.client?.sendContext(`Applied diff patch successfully\n\n${formatContext(cursorContext)}`);
         } else {
             updateActionStatus(actionData, 'failure', 'Failed to apply diff patch');
