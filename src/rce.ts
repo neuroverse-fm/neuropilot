@@ -262,17 +262,7 @@ export function acceptRceRequest(): void {
 
     try {
         const result = NEURO.rceRequest.callback(actionData);
-        if (result)
-            NEURO.client?.sendContext(result);
-
-        // Track execution result
-        if (result === undefined) {
-            // Handler returned undefined, keep as pending (handler will update later)
-            updateActionStatus(actionData, 'pending', 'Processing...');
-        } else {
-            // Handler returned a result, mark as success
-            updateActionStatus(actionData, 'success', result);
-        }
+        if (result) NEURO.client?.sendContext(result);
     } catch (erm: unknown) {
         const actionName = actionData.name;
         notifyOnCaughtException(actionName, erm);
