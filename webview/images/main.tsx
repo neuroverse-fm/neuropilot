@@ -72,32 +72,99 @@ function App() {
         return () => window.removeEventListener('message', handleMessage);
     }, [currentImage]);
 
-    const availableNames = currentImage?.set?.name && sets[currentImage.set.name]
-        ? sets[currentImage.set.name].images.map(img => img.name)
-        : [];
+    // Get all images from current set
+    const getCurrentSetImages = () => {
+        if (!currentImage?.set?.name || !sets[currentImage.set.name]) {
+            return [];
+        }
+        return sets[currentImage.set.name].images;
+    };
+
+    // Navigate to a specific image
+    const showImage = (setName: string, imageName: string) => {
+        const set = sets[setName];
+        if (!set) return;
+
+        const image = set.images.find(img => img.name === imageName);
+        if (!image) return;
+
+        const newImage: ImageData = {
+            name: image.name,
+            path: image.path,
+            credits: image.credits,
+            set: {
+                name: setName,
+                description: set.description,
+            },
+        };
+
+        setCurrentImage(newImage);
+        vscode.setState({
+            currentImage: newImage,
+            sets,
+        });
+    };
+
+    // Get a random set name
+    const getRandomSetName = (): string | null => {
+        const setNames = Object.keys(sets);
+        if (setNames.length === 0) return null;
+        return setNames[Math.floor(Math.random() * setNames.length)];
+    };
+
+    // Get a random image from a specific set
+    const getRandomImageFromSet = (setName: string): string | null => {
+        const set = sets[setName];
+        if (!set || set.images.length === 0) return null;
+        const image = set.images[Math.floor(Math.random() * set.images.length)];
+        return image.name;
+    };
 
     const handlePrevious = () => {
-        if (availableNames.length === 0) {
-            return;
-        }
-        vscode.postMessage({ type: 'previousImage', current: currentImage?.name ?? '' } satisfies ImagesViewMessage);
+        const images = getCurrentSetImages();
+        if (images.length === 0 || !currentImage) return;
+
+        const currentIndex = images.findIndex(img => img.name === currentImage.name);
+        if (currentIndex === -1) return;
+
+        const newIndex = (currentIndex - 1 + images.length) % images.length;
+        showImage(currentImage.set.name, images[newIndex].name);
     };
 
     const handleNext = () => {
-        if (availableNames.length === 0) {
-            return;
-        }
-        vscode.postMessage({ type: 'nextImage', current: currentImage?.name ?? '' } satisfies ImagesViewMessage);
+        const images = getCurrentSetImages();
+        if (images.length === 0 || !currentImage) return;
+
+        const currentIndex = images.findIndex(img => img.name === currentImage.name);
+        if (currentIndex === -1) return;
+
+        const newIndex = (currentIndex + 1) % images.length;
+        showImage(currentImage.set.name, images[newIndex].name);
     };
 
     const handleRandom = () => {
-        vscode.postMessage({ type: 'randomImage' } satisfies ImagesViewMessage);
+        const setName = getRandomSetName();
+        if (!setName) return;
+
+        const imageName = getRandomImageFromSet(setName);
+        if (!imageName) return;
+
+        showImage(setName, imageName);
     };
 
     const handleSearch = () => {
-        const q = searchQuery.trim();
-        if (q) {
-            vscode.postMessage({ type: 'searchImage', name: q } satisfies ImagesViewMessage);
+        const q = searchQuery.trim().toLowerCase();
+        if (!q) return;
+
+        // Search through all sets
+        for (const [setName, setData] of Object.entries(sets)) {
+            const image = setData.images.find(img =>
+                img.name.toLowerCase().includes(q),
+            );
+            if (image) {
+                showImage(setName, image.name);
+                return;
+            }
         }
     };
 
@@ -108,10 +175,13 @@ function App() {
     };
 
     const handleSetChange = (event: Event) => {
-        const name = (event.target as HTMLSelectElement).value;
-        if (name) {
-            vscode.postMessage({ type: 'switchSet', name } satisfies ImagesViewMessage);
-        }
+        const setName = (event.target as HTMLSelectElement).value;
+        if (!setName) return;
+
+        const imageName = getRandomImageFromSet(setName);
+        if (!imageName) return;
+
+        showImage(setName, imageName);
     };
 
     return (
