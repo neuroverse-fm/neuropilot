@@ -69,19 +69,4 @@ export class ExecuteViewProvider extends BaseWebviewViewProvider<Message, Execut
             },
         });
     }
-
-    /**
-     * Marks all pending executions as failed.
-     * Used when the extension is deactivating to clean up pending items.
-     */
-    public markAllPendingAsFailed(message: string) {
-        if (!this._view) {
-            return;
-        }
-
-        this.postMessage({
-            type: 'markAllPendingAsFailed',
-            message,
-        });
-    }
 }
