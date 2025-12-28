@@ -1,3 +1,5 @@
+import { render } from 'preact';
+import { useState, useEffect, useRef } from 'preact/hooks';
 import type { ImagesViewProviderMessage, ImagesViewMessage, ImageData, ImageSet } from '@/views/image';
 
 interface State {
@@ -5,166 +7,172 @@ interface State {
     sets: Record<string, ImageSet>;
 }
 
-(function () {
-    // Acquire the vscode API provided to webviews
-    const vscode = acquireVsCodeApi<State>();
-    const state = vscode.getState() || {
-        currentImage: null,
-        sets: {},
-    } satisfies State;
+const vscode = acquireVsCodeApi<State>();
 
-    let currentName: string | null = null;
-    let availableNames: string[] = [];
+function App() {
+    const [currentImage, setCurrentImage] = useState<ImageData | null>(null);
+    const [sets, setSets] = useState<Record<string, ImageSet>>({});
+    const [searchQuery, setSearchQuery] = useState('');
+    const searchBoxRef = useRef<HTMLInputElement>(null);
 
-    const mainImage = document.getElementById('mainImage') as HTMLImageElement;
-    const imageTitle = document.getElementById('imageTitle') as HTMLHeadingElement;
-    const imageCredits = document.getElementById('imageCredits') as HTMLParagraphElement;
-    const prevBtn = document.getElementById('prevBtn') as HTMLButtonElement;
-    const nextBtn = document.getElementById('nextBtn') as HTMLButtonElement;
-    const randomBtn = document.getElementById('randomBtn') as HTMLButtonElement;
-    const searchBtn = document.getElementById('searchBtn') as HTMLButtonElement;
-    const searchBox = document.getElementById('searchBox') as HTMLInputElement;
-    const setSelect = document.getElementById('setSelect') as HTMLSelectElement;
+    // Initialize state from vscode state
+    useEffect(() => {
+        const state = vscode.getState() || {
+            currentImage: null,
+            sets: {},
+        } satisfies State;
+        setCurrentImage(state.currentImage);
+        setSets(state.sets);
+
+        // Request update from provider (will send filtered sets based on config)
+        vscode.postMessage({ type: 'updateSets' } satisfies ImagesViewMessage);
+    }, []);
 
     // Handle messages from extension
-    window.addEventListener('message', event => {
-        const message = event.data as ImagesViewProviderMessage;
-        switch (message.type) {
-            case 'newImage':
-                // Overwrite state with authoritative data from provider
-                state.currentImage = message.image;
-                state.sets = message.sets;
-                vscode.setState(state);
-
-                // Update dropdown with new sets
-                populateSets(Object.keys(message.sets));
-
-                updateImage();
-                break;
-            case 'searchResult':
-                updateSearchResults(message.names);
-                break;
-            case 'setList':
-                populateSets(message.sets);
-                // Check if current image is still valid in the new sets
-                if (state.currentImage) {
-                    const setName = state.currentImage.set?.name;
-                    const imageStillExists = setName && message.sets.includes(setName);
-                    if (!imageStillExists) {
-                        // Current image's set was removed, request a new random image
-                        vscode.postMessage({ type: 'randomImage' } satisfies ImagesViewMessage);
+    useEffect(() => {
+        const handleMessage = (event: MessageEvent<ImagesViewProviderMessage>) => {
+            const message = event.data;
+            switch (message.type) {
+                case 'newImage':
+                    // Overwrite state with authoritative data from provider
+                    setCurrentImage(message.image);
+                    setSets(message.sets);
+                    vscode.setState({
+                        currentImage: message.image,
+                        sets: message.sets,
+                    });
+                    break;
+                case 'searchResult':
+                    // if results not empty, show first
+                    if (message.names.length > 0) {
+                        vscode.postMessage({ type: 'searchImage', name: message.names[0] } satisfies ImagesViewMessage);
                     }
-                } else if (message.sets.length === 0) {
-                    // No sets available, clear the image display
-                    clearImageDisplay();
-                }
-                break;
-            default:
-                // ignore unknown
-                break;
-        }
-    });
+                    break;
+                case 'setList':
+                    // Check if current image is still valid in the new sets
+                    if (currentImage) {
+                        const setName = currentImage.set?.name;
+                        const imageStillExists = setName && message.sets.includes(setName);
+                        if (!imageStillExists) {
+                            // Current image's set was removed, request a new random image
+                            vscode.postMessage({ type: 'randomImage' } satisfies ImagesViewMessage);
+                        }
+                    } else if (message.sets.length === 0) {
+                        // No sets available, clear the image display
+                        setCurrentImage(null);
+                    }
+                    break;
+                default:
+                    // ignore unknown
+                    break;
+            }
+        };
 
-    function updateImage() {
-        if (!state.currentImage)
-            return;
+        window.addEventListener('message', handleMessage);
+        return () => window.removeEventListener('message', handleMessage);
+    }, [currentImage]);
 
-        currentName = state.currentImage.name;
+    const availableNames = currentImage?.set?.name && sets[currentImage.set.name]
+        ? sets[currentImage.set.name].images.map(img => img.name)
+        : [];
 
-        // Extract available image names from current set
-        const setName = state.currentImage.set?.name;
-        availableNames = setName && state.sets[setName]
-            ? state.sets[setName].images.map(img => img.name)
-            : [];
-
-        // path should be a webview-safe uri provided by extension (string)
-        mainImage.src = state.currentImage.path || '';
-        mainImage.alt = state.currentImage.name;
-        imageTitle.textContent = state.currentImage.name;
-        imageCredits.textContent = state.currentImage.credits || '';
-
-        // Update selected set to match current image
-        setSelect.value = state.currentImage.set.name;
-    }
-
-    function clearImageDisplay() {
-        currentName = null;
-        availableNames = [];
-        mainImage.src = '';
-        mainImage.alt = 'No image selected';
-        imageTitle.textContent = 'No image selected';
-        imageCredits.textContent = '';
-    }
-
-    function updateSearchResults(names: string[]) {
-        // if results not empty, show first
-        if (names.length > 0) {
-            vscode.postMessage({ type: 'searchImage', name: names[0] } satisfies ImagesViewMessage);
-        }
-    }
-
-    function populateSets(sets: string[]) {
-        // keep selection if already present
-        const previous = setSelect.value;
-        setSelect.innerHTML = '';
-        sets.forEach(s => {
-            const opt = document.createElement('option');
-            opt.value = s;
-            opt.textContent = s;
-            setSelect.appendChild(opt);
-        });
-        if (previous && Array.from(setSelect.options).some(o => o.value === previous)) {
-            setSelect.value = previous;
-        }
-    }
-
-    // control handlers
-    prevBtn.addEventListener('click', () => {
+    const handlePrevious = () => {
         if (availableNames.length === 0) {
             return;
         }
-        vscode.postMessage({ type: 'previousImage', current: currentName ?? '' } satisfies ImagesViewMessage);
-    });
+        vscode.postMessage({ type: 'previousImage', current: currentImage?.name ?? '' } satisfies ImagesViewMessage);
+    };
 
-    nextBtn.addEventListener('click', () => {
+    const handleNext = () => {
         if (availableNames.length === 0) {
             return;
         }
-        vscode.postMessage({ type: 'nextImage', current: currentName ?? '' } satisfies ImagesViewMessage);
-    });
+        vscode.postMessage({ type: 'nextImage', current: currentImage?.name ?? '' } satisfies ImagesViewMessage);
+    };
 
-    randomBtn.addEventListener('click', () => {
+    const handleRandom = () => {
         vscode.postMessage({ type: 'randomImage' } satisfies ImagesViewMessage);
-    });
+    };
 
-    searchBtn.addEventListener('click', () => {
-        const q = searchBox.value.trim();
+    const handleSearch = () => {
+        const q = searchQuery.trim();
         if (q) {
             vscode.postMessage({ type: 'searchImage', name: q } satisfies ImagesViewMessage);
         }
-    });
+    };
 
-    searchBox.addEventListener('keydown', (event) => {
+    const handleSearchKeyDown = (event: KeyboardEvent) => {
         if (event.key === 'Enter') {
-            const q = searchBox.value.trim();
-            if (q) {
-                vscode.postMessage({ type: 'searchImage', name: q } satisfies ImagesViewMessage);
-            }
+            handleSearch();
         }
-    });
+    };
 
-    setSelect.addEventListener('change', () => {
-        const name = setSelect.value;
+    const handleSetChange = (event: Event) => {
+        const name = (event.target as HTMLSelectElement).value;
         if (name) {
             vscode.postMessage({ type: 'switchSet', name } satisfies ImagesViewMessage);
         }
-    });
+    };
 
-    // Restore state if available, then request authoritative update
-    if (state.currentImage) {
-        updateImage();
-    }
+    return (
+        <div class="viewer">
+            <div class="toolbar">
+                <select
+                    id="setSelect"
+                    aria-label="Image set"
+                    value={currentImage?.set.name ?? ''}
+                    onChange={handleSetChange}
+                >
+                    {Object.keys(sets).map(setName =>
+                        <option key={setName} value={setName}>
+                            {setName}
+                        </option>,
+                    )}
+                </select>
+                <div class="searchbar-container">
+                    <input
+                        ref={searchBoxRef}
+                        id="searchBox"
+                        type="search"
+                        placeholder="Search images..."
+                        aria-label="Search images"
+                        value={searchQuery}
+                        onInput={(e) => setSearchQuery((e.target as HTMLInputElement).value)}
+                        onKeyDown={handleSearchKeyDown}
+                    />
+                    <button id="searchBtn" title="Search" onClick={handleSearch}>
+                        <i class='codicon codicon-search'></i>
+                    </button>
+                    <button id="randomBtn" title="Random image" onClick={handleRandom}>
+                        <i class='codicon codicon-sync'></i>
+                    </button>
+                </div>
+            </div>
 
-    // Request update from provider (will send filtered sets based on config)
-    vscode.postMessage({ type: 'updateSets' } satisfies ImagesViewMessage);
-}());
+            <div class="image-container" role="region" aria-live="polite">
+                <button id="prevBtn" class="nav" title="Previous" onClick={handlePrevious}>
+                    <i class='codicon codicon-arrow-circle-left'></i>
+                </button>
+                <img
+                    id="mainImage"
+                    src={currentImage?.path ?? ''}
+                    alt={currentImage?.name ?? 'No image selected'}
+                />
+                <button id="nextBtn" class="nav" title="Next" onClick={handleNext}>
+                    <i class='codicon codicon-arrow-circle-right'></i>
+                </button>
+            </div>
+
+            <div class="caption">
+                <h2 id="imageTitle">{currentImage?.name ?? 'No image'}</h2>
+                <p id="imageCredits">{currentImage?.credits ?? ''}</p>
+            </div>
+        </div>
+    );
+}
+
+// Render the app
+const root = document.getElementById('root');
+if (root) {
+    render(<App />, root);
+}
