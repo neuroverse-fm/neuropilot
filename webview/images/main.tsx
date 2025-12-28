@@ -242,7 +242,4 @@ function App() {
 }
 
 // Render the app
-const root = document.getElementById('root');
-if (root) {
-    render(<App />, root);
-}
+render(<App />, document.getElementById('root')!);
