@@ -82,7 +82,7 @@ function handleRequestCookie(actionData: ActionData) {
                 'Segmentation fault (core dumped).',
             ];
             const randomIndex = Math.floor(Math.random() * quotes.length);
-            updateActionStatus(actionData, 'failure', `${base.replace('You', CONNECTION.nameOfAPI)}${quotes[randomIndex].replace(/you|You/g, CONNECTION.nameOfAPI)} (undefined cookie)`);
+            updateActionStatus(actionData, 'failure', `${base.replace('You', CONNECTION.nameOfAPI)}${quotes[randomIndex].replace(/you|You/g, CONNECTION.nameOfAPI)} (undefined flavor)`);
             return base + quotes[randomIndex];
         }
     }
