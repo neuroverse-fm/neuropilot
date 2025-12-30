@@ -598,7 +598,7 @@ export async function RCEActionHandler(actionData: ActionData) {
         NEURO.client?.sendActionResult(actionData.id, true, `An error occurred while executing the action "${actionName}". You can retry if you like, but it may be better to ask Vedal to check what's up.`);
 
         // Track execution error
-        updateActionStatus(actionData, 'failure', 'Unexpected error occurred');
+        updateActionStatus(actionData, 'failure', 'Uncaught exception while executing action');
         return;
     }
 }
