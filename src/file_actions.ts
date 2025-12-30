@@ -20,7 +20,7 @@ const ACTION_FAIL_NOTES = {
     targetedFile: 'Targeted path is a file',
     targetedFolder: 'Targeted path is a folder',
     incorrectType: 'Targeted path is not a file',
-};
+} as const;
 
 /**
  * The path validator.
