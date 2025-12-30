@@ -269,7 +269,7 @@ export function acceptRceRequest(): void {
         NEURO.client?.sendActionResult(actionData.id, true, `An error occurred while executing the action "${actionName}". You can retry if you like, but it may be better to ask ${CONNECTION.userName} to check what's up.`);
 
         // Track execution failure
-        updateActionStatus(actionData, 'failure', 'Execution error occurred');
+        updateActionStatus(actionData, 'failure', 'Uncaught exception while executing action');
     }
 
     clearRceRequest();
