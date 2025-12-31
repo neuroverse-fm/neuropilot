@@ -9,17 +9,18 @@ export interface ExecuteResult {
     sessionId: string;
 }
 
+export interface ExecutionHistoryItem extends ExecuteResult {
+    timestamp: number;
+}
+
 export type ExecuteViewProviderMessage = {
     type: 'executionResult';
-    result: ExecuteResult & { timestamp: number };
+    result: ExecutionHistoryItem;
 } | {
     type: 'updateStatus';
     executionId: string;
     status: ActionStatus;
     message?: string;
-} | {
-    type: 'markAllPendingAsFailed';
-    message: string;
 } | {
     type: 'currentSession';
     sessionId: string;

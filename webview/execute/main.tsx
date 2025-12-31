@@ -1,16 +1,7 @@
 import { render } from 'preact';
 import { useState, useEffect, useMemo } from 'preact/hooks';
-import type { ExecuteViewProviderMessage } from '@/views/execute';
-import type { ActionStatus } from '@/events/actions';
-
-interface ExecutionHistoryItem {
-    status: ActionStatus;
-    action: string;
-    message?: string;
-    timestamp: number;
-    executionId: string;
-    sessionId: string;
-}
+import type { ExecuteViewProviderMessage, ExecutionHistoryItem } from '@/views/execute';
+import { ActionStatus } from '~/src/events/actions';
 
 interface State {
     history: ExecutionHistoryItem[];
@@ -73,12 +64,6 @@ function ExecutionWindow() {
                         return [message.result, ...prev].slice(0, 100); // Keep last 100 items
                     }
                 });
-            } else if (message.type === 'markAllPendingAsFailed') {
-                setHistory(prev => prev.map(item =>
-                    item.status === 'pending'
-                        ? { ...item, status: 'failure' as const, message: message.message }
-                        : item,
-                ));
             }
         };
 
