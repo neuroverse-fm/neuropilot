@@ -4,10 +4,10 @@ import { ActionData } from '@/neuro_client_helper';
 export type ActionStatus = 'pending' | 'success' | 'failure' | 'denied' | 'exception' | 'timeout' | 'schema' | 'cancelled';
 
 export interface ActionsEventData {
-    action: string;
-    status: ActionStatus;
-    message?: string;
-    executionId: string;
+    readonly action: string;
+    readonly status: ActionStatus;
+    readonly message?: string;
+    readonly executionId: string;
 }
 
 const actionsEventEmitter = new EventEmitter<ActionsEventData>();
@@ -25,7 +25,7 @@ export function fireOnActionStart(actionData: ActionData, message?: string): voi
         status: 'pending',
         message,
         executionId: actionData.id,
-    });
+    } as const);
 }
 
 /**
@@ -41,7 +41,7 @@ export function updateActionStatus(actionData: ActionData, status: ActionStatus,
         status,
         message,
         executionId: actionData.id,
-    });
+    } as const);
 }
 
 /**
@@ -57,5 +57,5 @@ export function fireOnActionComplete(actionData: ActionData, success: boolean, m
         status: success ? 'success' : 'failure',
         message,
         executionId: actionData.id,
-    });
+    } as const);
 }
