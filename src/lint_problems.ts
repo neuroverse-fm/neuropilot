@@ -235,7 +235,7 @@ export function handleGetFileLintProblems(actionData: ActionData): string | unde
         return `Linting problems for file ${relativePath}:${formattedDiagnostics}`;
     } catch (erm) {
         logOutput('ERROR', `Getting diagnostics for ${relativePath} failed: ${erm}`);
-        updateActionStatus(actionData, 'failure', 'Error thrown');
+        updateActionStatus(actionData, 'exception', 'Error thrown');
         return contextFailure(`Failed to get linting diagnostics for "${relativePath}".`);
     }
 }
@@ -271,7 +271,7 @@ export function handleGetFolderLintProblems(actionData: ActionData): string | un
         return `Linting problems for folder "${relativeFolder}":\n${formattedDiagnostics}`;
     } catch (erm) {
         logOutput('ERROR', `Getting diagnostics for folder ${relativeFolder} failed: ${erm}`);
-        updateActionStatus(actionData, 'failure', 'Error thrown');
+        updateActionStatus(actionData, 'exception', 'Error thrown');
         return contextFailure(`Failed to get linting diagnostics for folder "${relativeFolder}".`);
     }
 }
@@ -304,7 +304,7 @@ export function handleGetWorkspaceLintProblems(actionData: ActionData): string |
         return `Linting problems for the current workspace:\n${formattedDiagnostics}`;
     } catch (erm) {
         logOutput('ERROR', `Failed to get diagnostics for workspace: ${erm}`);
-        updateActionStatus(actionData, 'failure', 'Error thrown');
+        updateActionStatus(actionData, 'exception', 'Error thrown');
         return contextFailure("Couldn't get diagnostics for the workspace.");
     }
 }

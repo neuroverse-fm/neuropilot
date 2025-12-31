@@ -88,11 +88,15 @@ export const cancelRequestAction: RCEAction = {
 /**
  * Handles cancellation requests from Neuro.
  */
-export function handleCancelRequest(_actionData: ActionData): string | undefined {
+export function handleCancelRequest(actionData: ActionData): string | undefined {
     if (!NEURO.rceRequest) {
+        updateActionStatus(actionData, 'failure', 'No active request.');
         return 'No active request to cancel.';
     }
+    const data = NEURO.rceRequest!.actionData;
+    updateActionStatus(data, 'cancelled', 'Cancelled on Neuro\'s request');
     clearRceRequest();
+    updateActionStatus(actionData, 'success', `Cancelled action "${data.name}"`);
     return 'Request cancelled.';
 }
 
@@ -105,6 +109,8 @@ export function emergencyDenyRequests(): void {
     if (!NEURO.rceRequest) {
         return;
     }
+    const data = NEURO.rceRequest.actionData;
+    updateActionStatus(data, 'cancelled', 'Emergency shutdown activated');
     clearRceRequest();
     logOutput('INFO', `Cancelled ${NEURO.rceRequest.callback} due to emergency shutdown.`);
     NEURO.client?.sendContext('Your last request was denied.');
@@ -186,7 +192,7 @@ export function createRceRequest(
             timeout = setTimeout(() => {
                 clearRceRequest();
                 NEURO.client?.sendContext('Request expired.');
-                updateActionStatus(actionData, 'failure', `Timed out waiting for approval from ${CONNECTION.userName}`);
+                updateActionStatus(actionData, 'timeout', `Timed out waiting for approval from ${CONNECTION.userName}`);
             }, timeoutDuration);
         }
 
@@ -290,7 +296,7 @@ export function denyRceRequest(): void {
     // Track denial
     updateActionStatus(
         NEURO.rceRequest.actionData,
-        'failure',
+        'denied',
         `Denied by ${CONNECTION.userName}`,
     );
 
@@ -471,7 +477,7 @@ export async function RCEActionHandler(actionData: ActionData) {
             const effectivePermission = getPermissionLevel(action.name);
             if (effectivePermission === PermissionLevel.OFF) {
                 NEURO.client?.sendActionResult(actionData.id, true, 'Action failed: You don\'t have permission to execute this action.');
-                updateActionStatus(actionData, 'failure', 'Permission denied');
+                updateActionStatus(actionData, 'denied', 'Permission denied');
                 return;
             }
 
@@ -490,7 +496,7 @@ export async function RCEActionHandler(actionData: ActionData) {
                     const schemaFailures = `- ${messagesArray.join('\n- ')}`;
                     const message = 'Action failed, your inputs did not pass schema validation due to these problems:\n\n' + schemaFailures + '\n\nPlease pay attention to the schema and the above errors if you choose to retry.';
                     NEURO.client?.sendActionResult(actionData.id, false, message);
-                    updateActionStatus(actionData, 'failure', 'Schema validation failed');
+                    updateActionStatus(actionData, 'schema', `${messagesArray.length} schema validation rules failed`);
                     return;
                 }
             }
@@ -539,7 +545,7 @@ export async function RCEActionHandler(actionData: ActionData) {
                     }
                     logOutput('WARN', `${CONNECTION.nameOfAPI}'${CONNECTION.nameOfAPI.endsWith('s') ? '' : 's'} action ${action.name} was cancelled because ${createdLogReason}`);
                     NEURO.client?.sendContext(`Your request was cancelled because ${createdReason}`);
-                    updateActionStatus(actionData, 'failure', `Cancelled because ${createdLogReason}`);
+                    updateActionStatus(actionData, 'cancelled', `Cancelled because ${createdLogReason}`);
                     clearRceRequest();
                 };
                 for (const eventObject of action.cancelEvents) {
@@ -598,7 +604,7 @@ export async function RCEActionHandler(actionData: ActionData) {
         NEURO.client?.sendActionResult(actionData.id, true, `An error occurred while executing the action "${actionName}". You can retry if you like, but it may be better to ask Vedal to check what's up.`);
 
         // Track execution error
-        updateActionStatus(actionData, 'failure', 'Uncaught exception while executing action');
+        updateActionStatus(actionData, 'exception', 'Uncaught exception while executing action');
         return;
     }
 }

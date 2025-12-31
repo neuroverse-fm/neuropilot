@@ -75,6 +75,17 @@ function ExecutionWindow() {
         setHistory([]);
     };
 
+    const historyItemMappings: Record<ActionStatus, string> = {
+        failure: 'codicon-error',
+        success: 'codicon-pass',
+        pending: 'codicon-loading codicon-modifier-spin',
+        denied: 'codicon-skip',
+        schema: 'codicon-bracket-error',
+        timeout: 'codicon-clockface',
+        exception: 'codicon-run-errors',
+        cancelled: 'codicon-bell-dot',
+    } as const;
+
     return (
         <div class="execution-container">
             <div class="header">
@@ -98,10 +109,7 @@ function ExecutionWindow() {
                             class={`history-item ${item.status}`}
                         >
                             <div class="item-header">
-                                <i class={`codicon ${item.status === 'success' ? 'codicon-pass' :
-                                item.status === 'failure' ? 'codicon-error' :
-                                'codicon-loading codicon-modifier-spin'
-                                }`}></i>
+                                <i class={`codicon ${historyItemMappings[item.status]}`}></i>
                                 <span class="action-name">{item.action}</span>
                                 <span class="timestamp">{formatTime(item.timestamp)}</span>
                             </div>

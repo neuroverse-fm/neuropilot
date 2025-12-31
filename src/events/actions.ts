@@ -1,7 +1,7 @@
 import { Disposable, EventEmitter } from 'vscode';
 import { ActionData } from '@/neuro_client_helper';
 
-export type ActionStatus = 'pending' | 'success' | 'failure';
+export type ActionStatus = 'pending' | 'success' | 'failure' | 'denied' | 'exception' | 'timeout' | 'schema' | 'cancelled';
 
 export interface ActionsEventData {
     action: string;
