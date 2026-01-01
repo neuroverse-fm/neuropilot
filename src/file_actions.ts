@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 
 import { NEURO } from '@/constants';
-import { formatContext, getFence, getPositionContext, getVirtualCursor, getWorkspacePath, getWorkspaceUri, isBinary, isPathNeuroSafe, logOutput, normalizePath, notifyOnCaughtException, stripTailSlashes } from '@/utils';
-import { ActionData, contextNoAccess, RCEAction, actionValidationFailure, actionValidationAccept, ActionValidationResult } from '@/neuro_client_helper';
+import { filterFileContents, formatContext, getFence, getPositionContext, getVirtualCursor, getWorkspacePath, getWorkspaceUri, isBinary, isPathNeuroSafe, logOutput, NeuroPositionContext, normalizePath, notifyOnCaughtException, simpleFileName, stripTailSlashes } from '@/utils';
+import { ActionData, contextFailure, contextNoAccess, RCEAction, actionValidationFailure, actionValidationAccept, ActionValidationResult } from '@/neuro_client_helper';
 import { CONFIG, PermissionLevel, getPermissionLevel } from '@/config';
 import { targetedFileCreatedEvent, targetedFileDeletedEvent } from '@events/files';
 import { RCECancelEvent } from '@events/utils';
@@ -227,22 +227,73 @@ export const fileActions = {
     },
     read_file: {
         name: 'read_file',
-        description: 'Read a file\'s contents without opening it.',
+        description: 'Read a file\'s contents without opening it. If filePath is not specified, reads the currently open file.',
         category: CATEGORY_FILE_ACTIONS,
         schema: {
             type: 'object',
             properties: {
-                filePath: { type: 'string', description: 'The relative path to the file.', examples: ['./index.html', 'style.css', 'src/main.js'] },
+                filePath: { type: 'string', description: 'The relative path to the file. If omitted, reads the currently open file.', examples: ['./index.html', 'style.css', 'src/main.js'] },
             },
-            required: ['filePath'],
             additionalProperties: false,
         },
         handler: handleReadFile,
-        cancelEvents: commonFileEvents,
+        cancelEvents: [
+            (actionData: ActionData) => {
+                if (!actionData.params?.filePath) {
+                    // For current file, cancel on document change
+                    return new RCECancelEvent({
+                        reason: 'the active document was changed.',
+                        events: [
+                            [vscode.workspace.onDidChangeTextDocument, null],
+                        ],
+                    });
+                }
+                // it looks more readable this way okay
+                return null;
+            },
+            (actionData: ActionData) => actionData.params?.filePath ? targetedFileCreatedEvent(actionData.params.filePath) : null,
+            (actionData: ActionData) => actionData.params?.filePath ? targetedFileDeletedEvent(actionData.params.filePath) : null,
+        ],
         validators: {
-            sync: [neuroSafeValidation, binaryFileValidation, validateIsAFile],
+            sync: [
+                async (actionData: ActionData) => {
+                    // Default to currently open file if filePath not provided
+                    if (!actionData.params.filePath) {
+                        const document = vscode.window.activeTextEditor?.document;
+                        if (!document) {
+                            return actionValidationFailure('File path left empty and you are not in an active file to edit.');
+                        }
+
+                        // Convert absolute path to relative path
+                        const workspaceUri = getWorkspaceUri();
+                        if (!workspaceUri) {
+                            return actionValidationFailure('You are not in a workspace.');
+                        }
+
+                        const relativePath = vscode.workspace.asRelativePath(document.uri, false);
+                        actionData.params.filePath = relativePath;
+                    }
+
+                    // Run all validators with the resolved filePath
+                    const neuroSafeResult = await neuroSafeValidation(actionData);
+                    if (!neuroSafeResult.success) return neuroSafeResult;
+
+                    const binaryResult = await binaryFileValidation(actionData);
+                    if (!binaryResult.success) return binaryResult;
+
+                    const fileResult = await validateIsAFile(actionData);
+                    if (!fileResult.success) return fileResult;
+
+                    return actionValidationAccept();
+                },
+            ],
         },
-        promptGenerator: (actionData: ActionData) => `read the file "${actionData.params?.filePath}" (without opening it).`,
+        promptGenerator: (actionData: ActionData) => {
+            if (actionData.params?.filePath) {
+                return `read the file "${actionData.params.filePath}" (without opening it).`;
+            }
+            return 'get the current file\'s contents.';
+        },
     },
     create_file: {
         name: 'create_file',
@@ -679,6 +730,35 @@ export function handleOpenFile(actionData: ActionData): string | undefined {
 }
 
 export function handleReadFile(actionData: ActionData): string | undefined {
+    // If no filePath provided, read current file
+    if (!actionData.params.filePath) {
+        const editor = vscode.window.activeTextEditor;
+        if (!editor) {
+            return contextFailure('No active text editor.');
+        }
+
+        const document = editor.document;
+        const fileName = simpleFileName(document.fileName);
+        const cursor = getVirtualCursor()!;
+
+        if (!isPathNeuroSafe(document.fileName)) {
+            return contextNoAccess(fileName);
+        }
+
+        // Manually construct context to include entire file
+        const positionContext: NeuroPositionContext = {
+            contextBefore: filterFileContents(document.getText(new vscode.Range(new vscode.Position(0, 0), cursor))),
+            contextAfter: filterFileContents(document.getText(new vscode.Range(cursor, document.lineAt(document.lineCount - 1).rangeIncludingLineBreak.end))),
+            startLine: 0,
+            endLine: document.lineCount - 1,
+            totalLines: document.lineCount,
+            cursorDefined: true,
+        };
+
+        return `Contents of the file ${fileName}:\n\n${formatContext(positionContext)}`;
+    }
+
+    // Original read_file logic for specific file
     const file = actionData.params.filePath;
 
     const workspaceUri = getWorkspaceUri()!;

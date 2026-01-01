@@ -220,19 +220,6 @@ export const editingActions = {
         cancelEvents: commonCancelEventsWithCursor,
         promptGenerator: 'get her current cursor position and the text surrounding it.',
     },
-    get_file_contents: {
-        name: 'get_file_contents',
-        description: 'Get the contents of the current file.',
-        category: CATEGORY_EDITING,
-        handler: handleGetContent,
-        cancelEvents: [
-            cancelOnDidChangeTextDocument,
-        ],
-        promptGenerator: 'get the current file\'s contents.',
-        validators: {
-            sync: [checkCurrentFile],
-        },
-    },
     insert_text: {
         name: 'insert_text',
         description: 'Insert code at the specified position.'
@@ -735,7 +722,6 @@ export function addEditingActions() {
     addActions([
         editingActions.change_cursor_position,
         editingActions.get_cursor_position,
-        editingActions.get_file_contents,
         editingActions.insert_text,
         editingActions.insert_lines,
         editingActions.replace_text,
@@ -816,33 +802,6 @@ export function handleGetCursor(_actionData: ActionData): string | undefined {
     if (cursorStyle === 'off')
         cursorStyle = 'lineAndColumn';
     return `In file ${relativePath}.\n\n${formatContext(cursorContext)}`;
-}
-
-export function handleGetContent(): string {
-    const editor = vscode.window.activeTextEditor;
-    if (!editor) {
-        return contextFailure('No active text editor.');
-    }
-
-    const document = editor.document;
-    const fileName = simpleFileName(document.fileName);
-    const cursor = getVirtualCursor()!;
-
-    if (!isPathNeuroSafe(document.fileName)) {
-        return contextNoAccess(fileName);
-    }
-
-    // Manually construct context to include entire file
-    const positionContext: NeuroPositionContext = {
-        contextBefore: filterFileContents(document.getText(new vscode.Range(new vscode.Position(0, 0), cursor))),
-        contextAfter: filterFileContents(document.getText(new vscode.Range(cursor, document.lineAt(document.lineCount - 1).rangeIncludingLineBreak.end))),
-        startLine: 0,
-        endLine: document.lineCount - 1,
-        totalLines: document.lineCount,
-        cursorDefined: true,
-    };
-
-    return `Contents of the file ${fileName}:\n\n${formatContext(positionContext)}`;
 }
 
 export function handleInsertText(actionData: ActionData): string | undefined {
