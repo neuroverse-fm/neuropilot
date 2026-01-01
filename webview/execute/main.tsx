@@ -95,7 +95,7 @@ function ExecutionWindow() {
 
     // Sort history by timestamp (oldest to newest)
     const sortedHistory = useMemo(() => {
-        return [...history].sort((a, b) => a.timestamp - b.timestamp);
+        return [...history].sort((a, b) => b.timestamp - a.timestamp);
     }, [history]);
 
     return (
