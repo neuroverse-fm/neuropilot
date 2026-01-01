@@ -692,7 +692,7 @@ export const editingActions = {
         schemaFallback: {
             type: 'object',
             properties: {
-                diff: { type: 'string', examples: ['>>>>>> SEARCH\ndef turtle():\n    return "Vedal"\n======\ndef turtle():\n    "insert_turtle_here"\n<<<<<< REPLACE'] },
+                diff: { type: 'string', examples: ['>>>>>> SEARCH\ndef turtle():\n    return "Vedal"\n======\ndef turtle():\n    return "insert_turtle_here"\n<<<<<< REPLACE'] },
                 moveCursor: { type: 'boolean', default: false },
             },
             required: ['diff'],
