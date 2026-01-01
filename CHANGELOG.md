@@ -16,6 +16,10 @@ Changes between each version before then will not be listed.
   - Each action updates the panel according to what the action executed is now doing.
   - The history persists across sessions. You can clear it by clicking the button in the view.
 
+### New commands
+
+- [Dev] Add Execution History Item: a developer-only command that adds a fake execution history item for testing purposes.
+
 ### Fixes
 
 - Before, toggling `neuropilot.actions.experimentalSchemas` off would still cause the inputs to be validated against the experimental schema. Now, the inputs are checked against the correct schema.
