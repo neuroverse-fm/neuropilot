@@ -149,7 +149,7 @@ async function binaryFileValidation(actionData: ActionData): Promise<ActionValid
 async function validateIsAFile(actionData: ActionData): Promise<ActionValidationResult> {
     const filePath = actionData.params?.filePath;
     if (!filePath)
-        return actionValidationFailure('No file path specified.', ACTION_FAIL_NOTES.noFilePath);
+        return actionValidationRetry('No file path specified.', ACTION_FAIL_NOTES.noFilePath);
 
     const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
     if (!workspaceFolder)
