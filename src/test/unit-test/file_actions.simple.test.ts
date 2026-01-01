@@ -6,7 +6,7 @@ import { ActionData } from '@/neuro_client_helper';
 suite('file Actions', () => {
     test('get_workspace_files has a non-empty prompt', () => {
         // === Arrange & Act ===
-        const prompt = fileActions.get_workspace_files.promptGenerator({} as ActionData);
+        const prompt = fileActions.list_files_and_folders.promptGenerator({} as ActionData);
 
         // === Assert ===
         assert.ok(typeof prompt === 'string' && prompt.length > 0);
@@ -14,7 +14,7 @@ suite('file Actions', () => {
 
     test('get_workspace_files correctly includes the folder in prompt', () => {
         // === Arrange & Act ===
-        const prompt = fileActions.get_workspace_files.promptGenerator({ params: { folder: 'src/' } } as ActionData);
+        const prompt = fileActions.list_files_and_folders.promptGenerator({ params: { folder: 'src/' } } as ActionData);
 
         // === Assert ===
         assert.ok(typeof prompt === 'string' && prompt.length > 0);
@@ -23,7 +23,7 @@ suite('file Actions', () => {
 
     test('get_workspace_files correctly states if Neuro asked for recursive', () => {
         // === Arrange & Act ===
-        const prompt = fileActions.get_workspace_files.promptGenerator({ params: { recursive: true } } as ActionData);
+        const prompt = fileActions.list_files_and_folders.promptGenerator({ params: { recursive: true } } as ActionData);
 
         // === Assert ===
         assert.ok(typeof prompt === 'string' && prompt.length > 0);
@@ -32,7 +32,7 @@ suite('file Actions', () => {
 
     test('get_workspace_files correctly omits recursive if Neuro didn\'t ask', () => {
         // === Arrange & Act ===
-        const prompt = fileActions.get_workspace_files.promptGenerator({ params: { recursive: false } } as ActionData);
+        const prompt = fileActions.list_files_and_folders.promptGenerator({ params: { recursive: false } } as ActionData);
 
         // === Assert ===
         assert.ok(typeof prompt === 'string' && prompt.length > 0);
@@ -41,7 +41,7 @@ suite('file Actions', () => {
 
     test('open_file prompt formats path', () => {
         // === Arrange & Act ===
-        const prompt = fileActions.open_file.promptGenerator({ params: { filePath: 'src/index.ts' } } as ActionData);
+        const prompt = fileActions.switch_files.promptGenerator({ params: { filePath: 'src/index.ts' } } as ActionData);
 
         // === Assert ===
         assert.ok(typeof prompt === 'string' && prompt.length > 0);

@@ -194,9 +194,9 @@ const commonCancelEventsWithCursor: ((actionData: ActionData) => RCECancelEvent)
 ];
 
 export const editingActions = {
-    place_cursor: {
-        name: 'place_cursor',
-        description: 'Place your cursor in the current file at the specified position. Line and column numbers are one-based for "absolute" and zero-based for "relative".',
+    change_cursor_position: {
+        name: 'change_cursor_position',
+        description: 'Move your cursor in the current file at the specified position. Line and column numbers are one-based for "absolute" and zero-based for "relative".',
         category: CATEGORY_EDITING,
         schema: {
             ...POSITION_SCHEMA,
@@ -209,8 +209,8 @@ export const editingActions = {
         cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `${actionData.params.type === 'absolute' ? 'place her cursor at' : 'move her cursor by'} (${actionData.params.line}:${actionData.params.column}).`,
     },
-    get_cursor: {
-        name: 'get_cursor',
+    get_cursor_position: {
+        name: 'get_cursor_position',
         description: 'Get your current cursor position and the text surrounding it.',
         category: CATEGORY_EDITING,
         handler: handleGetCursor,
@@ -670,13 +670,13 @@ export const editingActions = {
             return `replace your current selection with ${lineCount} line${lineCount === 1 ? '' : 's'} of content.`;
         },
     },
-    diff_patch: {
-        name: 'diff_patch',
+    edit_with_diff: {
+        name: 'edit_with_diff',
         description: 'Write a diff patch to apply to the file.' +
             ' The diff patch must be written in a pseudo-search-replace-diff format.' +
             ' `>>>>>> SEARCH` and `<<<<<< REPLACE` will be used to tell what to search and what to replace,' +
             ' with `======` delimiting between the two.' +
-            ' `>>>>>> SEARCH`, `<<<<<< REPLACE` and `======` must be on a separate line, and be the only content on that line.' +
+            ' `>>>>>> SEARCH`, `<<<<<< REPLACE` and `======` must each be on a separate line, and be the only content on said lines.' +
             ' You can only specify **one** search/replace pair per diff patch.*' +
             ' Read the schema for an example.',
         category: CATEGORY_EDITING,
@@ -733,8 +733,8 @@ export const editingActions = {
 
 export function addEditingActions() {
     addActions([
-        editingActions.place_cursor,
-        editingActions.get_cursor,
+        editingActions.change_cursor_position,
+        editingActions.get_cursor_position,
         editingActions.get_file_contents,
         editingActions.insert_text,
         editingActions.insert_lines,
@@ -748,7 +748,7 @@ export function addEditingActions() {
         editingActions.highlight_lines,
         editingActions.get_user_selection,
         editingActions.replace_user_selection,
-        editingActions.diff_patch,
+        editingActions.edit_with_diff,
         editingActions.save,
     ]);
 }

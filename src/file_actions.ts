@@ -167,8 +167,8 @@ const commonFileEvents: ((actionData: ActionData) => RCECancelEvent | null)[] = 
 ];
 
 export const fileActions = {
-    get_workspace_files: {
-        name: 'get_workspace_files',
+    list_files_and_folders: {
+        name: 'list_files_and_folders',
         description: 'Get a list of files in the workspace. Will not return subdirectories by default, use `recursive` to do so.',
         schema: {
             type: 'object',
@@ -206,9 +206,9 @@ export const fileActions = {
         ],
         promptGenerator: (actionData: ActionData) => `${actionData.params?.recursive ? 'Recursively get' : 'Get'} a list of files in ${actionData.params?.folder ? `"${stripTailSlashes(actionData.params.folder)}"` : 'the workspace'}.`,
     },
-    open_file: {
-        name: 'open_file',
-        description: 'Open a file in the workspace. You cannot open a binary file directly.',
+    switch_files: {
+        name: 'switch_files',
+        description: 'Switch to a different file in the workspace. You cannot open a binary file directly.',
         category: CATEGORY_FILE_ACTIONS,
         schema: {
             type: 'object',
@@ -333,8 +333,8 @@ export const fileActions = {
 
 export function addFileActions() {
     addActions([
-        fileActions.get_workspace_files,
-        fileActions.open_file,
+        fileActions.list_files_and_folders,
+        fileActions.switch_files,
         fileActions.read_file,
         fileActions.create_file,
         fileActions.create_folder,
@@ -385,7 +385,7 @@ export function handleCreateFile(actionData: ActionData): string | undefined {
         NEURO.client?.sendContext(`Created file ${relativePath}`);
 
         // Open the file if Neuro has permission for open_file
-        if (getPermissionLevel(fileActions.open_file.name) !== PermissionLevel.AUTOPILOT)
+        if (getPermissionLevel(fileActions.switch_files.name) !== PermissionLevel.AUTOPILOT)
             return;
 
         try {
