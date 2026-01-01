@@ -48,10 +48,14 @@ function ExecutionWindow() {
             } else if (message.type === 'executionResult') {
                 setHistory(prev => {
                     // Check if execution ID already exists
-                    const existingIndex = prev.findIndex(item => item.executionId === message.result.executionId);
+                    // Only match items from the current session to avoid updating old items
+                    const existingIndex = prev.findIndex(item =>
+                        item.executionId === message.result.executionId &&
+                        item.sessionId === message.result.sessionId,
+                    );
 
                     if (existingIndex !== -1) {
-                        // Update existing entry
+                        // Update existing entry - only if it's from the same session
                         const updated = [...prev];
                         updated[existingIndex] = {
                             ...updated[existingIndex],
@@ -60,10 +64,13 @@ function ExecutionWindow() {
                         };
                         return updated;
                     } else {
-                        // Add new entry
+                        // Add new entry at the beginning
                         return [message.result, ...prev].slice(0, 100); // Keep last 100 items
                     }
                 });
+            } else if (message.type === 'addHistoryItem') {
+                // Add a custom history item (for dev testing)
+                setHistory(prev => [message.item, ...prev].slice(0, 100));
             }
         };
 
@@ -86,6 +93,11 @@ function ExecutionWindow() {
         cancelled: 'codicon-bell-dot',
     } as const;
 
+    // Sort history by timestamp (oldest to newest)
+    const sortedHistory = useMemo(() => {
+        return [...history].sort((a, b) => a.timestamp - b.timestamp);
+    }, [history]);
+
     return (
         <div class="execution-container">
             <div class="header">
@@ -103,7 +115,7 @@ function ExecutionWindow() {
                 </div>
                 :
                 <div class="history-list">
-                    {history.map((item, index) =>
+                    {sortedHistory.map((item, index) =>
                         <div
                             key={`${item.executionId}-${index}`}
                             class={`history-item ${item.status}`}

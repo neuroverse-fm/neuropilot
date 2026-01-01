@@ -173,8 +173,14 @@
 			},
 			{
 				"command": "neuropilot.dev.clearMementos",
-				"title": "[Dev] Clear all NeuroPilot mementos",
-				"category": "NeuroPilot",
+				"title": "Clear all NeuroPilot mementos",
+				"category": "NeuroPilot [Dev]",
+				"enablement": "isDevelopment"
+			},
+			{
+				"command": "neuropilot.dev.addExecutionHistoryItem",
+				"title": "Add Custion Execution History Item",
+				"category": "NeuroPilot [Dev]",
 				"enablement": "isDevelopment"
 			},
 			{

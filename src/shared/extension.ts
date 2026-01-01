@@ -17,7 +17,7 @@ import { loadIgnoreFiles } from '@/ignore_files_utils';
 import { getWorkspacePath, normalizePath } from '@/utils';
 import { ActionsViewProvider } from '@/views/actions';
 import { ImagesViewProvider } from '../views/image';
-import { ExecuteViewProvider } from '@/views/execute';
+import { ExecuteViewProvider, addCustomExecutionHistoryItem } from '@/views/execute';
 
 // Shared commands
 export function registerCommonCommands() {
@@ -38,6 +38,13 @@ export function registerCommonCommands() {
         vscode.commands.registerCommand('neuropilot.resetTemporarilyDisabledActions', () => NEURO.tempDisabledActions = []),
         vscode.commands.registerCommand('neuropilot.readChangelog', readChangelogAndSendToNeuro),
         vscode.commands.registerCommand('neuropilot.dev.clearMementos', clearAllMementos),
+        vscode.commands.registerCommand('neuropilot.dev.addExecutionHistoryItem', () => {
+            if (NEURO.viewProviders.execute) {
+                addCustomExecutionHistoryItem(NEURO.viewProviders.execute);
+            } else {
+                vscode.window.showErrorMessage('Execution view provider not initialized');
+            }
+        }),
         ...registerDocsCommands(),
     ];
 }
