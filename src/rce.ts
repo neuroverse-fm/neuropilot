@@ -512,7 +512,7 @@ export async function RCEActionHandler(actionData: ActionData) {
                             updateActionStatus(
                                 actionData,
                                 'failure',
-                                actionResult.historyNote ? `Validator failed: ${actionResult.historyNote}` : 'Validator failed',
+                                actionResult.historyNote ? `Validator failed: ${actionResult.historyNote}` : 'Validator failed' + actionResult.retry ? '\nRequesting retry' : '',
                             );
                             return;
                         }

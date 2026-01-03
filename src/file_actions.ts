@@ -128,9 +128,7 @@ async function binaryFileValidation(actionData: ActionData): Promise<ActionValid
     const uri = workspaceUri.with({ path: absolutePath });
 
     try {
-        const stat = await vscode.workspace.fs.stat(uri);
-        if (stat.type !== vscode.FileType.File)
-            return actionValidationFailure('The specified path is not a file.', ACTION_FAIL_NOTES.targetedFolder);
+        await vscode.workspace.fs.stat(uri);
     } catch {
         return actionValidationFailure('Specified file does not exist.', ACTION_FAIL_NOTES.doesntExist.replace('directory', 'file'));
     }
@@ -158,7 +156,7 @@ async function validateIsAFile(actionData: ActionData): Promise<ActionValidation
     const normalizedPath = normalizePath(filePath).replace(/^\/|\/$/g, '');
     const segments = normalizedPath.split('/').filter(Boolean);
     if (segments.length === 0)
-        return actionValidationFailure('No file path specified.', ACTION_FAIL_NOTES.noFilePath);
+        return actionValidationRetry('No file path specified.', ACTION_FAIL_NOTES.noFilePath);
     const fullPath = vscode.Uri.joinPath(workspaceFolder.uri, ...segments);
 
     try {
@@ -167,9 +165,9 @@ async function validateIsAFile(actionData: ActionData): Promise<ActionValidation
         const isFile = (stat.type & vscode.FileType.File) === vscode.FileType.File;
 
         if (isDirectory)
-            return actionValidationRetry(`${filePath} is a directory, not a file.`, ACTION_FAIL_NOTES.targetedFolder);
+            return actionValidationFailure(`${filePath} is a directory, not a file.`, ACTION_FAIL_NOTES.targetedFolder);
         if (!isFile)
-            return actionValidationRetry(`${filePath} is not a file.`, ACTION_FAIL_NOTES.targetedFolder);
+            return actionValidationFailure(`${filePath} is not a file.`, ACTION_FAIL_NOTES.targetedFolder);
     } catch (erm: unknown) {
         if (erm instanceof vscode.FileSystemError && erm.code === 'FileNotFound')
             return actionValidationFailure(`${filePath} does not exist.`, ACTION_FAIL_NOTES.doesntExist);
@@ -239,7 +237,7 @@ export const fileActions = {
         handler: handleOpenFile,
         cancelEvents: commonFileEvents,
         validators: {
-            sync: [neuroSafeValidation, binaryFileValidation, validateIsAFile],
+            sync: [neuroSafeValidation, validateIsAFile, binaryFileValidation],
         },
         promptGenerator: (actionData: ActionData) => `open the file "${actionData.params?.filePath}".`,
     },
@@ -258,7 +256,7 @@ export const fileActions = {
         handler: handleReadFile,
         cancelEvents: commonFileEvents,
         validators: {
-            sync: [neuroSafeValidation, binaryFileValidation, validateIsAFile],
+            sync: [neuroSafeValidation, validateIsAFile, binaryFileValidation],
         },
         promptGenerator: (actionData: ActionData) => `read the file "${actionData.params?.filePath}" (without opening it).`,
     },
