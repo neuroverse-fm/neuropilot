@@ -64,7 +64,8 @@ async function loadCache(cacheFile) {
     try {
         const content = await fsp.readFile(cacheFile, 'utf-8');
         return JSON.parse(content);
-    } catch {
+    } catch (erm) {
+        console.error(`Error while loading cache file: ${erm}`);
         return {};
     }
 }
