@@ -6,6 +6,18 @@ Since v2.1.0, we're keeping a changelog of each version's changes in NeuroPilot.
 
 Changes between each version before then will not be listed.
 
+## 2.4.0
+
+### Changes
+
+- Several actions were renamed:
+  - `get_workspace_files` -> `list_files_and_folders`
+  - `open_file` -> `switch_files`
+  - `place_cursor` -> `change_cursor_position`
+  - `get_cursor` -> `get_cursor_position`
+  - `diff_patch` -> `edit_with_diff`
+- The newly-renamed `switch_files`, `change_cursor_position` and `edit_with_diff` files also have minor description changes.
+
 ## 2.3.3
 
 ### New settings
