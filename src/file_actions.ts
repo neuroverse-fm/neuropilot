@@ -153,7 +153,7 @@ async function validateIsAFile(actionData: ActionData): Promise<ActionValidation
 
     const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
     if (!workspaceFolder)
-        return actionValidationFailure('You are not in an open workspace.');
+        return actionValidationFailure('You are not in an open workspace.', ACTION_FAIL_NOTES.noWorkspace);
 
     const normalizedPath = normalizePath(filePath).replace(/^\/|\/$/g, '');
     const segments = normalizedPath.split('/').filter(Boolean);
@@ -167,9 +167,9 @@ async function validateIsAFile(actionData: ActionData): Promise<ActionValidation
         const isFile = (stat.type & vscode.FileType.File) === vscode.FileType.File;
 
         if (isDirectory)
-            return actionValidationFailure(`${filePath} is a directory, not a file.`, ACTION_FAIL_NOTES.targetedFolder);
+            return actionValidationRetry(`${filePath} is a directory, not a file.`, ACTION_FAIL_NOTES.targetedFolder);
         if (!isFile)
-            return actionValidationFailure(`${filePath} is not a file.`, ACTION_FAIL_NOTES.targetedFolder);
+            return actionValidationRetry(`${filePath} is not a file.`, ACTION_FAIL_NOTES.targetedFolder);
     } catch (erm: unknown) {
         if (erm instanceof vscode.FileSystemError && erm.code === 'FileNotFound')
             return actionValidationFailure(`${filePath} does not exist.`, ACTION_FAIL_NOTES.doesntExist);
