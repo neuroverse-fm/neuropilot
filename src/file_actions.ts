@@ -481,21 +481,26 @@ export function handleRenameFileOrFolder(actionData: ActionData): string | undef
 
     const oldRelativePath = normalizePath(oldRelativePathParam).replace(/^\/|\/$/g, '');
     const newRelativePath = normalizePath(newRelativePathParam).replace(/^\/|\/$/g, '');
-    const oldAbsolutePath = getWorkspacePath() + '/' + oldRelativePath;
-    const newAbsolutePath = getWorkspacePath() + '/' + newRelativePath;
-
-    checkAndRenameAsync(oldAbsolutePath, oldRelativePath, newAbsolutePath, newRelativePath);
+    checkAndRenameAsync(oldRelativePath, newRelativePath);
 
     return;
 
     // Function to avoid pyramid of doom
-    async function checkAndRenameAsync(oldAbsolutePath: string, oldRelativePath: string, newAbsolutePath: string, newRelativePath: string) {
-        const oldUri = getWorkspaceUri()!.with({ path: oldAbsolutePath });
-        const newUri = getWorkspaceUri()!.with({ path: newAbsolutePath });
+    async function checkAndRenameAsync(oldRelativePath: string, newRelativePath: string) {
+        const base = vscode.workspace.workspaceFolders?.[0]?.uri;
+        if (!base) {
+            updateActionStatus(actionData, 'failure', 'No workspace folder open');
+            NEURO.client?.sendContext('Could not rename: no workspace folder open');
+            return;
+        }
+
+        // Use joinPath so this works in both desktop (file://) and web/virtual FS (e.g. vscode-test-web://mount/)
+        const oldUri = vscode.Uri.joinPath(base, oldRelativePath);
+        const newUri = vscode.Uri.joinPath(base, newRelativePath);
 
         // Check if the old path doesn't exist
         try {
-            await vscode.workspace.fs.stat(newUri);
+            await vscode.workspace.fs.stat(oldUri);
         } catch (erm: unknown) {
             if (erm instanceof vscode.FileSystemError && erm.code === 'FileNotFound') {
                 updateActionStatus(actionData, 'failure', ACTION_FAIL_NOTES.doesntExist.replace('Targeted', 'Old'));
@@ -528,7 +533,7 @@ export function handleRenameFileOrFolder(actionData: ActionData): string | undef
         // Rename the file/folder
         try {
             updateActionStatus(actionData, 'pending', 'Renaming paths...');
-            await vscode.workspace.fs.rename(oldUri, newUri);
+            await vscode.workspace.fs.rename(oldUri, newUri, { overwrite: false });
         } catch (erm: unknown) {
             notifyOnCaughtException('rename_file_or_folder', erm);
             NEURO.client?.sendContext(`Failed to rename ${oldRelativePath} to ${newRelativePath}`);
