@@ -113,7 +113,7 @@ async function main() {
     try {
         const destArg = process.argv[2] || 'media/codicons';
         const destDir = path.resolve(destArg);
-        const cacheFile = path.join(destDir, '.codicons-cache.json');
+        const cacheFile = path.join(destDir, '.cache-hash.json');
 
         let pkgJsonPath;
         try {
