@@ -257,21 +257,23 @@ export const fileActions = {
         validators: {
             sync: [
                 async (actionData: ActionData) => {
+                    const workspaceUri = getWorkspaceUri();
+                    if (!workspaceUri) {
+                        return actionValidationFailure('You are not in a workspace.');
+                    }
+
                     // Default to currently open file if filePath not provided
-                    if (!actionData.params.filePath) {
+                    if (!actionData.params.filePath || actionData.params.filePath === '') {
                         const document = vscode.window.activeTextEditor?.document;
                         if (!document) {
                             return actionValidationFailure('File path left empty and you are not in an active file to edit.');
                         }
 
-                        // Convert absolute path to relative path
-                        const workspaceUri = getWorkspaceUri();
-                        if (!workspaceUri) {
-                            return actionValidationFailure('You are not in a workspace.');
-                        }
-
-                        const relativePath = vscode.workspace.asRelativePath(document.uri, false);
-                        actionData.params.filePath = relativePath;
+                        actionData.params.filePath = vscode.workspace.asRelativePath(document.uri, false);
+                    } else {
+                        // Normalize user-provided paths using VS Code's relative path resolver
+                        const normalizedUri = vscode.Uri.joinPath(workspaceUri, actionData.params.filePath);
+                        actionData.params.filePath = vscode.workspace.asRelativePath(normalizedUri, false);
                     }
 
                     // Run all validators with the resolved filePath
@@ -730,13 +732,12 @@ export function handleOpenFile(actionData: ActionData): string | undefined {
 }
 
 export function handleReadFile(actionData: ActionData): string | undefined {
+    const editor = vscode.window.activeTextEditor;
+    if (!editor) {
+        return contextFailure('No active text editor.');
+    }
     // If no filePath provided, read current file
-    if (!actionData.params.filePath) {
-        const editor = vscode.window.activeTextEditor;
-        if (!editor) {
-            return contextFailure('No active text editor.');
-        }
-
+    if (!actionData.params.filePath || actionData.params.filePath === '' || vscode.workspace.asRelativePath(editor.document.uri) === vscode.workspace.asRelativePath(vscode.Uri.joinPath(getWorkspaceUri()!, actionData.params.filePath))) {
         const document = editor.document;
         const fileName = simpleFileName(document.fileName);
         const cursor = getVirtualCursor()!;
