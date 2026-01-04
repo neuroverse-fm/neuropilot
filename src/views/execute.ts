@@ -48,13 +48,22 @@ export class ExecuteViewProvider extends BaseWebviewViewProvider<Message, Execut
             this.bufferedResults = stored.slice(0, this.maxBufferSize);
         }
 
-        // Subscribe to action events immediately, not just when view is ready
-        onDidAttemptAction((data: ActionsEventData) => {
-            this.sendExecutionResult({
-                ...data,
-                sessionId: ExecuteViewProvider.sessionId,
-            });
-        });
+        // Push event subscriptions to disposable array
+        this.context.subscriptions.push(
+            // Subscribe to action events immediately, not just when view is ready
+            onDidAttemptAction((data: ActionsEventData) => {
+                this.sendExecutionResult({
+                    ...data,
+                    sessionId: ExecuteViewProvider.sessionId,
+                });
+            }),
+            // Subscribe to visibility changes to flush buffer when view is opened
+            this._view!.onDidChangeVisibility(() => {
+                if (this._view!.visible) {
+                    this.flushBufferedResults();
+                }
+            }),
+        );
     }
 
     protected handleMessage(_message: Message): void { }
