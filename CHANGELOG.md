@@ -11,7 +11,7 @@ Changes between each version before then will not be listed.
 ### New features
 
 - Added a sidebar view for listing action execution history.
-  - Each execution can be set to one of 3 statuses: `pending`, `success`, or `failure`.
+  - Each execution can be set to one of 8 statuses: `pending` | `success` | `failure` | `denied` | `exception` | `timeout` | `schema` | `cancelled`.
   - All actions that go through RCE automatically starts a pending status in the view.
   - Each action updates the panel according to what the action executed is now doing.
   - The history persists across sessions. You can clear it by clicking the button in the view.

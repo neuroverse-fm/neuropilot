@@ -127,7 +127,7 @@ export function initializeCommonState(context: vscode.ExtensionContext) {
 export function setupCommonProviders() {
     NEURO.viewProviders.actions = new ActionsViewProvider();
     NEURO.viewProviders.images = new ImagesViewProvider();
-    NEURO.viewProviders.execute = new ExecuteViewProvider();
+    NEURO.viewProviders.execute = new ExecuteViewProvider(NEURO.context!);
     const providers = [
         vscode.languages.registerInlineCompletionItemProvider({ pattern: '**' }, completionsProvider),
         vscode.languages.registerCodeActionsProvider(
@@ -295,6 +295,11 @@ export function obtainExtensionState(): void {
 export function deactivate() {
     NEURO.client?.sendContext(`NeuroPilot is being deactivated, or ${CONNECTION.gameName} is closing. See you next time, ${NEURO.currentController}!`);
     clearRceRequest();
+
+    // Save buffered execution history items
+    if (NEURO.viewProviders.execute) {
+        NEURO.viewProviders.execute.saveBufferBeforeDeactivation();
+    }
 }
 
 export function getCursorDecorationRenderOptions(): vscode.DecorationRenderOptions {

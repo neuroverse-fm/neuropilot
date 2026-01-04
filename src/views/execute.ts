@@ -33,9 +33,28 @@ export type ExecuteViewProviderMessage = {
 export class ExecuteViewProvider extends BaseWebviewViewProvider<Message, ExecuteViewProviderMessage> {
     private static readonly sessionId = `session_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
     public static readonly viewId: string = 'neuropilot.executionView';
+    private static readonly mementoKey = 'bufferedResults';
+    private bufferedResults: ExecutionHistoryItem[] = [];
+    private readonly maxBufferSize = 100;
+    private context: vscode.ExtensionContext;
 
-    constructor() {
+    constructor(context: vscode.ExtensionContext) {
         super('execute/index.html', 'execute/main.js', ['execute/style.css']);
+        this.context = context;
+
+        // Restore buffered results from previous session
+        const stored = this.context.globalState.get<ExecutionHistoryItem[]>(ExecuteViewProvider.mementoKey);
+        if (stored && Array.isArray(stored)) {
+            this.bufferedResults = stored.slice(0, this.maxBufferSize);
+        }
+
+        // Subscribe to action events immediately, not just when view is ready
+        onDidAttemptAction((data: ActionsEventData) => {
+            this.sendExecutionResult({
+                ...data,
+                sessionId: ExecuteViewProvider.sessionId,
+            });
+        });
     }
 
     protected handleMessage(_message: Message): void { }
@@ -47,32 +66,73 @@ export class ExecuteViewProvider extends BaseWebviewViewProvider<Message, Execut
             sessionId: ExecuteViewProvider.sessionId,
         });
 
-        // Listen to action execution events and send them to the webview
-        // The webview will handle deduplication using its persisted state
-        onDidAttemptAction((data: ActionsEventData) => {
-            this.sendExecutionResult({
-                ...data,
-                sessionId: ExecuteViewProvider.sessionId,
-            });
-        });
+        // Flush buffered results to the now-ready webview
+        this.flushBufferedResults();
     }
 
     /**
      * Sends an execution result to the execute view.
      * The webview will determine whether to create a new entry or update an existing one.
+     * If the view is not ready, results are buffered and sent when it becomes ready.
      */
     public sendExecutionResult(result: ExecuteResult) {
+        const historyItem: ExecutionHistoryItem = {
+            ...result,
+            timestamp: Date.now(),
+        };
+
         if (!this._view) {
+            // Buffer the result until the view is ready
+            this.bufferedResults.push(historyItem);
+            // Keep buffer size manageable
+            if (this.bufferedResults.length > this.maxBufferSize) {
+                this.bufferedResults.shift(); // Remove oldest item
+            }
+            // Persist to memento
+            this.persistBuffer();
             return;
         }
 
         this.postMessage({
             type: 'executionResult',
-            result: {
-                ...result,
-                timestamp: Date.now(),
-            },
+            result: historyItem,
         });
+    }
+
+    /**
+     * Flushes all buffered results to the webview.
+     */
+    private flushBufferedResults(): void {
+        if (!this._view || this.bufferedResults.length === 0) {
+            return;
+        }
+
+        for (const result of this.bufferedResults) {
+            this.postMessage({
+                type: 'executionResult',
+                result,
+            });
+        }
+        this.bufferedResults = [];
+        // Clear from memento since items are now in the webview
+        this.context.globalState.update(ExecuteViewProvider.mementoKey, undefined);
+    }
+
+    /**
+     * Persists the buffered results to extension storage.
+     */
+    private persistBuffer(): void {
+        this.context.globalState.update(ExecuteViewProvider.mementoKey, this.bufferedResults);
+    }
+
+    /**
+     * Saves buffered results before deactivation.
+     * Should be called from the extension's deactivate function.
+     */
+    public saveBufferBeforeDeactivation(): void {
+        if (this.bufferedResults.length > 0) {
+            this.persistBuffer();
+        }
     }
 
     /**
