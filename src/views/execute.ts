@@ -48,20 +48,13 @@ export class ExecuteViewProvider extends BaseWebviewViewProvider<Message, Execut
             this.bufferedResults = stored.slice(0, this.maxBufferSize);
         }
 
-        // Push event subscriptions to disposable array
+        // Subscribe to action events immediately, not just when view is ready
         this.context.subscriptions.push(
-            // Subscribe to action events immediately, not just when view is ready
             onDidAttemptAction((data: ActionsEventData) => {
                 this.sendExecutionResult({
                     ...data,
                     sessionId: ExecuteViewProvider.sessionId,
                 });
-            }),
-            // Subscribe to visibility changes to flush buffer when view is opened
-            this._view!.onDidChangeVisibility(() => {
-                if (this._view!.visible) {
-                    this.flushBufferedResults();
-                }
             }),
         );
     }
@@ -74,6 +67,15 @@ export class ExecuteViewProvider extends BaseWebviewViewProvider<Message, Execut
             type: 'currentSession',
             sessionId: ExecuteViewProvider.sessionId,
         });
+
+        // Subscribe to visibility changes to flush buffer when view is opened
+        this.context.subscriptions.push(
+            this._view!.onDidChangeVisibility(() => {
+                if (this._view!.visible) {
+                    this.flushBufferedResults();
+                }
+            }),
+        );
 
         // Flush buffered results to the now-ready webview
         this.flushBufferedResults();
@@ -117,6 +119,7 @@ export class ExecuteViewProvider extends BaseWebviewViewProvider<Message, Execut
         }
 
         for (const result of this.bufferedResults) {
+            console.log(`Posted message: ${JSON.stringify(result)}`);
             this.postMessage({
                 type: 'executionResult',
                 result,
