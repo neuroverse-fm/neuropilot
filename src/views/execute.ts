@@ -35,7 +35,7 @@ export class ExecuteViewProvider extends BaseWebviewViewProvider<Message, Execut
     public static readonly viewId: string = 'neuropilot.executionView';
     private static readonly mementoKey = 'bufferedResults';
     private bufferedResults: ExecutionHistoryItem[] = [];
-    private readonly maxBufferSize = 100;
+    private readonly maxBufferSize: number = 50; // likely adjustable in the future, if set to 0 it will disable buffering, if set to -1 it will allow unlimited buffer size.
     private context: vscode.ExtensionContext;
 
     constructor(context: vscode.ExtensionContext) {
@@ -92,15 +92,27 @@ export class ExecuteViewProvider extends BaseWebviewViewProvider<Message, Execut
             timestamp: Date.now(),
         };
 
-        if (!this._view) {
-            // Buffer the result until the view is ready
-            this.bufferedResults.push(historyItem);
-            // Keep buffer size manageable
-            if (this.bufferedResults.length > this.maxBufferSize) {
-                this.bufferedResults.shift(); // Remove oldest item
+        if (!this._view?.visible) {
+            // Check if this execution already exists in the buffer
+            const existingIndex = this.bufferedResults.findIndex(
+                item => item.executionId === result.executionId && item.sessionId === result.sessionId,
+            );
+
+            if (existingIndex !== -1) {
+                // Update existing buffered item
+                this.bufferedResults[existingIndex] = {
+                    ...this.bufferedResults[existingIndex],
+                    status: result.status,
+                    message: result.message,
+                };
+            } else {
+                // Add new buffered item
+                this.bufferedResults.push(historyItem);
+                // Keep buffer size manageable
+                if (this.maxBufferSize !== -1 && this.bufferedResults.length > this.maxBufferSize) {
+                    this.bufferedResults.shift(); // Remove oldest item
+                }
             }
-            // Persist to memento
-            this.persistBuffer();
             return;
         }
 
@@ -119,7 +131,6 @@ export class ExecuteViewProvider extends BaseWebviewViewProvider<Message, Execut
         }
 
         for (const result of this.bufferedResults) {
-            console.log(`Posted message: ${JSON.stringify(result)}`);
             this.postMessage({
                 type: 'executionResult',
                 result,
