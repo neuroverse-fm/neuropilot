@@ -94,8 +94,8 @@ export function handleCancelRequest(actionData: ActionData): string | undefined 
         return 'No active request to cancel.';
     }
     const data = NEURO.rceRequest!.actionData;
-    updateActionStatus(data, 'cancelled', 'Cancelled on Neuro\'s request');
     clearRceRequest();
+    updateActionStatus(data, 'cancelled', 'Cancelled on Neuro\'s request');
     updateActionStatus(actionData, 'success', `Cancelled action "${data.name}"`);
     return 'Request cancelled.';
 }
