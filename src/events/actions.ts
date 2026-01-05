@@ -43,19 +43,3 @@ export function updateActionStatus(actionData: ActionData, status: ActionStatus,
         executionId: actionData.id,
     } as const);
 }
-
-/**
- * Fires a completed action attempt event.
- * Use this for actions that complete immediately without needing a pending state.
- * @param actionData The action data containing the action name and unique ID.
- * @param success Whether the action succeeded.
- * @param message Optional status message.
- */
-export function fireOnActionComplete(actionData: ActionData, success: boolean, message?: string): void {
-    actionsEventEmitter.fire({
-        action: actionData.name,
-        status: success ? 'success' : 'failure',
-        message,
-        executionId: actionData.id,
-    } as const);
-}
