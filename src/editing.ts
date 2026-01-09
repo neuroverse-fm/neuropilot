@@ -1580,13 +1580,17 @@ export function handleDiffPatch(actionData: ActionData): string | undefined {
     return undefined;
 }
 
-function handleGetUserSelection(_actionData: ActionData): string | undefined {
+function handleGetUserSelection(actionData: ActionData): string | undefined {
     const editor = vscode.window.activeTextEditor;
     const document = editor?.document;
-    if (editor === undefined || document === undefined)
+    if (editor === undefined || document === undefined) {
+        updateActionStatus(actionData, 'failure', 'No active document.');
         return contextFailure(CONTEXT_NO_ACTIVE_DOCUMENT);
-    if (!isPathNeuroSafe(document.fileName))
+    }
+    if (!isPathNeuroSafe(document.fileName)) {
+        updateActionStatus(actionData, 'failure', 'File path is not Neuro-safe');
         return contextFailure(CONTEXT_NO_ACCESS);
+    }
 
     NEURO.lastKnownUserSelection = editor.selection;
 
@@ -1605,6 +1609,7 @@ function handleGetUserSelection(_actionData: ActionData): string | undefined {
         ? ''
         : `\n\n${CONNECTION.userName}'s selection contains:\n\n${fence}\n${selectedText}\n${fence}`;
 
+    updateActionStatus(actionData, 'success', `Cursor selection for ${CONNECTION.userName} formatted and sent to ${CONNECTION.nameOfAPI}.`);
     return `${preamble}\n\n${formatContext(cursorContext)}${postamble}`;
 }
 
