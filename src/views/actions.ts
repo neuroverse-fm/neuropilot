@@ -42,7 +42,7 @@ export type ActionsViewMessage = {
 };
 
 export class ActionsViewProvider extends BaseWebviewViewProvider<ActionsViewMessage, ActionsViewProviderMessage> {
-    public static readonly viewType = 'neuropilot.actionsView';
+    public static readonly viewId = 'neuropilot.actionsView';
     private _currentContext: SettingsContext = 'workspace';
 
     constructor() {

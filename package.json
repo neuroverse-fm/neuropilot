@@ -173,8 +173,14 @@
 			},
 			{
 				"command": "neuropilot.dev.clearMementos",
-				"title": "[Dev] Clear all NeuroPilot mementos",
-				"category": "NeuroPilot",
+				"title": "Clear all NeuroPilot mementos",
+				"category": "NeuroPilot [Dev]",
+				"enablement": "isDevelopment"
+			},
+			{
+				"command": "neuropilot.dev.addExecutionHistoryItem",
+				"title": "Add Custion Execution History Item",
+				"category": "NeuroPilot [Dev]",
 				"enablement": "isDevelopment"
 			},
 			{
@@ -724,9 +730,24 @@
 				},
 				{
 					"type": "webview",
+					"id": "neuropilot.executionView",
+					"name": "Execution History",
+					"icon": "assets/neuropilot-font.svg",
+					"visibility": "visible"
+				},
+				{
+					"type": "webview",
 					"id": "neuropilot.imagesView",
 					"name": "Images",
 					"icon": "assets/neuropilot-font.svg"
+				},
+				{
+					"type": "webview",
+					"id": "neuropilot.testView",
+					"name": "Test View",
+					"icon": "assets/neuropilot-font.svg",
+					"when": "isDevelopment",
+					"visibility": "collapsed"
 				}
 			]
 		}
@@ -808,7 +829,7 @@
 		"@types/ws": "^8.18.0",
 		"@vscode/test-cli": "^0.0.12",
 		"@vscode/test-electron": "^2.5.2",
-		"@vscode/test-web": "^0.0.77",
+		"@vscode/test-web": "^0.0.78",
 		"@vscode/vsce": "^3.7.1",
 		"chalk": "^5.6.2",
 		"cross-env": "^10.1.0",

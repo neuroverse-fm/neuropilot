@@ -71,6 +71,11 @@ export async function webTest(_prodFlag, watchFlag) {
             '@vscode/test-web',
         ],
         logLevel: 'warning',
+        // This repo's package.json declares "sideEffects": [], which makes esbuild warn loudly
+        // about bare imports used to register mocha suites. Silence that single warning class.
+        logOverride: {
+            'ignored-bare-import': 'silent',
+        },
         define: {
             // Define test environment variables
             'process.env.NODE_ENV': '"test"',
@@ -126,6 +131,9 @@ export async function webTestBrowser(_prodFlag, watchFlag) {
             '@vscode/test-web',
         ],
         logLevel: 'warning',
+        logOverride: {
+            'ignored-bare-import': 'silent',
+        },
         define: {
             'process.env.NODE_ENV': '"test"',
         },

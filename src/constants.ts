@@ -1,10 +1,12 @@
 import * as vscode from 'vscode';
 import { NeuroClient } from 'neuro-game-sdk';
 import { TerminalSession } from './pseudoterminal';
-import { RceRequest } from './rce';
+import { RceRequest } from '@/rce';
 import type { GitExtension } from '@typing/git.d';
-import { ActionsViewProvider } from './views/actions';
-import { ImagesViewProvider } from './views/image';
+import { ActionsViewProvider } from '@views/actions';
+import { ImagesViewProvider } from '@views/image';
+import type { ExecuteViewProvider } from '@views/execute';
+import type { ActionData } from '@/neuro_client_helper';
 
 export interface NeuroTask {
     id: string;
@@ -15,6 +17,7 @@ export interface NeuroTask {
 interface NeuroViewProviders {
     actions: ActionsViewProvider | null;
     images: ImagesViewProvider | null;
+    execute: ExecuteViewProvider | null;
 }
 
 interface Neuro {
@@ -45,7 +48,7 @@ interface Neuro {
     /** The array of tasks that Neuro can execute. */
     tasks: NeuroTask[];
     /** Stores the currently executed task. */
-    currentTaskExecution: vscode.TaskExecution | null;
+    currentTaskExecution: { task: vscode.TaskExecution, data: ActionData } | null;
     /** Whether the current action has been handled. */
     actionHandled: boolean;
     /** Whether or not terminals are currently running. */
@@ -123,6 +126,7 @@ export const NEURO: Neuro = {
     viewProviders: {
         actions: null,
         images: null,
+        execute: null,
     },
 };
 
