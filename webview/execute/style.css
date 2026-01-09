@@ -119,6 +119,8 @@
     flex: 1;
     font-weight: 500;
     font-family: var(--vscode-editor-font-family);
+    text-overflow: ellipsis;
+    overflow: hidden;
 }
 
 .timestamp {
