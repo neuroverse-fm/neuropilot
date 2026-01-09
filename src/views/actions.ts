@@ -46,7 +46,7 @@ export class ActionsViewProvider extends BaseWebviewViewProvider<ActionsViewMess
     private _currentContext: SettingsContext = 'workspace';
 
     constructor() {
-        super('actions/index.html', 'actions/main.js', ['actions/style.css']);
+        super('actions/main.js', ['actions/style.css']);
     }
 
     public refreshActions() {

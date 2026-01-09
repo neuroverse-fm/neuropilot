@@ -69,7 +69,7 @@ export class ImagesViewProvider extends BaseWebviewViewProvider<ImagesViewMessag
     private _configListener: vscode.Disposable | null = null;
 
     constructor() {
-        super('images/index.html', 'images/main.js', ['images/style.css']);
+        super('images/main.js', ['images/style.css']);
     }
 
     public dispose(): void {
