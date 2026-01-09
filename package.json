@@ -818,7 +818,7 @@
 		"test:desktop:vscode": "vscode-test --coverage --label desktopUnitTest --coverage-output ./coverage-desktop"
 	},
 	"devDependencies": {
-		"@eslint/js": "^9.39.1",
+		"@eslint/js": "^9.39.2",
 		"@stylistic/eslint-plugin": "^5.6.1",
 		"@types/glob-to-regexp": "^0.4.4",
 		"@types/json-schema": "^7.0.15",
@@ -829,13 +829,13 @@
 		"@types/ws": "^8.18.0",
 		"@vscode/test-cli": "^0.0.12",
 		"@vscode/test-electron": "^2.5.2",
-		"@vscode/test-web": "^0.0.76",
+		"@vscode/test-web": "^0.0.77",
 		"@vscode/vsce": "^3.7.1",
 		"chalk": "^5.6.2",
 		"cross-env": "^10.1.0",
-		"esbuild": "^0.27.0",
+		"esbuild": "^0.27.2",
 		"esbuild-plugin-polyfill-node": "^0.3.0",
-		"eslint": "^9.39.1",
+		"eslint": "^9.39.2",
 		"eslint-plugin-unicorn": "^62.0.0",
 		"glob": "^13.0.0",
 		"globals": "^16.5.0",
@@ -847,7 +847,7 @@
 		"ts-mockito": "^2.6.1",
 		"tsx": "^4.21.0",
 		"typescript": "^5.9.3",
-		"typescript-eslint": "^8.48.0",
+		"typescript-eslint": "^8.51.0",
 		"yaml": "^2.8.2"
 	},
 	"dependencies": {
