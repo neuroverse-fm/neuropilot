@@ -17,6 +17,7 @@ import { loadIgnoreFiles } from '@/ignore_files_utils';
 import { getWorkspacePath, normalizePath } from '@/utils';
 import { ActionsViewProvider } from '@/views/actions';
 import { ImagesViewProvider } from '../views/image';
+import { ExecuteViewProvider, addCustomExecutionHistoryItem } from '@/views/execute';
 
 // Shared commands
 export function registerCommonCommands() {
@@ -37,6 +38,13 @@ export function registerCommonCommands() {
         vscode.commands.registerCommand('neuropilot.resetTemporarilyDisabledActions', () => NEURO.tempDisabledActions = []),
         vscode.commands.registerCommand('neuropilot.readChangelog', readChangelogAndSendToNeuro),
         vscode.commands.registerCommand('neuropilot.dev.clearMementos', clearAllMementos),
+        vscode.commands.registerCommand('neuropilot.dev.addExecutionHistoryItem', () => {
+            if (NEURO.viewProviders.execute) {
+                addCustomExecutionHistoryItem(NEURO.viewProviders.execute);
+            } else {
+                vscode.window.showErrorMessage('Execution view provider not initialized');
+            }
+        }),
         ...registerDocsCommands(),
     ];
 }
@@ -119,6 +127,7 @@ export function initializeCommonState(context: vscode.ExtensionContext) {
 export function setupCommonProviders() {
     NEURO.viewProviders.actions = new ActionsViewProvider();
     NEURO.viewProviders.images = new ImagesViewProvider();
+    NEURO.viewProviders.execute = new ExecuteViewProvider(NEURO.context!);
     const providers = [
         vscode.languages.registerInlineCompletionItemProvider({ pattern: '**' }, completionsProvider),
         vscode.languages.registerCodeActionsProvider(
@@ -126,8 +135,9 @@ export function setupCommonProviders() {
             new NeuroCodeActionsProvider(),
             { providedCodeActionKinds: NeuroCodeActionsProvider.providedCodeActionKinds },
         ),
-        vscode.window.registerWebviewViewProvider(ActionsViewProvider.viewType, NEURO.viewProviders.actions),
-        vscode.window.registerWebviewViewProvider(ImagesViewProvider.viewType, NEURO.viewProviders.images),
+        vscode.window.registerWebviewViewProvider(ActionsViewProvider.viewId, NEURO.viewProviders.actions),
+        vscode.window.registerWebviewViewProvider(ImagesViewProvider.viewId, NEURO.viewProviders.images),
+        vscode.window.registerWebviewViewProvider(ExecuteViewProvider.viewId, NEURO.viewProviders.execute),
     ];
 
     return providers;
@@ -229,7 +239,7 @@ function disableAllPermissions() {
     }
 
     if (NEURO.currentTaskExecution) {
-        NEURO.currentTaskExecution.terminate();
+        NEURO.currentTaskExecution.task.terminate();
         NEURO.currentTaskExecution = null;
     }
     emergencyDenyRequests();
@@ -285,6 +295,11 @@ export function obtainExtensionState(): void {
 export function deactivate() {
     NEURO.client?.sendContext(`NeuroPilot is being deactivated, or ${CONNECTION.gameName} is closing. See you next time, ${NEURO.currentController}!`);
     clearRceRequest();
+
+    // Save buffered execution history items
+    if (NEURO.viewProviders.execute) {
+        NEURO.viewProviders.execute.saveBufferBeforeDeactivation();
+    }
 }
 
 export function getCursorDecorationRenderOptions(): vscode.DecorationRenderOptions {

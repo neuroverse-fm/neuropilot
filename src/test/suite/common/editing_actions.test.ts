@@ -103,7 +103,7 @@ suite('Integration: Editing actions', () => {
 
     test('get_content returns full file content context', () => {
         // === Act ===
-        const result = handleGetContent();
+        const result = handleGetContent({ id: 'handleGetContent_test', name: 'get_file_content' });
 
         // === Assert ===
         assert.ok(result.includes('Alpha'));

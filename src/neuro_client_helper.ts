@@ -31,6 +31,8 @@ export interface ActionValidationResult {
     message?: string;
     /** If `true`, Neuro should retry the action if it was forced. */
     retry?: boolean;
+    /** The reason to show on action panel. */
+    historyNote?: string;
 }
 
 type TypedAction = Omit<Action, 'schema'> & { schema?: JSONSchema7 };
@@ -137,11 +139,12 @@ export function stripToActions(actions: RCEAction[]): Action[] {
  * @param message An optional message to send to Neuro.
  * @returns A successful action result.
  */
-export function actionValidationAccept(message?: string): ActionValidationResult {
+export function actionValidationAccept(message?: string, historyNote?: string): ActionValidationResult {
     return {
         success: true,
         retry: false,
-        message: message,
+        message,
+        historyNote,
     };
 }
 
@@ -154,14 +157,16 @@ export function actionValidationAccept(message?: string): ActionValidationResult
  * This should explain, if possible, why the action failed.
  * If omitted, will just send "Action failed.".
  * @param retry It's highly recommended you use {@link actionValidationRetry} instead.
+ * @param historyNote A note for the history panel. Will be changed to be required soon.
  * @returns A successful action result with the specified message.
  */
-export function actionValidationFailure(message: string, retry = false): ActionValidationResult {
+export function actionValidationFailure(message: string, historyNote?: string): ActionValidationResult {
     logOutput('WARNING', 'Action failed: ' + message);
     return {
         success: false,
-        retry: retry,
+        retry: false,
         message: message !== undefined ? `Action failed: ${message}` : 'Action failed.',
+        historyNote,
     };
 }
 
@@ -170,7 +175,7 @@ export function actionValidationFailure(message: string, retry = false): ActionV
  * Also logs the message to the console.
  * Note that this does not send the context message.
  * @param message The message to format.
- * @param {string} [tag="WARNING"] The tag to use for the log output.
+ * @param tag The tag to use for the log output.
  * This should explain, if possible, why the action failed.
  * If omitted, will just return "Action failed.".
  * @returns A context message with the specified message.
@@ -187,12 +192,13 @@ export function contextFailure(message?: string, tag = 'WARNING'): string {
  * This should contain the information required to fix the mistake.
  * @returns A failed action result with the specified message.
  */
-export function actionValidationRetry(message: string): ActionValidationResult {
+export function actionValidationRetry(message: string, historyNote?: string): ActionValidationResult {
     logOutput('WARNING', 'Action failed: ' + message + '\nRequesting retry.');
     return {
         success: false,
         retry: true,
         message: 'Action failed: ' + message,
+        historyNote,
     };
 }
 

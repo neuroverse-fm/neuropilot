@@ -53,6 +53,10 @@ export async function desktopTest(_prodFlag, watchFlag) {
             '@vscode/test-electron',
         ],
         logLevel: 'warning',
+        // Silence noisy warnings caused by package.json "sideEffects": [] in test bundles.
+        logOverride: {
+            'ignored-bare-import': 'silent',
+        },
         define: {
             // Define test environment variables
             'process.env.NODE_ENV': '"test"',

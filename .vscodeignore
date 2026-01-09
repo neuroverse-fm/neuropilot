@@ -9,6 +9,7 @@ src/
 node_modules/
 *.vsix
 **/*.tsbuildinfo
+media/codicons/.cache-hash.json
 
 # Source .ts files for webviews
 webview/**/*.ts
