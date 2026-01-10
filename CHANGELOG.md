@@ -28,7 +28,7 @@ Changes between each version before then will not be listed.
   - `place_cursor` -> `change_cursor_position`
   - `get_cursor` -> `get_cursor_position`
   - `diff_patch` -> `edit_with_diff`
-- The newly-renamed `switch_files`, `change_cursor_position` and `edit_with_diff` files also have minor description changes.
+- The newly-renamed `switch_files`, `change_cursor_position` and `edit_with_diff` files also have minor description changes, as well as `read_file`.
 
 ### Fixes
 
