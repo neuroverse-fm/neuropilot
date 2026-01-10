@@ -62,7 +62,7 @@ export interface ImageSet {
 }
 
 export class ImagesViewProvider extends BaseWebviewViewProvider<ImagesViewMessage, ImagesViewProviderMessage> {
-    public static readonly viewType = 'neuropilot.imagesView';
+    public static readonly viewId = 'neuropilot.imagesView';
 
     private config: GalleryConfig | null = null;
     private currentSet: string | null = null;

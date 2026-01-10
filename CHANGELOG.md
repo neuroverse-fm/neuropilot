@@ -8,6 +8,18 @@ Changes between each version before then will not be listed.
 
 ## 2.4.0
 
+### New features
+
+- Added a sidebar view for listing action execution history.
+  - Each execution can be set to one of 8 statuses: `pending` | `success` | `failure` | `denied` | `exception` | `timeout` | `schema` | `cancelled`.
+  - All actions that go through RCE automatically starts a pending status in the view.
+  - Each action updates the panel according to what the action executed is now doing.
+  - The history persists across sessions. You can clear it by clicking the button in the view.
+
+### New commands
+
+- [Dev] Add Execution History Item: a developer-only command that adds a fake execution history item for testing purposes.
+
 ### Changes
 
 - Several actions were renamed:
@@ -17,6 +29,16 @@ Changes between each version before then will not be listed.
   - `get_cursor` -> `get_cursor_position`
   - `diff_patch` -> `edit_with_diff`
 - The newly-renamed `switch_files`, `change_cursor_position` and `edit_with_diff` files also have minor description changes.
+
+### Fixes
+
+- Before, toggling `neuropilot.actions.experimentalSchemas` off would still cause the inputs to be validated against the experimental schema. Now, the inputs are checked against the correct schema.
+- If a linting action's handler was executed while there were no linting issues (happens most often with Copilot mode), this will no longer say the action failed.
+- A capitalization error with the Copilot prompt for `get_workspace_files` has been corrected.
+
+### Meta changes
+
+The image gallery has been updated to include 1 new icon: [neurontainer](https://github.com/VSC-NeuroPilot/neurontainer).
 
 ## 2.3.3
 

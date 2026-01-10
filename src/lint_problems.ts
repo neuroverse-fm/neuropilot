@@ -2,10 +2,11 @@ import * as vscode from 'vscode';
 import { NEURO } from '@/constants';
 import { normalizePath, getWorkspacePath, logOutput, isPathNeuroSafe, getWorkspaceUri } from '@/utils';
 import { CONFIG } from '@/config';
-import { ActionData, actionValidationAccept, actionValidationFailure, ActionValidationResult, RCEAction, contextFailure } from '@/neuro_client_helper';
+import { ActionData, actionValidationAccept, actionValidationFailure, ActionValidationResult, RCEAction, contextFailure, actionValidationRetry } from '@/neuro_client_helper';
 import assert from 'node:assert';
 import { targetedFileLintingResolvedEvent, targetedFolderLintingResolvedEvent, workspaceLintingResolvedEvent } from '@events/linting';
-import { addActions } from './rce';
+import { addActions } from '@/rce';
+import { updateActionStatus } from '@events/actions';
 
 const CATEGORY_LINTING = 'Linting';
 
@@ -17,20 +18,20 @@ const CATEGORY_LINTING = 'Linting';
  */
 async function validatePath(path: string, directoryType: string): Promise<ActionValidationResult> {
     if (path === '') {
-        return actionValidationFailure('No file path specified.', true);
+        return actionValidationRetry('No file path specified.', 'File path left unspecified');
     };
     const workspaceUri = getWorkspaceUri();
     if (!workspaceUri) {
-        return actionValidationFailure('Unable to get current workspace.');
+        return actionValidationFailure('Unable to get current workspace.', 'Can\'t get current workspace');
     }
     const absolutePath = normalizePath(workspaceUri.fsPath + '/' + path.replace(/^\/|\/$/g, ''));
     if (!isPathNeuroSafe(absolutePath)) {
-        return actionValidationFailure(`You are not allowed to access this ${directoryType}.`);
+        return actionValidationFailure(`You are not allowed to access this ${directoryType}.`, `Access to the ${directoryType} disallowed.`);
     }
 
     const existence = await getUriExistence(workspaceUri.with({ path: absolutePath }));
     if (existence === false) {
-        return actionValidationFailure(`${directoryType} "${path}" does not exist.`);
+        return actionValidationFailure(`${directoryType} "${path}" does not exist.`, `Path to targeted ${directoryType} does not exist.`);
     }
 
     return actionValidationAccept();
@@ -225,13 +226,16 @@ export function handleGetFileLintProblems(actionData: ActionData): string | unde
 
         const rawDiagnostics = vscode.languages.getDiagnostics(workspaceUri.with({ path: normalizedPath }));
         if (rawDiagnostics.length === 0) {
-            return contextFailure(`No linting problems found for file ${relativePath}.`);
+            updateActionStatus(actionData, 'success', 'No linting issues found');
+            return `No linting problems found for file ${relativePath}.`;
         }
 
         const formattedDiagnostics = getFormattedDiagnosticsForFile(relativePath, rawDiagnostics);
+        updateActionStatus(actionData, 'success', `${rawDiagnostics.length} linting issues sent`);
         return `Linting problems for file ${relativePath}:${formattedDiagnostics}`;
     } catch (erm) {
         logOutput('ERROR', `Getting diagnostics for ${relativePath} failed: ${erm}`);
+        updateActionStatus(actionData, 'exception', 'Error thrown');
         return contextFailure(`Failed to get linting diagnostics for "${relativePath}".`);
     }
 }
@@ -254,6 +258,7 @@ export function handleGetFolderLintProblems(actionData: ActionData): string | un
         });
 
         if (folderDiagnostics.length === 0) {
+            updateActionStatus(actionData, 'success', 'No linting issues found');
             return contextFailure(`No linting problems found for folder "${relativeFolder}".`);
         }
 
@@ -262,15 +267,17 @@ export function handleGetFolderLintProblems(actionData: ActionData): string | un
             return getFormattedDiagnosticsForFile(relative, diags);
         }).join('\n');
 
+        updateActionStatus(actionData, 'success', `${folderDiagnostics.length} linting issues sent`);
         return `Linting problems for folder "${relativeFolder}":\n${formattedDiagnostics}`;
     } catch (erm) {
         logOutput('ERROR', `Getting diagnostics for folder ${relativeFolder} failed: ${erm}`);
+        updateActionStatus(actionData, 'exception', 'Error thrown');
         return contextFailure(`Failed to get linting diagnostics for folder "${relativeFolder}".`);
     }
 }
 
 // Handle diagnostics for the entire workspace
-export function handleGetWorkspaceLintProblems(_actionData: ActionData): string | undefined {
+export function handleGetWorkspaceLintProblems(actionData: ActionData): string | undefined {
     const workspacePath = getWorkspacePath();
     if (!workspacePath) {
         return contextFailure('No workspace opened.');
@@ -284,6 +291,7 @@ export function handleGetWorkspaceLintProblems(_actionData: ActionData): string 
         );
 
         if (safeDiagnostics.length === 0) {
+            updateActionStatus(actionData, 'success', 'No linting issues found');
             return contextFailure('No linting problems found for the current workspace.');
         }
 
@@ -292,9 +300,11 @@ export function handleGetWorkspaceLintProblems(_actionData: ActionData): string 
             return getFormattedDiagnosticsForFile(relative, diags);
         }).join('\n\n');
 
+        updateActionStatus(actionData, 'success', `${safeDiagnostics.length} linting issues found`);
         return `Linting problems for the current workspace:\n${formattedDiagnostics}`;
     } catch (erm) {
         logOutput('ERROR', `Failed to get diagnostics for workspace: ${erm}`);
+        updateActionStatus(actionData, 'exception', 'Error thrown');
         return contextFailure("Couldn't get diagnostics for the workspace.");
     }
 }
