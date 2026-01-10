@@ -16,7 +16,6 @@ const CONTEXT_NO_ACCESS = 'You do not have permission to access this file.';
 const CONTEXT_NO_ACTIVE_DOCUMENT = 'No active document to edit.';
 
 // Common status messages for action tracking
-const STATUS_EXECUTING = 'Executing...';
 const STATUS_NO_ACTIVE_DOCUMENT = 'No active document';
 const STATUS_NO_ACCESS = 'No access to file';
 // const STATUS_POSITION_OUT_OF_BOUNDS = 'Position out of bounds';
@@ -758,8 +757,6 @@ export function toggleSaveAction(): void {
 }
 
 export function handlePlaceCursor(actionData: ActionData): string | undefined {
-    updateActionStatus(actionData, 'pending', STATUS_EXECUTING);
-
     // One-based line and column (depending on config)
     let line = actionData.params.line;
     let column = actionData.params.column;
@@ -803,8 +800,6 @@ export function handlePlaceCursor(actionData: ActionData): string | undefined {
 }
 
 export function handleGetCursor(actionData: ActionData): string | undefined {
-    updateActionStatus(actionData, 'pending', STATUS_EXECUTING);
-
     const document = vscode.window.activeTextEditor?.document;
     if (document === undefined) {
         updateActionStatus(actionData, 'failure', STATUS_NO_ACTIVE_DOCUMENT);
@@ -828,8 +823,6 @@ export function handleGetCursor(actionData: ActionData): string | undefined {
 }
 
 export function handleInsertText(actionData: ActionData): string | undefined {
-    updateActionStatus(actionData, 'pending', STATUS_EXECUTING);
-
     const text: string = actionData.params.text;
     const cursor = getVirtualCursor()!;
     let position = actionData.params.position;
@@ -891,8 +884,6 @@ export function handleInsertText(actionData: ActionData): string | undefined {
 }
 
 export function handleInsertLines(actionData: ActionData): string | undefined {
-    updateActionStatus(actionData, 'pending', STATUS_EXECUTING);
-
     /**
      * The current implementation is a lazy one of just appending a newline and pasting the text in
      * We want to allow specification of the line to insert under, with the default set to the current cursor location
@@ -947,8 +938,6 @@ export function handleInsertLines(actionData: ActionData): string | undefined {
 }
 
 export function handleReplaceText(actionData: ActionData): string | undefined {
-    updateActionStatus(actionData, 'pending', STATUS_EXECUTING);
-
     const find: string = actionData.params.find;
     const replaceWith: string = actionData.params.replaceWith;
     const match: string = actionData.params.match;
@@ -1018,8 +1007,6 @@ export function handleReplaceText(actionData: ActionData): string | undefined {
 }
 
 export function handleDeleteText(actionData: ActionData): string | undefined {
-    updateActionStatus(actionData, 'pending', STATUS_EXECUTING);
-
     const find: string = actionData.params.find;
     const match: string = actionData.params.match;
     const useRegex: boolean = actionData.params.useRegex ?? false;
@@ -1085,8 +1072,6 @@ export function handleDeleteText(actionData: ActionData): string | undefined {
 }
 
 export function handleFindText(actionData: ActionData): string | undefined {
-    updateActionStatus(actionData, 'pending', STATUS_EXECUTING);
-
     const find: string = actionData.params.find;
     const match: MatchOptions = actionData.params.match;
     const useRegex: boolean = actionData.params.useRegex ?? false;
@@ -1156,8 +1141,6 @@ export function handleFindText(actionData: ActionData): string | undefined {
 }
 
 export function handleUndo(actionData: ActionData): string | undefined {
-    updateActionStatus(actionData, 'pending', STATUS_EXECUTING);
-
     const document = vscode.window.activeTextEditor?.document;
     if (document === undefined) {
         updateActionStatus(actionData, 'failure', STATUS_NO_ACTIVE_DOCUMENT);
@@ -1190,8 +1173,6 @@ export function handleUndo(actionData: ActionData): string | undefined {
 }
 
 export function handleSave(actionData: ActionData): string | undefined {
-    updateActionStatus(actionData, 'pending', STATUS_EXECUTING);
-
     const document = vscode.window.activeTextEditor?.document;
     if (document === undefined) {
         updateActionStatus(actionData, 'failure', STATUS_NO_ACTIVE_DOCUMENT);
@@ -1229,8 +1210,6 @@ export function handleSave(actionData: ActionData): string | undefined {
 }
 
 export function handleRewriteAll(actionData: ActionData): string | undefined {
-    updateActionStatus(actionData, 'pending', STATUS_EXECUTING);
-
     const content: string = actionData.params.content;
 
     const document = vscode.window.activeTextEditor?.document;
@@ -1280,8 +1259,6 @@ export function handleRewriteAll(actionData: ActionData): string | undefined {
 }
 
 export function handleDeleteLines(actionData: ActionData): string | undefined {
-    updateActionStatus(actionData, 'pending', STATUS_EXECUTING);
-
     const startLine = actionData.params.startLine;
     const endLine = actionData.params.endLine;
 
@@ -1361,8 +1338,6 @@ export function handleDeleteLines(actionData: ActionData): string | undefined {
 }
 
 export function handleRewriteLines(actionData: ActionData): string | undefined {
-    updateActionStatus(actionData, 'pending', STATUS_EXECUTING);
-
     const startLine = actionData.params.startLine;
     const endLine = actionData.params.endLine;
     const content = actionData.params.content;
@@ -1419,8 +1394,6 @@ export function handleRewriteLines(actionData: ActionData): string | undefined {
 }
 
 export function handleHighlightLines(actionData: ActionData): string | undefined {
-    updateActionStatus(actionData, 'pending', STATUS_EXECUTING);
-
     const startLine: number = actionData.params.startLine;
     const endLine: number = actionData.params.endLine;
 
@@ -1451,8 +1424,6 @@ export function handleHighlightLines(actionData: ActionData): string | undefined
 }
 
 export function handleDiffPatch(actionData: ActionData): string | undefined {
-    updateActionStatus(actionData, 'pending', STATUS_EXECUTING);
-
     const diff = actionData.params.diff;
 
     const document = vscode.window.activeTextEditor?.document;
@@ -1568,8 +1539,6 @@ function handleGetUserSelection(actionData: ActionData): string | undefined {
 }
 
 export function handleReplaceUserSelection(actionData: ActionData): string | undefined {
-    updateActionStatus(actionData, 'pending', STATUS_EXECUTING);
-
     const content: string = actionData.params.content;
 
     const editor = vscode.window.activeTextEditor;
