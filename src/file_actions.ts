@@ -244,8 +244,7 @@ export const fileActions = {
     read_file: {
         name: 'read_file',
         description: 'Read a file\'s contents without opening it. ' +
-            'If filePath is not specified, reads the currently open file. ' +
-            'If the currently open file is targeted by any means (either explicitly specified or if filePath is left unspecified), your cursor\'s position will be included.',
+            'If filePath is not specified, reads the currently open file. ',
         category: CATEGORY_FILE_ACTIONS,
         schema: {
             type: 'object',
