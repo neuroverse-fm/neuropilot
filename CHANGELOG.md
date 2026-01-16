@@ -22,13 +22,15 @@ Changes between each version before then will not be listed.
 
 ### Changes
 
-- Several actions were renamed:
+- Several actions were renamed and checked for by the deprecation checker & migrator:
   - `get_workspace_files` -> `list_files_and_folders`
   - `open_file` -> `switch_files`
-  - `place_cursor` -> `change_cursor_position`
+  - `place_cursor` -> `move_cursor_position`
   - `get_cursor` -> `get_cursor_position`
   - `diff_patch` -> `edit_with_diff`
-- The newly-renamed `switch_files`, `change_cursor_position` and `edit_with_diff` files also have minor description changes, as well as `read_file`.
+- The newly-renamed `switch_files`, `move_cursor_position` and `edit_with_diff` files also have minor description changes, as well as `read_file`.
+- `get_file_content` is now merged with `read_file`. Now, depending on whether or not the currently open file is being targeted, it will invoke the behaviour of either old `get_file_content` or `read_file`.
+  - Unlike the action renaming change, this will NOT be included in the deprecation checker. It will be assumed that the current permission set for `read_file` is sufficient.
 
 ### Fixes
 

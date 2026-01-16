@@ -202,8 +202,8 @@ const commonCancelEventsWithCursor: ((actionData: ActionData) => RCECancelEvent)
 ];
 
 export const editingActions = {
-    change_cursor_position: {
-        name: 'change_cursor_position',
+    move_cursor_position: {
+        name: 'move_cursor_position',
         description: 'Move your cursor in the current file to the specified position. Line and column numbers are one-based for "absolute" and zero-based for "relative".',
         category: CATEGORY_EDITING,
         schema: {
@@ -728,7 +728,7 @@ export const editingActions = {
 
 export function addEditingActions() {
     addActions([
-        editingActions.change_cursor_position,
+        editingActions.move_cursor_position,
         editingActions.get_cursor_position,
         editingActions.insert_text,
         editingActions.insert_lines,
