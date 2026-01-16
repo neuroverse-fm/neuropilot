@@ -235,7 +235,9 @@ export const fileActions = {
             additionalProperties: false,
         },
         handler: handleOpenFile,
-        cancelEvents: commonFileEvents,
+        cancelEvents: [
+            (actionData: ActionData) => targetedFileDeletedEvent(actionData.params?.filePath),
+        ],
         validators: {
             sync: [neuroSafeValidation, validateIsAFile, binaryFileValidation],
         },
@@ -268,7 +270,6 @@ export const fileActions = {
                 // it looks more readable this way okay
                 return null;
             },
-            (actionData: ActionData) => actionData.params?.filePath ? targetedFileCreatedEvent(actionData.params.filePath) : null,
             (actionData: ActionData) => actionData.params?.filePath ? targetedFileDeletedEvent(actionData.params.filePath) : null,
         ],
         validators: {
