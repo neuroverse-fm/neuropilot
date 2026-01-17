@@ -20,6 +20,11 @@ Changes between each version before then will not be listed.
 
 - [Dev] Add Execution History Item: a developer-only command that adds a fake execution history item for testing purposes.
 
+### Changes
+
+- *Hopefully*, Neuro will ask for changelogs. Please send them to her. She deserves it. She'll even summarise it for you so you can hear it from your AI instead of having to read it yourself.
+  - This does happen every session though, but this is the nuclear option at this point.
+
 ### Fixes
 
 - Before, toggling `neuropilot.actions.experimentalSchemas` off would still cause the inputs to be validated against the experimental schema. Now, the inputs are checked against the correct schema.
