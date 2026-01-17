@@ -11,6 +11,49 @@ if (typeof globalThis !== 'undefined' && typeof globalThis.navigator === 'undefi
 
 import Mocha from 'mocha';
 import 'mocha';
+import * as vscode from 'vscode';
+import { NeuroClient } from 'neuro-game-sdk';
+import { NEURO } from '@/constants';
+
+if (globalThis?.process?.env?.NEUROPILOT_TEST === 'true') {
+    const originalError = console.error;
+    const originalWarn = console.warn;
+    const isNoise = (message: string) =>
+        message.includes('WebSocket is not open') ||
+        message.includes('DisposableStore that has already been disposed');
+    console.error = (...args) => {
+        const message = args.map(String).join(' ');
+        if (isNoise(message)) return;
+        originalError(...args);
+    };
+    console.warn = (...args) => {
+        const message = args.map(String).join(' ');
+        if (isNoise(message)) return;
+        originalWarn(...args);
+    };
+}
+
+const globalWithTest = globalThis as typeof globalThis & { NEUROPILOT_TEST?: boolean };
+globalWithTest.NEUROPILOT_TEST = true;
+NeuroClient.prototype.sendContext = () => {};
+NeuroClient.prototype.registerActions = () => {};
+NeuroClient.prototype.unregisterActions = () => {};
+NeuroClient.prototype.sendActionResult = () => {};
+NeuroClient.prototype.onAction = () => {};
+
+if (!NEURO.outputChannel) {
+    NEURO.outputChannel = vscode.window.createOutputChannel('Neuropilot Test');
+}
+if (!NEURO.client) {
+    NEURO.client = {
+        sendContext: () => {},
+        disconnect: () => {},
+        registerActions: () => {},
+        unregisterActions: () => {},
+        sendActionResult: () => {},
+        onAction: () => {},
+    } as unknown as NeuroClient;
+}
 
 // Extension unit tests
 import './extension.test';
