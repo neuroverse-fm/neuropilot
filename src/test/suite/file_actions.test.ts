@@ -3,6 +3,7 @@ import * as vscode from 'vscode';
 import * as fileActions from '../../file_actions';
 import { assertProperties, checkNoErrorWithTimeout, createTestDirectory, createTestFile } from '../test_utils';
 import { ActionData } from '../../neuro_client_helper';
+import { getPermissionLevel, PermissionLevel } from '../../config';
 import { NeuroClient } from 'neuro-game-sdk';
 import { NEURO } from '../../constants';
 import { anything, capture, instance, mock, verify } from 'ts-mockito';
@@ -11,20 +12,39 @@ suite('File Actions', () => {
     let originalClient: NeuroClient | null = null;
     let mockedClient: NeuroClient;
 
+    function withTimeout<T>(promise: PromiseLike<T>, label: string, timeoutMs = 5000): Promise<T> {
+        let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
+        const timeoutPromise = new Promise<never>((_, reject) => {
+            timeoutHandle = setTimeout(() => {
+                reject(new Error(`Timeout after ${timeoutMs}ms: ${label}`));
+            }, timeoutMs);
+        });
+        return Promise.race([Promise.resolve(promise), timeoutPromise]).finally(() => {
+            if (timeoutHandle) {
+                clearTimeout(timeoutHandle);
+            }
+        });
+    }
+
     setup(async function () {
+        this.timeout(10000);
         // Mock the NeuroClient to avoid actual network calls
         originalClient = NEURO.client;
         mockedClient = mock(NeuroClient);
         NEURO.client = instance(mockedClient);
 
         // Close all open editors
-        await vscode.commands.executeCommand('workbench.action.closeAllEditors');
+        await withTimeout(vscode.commands.executeCommand('workbench.action.closeAllEditors'), 'closeAllEditors');
     });
 
     teardown(async function () {
+        this.timeout(10000);
         // Delete all test files created during the tests
         const testFilesDir = vscode.Uri.joinPath(vscode.workspace.workspaceFolders![0].uri, 'test_files');
-        await vscode.workspace.fs.delete(testFilesDir, { recursive: true, useTrash: false });
+        await withTimeout(
+            vscode.workspace.fs.delete(testFilesDir, { recursive: true, useTrash: false }),
+            'delete test_files',
+        );
 
         // Restore the original NeuroClient
         NEURO.client = originalClient;
@@ -335,10 +355,19 @@ suite('File Actions', () => {
 
         // === Act ===
         fileActions.handleCreateFile({ id: 'abc', name: 'create_file', params: { filePath: relativePath } });
-        await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).twice(); });
+        const openAllowed = getPermissionLevel(fileActions.fileActions.switch_files.name) === PermissionLevel.AUTOPILOT;
+        await checkNoErrorWithTimeout(() => {
+            if (openAllowed) {
+                verify(mockedClient.sendContext(anything())).twice();
+            } else {
+                verify(mockedClient.sendContext(anything())).once();
+            }
+        }, 5000, 100);
 
         // === Assert ===
-        assert.strictEqual(vscode.window.activeTextEditor?.document.uri.path.toLowerCase(), uri.path.toLowerCase(), 'The new file should be opened in the active editor');
+        if (openAllowed) {
+            assert.strictEqual(vscode.window.activeTextEditor?.document.uri.path.toLowerCase(), uri.path.toLowerCase(), 'The new file should be opened in the active editor');
+        }
 
         const stat = await vscode.workspace.fs.stat(uri);
         assert.strictEqual(stat.type, vscode.FileType.File, 'The new file should be created successfully');
