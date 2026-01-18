@@ -40,7 +40,6 @@ export async function desktopTest(_prodFlag, watchFlag) {
     const ctx = await context({
         entryPoints: ['src/test/suite/desktop/index.ts'],
         bundle: true,
-        treeShaking: false,
         format: 'cjs',
         minify: false, // Don't minify tests for better debugging
         sourcemap: true, // Always generate sourcemaps for tests
