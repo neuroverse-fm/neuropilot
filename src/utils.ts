@@ -22,6 +22,10 @@ let cachedExcludeRegExp: RegExp = REGEXP_NEVER;
 
 export function logOutput(tag: string, message: string) {
     if (!NEURO.outputChannel) {
+        const testFlag = (globalThis as typeof globalThis & { NEUROPILOT_TEST?: boolean }).NEUROPILOT_TEST;
+        if (testFlag === true || globalThis?.process?.env?.NEUROPILOT_TEST === 'true') {
+            return;
+        }
         console.error('Output channel not initialized');
         return;
     }
@@ -37,6 +41,20 @@ let retryTimeout: NodeJS.Timeout | null = null;
 let shouldAutoReconnect = true; // Flag to control auto-reconnection
 
 export function createClient() {
+    const testFlag = (globalThis as typeof globalThis & { NEUROPILOT_TEST?: boolean }).NEUROPILOT_TEST;
+    if (testFlag === true || globalThis?.process?.env?.NEUROPILOT_TEST === 'true') {
+        if (!NEURO.client) {
+            NEURO.client = {
+                sendContext: () => {},
+                disconnect: () => {},
+                registerActions: () => {},
+                unregisterActions: () => {},
+                sendActionResult: () => {},
+                onAction: () => {},
+            } as unknown as NeuroClient;
+        }
+        return;
+    }
     logOutput('INFO', 'Creating Neuro API client');
     if (NEURO.client) {
         // Prevent auto-reconnection when manually disconnecting

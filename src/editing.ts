@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 
 import { NEURO } from '@/constants';
-import { DiffRangeType, escapeRegExp, getDiffRanges, getFence, getPositionContext, getProperty, getVirtualCursor, showDiffRanges, isPathNeuroSafe, logOutput, NeuroPositionContext, setVirtualCursor, simpleFileName, substituteMatch, clearDecorations, formatContext, filterFileContents, positionFromIndex, indexFromPosition } from '@/utils';
-import { ActionData, actionValidationAccept, actionValidationFailure, ActionValidationResult, RCEAction, contextFailure, actionValidationRetry, contextNoAccess } from '@/neuro_client_helper';
+import { DiffRangeType, escapeRegExp, getDiffRanges, getFence, getPositionContext, getProperty, getVirtualCursor, showDiffRanges, isPathNeuroSafe, logOutput, setVirtualCursor, simpleFileName, substituteMatch, clearDecorations, formatContext, filterFileContents, positionFromIndex, indexFromPosition } from '@/utils';
+import { ActionData, actionValidationAccept, actionValidationFailure, ActionValidationResult, RCEAction, contextFailure, actionValidationRetry } from '@/neuro_client_helper';
 import { CONFIG, CONNECTION } from '@/config';
 import { createCursorPositionChangedEvent } from '@events/cursor';
 import { RCECancelEvent } from '@events/utils';
@@ -16,7 +16,6 @@ const CONTEXT_NO_ACCESS = 'You do not have permission to access this file.';
 const CONTEXT_NO_ACTIVE_DOCUMENT = 'No active document to edit.';
 
 // Common status messages for action tracking
-const STATUS_EXECUTING = 'Executing...';
 const STATUS_NO_ACTIVE_DOCUMENT = 'No active document';
 const STATUS_NO_ACCESS = 'No access to file';
 // const STATUS_POSITION_OUT_OF_BOUNDS = 'Position out of bounds';
@@ -203,9 +202,9 @@ const commonCancelEventsWithCursor: ((actionData: ActionData) => RCECancelEvent)
 ];
 
 export const editingActions = {
-    place_cursor: {
-        name: 'place_cursor',
-        description: 'Place your cursor in the current file at the specified position. Line and column numbers are one-based for "absolute" and zero-based for "relative".',
+    move_cursor_position: {
+        name: 'move_cursor_position',
+        description: 'Move your cursor in the current file to the specified position. Line and column numbers are one-based for "absolute" and zero-based for "relative".',
         category: CATEGORY_EDITING,
         schema: {
             ...POSITION_SCHEMA,
@@ -218,8 +217,8 @@ export const editingActions = {
         cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `${actionData.params.type === 'absolute' ? 'place her cursor at' : 'move her cursor by'} (${actionData.params.line}:${actionData.params.column}).`,
     },
-    get_cursor: {
-        name: 'get_cursor',
+    get_cursor_position: {
+        name: 'get_cursor_position',
         description: 'Get your current cursor position and the text surrounding it.',
         category: CATEGORY_EDITING,
         handler: handleGetCursor,
@@ -228,19 +227,6 @@ export const editingActions = {
         },
         cancelEvents: commonCancelEventsWithCursor,
         promptGenerator: 'get her current cursor position and the text surrounding it.',
-    },
-    get_file_contents: {
-        name: 'get_file_contents',
-        description: 'Get the contents of the current file.',
-        category: CATEGORY_EDITING,
-        handler: handleGetContent,
-        cancelEvents: [
-            cancelOnDidChangeTextDocument,
-        ],
-        promptGenerator: 'get the current file\'s contents.',
-        validators: {
-            sync: [checkCurrentFile],
-        },
     },
     insert_text: {
         name: 'insert_text',
@@ -679,13 +665,13 @@ export const editingActions = {
             return `replace your current selection with ${lineCount} line${lineCount === 1 ? '' : 's'} of content.`;
         },
     },
-    diff_patch: {
-        name: 'diff_patch',
+    edit_with_diff: {
+        name: 'edit_with_diff',
         description: 'Write a diff patch to apply to the file.' +
             ' The diff patch must be written in a pseudo-search-replace-diff format.' +
             ' `>>>>>> SEARCH` and `<<<<<< REPLACE` will be used to tell what to search and what to replace,' +
             ' with `======` delimiting between the two.' +
-            ' `>>>>>> SEARCH`, `<<<<<< REPLACE` and `======` must be on a separate line, and be the only content on that line.' +
+            ' `>>>>>> SEARCH`, `<<<<<< REPLACE` and `======` must each be on a separate line, and be the only content on said lines.' +
             ' You can only specify **one** search/replace pair per diff patch.*' +
             ' Read the schema for an example.',
         category: CATEGORY_EDITING,
@@ -701,7 +687,7 @@ export const editingActions = {
         schemaFallback: {
             type: 'object',
             properties: {
-                diff: { type: 'string', examples: ['>>>>>> SEARCH\ndef turtle():\n    return "Vedal"\n======\ndef turtle():\n    "insert_turtle_here"\n<<<<<< REPLACE'] },
+                diff: { type: 'string', examples: ['>>>>>> SEARCH\ndef turtle():\n    return "Vedal"\n======\ndef turtle():\n    return "insert_turtle_here"\n<<<<<< REPLACE'] },
                 moveCursor: { type: 'boolean', default: false },
             },
             required: ['diff'],
@@ -742,9 +728,8 @@ export const editingActions = {
 
 export function addEditingActions() {
     addActions([
-        editingActions.place_cursor,
-        editingActions.get_cursor,
-        editingActions.get_file_contents,
+        editingActions.move_cursor_position,
+        editingActions.get_cursor_position,
         editingActions.insert_text,
         editingActions.insert_lines,
         editingActions.replace_text,
@@ -757,7 +742,7 @@ export function addEditingActions() {
         editingActions.highlight_lines,
         editingActions.get_user_selection,
         editingActions.replace_user_selection,
-        editingActions.diff_patch,
+        editingActions.edit_with_diff,
         editingActions.save,
     ]);
 }
@@ -772,8 +757,6 @@ export function toggleSaveAction(): void {
 }
 
 export function handlePlaceCursor(actionData: ActionData): string | undefined {
-    updateActionStatus(actionData, 'pending', STATUS_EXECUTING);
-
     // One-based line and column (depending on config)
     let line = actionData.params.line;
     let column = actionData.params.column;
@@ -817,8 +800,6 @@ export function handlePlaceCursor(actionData: ActionData): string | undefined {
 }
 
 export function handleGetCursor(actionData: ActionData): string | undefined {
-    updateActionStatus(actionData, 'pending', STATUS_EXECUTING);
-
     const document = vscode.window.activeTextEditor?.document;
     if (document === undefined) {
         updateActionStatus(actionData, 'failure', STATUS_NO_ACTIVE_DOCUMENT);
@@ -841,41 +822,7 @@ export function handleGetCursor(actionData: ActionData): string | undefined {
     return `In file ${relativePath}.\n\n${formatContext(cursorContext)}`;
 }
 
-export function handleGetContent(actionData: ActionData): string {
-    updateActionStatus(actionData, 'pending', STATUS_EXECUTING);
-
-    const editor = vscode.window.activeTextEditor;
-    if (!editor) {
-        updateActionStatus(actionData, 'failure', STATUS_NO_ACTIVE_DOCUMENT);
-        return contextFailure('No active text editor.');
-    }
-
-    const document = editor.document;
-    const fileName = simpleFileName(document.fileName);
-    const cursor = getVirtualCursor()!;
-
-    if (!isPathNeuroSafe(document.fileName)) {
-        updateActionStatus(actionData, 'failure', STATUS_NO_ACCESS);
-        return contextNoAccess(fileName);
-    }
-
-    // Manually construct context to include entire file
-    const positionContext: NeuroPositionContext = {
-        contextBefore: filterFileContents(document.getText(new vscode.Range(new vscode.Position(0, 0), cursor))),
-        contextAfter: filterFileContents(document.getText(new vscode.Range(cursor, document.lineAt(document.lineCount - 1).rangeIncludingLineBreak.end))),
-        startLine: 0,
-        endLine: document.lineCount - 1,
-        totalLines: document.lineCount,
-        cursorDefined: true,
-    };
-
-    updateActionStatus(actionData, 'success', `Retrieved ${document.lineCount} lines from ${fileName}`);
-    return `Contents of the file ${fileName}:\n\n${formatContext(positionContext)}`;
-}
-
 export function handleInsertText(actionData: ActionData): string | undefined {
-    updateActionStatus(actionData, 'pending', STATUS_EXECUTING);
-
     const text: string = actionData.params.text;
     const cursor = getVirtualCursor()!;
     let position = actionData.params.position;
@@ -937,8 +884,6 @@ export function handleInsertText(actionData: ActionData): string | undefined {
 }
 
 export function handleInsertLines(actionData: ActionData): string | undefined {
-    updateActionStatus(actionData, 'pending', STATUS_EXECUTING);
-
     /**
      * The current implementation is a lazy one of just appending a newline and pasting the text in
      * We want to allow specification of the line to insert under, with the default set to the current cursor location
@@ -993,8 +938,6 @@ export function handleInsertLines(actionData: ActionData): string | undefined {
 }
 
 export function handleReplaceText(actionData: ActionData): string | undefined {
-    updateActionStatus(actionData, 'pending', STATUS_EXECUTING);
-
     const find: string = actionData.params.find;
     const replaceWith: string = actionData.params.replaceWith;
     const match: string = actionData.params.match;
@@ -1064,8 +1007,6 @@ export function handleReplaceText(actionData: ActionData): string | undefined {
 }
 
 export function handleDeleteText(actionData: ActionData): string | undefined {
-    updateActionStatus(actionData, 'pending', STATUS_EXECUTING);
-
     const find: string = actionData.params.find;
     const match: string = actionData.params.match;
     const useRegex: boolean = actionData.params.useRegex ?? false;
@@ -1131,8 +1072,6 @@ export function handleDeleteText(actionData: ActionData): string | undefined {
 }
 
 export function handleFindText(actionData: ActionData): string | undefined {
-    updateActionStatus(actionData, 'pending', STATUS_EXECUTING);
-
     const find: string = actionData.params.find;
     const match: MatchOptions = actionData.params.match;
     const useRegex: boolean = actionData.params.useRegex ?? false;
@@ -1202,8 +1141,6 @@ export function handleFindText(actionData: ActionData): string | undefined {
 }
 
 export function handleUndo(actionData: ActionData): string | undefined {
-    updateActionStatus(actionData, 'pending', STATUS_EXECUTING);
-
     const document = vscode.window.activeTextEditor?.document;
     if (document === undefined) {
         updateActionStatus(actionData, 'failure', STATUS_NO_ACTIVE_DOCUMENT);
@@ -1236,8 +1173,6 @@ export function handleUndo(actionData: ActionData): string | undefined {
 }
 
 export function handleSave(actionData: ActionData): string | undefined {
-    updateActionStatus(actionData, 'pending', STATUS_EXECUTING);
-
     const document = vscode.window.activeTextEditor?.document;
     if (document === undefined) {
         updateActionStatus(actionData, 'failure', STATUS_NO_ACTIVE_DOCUMENT);
@@ -1275,8 +1210,6 @@ export function handleSave(actionData: ActionData): string | undefined {
 }
 
 export function handleRewriteAll(actionData: ActionData): string | undefined {
-    updateActionStatus(actionData, 'pending', STATUS_EXECUTING);
-
     const content: string = actionData.params.content;
 
     const document = vscode.window.activeTextEditor?.document;
@@ -1326,8 +1259,6 @@ export function handleRewriteAll(actionData: ActionData): string | undefined {
 }
 
 export function handleDeleteLines(actionData: ActionData): string | undefined {
-    updateActionStatus(actionData, 'pending', STATUS_EXECUTING);
-
     const startLine = actionData.params.startLine;
     const endLine = actionData.params.endLine;
 
@@ -1407,8 +1338,6 @@ export function handleDeleteLines(actionData: ActionData): string | undefined {
 }
 
 export function handleRewriteLines(actionData: ActionData): string | undefined {
-    updateActionStatus(actionData, 'pending', STATUS_EXECUTING);
-
     const startLine = actionData.params.startLine;
     const endLine = actionData.params.endLine;
     const content = actionData.params.content;
@@ -1465,8 +1394,6 @@ export function handleRewriteLines(actionData: ActionData): string | undefined {
 }
 
 export function handleHighlightLines(actionData: ActionData): string | undefined {
-    updateActionStatus(actionData, 'pending', STATUS_EXECUTING);
-
     const startLine: number = actionData.params.startLine;
     const endLine: number = actionData.params.endLine;
 
@@ -1497,8 +1424,6 @@ export function handleHighlightLines(actionData: ActionData): string | undefined
 }
 
 export function handleDiffPatch(actionData: ActionData): string | undefined {
-    updateActionStatus(actionData, 'pending', STATUS_EXECUTING);
-
     const diff = actionData.params.diff;
 
     const document = vscode.window.activeTextEditor?.document;
@@ -1614,8 +1539,6 @@ function handleGetUserSelection(actionData: ActionData): string | undefined {
 }
 
 export function handleReplaceUserSelection(actionData: ActionData): string | undefined {
-    updateActionStatus(actionData, 'pending', STATUS_EXECUTING);
-
     const content: string = actionData.params.content;
 
     const editor = vscode.window.activeTextEditor;

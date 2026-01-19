@@ -377,6 +377,10 @@ export function getHighlightDecorationRenderOptions(): vscode.DecorationRenderOp
  * Does NOT show on brand new installs (sets memento to current version instead).
  */
 export function showUpdateReminder(context: vscode.ExtensionContext) {
+    const testFlag = (globalThis as typeof globalThis & { NEUROPILOT_TEST?: boolean }).NEUROPILOT_TEST;
+    if (testFlag === true || globalThis?.process?.env?.NEUROPILOT_TEST === 'true') {
+        return;
+    }
     const mementoKey = 'lastVersionReminder';
     const lastVersion = context.globalState.get<string>(mementoKey);
     const docsUrl = 'https://vsc-neuropilot.github.io/docs';

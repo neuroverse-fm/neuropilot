@@ -6,7 +6,6 @@ import { ActionData } from '@/neuro_client_helper';
 import {
     handlePlaceCursor,
     handleGetCursor,
-    handleGetContent,
     handleInsertText,
     handleInsertLines,
     handleReplaceText,
@@ -99,15 +98,6 @@ suite('Integration: Editing actions', () => {
         // === Act & Assert ===
         const restored = handlePlaceCursor({ id: 't', name: 'place_cursor', params: { line: 2, column: 1, type: 'absolute' } });
         assert.ok(restored && restored.includes('(2:1)'));
-    });
-
-    test('get_content returns full file content context', () => {
-        // === Act ===
-        const result = handleGetContent({ id: 'handleGetContent_test', name: 'get_file_content' });
-
-        // === Assert ===
-        assert.ok(result.includes('Alpha'));
-        assert.ok(result.includes('Delta'));
     });
 
     test('insert_text inserts at absolute position and sends context', async () => {

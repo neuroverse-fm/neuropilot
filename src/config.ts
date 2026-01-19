@@ -15,7 +15,7 @@ export interface Permission {
 }
 
 interface DeprecatedSetting {
-    old: string;
+    old: string | (() => null | string);
     new: string | ((target: vscode.ConfigurationTarget) => Promise<void>);
 }
 
@@ -181,6 +181,12 @@ const DEPRECATED_SETTINGS: DeprecatedSetting[] = [
             await cfg.update('actionPermissions', permissions, target);
         },
     },
+    // Action migrations (add new action renames here)
+    deprecatedAction('open_file', 'switch_files'),
+    deprecatedAction('get_workspace_files', 'list_files_and_folders'),
+    deprecatedAction('place_cursor', 'move_cursor_position'),
+    deprecatedAction('get_cursor', 'get_cursor_position'),
+    deprecatedAction('diff_patch', 'edit_with_diff'),
 ];
 
 function deprecatedPermission(oldKey: string, affectedActions: string[]): DeprecatedSetting {
@@ -206,6 +212,38 @@ function deprecatedPermission(oldKey: string, affectedActions: string[]): Deprec
     };
 }
 
+function deprecatedAction(oldAction: string, newAction: string): DeprecatedSetting {
+    return {
+        old: () => {
+            // Check if the old action exists in any of the actionPermissions configurations
+            const cfg = vscode.workspace.getConfiguration('neuropilot');
+            const inspection = cfg.inspect<Record<string, string>>('actionPermissions');
+
+            // Check all configuration targets
+            const hasInGlobal = inspection?.globalValue?.[oldAction] !== undefined;
+            const hasInWorkspace = inspection?.workspaceValue?.[oldAction] !== undefined;
+            const hasInWorkspaceFolder = inspection?.workspaceFolderValue?.[oldAction] !== undefined;
+
+            if (hasInGlobal || hasInWorkspace || hasInWorkspaceFolder) {
+                return `actionPermissions.${oldAction}`;
+            }
+            return null;
+        },
+        async new(target: vscode.ConfigurationTarget) {
+            const cfg = vscode.workspace.getConfiguration('neuropilot');
+            const permissions = getTargetConfig<Record<string, string>>(cfg, 'actionPermissions', target) ?? {};
+
+            if (Object.keys(permissions).includes(oldAction)) {
+                const permissionLevel = permissions[oldAction];
+                permissions[newAction] = permissionLevel;
+                delete permissions[oldAction];
+                await cfg.update('actionPermissions', permissions, target);
+                logOutput('INFO', `Migrated action "${oldAction}" to "${newAction}" with permission level "${permissionLevel}"`);
+            }
+        },
+    };
+}
+
 function getTargetConfig<T>(config: vscode.WorkspaceConfiguration, key: string, target: vscode.ConfigurationTarget) {
     switch (target) {
         case vscode.ConfigurationTarget.Global:
@@ -227,22 +265,53 @@ export async function checkDeprecatedSettings(version: string) {
     const deprecatedSettings: Record<string, Map<vscode.ConfigurationTarget, unknown>> = {};
 
     for (const setting of DEPRECATED_SETTINGS) {
-        const inspection = cfg.inspect(setting.old);
+        let oldConfig: string;
+        if (typeof setting.old === 'function') {
+            const result = setting.old();
+            if (!result) {
+                // Setting not found or not applicable
+                continue;
+            }
+            oldConfig = typeof result === 'string' ? result : '';
+            if (!oldConfig) continue;
+        } else {
+            oldConfig = setting.old;
+        }
+
         const targetValueMap = new Map<vscode.ConfigurationTarget, unknown>();
 
-        // Check all possible configuration targets
-        if (inspection?.globalValue !== undefined) {
-            targetValueMap.set(vscode.ConfigurationTarget.Global, inspection.globalValue);
-        }
-        if (inspection?.workspaceValue !== undefined) {
-            targetValueMap.set(vscode.ConfigurationTarget.Workspace, inspection.workspaceValue);
-        }
-        if (inspection?.workspaceFolderValue !== undefined) {
-            targetValueMap.set(vscode.ConfigurationTarget.WorkspaceFolder, inspection.workspaceFolderValue);
+        // Special handling for actionPermissions (nested object properties)
+        if (oldConfig.startsWith('actionPermissions.')) {
+            const actionName = oldConfig.substring('actionPermissions.'.length);
+            const permissionsInspection = cfg.inspect<Record<string, string>>('actionPermissions');
+
+            if (permissionsInspection?.globalValue?.[actionName] !== undefined) {
+                targetValueMap.set(vscode.ConfigurationTarget.Global, permissionsInspection.globalValue[actionName]);
+            }
+            if (permissionsInspection?.workspaceValue?.[actionName] !== undefined) {
+                targetValueMap.set(vscode.ConfigurationTarget.Workspace, permissionsInspection.workspaceValue[actionName]);
+            }
+            if (permissionsInspection?.workspaceFolderValue?.[actionName] !== undefined) {
+                targetValueMap.set(vscode.ConfigurationTarget.WorkspaceFolder, permissionsInspection.workspaceFolderValue[actionName]);
+            }
+        } else {
+            // Normal handling for top-level settings
+            const inspection = cfg.inspect(oldConfig);
+
+            // Check all possible configuration targets
+            if (inspection?.globalValue !== undefined) {
+                targetValueMap.set(vscode.ConfigurationTarget.Global, inspection.globalValue);
+            }
+            if (inspection?.workspaceValue !== undefined) {
+                targetValueMap.set(vscode.ConfigurationTarget.Workspace, inspection.workspaceValue);
+            }
+            if (inspection?.workspaceFolderValue !== undefined) {
+                targetValueMap.set(vscode.ConfigurationTarget.WorkspaceFolder, inspection.workspaceFolderValue);
+            }
         }
 
         if (targetValueMap.size > 0) {
-            deprecatedSettings[setting.old] = targetValueMap;
+            deprecatedSettings[oldConfig] = targetValueMap;
         }
     }
 
@@ -284,7 +353,15 @@ export async function checkDeprecatedSettings(version: string) {
             switch (notif) {
                 case 'Yes':
                     for (const key of keys) {
-                        const updateObject = DEPRECATED_SETTINGS.find(o => o.old === key);
+                        const updateObject = DEPRECATED_SETTINGS.find(o => {
+                            if (typeof o.old === 'string') {
+                                return o.old === key;
+                            } else {
+                                // For function-based old configs, call the function and check if it returns the key
+                                const result = o.old();
+                                return result === key;
+                            }
+                        });
                         const targetValueMap = deprecatedSettings[key];
 
                         try {
@@ -295,12 +372,19 @@ export async function checkDeprecatedSettings(version: string) {
                                         // Update with the specific configuration target
                                         await cfg.update(updateObject.new, value, target);
                                         // Remove the old setting from this target
-                                        await cfg.update(updateObject.old, undefined, target);
+                                        const oldKey = typeof updateObject.old === 'string' ? updateObject.old : key;
+                                        await cfg.update(oldKey, undefined, target);
                                     } else {
-                                        // For custom migration functions, pass the target and value
+                                        // For custom migration functions, pass the target
                                         await updateObject.new(target);
                                         // Remove the old setting from this target
-                                        await cfg.update(updateObject.old, undefined, target);
+                                        // For function-based old configs, we need to extract the actual key
+                                        if (typeof updateObject.old === 'string') {
+                                            await cfg.update(updateObject.old, undefined, target);
+                                        } else {
+                                            // For actionPermissions, we handle deletion within the migration function
+                                            // so we don't need to delete anything here
+                                        }
                                     }
                                 }
                             }
