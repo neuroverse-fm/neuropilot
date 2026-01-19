@@ -39,7 +39,7 @@ export class ExecuteViewProvider extends BaseWebviewViewProvider<Message, Execut
     private context: vscode.ExtensionContext;
 
     constructor(context: vscode.ExtensionContext) {
-        super('execute/index.html', 'execute/main.js', ['execute/style.css']);
+        super('execute/main.js', ['execute/style.css']);
         this.context = context;
 
         // Restore buffered results from previous session
