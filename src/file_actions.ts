@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 
 import { NEURO } from '@/constants';
-import { formatContext, getFence, getPositionContext, getVirtualCursor, getWorkspacePath, getWorkspaceUri, isBinary, isPathNeuroSafe, logOutput, normalizePath, notifyOnCaughtException, stripTailSlashes } from '@/utils';
-import { ActionData, contextNoAccess, RCEAction, actionValidationFailure, actionValidationAccept, ActionValidationResult, actionValidationRetry } from '@/neuro_client_helper';
+import { filterFileContents, formatContext, getFence, getPositionContext, getVirtualCursor, getWorkspacePath, getWorkspaceUri, isBinary, isPathNeuroSafe, logOutput, NeuroPositionContext, normalizePath, notifyOnCaughtException, simpleFileName, stripTailSlashes } from '@/utils';
+import { ActionData, contextFailure, contextNoAccess, RCEAction, actionValidationFailure, actionValidationAccept, ActionValidationResult, actionValidationRetry } from '@/neuro_client_helper';
 import { CONFIG, PermissionLevel, getPermissionLevel } from '@/config';
 import { targetedFileCreatedEvent, targetedFileDeletedEvent } from '@events/files';
 import { RCECancelEvent } from '@events/utils';
@@ -183,8 +183,8 @@ const commonFileEvents: ((actionData: ActionData) => RCECancelEvent | null)[] = 
 ];
 
 export const fileActions = {
-    get_workspace_files: {
-        name: 'get_workspace_files',
+    list_files_and_folders: {
+        name: 'list_files_and_folders',
         description: 'Get a list of files in the workspace. Will not return subdirectories by default, use `recursive` to do so.',
         schema: {
             type: 'object',
@@ -222,9 +222,9 @@ export const fileActions = {
         ],
         promptGenerator: (actionData: ActionData) => `${actionData.params?.recursive ? 'recursively get' : 'get'} a list of files in ${actionData.params?.folder ? `"${stripTailSlashes(actionData.params.folder)}"` : 'the workspace'}.`,
     },
-    open_file: {
-        name: 'open_file',
-        description: 'Open a file in the workspace. You cannot open a binary file directly.',
+    switch_files: {
+        name: 'switch_files',
+        description: 'Switch to a different file in the workspace. You cannot open a binary file directly.',
         category: CATEGORY_FILE_ACTIONS,
         schema: {
             type: 'object',
@@ -235,7 +235,9 @@ export const fileActions = {
             additionalProperties: false,
         },
         handler: handleOpenFile,
-        cancelEvents: commonFileEvents,
+        cancelEvents: [
+            (actionData: ActionData) => targetedFileDeletedEvent(actionData.params?.filePath),
+        ],
         validators: {
             sync: [neuroSafeValidation, validateIsAFile, binaryFileValidation],
         },
@@ -243,22 +245,75 @@ export const fileActions = {
     },
     read_file: {
         name: 'read_file',
-        description: 'Read a file\'s contents without opening it.',
+        description: 'Read a file\'s contents without opening it. ' +
+            'If filePath is not specified, reads the currently open file. ',
         category: CATEGORY_FILE_ACTIONS,
         schema: {
             type: 'object',
             properties: {
-                filePath: { type: 'string', description: 'The relative path to the file.', examples: ['./index.html', 'style.css', 'src/main.js'] },
+                filePath: { type: 'string', description: 'The relative path to the file. If omitted, reads the currently open file.', examples: ['./index.html', 'style.css', 'src/main.js'] },
             },
-            required: ['filePath'],
             additionalProperties: false,
         },
         handler: handleReadFile,
-        cancelEvents: commonFileEvents,
+        cancelEvents: [
+            (actionData: ActionData) => {
+                if (!actionData.params?.filePath) {
+                    // For current file, cancel on document change
+                    return new RCECancelEvent({
+                        reason: 'the active document was changed.',
+                        events: [
+                            [vscode.workspace.onDidChangeTextDocument, null],
+                        ],
+                    });
+                }
+                // it looks more readable this way okay
+                return null;
+            },
+            (actionData: ActionData) => actionData.params?.filePath ? targetedFileDeletedEvent(actionData.params.filePath) : null,
+        ],
         validators: {
-            sync: [neuroSafeValidation, validateIsAFile, binaryFileValidation],
+            sync: [
+                async (actionData: ActionData) => {
+                    const workspaceUri = getWorkspaceUri();
+                    if (!workspaceUri) {
+                        return actionValidationFailure('You are not in a workspace.', 'Not in a workspace.');
+                    }
+
+                    // Default to currently open file if filePath not provided
+                    if (!actionData.params.filePath || actionData.params.filePath === '') {
+                        const document = vscode.window.activeTextEditor?.document;
+                        if (!document) {
+                            return actionValidationFailure('File path left empty and you are not in an active file to edit.', 'Not in editable file.');
+                        }
+
+                        actionData.params.filePath = vscode.workspace.asRelativePath(document.uri, false);
+                    } else {
+                        // Normalize user-provided paths using VS Code's relative path resolver
+                        const normalizedUri = vscode.Uri.joinPath(workspaceUri, actionData.params.filePath);
+                        actionData.params.filePath = vscode.workspace.asRelativePath(normalizedUri, false);
+                    }
+
+                    // Run all validators with the resolved filePath
+                    const neuroSafeResult = await neuroSafeValidation(actionData);
+                    if (!neuroSafeResult.success) return neuroSafeResult;
+
+                    const binaryResult = await binaryFileValidation(actionData);
+                    if (!binaryResult.success) return binaryResult;
+
+                    const fileResult = await validateIsAFile(actionData);
+                    if (!fileResult.success) return fileResult;
+
+                    return actionValidationAccept();
+                },
+            ],
         },
-        promptGenerator: (actionData: ActionData) => `read the file "${actionData.params?.filePath}" (without opening it).`,
+        promptGenerator: (actionData: ActionData) => {
+            if (actionData.params?.filePath) {
+                return `read the file "${actionData.params.filePath}" (without opening it).`;
+            }
+            return 'get the current file\'s contents.';
+        },
     },
     create_file: {
         name: 'create_file',
@@ -349,8 +404,8 @@ export const fileActions = {
 
 export function addFileActions() {
     addActions([
-        fileActions.get_workspace_files,
-        fileActions.open_file,
+        fileActions.list_files_and_folders,
+        fileActions.switch_files,
         fileActions.read_file,
         fileActions.create_file,
         fileActions.create_folder,
@@ -407,7 +462,7 @@ export function handleCreateFile(actionData: ActionData): string | undefined {
         NEURO.client?.sendContext(`Created file ${relativePath}`);
 
         // Open the file if Neuro has permission for open_file
-        if (getPermissionLevel(fileActions.open_file.name) !== PermissionLevel.AUTOPILOT) {
+        if (getPermissionLevel(fileActions.switch_files.name) !== PermissionLevel.AUTOPILOT) {
             updateActionStatus(actionData, 'success', 'File created');
             return;
         }
@@ -755,6 +810,34 @@ export function handleOpenFile(actionData: ActionData): string | undefined {
 }
 
 export function handleReadFile(actionData: ActionData): string | undefined {
+    const editor = vscode.window.activeTextEditor;
+    if (!editor) {
+        return contextFailure('No active text editor.');
+    }
+    // If no filePath provided, read current file
+    if (!actionData.params.filePath || actionData.params.filePath === '' || vscode.workspace.asRelativePath(editor.document.uri) === vscode.workspace.asRelativePath(vscode.Uri.joinPath(getWorkspaceUri()!, actionData.params.filePath))) {
+        const document = editor.document;
+        const fileName = simpleFileName(document.fileName);
+        const cursor = getVirtualCursor()!;
+
+        if (!isPathNeuroSafe(document.fileName)) {
+            return contextNoAccess(fileName);
+        }
+
+        // Manually construct context to include entire file
+        const positionContext: NeuroPositionContext = {
+            contextBefore: filterFileContents(document.getText(new vscode.Range(new vscode.Position(0, 0), cursor))),
+            contextAfter: filterFileContents(document.getText(new vscode.Range(cursor, document.lineAt(document.lineCount - 1).rangeIncludingLineBreak.end))),
+            startLine: 0,
+            endLine: document.lineCount - 1,
+            totalLines: document.lineCount,
+            cursorDefined: true,
+        };
+
+        return `Contents of the file ${fileName}:\n\n${formatContext(positionContext)}`;
+    }
+
+    // Original read_file logic for specific file
     const file = actionData.params.filePath;
 
     const workspaceUri = getWorkspaceUri()!;
