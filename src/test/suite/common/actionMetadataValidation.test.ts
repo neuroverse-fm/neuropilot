@@ -10,7 +10,7 @@ import { chatAction } from '~/src/chat';
 import { completionAction } from '~/src/completions';
 
 suite('Validate action schemas', async () => {
-    const metaschema = (await fetch('https://json-schema.org/draft-07/schema#')).json() as JSONSchema7;
+    const metaschema = await (await fetch('https://json-schema.org/draft-07/schema#')).json() as JSONSchema7;
 
     test('File Actions', () => {
         const actions = Object.keys(fileActions) as (keyof typeof fileActions)[];
