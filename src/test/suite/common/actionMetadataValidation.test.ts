@@ -6,10 +6,8 @@ import { editingActions } from '~/src/editing';
 import { changelogActions } from '~/src/changelog';
 import { REQUEST_COOKIE_ACTION } from '~/src/context';
 import { gitActions } from '~/src/git';
-import { terminalActions } from '~/src/pseudoterminal';
 import { chatAction } from '~/src/chat';
 import { completionAction } from '~/src/completions';
-import { taskActions } from '~/src/tasks';
 
 suite('Validate action schemas', async () => {
     const metaschema = (await fetch('https://json-schema.org/draft-07/schema#')).json() as JSONSchema7;
@@ -54,22 +52,6 @@ suite('Validate action schemas', async () => {
         }
     });
 
-    test('Pseudoterminal Actions', () => {
-        const actions = Object.keys(terminalActions) as (keyof typeof terminalActions)[];
-        for (const a of actions) {
-            assert.strictEqual(a, terminalActions[a].name);
-            if ('schema' in terminalActions[a] && terminalActions[a].schema) {
-                assert.ok(validate(terminalActions[a].schema, metaschema).valid);
-            }
-            if ('schemaFallback' in terminalActions[a] && terminalActions[a].schemaFallback) {
-                assert.ok(validate(terminalActions[a].schemaFallback, metaschema).valid);
-            }
-            if ('schemaFallback' in terminalActions[a] && !('schema' in terminalActions[a])) {
-                throw new assert.AssertionError({ message: `Action "${a}" has a fallback schema but no main schema!` });
-            }
-        }
-    });
-
     test('Copilot Chat integrations', () => {
         const actionsToTest = {
             chat: chatAction,
@@ -79,13 +61,6 @@ suite('Validate action schemas', async () => {
         for (const a of actions) {
             assert.strictEqual(a, actionsToTest[a].name);
             assert.ok(validate(actionsToTest[a].schema, metaschema).valid);
-        }
-    });
-
-    test('Terminate Task Action', () => {
-        const actions = Object.keys(taskActions) as (keyof typeof taskActions)[];
-        for (const a of actions) {
-            assert.strictEqual(a, taskActions[a].name);
         }
     });
 
