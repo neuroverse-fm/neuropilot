@@ -60,7 +60,7 @@ export function run(): Promise<void> {
                 await import('../file_actions.test.js');
                 await import('../utils.test.js');
                 await import('../test_utils.test.js');
-                await import('../common/actionMetadataValidation.test');
+                await import('../common/actionMetadataValidation.test.js');
                 await import('../../unit-test/rewrite_all.simple.test.js');
                 mocha.run((failures: number) => {
                     if (failures > 0) {
