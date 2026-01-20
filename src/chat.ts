@@ -174,6 +174,24 @@ export function registerChatParticipant() {
     }
 }
 
+export const chatAction = {
+    name: 'chat',
+    description:
+        `Provide an answer to ${CONNECTION.userName}'s request.` +
+        ' Use markdown to format your response.' +
+        ' You may additionally include code blocks by using triple backticks.' +
+        ' Be sure to use the correct language identifier after the first set of backticks.' +
+        ' If you decide to include a code block, make sure to explain what it is doing.',
+    schema: {
+        type: 'object',
+        properties: {
+            answer: { type: 'string' },
+        },
+        required: ['answer'],
+        additionalProperties: false,
+    },
+};
+
 async function requestChatResponse(
     prompt: string,
     state: string,
@@ -185,23 +203,7 @@ async function requestChatResponse(
     NEURO.cancelled = false;
 
     NEURO.client?.registerActions([
-        {
-            name: 'chat',
-            description:
-                `Provide an answer to ${CONNECTION.userName}'s request.` +
-                ' Use markdown to format your response.' +
-                ' You may additionally include code blocks by using triple backticks.' +
-                ' Be sure to use the correct language identifier after the first set of backticks.' +
-                ' If you decide to include a code block, make sure to explain what it is doing.',
-            schema: {
-                type: 'object',
-                properties: {
-                    answer: { type: 'string' },
-                },
-                required: ['answer'],
-                additionalProperties: false,
-            },
-        },
+        chatAction,
     ]);
 
     NEURO.client?.forceActions(prompt, ['chat'], state, false);
