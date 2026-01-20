@@ -5,7 +5,7 @@ import { terminalActions } from '~/src/pseudoterminal';
 import { taskActions } from '~/src/tasks';
 
 suite('Validate action schemas', async () => {
-    const metaschema = (await fetch('https://json-schema.org/draft-07/schema#')).json() as JSONSchema7;
+    const metaschema = await (await fetch('https://json-schema.org/draft-07/schema#')).json() as JSONSchema7;
 
     test('Pseudoterminal Actions', () => {
         const actions = Object.keys(terminalActions) as (keyof typeof terminalActions)[];
