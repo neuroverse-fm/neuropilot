@@ -40,7 +40,7 @@ function checkLiveTerminals(actionData: ActionData): ActionValidationResult {
     return actionValidationAccept();
 }
 
-export const terminalAccessHandlers = {
+export const terminalActions = {
     execute_in_terminal: {
         name: 'execute_in_terminal',
         description: 'Run a command directly in the terminal',
@@ -101,9 +101,9 @@ export const terminalAccessHandlers = {
 
 export function addTerminalActions() {
     addActions([
-        terminalAccessHandlers.execute_in_terminal,
-        terminalAccessHandlers.kill_terminal_process,
-        terminalAccessHandlers.get_currently_running_shells,
+        terminalActions.execute_in_terminal,
+        terminalActions.kill_terminal_process,
+        terminalActions.get_currently_running_shells,
     ]);
 }
 
