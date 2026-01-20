@@ -17,7 +17,7 @@ import { updateActionStatus } from './events/actions';
 const CATEGORY_TASKS = 'Tasks';
 const CATEGORY_REGISTERED_TASKS = 'Registered Tasks';
 
-export const taskHandlers = {
+export const taskActions = {
     // handleRunTask is used separately and not on this list
     terminate_task: {
         name: 'terminate_task',
@@ -41,7 +41,7 @@ export const taskHandlers = {
 export function addTaskActions() {
     // TODO: Maybe only register once a task is running?
     addActions([
-        taskHandlers.terminate_task,
+        taskActions.terminate_task,
     ]);
     // Tasks are registered asynchronously in reloadTasks()
 }
