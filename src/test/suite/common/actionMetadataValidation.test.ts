@@ -15,6 +15,7 @@ suite('Validate action schemas', async () => {
     test('File Actions', () => {
         const actions = Object.keys(fileActions) as (keyof typeof fileActions)[];
         for (const a of actions) {
+            assert.strictEqual(a, fileActions[a].name);
             if (fileActions[a].schema) {
                 assert.ok(validate(fileActions[a].schema, metaschema).valid);
             }
@@ -24,6 +25,7 @@ suite('Validate action schemas', async () => {
     test('Edit Actions', () => {
         const actions = Object.keys(editingActions) as (keyof typeof editingActions)[];
         for (const a of actions) {
+            assert.strictEqual(a, editingActions[a].name);
             if ('schema' in editingActions[a] && editingActions[a].schema) {
                 assert.ok(validate(editingActions[a].schema, metaschema).valid);
             }
