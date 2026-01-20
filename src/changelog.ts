@@ -4,7 +4,7 @@ import { NEURO } from '@/constants';
 import { getFence, logOutput } from '@/utils';
 import { ActionData, RCEAction } from '@/neuro_client_helper';
 import { PermissionLevel } from '@/config';
-import { addActions } from './rce';
+import { addActions, CATEGORY_MISC } from './rce';
 import { updateActionStatus } from './events/actions';
 
 const MEMENTO_KEY = 'lastDeliveredChangelogVersion';
@@ -18,7 +18,7 @@ export const changelogActions = {
     read_changelog: {
         name: 'read_changelog',
         description: 'Get changelog entries starting from a specified version. If fromVersion is omitted, any new entries after the last read_changelog command are read.',
-        category: 'Miscellaneous',
+        category: CATEGORY_MISC,
         schema: {
             type: 'object',
             properties: {
