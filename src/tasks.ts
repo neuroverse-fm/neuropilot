@@ -14,7 +14,7 @@ import { notifyOnTaskFinish } from '@events/shells';
 import { addActions, getActions, removeActions } from './rce';
 import { updateActionStatus } from './events/actions';
 
-const CATEGORY_TASKS = 'Tasks';
+export const CATEGORY_TASKS = 'Tasks';
 const CATEGORY_REGISTERED_TASKS = 'Registered Tasks';
 
 export const taskActions = {

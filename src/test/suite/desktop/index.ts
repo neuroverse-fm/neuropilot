@@ -73,3 +73,5 @@ import '../../unit-test/undo_and_save.simple.test';
 
 // Testing the meta stuff
 import '../test_utils.test';
+import '../common/actionMetadataValidation.test';
+import './actionMetadataValidation.test';

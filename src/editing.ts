@@ -10,7 +10,7 @@ import type { JSONSchema7 } from 'json-schema';
 import { addActions, registerAction, unregisterAction } from '@/rce';
 import { updateActionStatus } from '@events/actions';
 
-const CATEGORY_EDITING = 'Editing';
+export const CATEGORY_EDITING = 'Editing';
 
 const CONTEXT_NO_ACCESS = 'You do not have permission to access this file.';
 const CONTEXT_NO_ACTIVE_DOCUMENT = 'No active document to edit.';
