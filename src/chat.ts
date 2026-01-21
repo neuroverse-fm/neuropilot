@@ -4,6 +4,8 @@ import { NEURO } from '@/constants';
 import { filterFileContents, logOutput, simpleFileName } from '@/utils';
 import { CONFIG, CONNECTION } from '@/config';
 import assert from 'node:assert';
+import { JSONSchema7 } from 'json-schema';
+import { Action } from 'neuro-game-sdk';
 
 interface Participant {
     id: string;
