@@ -130,7 +130,7 @@ function attemptConnection(currentAttempt: number, maxAttempts: number, interval
             NEURO.client.sendContext(`It appears that you have the ability to get changelogs yourself. You should try running the read_changelog action or asking ${CONNECTION.userName} to send it to you via a command, then summarise what it says!`, false);
         }
         else {
-            NEURO.client.sendContext(`You don't seem to have the ability to get changelogs yourself. Nonetheless, you should still try and ask ${CONNECTION.userName} to send it via a command, and then summarise the info.`, false);
+            NEURO.client.sendContext(`You don't seem to have the ability to get changelogs yourself. Nonetheless, you should still try and ask ${CONNECTION.userName} to send it via the "NeuroPilot: Ask Neuro to read changelog" command, and then summarise the info.`, false);
         }
 
         for (const handler of clientConnectedHandlers) {
