@@ -69,7 +69,7 @@ export async function readChangelogAndSendToNeuro(fromVersion?: string, actionDa
         messageParts.push('\n');
         messageParts.push(`${fence}markdown\n${md}\n${fence}`);
 
-        NEURO.client?.sendContext(messageParts.join('\n') + `\nPlease summarise the changelogs if you want to tell ${CONNECTION.userName}.`);
+        NEURO.client?.sendContext(messageParts.join('\n') + `\nPlease summarise the changelogs for ${CONNECTION.userName}.`);
         if (actionData) updateActionStatus(actionData, 'success', 'Sent requested changelog');
 
         // Update memento to latest delivered
