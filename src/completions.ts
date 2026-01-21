@@ -28,8 +28,8 @@ export const completionAction = (maxCount: number) => ({
         },
         required: ['suggestions'],
         additionalProperties: false,
-    },
-});
+    } satisfies JSONSchema7,
+} satisfies Action);
 
 export function requestCompletion(beforeContext: string, afterContext: string, fileName: string, language: string, maxCount: number) {
     // If completions are disabled, notify and return early.
