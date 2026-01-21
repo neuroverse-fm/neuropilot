@@ -9,7 +9,7 @@ import { RCECancelEvent } from '@events/utils';
 import { addActions } from './rce';
 import { updateActionStatus } from '@events/actions';
 
-const CATEGORY_FILE_ACTIONS = 'File Actions';
+export const CATEGORY_FILE_ACTIONS = 'File Actions';
 const ACTION_FAIL_NOTES = {
     noFilePath: 'Directory path left unspecified',
     noAccess: 'Access disallowed to targeted directory',

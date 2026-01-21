@@ -30,7 +30,7 @@ export function sendCurrentFile() {
     NEURO.client?.sendContext(`${CONNECTION.userName} sent you the contents of the file ${fileName}.\n\nContent:\n\n${fence}${language}\n${text}\n${fence}`);
 }
 
-const REQUEST_COOKIE_ACTION: RCEAction = {
+export const REQUEST_COOKIE_ACTION: RCEAction = {
     name: 'request_cookie',
     description: `Ask ${CONNECTION.userName} for a cookie. You can request a specific flavor, but it's up to ${CONNECTION.userName} to decide.`,
     category: CATEGORY_MISC,

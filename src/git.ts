@@ -11,7 +11,7 @@ import { JSONSchema7Definition } from 'json-schema';
 import { addActions, registerAction, reregisterAllActions, unregisterAction } from './rce';
 import { updateActionStatus } from '@events/actions';
 
-const CATEGORY_GIT = 'Git';
+export const CATEGORY_GIT = 'Git';
 
 // Get the Git extension
 let git: API | null = null;

@@ -15,7 +15,7 @@ import { notifyOnTerminalClose } from '@events/shells';
 import { addActions } from './rce';
 import { updateActionStatus } from './events/actions';
 
-const CATEGORY_TERMINAL = 'Terminal Access';
+export const CATEGORY_TERMINAL = 'Terminal Access';
 
 /*
  * Extended interface for terminal sessions.

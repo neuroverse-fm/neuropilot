@@ -8,7 +8,7 @@ import { targetedFileLintingResolvedEvent, targetedFolderLintingResolvedEvent, w
 import { addActions } from '@/rce';
 import { updateActionStatus } from '@events/actions';
 
-const CATEGORY_LINTING = 'Linting';
+export const CATEGORY_LINTING = 'Linting';
 
 /**
  * The path validator.
