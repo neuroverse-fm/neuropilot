@@ -174,7 +174,7 @@ export function registerChatParticipant() {
     }
 }
 
-export const chatAction = {
+export const chatAction: Action = {
     name: 'chat',
     description:
         `Provide an answer to ${CONNECTION.userName}'s request.` +
@@ -189,7 +189,7 @@ export const chatAction = {
         },
         required: ['answer'],
         additionalProperties: false,
-    },
+    } satisfies JSONSchema7,
 };
 
 async function requestChatResponse(
