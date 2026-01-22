@@ -3,7 +3,7 @@ import * as vscode from 'vscode';
 import { NEURO } from '@/constants';
 import { getFence, logOutput } from '@/utils';
 import { ActionData, RCEAction } from '@/neuro_client_helper';
-import { PermissionLevel } from '@/config';
+import { CONNECTION, PermissionLevel } from '@/config';
 import { addActions, CATEGORY_MISC } from './rce';
 import { updateActionStatus } from './events/actions';
 
@@ -69,7 +69,7 @@ export async function readChangelogAndSendToNeuro(fromVersion?: string, actionDa
         messageParts.push('\n');
         messageParts.push(`${fence}markdown\n${md}\n${fence}`);
 
-        NEURO.client?.sendContext(messageParts.join('\n'));
+        NEURO.client?.sendContext(messageParts.join('\n') + `\nPlease summarise the changelogs for ${CONNECTION.userName}.`);
         if (actionData) updateActionStatus(actionData, 'success', 'Sent requested changelog');
 
         // Update memento to latest delivered

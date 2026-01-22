@@ -4,7 +4,7 @@ import globToRegExp from 'glob-to-regexp';
 import { fileTypeFromBuffer } from 'file-type';
 
 import { NEURO } from '@/constants';
-import { ACCESS, CONFIG, CONNECTION, CursorPositionContextStyle, PermissionLevel, setPermissionLevel } from '@/config';
+import { ACCESS, CONFIG, CONNECTION, CursorPositionContextStyle, getPermissionLevel, PermissionLevel, setPermissionLevel } from '@/config';
 
 import { ActionValidationResult, ActionData, actionValidationAccept, actionValidationFailure } from '@/neuro_client_helper';
 import assert from 'node:assert';
@@ -125,6 +125,13 @@ function attemptConnection(currentAttempt: number, maxAttempts: number, interval
         NEURO.client.sendContext(
             turtleSafari(vscode.workspace.getConfiguration('neuropilot').get('connection.initialContext', 'Someone tell the NeuroPilot devs that there\'s a problem with their extension.')),
         );
+
+        if (getPermissionLevel(changelogActions.read_changelog.name) !== PermissionLevel.OFF) {
+            NEURO.client.sendContext(`It appears that you have the ability to get changelogs yourself. You should try running the read_changelog action or asking ${CONNECTION.userName} to send it to you via a command, then summarise what it says!`, false);
+        }
+        else {
+            NEURO.client.sendContext(`You don't seem to have the ability to get changelogs yourself. Nonetheless, you should still try and ask ${CONNECTION.userName} to send it via the "NeuroPilot: Ask Neuro to read changelog" command, and then summarise the info.`, false);
+        }
 
         for (const handler of clientConnectedHandlers) {
             handler();
@@ -331,6 +338,7 @@ export function combineGlobLinesToRegExp(lines: string[]): RegExp {
 
 import { fastIsItIgnored } from '@/ignore_files_utils';
 import { unregisterAllActions } from './rce';
+import { changelogActions } from './changelog';
 
 /**
  * Check if an absolute path is safe for Neuro to access.
