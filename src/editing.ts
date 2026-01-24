@@ -1513,7 +1513,7 @@ function handleGetUserSelection(actionData: ActionData): string | undefined {
         return contextFailure(CONTEXT_NO_ACTIVE_DOCUMENT);
     }
     if (!isPathNeuroSafe(document.fileName)) {
-        updateActionStatus(actionData, 'failure', 'File path is not Neuro-safe');
+        updateActionStatus(actionData, 'failure', STATUS_NO_ACCESS);
         return contextFailure(CONTEXT_NO_ACCESS);
     }
 
