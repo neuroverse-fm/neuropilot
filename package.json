@@ -179,7 +179,7 @@
 			},
 			{
 				"command": "neuropilot.dev.addExecutionHistoryItem",
-				"title": "Add Custion Execution History Item",
+				"title": "Add Custom Execution History Item",
 				"category": "NeuroPilot [Dev]",
 				"enablement": "isDevelopment"
 			},
