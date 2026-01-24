@@ -1509,7 +1509,7 @@ function handleGetUserSelection(actionData: ActionData): string | undefined {
     const editor = vscode.window.activeTextEditor;
     const document = editor?.document;
     if (editor === undefined || document === undefined) {
-        updateActionStatus(actionData, 'failure', 'No active document.');
+        updateActionStatus(actionData, 'failure', STATUS_NO_ACTIVE_DOCUMENT);
         return contextFailure(CONTEXT_NO_ACTIVE_DOCUMENT);
     }
     if (!isPathNeuroSafe(document.fileName)) {
