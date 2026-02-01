@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { EXTENSIONS, NEURO } from '@/constants';
+import { EXTENSIONS, NEURO, PROMISE_REJECTION_STRING } from '@/constants';
 import type { Change, CommitOptions, Commit, Repository, API, GitExtension } from '@typing/git.d';
 import { ForcePushMode } from '@typing/git.d';
 import { StatusStrings, RefTypeStrings } from '@typing/git_status';
@@ -732,7 +732,7 @@ export function handleNewGitRepo(actionData: ActionData): string | undefined {
     }, (erm: string) => {
         NEURO.client?.sendContext('Failed to initialize Git repository');
         logOutput('ERROR', `Failed to initialize Git repository: ${erm}`);
-        updateActionStatus(actionData, 'failure', 'Promise rejected');
+        updateActionStatus(actionData, 'failure', PROMISE_REJECTION_STRING);
     });
 }
 
@@ -756,7 +756,7 @@ export function handleGetGitConfig(actionData: ActionData): string | undefined {
         }, (erm: string) => {
             NEURO.client?.sendContext(`Failed to get Git config key "${configKey}"`);
             logOutput('ERROR', `Failed to get Git config key "${configKey}": ${erm}`);
-            updateActionStatus(actionData, 'failure', 'Promise rejected');
+            updateActionStatus(actionData, 'failure', PROMISE_REJECTION_STRING);
         });
     }
 
@@ -774,7 +774,7 @@ export function handleSetGitConfig(actionData: ActionData): string | undefined {
     }, (erm: string) => {
         NEURO.client?.sendContext(`Failed to set Git config key "${configKey}"`);
         logOutput('ERROR', `Failed to set Git config key "${configKey}": ${erm}`);
-        updateActionStatus(actionData, 'failure', 'Promise rejected');
+        updateActionStatus(actionData, 'failure', PROMISE_REJECTION_STRING);
     });
 
     return;
@@ -794,7 +794,7 @@ export function handleNewGitBranch(actionData: ActionData): string | undefined {
     }, (erm: string) => {
         NEURO.client?.sendContext(`Failed to create branch ${branchName}`);
         logOutput('ERROR', `Failed to create branch: ${erm}`);
-        updateActionStatus(actionData, 'failure', 'Promise rejected');
+        updateActionStatus(actionData, 'failure', PROMISE_REJECTION_STRING);
     });
 
     return;
@@ -810,7 +810,7 @@ export function handleSwitchGitBranch(actionData: ActionData): string | undefine
     }, (erm: string) => {
         NEURO.client?.sendContext(`Failed to switch to branch ${branchName}`);
         logOutput('ERROR', `Failed to switch branch: ${erm}`);
-        updateActionStatus(actionData, 'failure', 'Promise rejected');
+        updateActionStatus(actionData, 'failure', PROMISE_REJECTION_STRING);
     });
 
     return;
@@ -827,7 +827,7 @@ export function handleDeleteGitBranch(actionData: ActionData): string | undefine
     }, (erm: string) => {
         NEURO.client?.sendContext(`Failed to delete branch "${branchName}".${forceDelete === false ? '\nEnsure the branch is merged before deleting, or force delete it to discard changes.' : ''}`);
         logOutput('ERROR', `Failed to delete branch: ${erm}`);
-        updateActionStatus(actionData, 'failure', 'Promise rejected');
+        updateActionStatus(actionData, 'failure', PROMISE_REJECTION_STRING);
     });
 
     return;
@@ -919,7 +919,7 @@ export function handleGitStatus(actionData: ActionData): string | undefined {
     }, (erm: string) => {
         NEURO.client?.sendContext('Failed to get Git repository status');
         logOutput('ERROR', `Failed to get Git status: ${erm}`);
-        updateActionStatus(actionData, 'failure', 'Promise rejected');
+        updateActionStatus(actionData, 'failure', PROMISE_REJECTION_STRING);
     });
 
     return;
@@ -948,7 +948,7 @@ export function handleAddFileToGit(actionData: ActionData): string | undefined {
     }, (erm: string) => {
         NEURO.client?.sendContext('Adding files to staging area failed');
         logOutput('ERROR', `Failed to git add: ${erm}\nTried to add ${absolutePaths}`);
-        updateActionStatus(actionData, 'failure', 'Promise rejected');
+        updateActionStatus(actionData, 'failure', PROMISE_REJECTION_STRING);
     });
     return;
 }
@@ -968,7 +968,7 @@ export function handleRemoveFileFromGit(actionData: ActionData): string | undefi
     }, (erm: string) => {
         NEURO.client?.sendContext('Removing files from the index failed');
         logOutput('ERROR', `Git remove failed: ${erm}\nTried to remove ${absolutePaths}`);
-        updateActionStatus(actionData, 'failure', 'Promise rejected');
+        updateActionStatus(actionData, 'failure', PROMISE_REJECTION_STRING);
     });
     return;
 }
@@ -1016,7 +1016,7 @@ export function handleMakeGitCommit(actionData: ActionData): string | undefined 
     }, (erm: string) => {
         NEURO.client?.sendContext('Failed to record commit');
         logOutput('ERROR', `Failed to commit: ${erm}`);
-        updateActionStatus(actionData, 'failure', 'Promise rejected');
+        updateActionStatus(actionData, 'failure', PROMISE_REJECTION_STRING);
     });
 
     return;
@@ -1037,7 +1037,7 @@ export function handleGitMerge(actionData: ActionData): string | undefined {
         } else {
             NEURO.client?.sendContext(`Couldn't merge ${refToMerge}.`);
             logOutput('ERROR', `Encountered an error when merging ${refToMerge}: ${erm}`);
-            updateActionStatus(actionData, 'failure', 'Promise rejected');
+            updateActionStatus(actionData, 'failure', PROMISE_REJECTION_STRING);
         }
     });
 
@@ -1054,7 +1054,7 @@ export function handleAbortMerge(actionData: ActionData): string | undefined {
     }, (erm: string) => {
         NEURO.client?.sendContext("Couldn't abort merging!");
         logOutput('ERROR', `Failed to abort merge: ${erm}`);
-        updateActionStatus(actionData, 'failure', 'Promise rejected');
+        updateActionStatus(actionData, 'failure', PROMISE_REJECTION_STRING);
     });
 
     return;
@@ -1080,7 +1080,7 @@ export function handleDiffFiles(actionData: ActionData): string | undefined {
                 .catch((erm: string) => {
                     NEURO.client?.sendContext(`Failed to get diff with HEAD for ${filePath || 'workspace root'}.`);
                     logOutput('ERROR', `Failed to get diff with HEAD for ${filePath || 'workspace root'}: ${erm}`);
-                    updateActionStatus(actionData, 'failure', 'Promise rejected');
+                    updateActionStatus(actionData, 'failure', PROMISE_REJECTION_STRING);
                 });
             break;
 
@@ -1094,7 +1094,7 @@ export function handleDiffFiles(actionData: ActionData): string | undefined {
                     .catch((erm: string) => {
                         NEURO.client?.sendContext(`Failed to get diff with ref "${ref1}" for ${filePath || 'workspace root'}.`);
                         logOutput('ERROR', `Failed to get diff with ref "${ref1}" for ${filePath || 'workspace root'}: ${erm}`);
-                        updateActionStatus(actionData, 'failure', 'Promise rejected');
+                        updateActionStatus(actionData, 'failure', PROMISE_REJECTION_STRING);
                     });
             } else {
                 NEURO.client?.sendContext('Ref1 is required for diffWith.');
@@ -1111,7 +1111,7 @@ export function handleDiffFiles(actionData: ActionData): string | undefined {
                 .catch((erm: string) => {
                     NEURO.client?.sendContext(`Failed to get diff index with HEAD for ${filePath || 'workspace root'}.`);
                     logOutput('ERROR', `Failed to get diff index with HEAD for ${filePath || 'workspace root'}: ${erm}`);
-                    updateActionStatus(actionData, 'failure', 'Promise rejected');
+                    updateActionStatus(actionData, 'failure', PROMISE_REJECTION_STRING);
                 });
             break;
 
@@ -1125,7 +1125,7 @@ export function handleDiffFiles(actionData: ActionData): string | undefined {
                     .catch((erm: string) => {
                         NEURO.client?.sendContext(`Failed to get diff index with ref "${ref1}" for ${filePath || 'workspace root'}.`);
                         logOutput('ERROR', `Failed to get diff index with ref "${ref1}" for ${filePath || 'workspace root'}: ${erm}`);
-                        updateActionStatus(actionData, 'failure', 'Promise rejected');
+                        updateActionStatus(actionData, 'failure', PROMISE_REJECTION_STRING);
                     });
             } else {
                 NEURO.client?.sendContext('Ref1 is required for diffIndexWith.');
@@ -1143,7 +1143,7 @@ export function handleDiffFiles(actionData: ActionData): string | undefined {
                     .catch((erm: string) => {
                         NEURO.client?.sendContext(`Failed to get diff between refs "${ref1}" and "${ref2}" for ${filePath || 'workspace root'}.`);
                         logOutput('ERROR', `Failed to get diff between refs "${ref1}" and "${ref2}" for ${filePath || 'workspace root'}: ${erm}`);
-                        updateActionStatus(actionData, 'failure', 'Promise rejected');
+                        updateActionStatus(actionData, 'failure', PROMISE_REJECTION_STRING);
                     });
             } else {
                 NEURO.client?.sendContext('Both ref1 and ref2 are required for diffBetween.');
@@ -1160,7 +1160,7 @@ export function handleDiffFiles(actionData: ActionData): string | undefined {
                 .catch((erm: string) => {
                     NEURO.client?.sendContext('Failed to get full diff for workspace root.');
                     logOutput('ERROR', `Failed to get full diff for workspace root: ${erm}`);
-                    updateActionStatus(actionData, 'failure', 'Promise rejected');
+                    updateActionStatus(actionData, 'failure', PROMISE_REJECTION_STRING);
                 });
             break;
 
@@ -1192,7 +1192,7 @@ export function handleGitLog(actionData: ActionData): string | undefined {
     }, (erm: string) => {
         NEURO.client?.sendContext('Failed to get git log.');
         logOutput('ERROR', `Failed to get git log: ${erm}`);
-        updateActionStatus(actionData, 'failure', 'Promise rejected');
+        updateActionStatus(actionData, 'failure', PROMISE_REJECTION_STRING);
     });
 
     return;
@@ -1214,7 +1214,7 @@ export function handleGitBlame(actionData: ActionData): string | undefined {
     }, (erm: string) => {
         NEURO.client?.sendContext('Failed to get blame attribution.');
         logOutput('ERROR', `Error getting blame attribs for ${filePath}: ${erm}`);
-        updateActionStatus(actionData, 'failure', 'Promise rejected');
+        updateActionStatus(actionData, 'failure', PROMISE_REJECTION_STRING);
     });
 
     return;
@@ -1236,7 +1236,7 @@ export function handleTagHEAD(actionData: ActionData): string | undefined {
     }, (erm: string) => {
         NEURO.client?.sendContext('There was an error during tagging.');
         logOutput('ERROR', `Error trying to tag: ${erm}`);
-        updateActionStatus(actionData, 'failure', 'Promise rejected');
+        updateActionStatus(actionData, 'failure', PROMISE_REJECTION_STRING);
     });
 
     return;
@@ -1252,7 +1252,7 @@ export function handleDeleteTag(actionData: ActionData): string | undefined {
     }, (erm: string) => {
         NEURO.client?.sendContext(`Couldn't delete tag "${name}"`);
         logOutput('ERROR', `Failed to delete tag ${name}: ${erm}`);
-        updateActionStatus(actionData, 'failure', 'Promise rejected');
+        updateActionStatus(actionData, 'failure', PROMISE_REJECTION_STRING);
     });
 
     return;
@@ -1274,7 +1274,7 @@ export function handleFetchGitCommits(actionData: ActionData): string | undefine
     }, (erm: string) => {
         NEURO.client?.sendContext(`Failed to fetch commits from remote "${remoteName}"`);
         logOutput('ERROR', `Failed to fetch commits: ${erm}`);
-        updateActionStatus(actionData, 'failure', 'Promise rejected');
+        updateActionStatus(actionData, 'failure', PROMISE_REJECTION_STRING);
     });
 
     return;
@@ -1289,7 +1289,7 @@ export function handlePullGitCommits(actionData: ActionData): string | undefined
     }, (erm: string) => {
         NEURO.client?.sendContext(`Failed to pull commits from remote: ${erm}`);
         logOutput('ERROR', `Failed to pull commits: ${erm}`);
-        updateActionStatus(actionData, 'failure', 'Promise rejected');
+        updateActionStatus(actionData, 'failure', PROMISE_REJECTION_STRING);
     });
 
     return;
@@ -1309,7 +1309,7 @@ export function handlePushGitCommits(actionData: ActionData): string | undefined
     }, (erm: string) => {
         NEURO.client?.sendContext(`Failed to push commits to remote "${remoteName}": ${erm}`);
         logOutput('ERROR', `Failed to push commits: ${erm}`);
-        updateActionStatus(actionData, 'failure', 'Promise rejected');
+        updateActionStatus(actionData, 'failure', PROMISE_REJECTION_STRING);
     });
 
     return;
@@ -1332,7 +1332,7 @@ export function handleAddGitRemote(actionData: ActionData): string | undefined {
     }, (erm: string) => {
         NEURO.client?.sendContext(`Failed to add remote "${remoteName}"`);
         logOutput('ERROR', `Failed to add remote: ${erm}`);
-        updateActionStatus(actionData, 'failure', 'Promise rejected');
+        updateActionStatus(actionData, 'failure', PROMISE_REJECTION_STRING);
     });
 
     return;
@@ -1348,7 +1348,7 @@ export function handleRemoveGitRemote(actionData: ActionData): string | undefine
     }, (erm: string) => {
         NEURO.client?.sendContext(`Failed to remove remote "${remoteName}"`);
         logOutput('ERROR', `Failed to remove remote: ${erm}`);
-        updateActionStatus(actionData, 'failure', 'Promise rejected');
+        updateActionStatus(actionData, 'failure', PROMISE_REJECTION_STRING);
     });
 
     return;
@@ -1365,7 +1365,7 @@ export function handleRenameGitRemote(actionData: ActionData): string | undefine
     }, (erm: string) => {
         NEURO.client?.sendContext(`Failed to rename remote "${oldRemoteName}" to "${newRemoteName}"`);
         logOutput('ERROR', `Failed to rename remote ${oldRemoteName}: ${erm}`);
-        updateActionStatus(actionData, 'failure', 'Promise rejected');
+        updateActionStatus(actionData, 'failure', PROMISE_REJECTION_STRING);
     });
 
     return;

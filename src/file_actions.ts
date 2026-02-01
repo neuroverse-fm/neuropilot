@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 
-import { NEURO } from '@/constants';
+import { EXCEPTION_THROWN_STRING, NEURO, PROMISE_REJECTION_STRING } from '@/constants';
 import { filterFileContents, formatContext, getFence, getPositionContext, getVirtualCursor, getWorkspacePath, getWorkspaceUri, isBinary, isPathNeuroSafe, logOutput, NeuroPositionContext, normalizePath, notifyOnCaughtException, simpleFileName, stripTailSlashes } from '@/utils';
 import { ActionData, contextFailure, contextNoAccess, RCEAction, actionValidationFailure, actionValidationAccept, ActionValidationResult, actionValidationRetry } from '@/neuro_client_helper';
 import { CONFIG, PermissionLevel, getPermissionLevel } from '@/config';
@@ -441,7 +441,7 @@ export function handleCreateFile(actionData: ActionData): string | undefined {
         } catch (erm: unknown) {
             if (erm instanceof vscode.FileSystemError && erm.code !== 'FileNotFound') {
                 notifyOnCaughtException('create_file', erm);
-                updateActionStatus(actionData, 'failure', 'Exception thrown');
+                updateActionStatus(actionData, 'failure', EXCEPTION_THROWN_STRING);
                 return;
             };
             /* else, file does not exist, continue */
@@ -454,7 +454,7 @@ export function handleCreateFile(actionData: ActionData): string | undefined {
         } catch (erm: unknown) {
             notifyOnCaughtException('create_file', erm);
             NEURO.client?.sendContext(`Failed to create file ${relativePath}`);
-            updateActionStatus(actionData, 'failure', 'Exception thrown');
+            updateActionStatus(actionData, 'failure', EXCEPTION_THROWN_STRING);
             return;
         }
 
@@ -508,7 +508,7 @@ export function handleCreateFolder(actionData: ActionData): string | undefined {
         } catch (erm: unknown) {
             if (erm instanceof vscode.FileSystemError && erm.code !== 'FileNotFound') {
                 notifyOnCaughtException('create_folder', erm);
-                updateActionStatus(actionData, 'failure', 'Exception thrown');
+                updateActionStatus(actionData, 'failure', EXCEPTION_THROWN_STRING);
                 return;
             }
             /* else, folder does not exist, continue */
@@ -524,7 +524,7 @@ export function handleCreateFolder(actionData: ActionData): string | undefined {
         } catch (erm: unknown) {
             notifyOnCaughtException('create_folder', erm);
             NEURO.client?.sendContext(`Failed to create folder ${relativePath}`);
-            updateActionStatus(actionData, 'failure', 'Exception thrown');
+            updateActionStatus(actionData, 'failure', EXCEPTION_THROWN_STRING);
             return;
         }
     }
@@ -564,7 +564,7 @@ export function handleRenameFileOrFolder(actionData: ActionData): string | undef
             }
             else {
                 notifyOnCaughtException('rename_file_or_folder', erm);
-                updateActionStatus(actionData, 'failure', 'Exception thrown');
+                updateActionStatus(actionData, 'failure', EXCEPTION_THROWN_STRING);
                 return;
             };
         }
@@ -579,7 +579,7 @@ export function handleRenameFileOrFolder(actionData: ActionData): string | undef
         } catch (erm: unknown) {
             if (erm instanceof vscode.FileSystemError && erm.code !== 'FileNotFound') {
                 notifyOnCaughtException('rename_file_or_folder', erm);
-                updateActionStatus(actionData, 'failure', 'Exception thrown');
+                updateActionStatus(actionData, 'failure', EXCEPTION_THROWN_STRING);
                 return;
             };
             /* New path does not exist, continue */
@@ -592,7 +592,7 @@ export function handleRenameFileOrFolder(actionData: ActionData): string | undef
         } catch (erm: unknown) {
             notifyOnCaughtException('rename_file_or_folder', erm);
             NEURO.client?.sendContext(`Failed to rename ${oldRelativePath} to ${newRelativePath}`);
-            updateActionStatus(actionData, 'failure', 'Exception thrown');
+            updateActionStatus(actionData, 'failure', EXCEPTION_THROWN_STRING);
             return;
         }
 
@@ -629,7 +629,7 @@ export function handleDeleteFileOrFolder(actionData: ActionData): string | undef
                 return;
             } else {
                 notifyOnCaughtException('delete_file_or_folder', erm);
-                updateActionStatus(actionData, 'failure', 'Exception thrown');
+                updateActionStatus(actionData, 'failure', EXCEPTION_THROWN_STRING);
                 return;
             }
         }
@@ -649,7 +649,7 @@ export function handleDeleteFileOrFolder(actionData: ActionData): string | undef
         } catch (erm: unknown) {
             logOutput('ERROR', `Failed to delete ${relativePath}: ${erm}`);
             NEURO.client?.sendContext(`Failed to delete ${relativePath}`);
-            updateActionStatus(actionData, 'failure', 'Exception thrown');
+            updateActionStatus(actionData, 'failure', EXCEPTION_THROWN_STRING);
             return;
         }
 
@@ -803,7 +803,7 @@ export function handleOpenFile(actionData: ActionData): string | undefined {
             } else {
                 notifyOnCaughtException('open_file', erm);
                 NEURO.client?.sendContext(`Failed to open file ${relativePath}`);
-                updateActionStatus(actionData, 'failure', 'Exception thrown');
+                updateActionStatus(actionData, 'failure', EXCEPTION_THROWN_STRING);
             }
         }
     }
@@ -857,13 +857,13 @@ export function handleReadFile(actionData: ActionData): string | undefined {
             (erm: unknown) => {
                 logOutput('ERROR', `Couldn't read file ${absolute}: ${erm}`);
                 NEURO.client?.sendContext(`Couldn't read file ${file}.`);
-                updateActionStatus(actionData, 'failure', 'Promise rejected');
+                updateActionStatus(actionData, 'failure', PROMISE_REJECTION_STRING);
             },
         );
     } catch (erm: unknown) {
         notifyOnCaughtException('read_file', erm);
         NEURO.client?.sendContext(`Unable to read file ${file}`);
-        updateActionStatus(actionData, 'failure', 'Exception thrown');
+        updateActionStatus(actionData, 'failure', EXCEPTION_THROWN_STRING);
     }
 }
 

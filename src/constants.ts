@@ -140,3 +140,7 @@ export const EXTENSIONS: ExtensionDependencies = {
     copilotChat: false,
     git: null,
 };
+
+export const PROMISE_REJECTION_STRING = 'Promise rejected';
+
+export const EXCEPTION_THROWN_STRING = 'Exception thrown';

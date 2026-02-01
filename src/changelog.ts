@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 
-import { NEURO } from '@/constants';
+import { EXCEPTION_THROWN_STRING, NEURO } from '@/constants';
 import { getFence, logOutput } from '@/utils';
 import { ActionData, RCEAction } from '@/neuro_client_helper';
 import { CONNECTION, PermissionLevel } from '@/config';
@@ -77,7 +77,7 @@ export async function readChangelogAndSendToNeuro(fromVersion?: string, actionDa
     } catch (erm) {
         logOutput('ERROR', `Failed to read changelog: ${erm}`);
         vscode.window.showErrorMessage('Failed to read changelog. See logs for details.');
-        if (actionData) updateActionStatus(actionData, 'failure', 'Exception thrown');
+        if (actionData) updateActionStatus(actionData, 'failure', EXCEPTION_THROWN_STRING);
     }
 }
 
