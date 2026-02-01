@@ -1,11 +1,36 @@
-import { NeuroClient } from 'neuro-game-sdk';
+import { Action, NeuroClient } from 'neuro-game-sdk';
 import * as vscode from 'vscode';
 import { NEURO } from '@/constants';
 import { logOutput, simpleFileName, getPositionContext } from '@/utils';
 import assert from 'node:assert';
 import { CONFIG } from '@/config';
+import { JSONSchema7 } from 'json-schema';
 
 let lastSuggestions: string[] = [];
+
+export const completionAction = (maxCount: number) => ({
+    name: 'complete_code',
+    description: maxCount == 1
+        ? 'Suggest code to write.' +
+        ' You may make one suggestion.' +
+        ' Your suggestion can be a single line or a multi-line code snippet.'
+
+        : 'Suggest code to write.' +
+        ` You may make up to ${maxCount} suggestions, but only one will be used.` +
+        ' Your suggestions can be single lines or multi-line code snippets.',
+    schema: {
+        type: 'object',
+        properties: {
+            suggestions: {
+                type: 'array',
+                items: { type: 'string' },
+                maxItems: maxCount,
+            },
+        },
+        required: ['suggestions'],
+        additionalProperties: false,
+    } satisfies JSONSchema7,
+} satisfies Action);
 
 export function requestCompletion(beforeContext: string, afterContext: string, fileName: string, language: string, maxCount: number) {
     // If completions are disabled, notify and return early.
@@ -43,29 +68,7 @@ export function requestCompletion(beforeContext: string, afterContext: string, f
     assert(NEURO.client);
 
     NEURO.client.registerActions([
-        {
-            name: 'complete_code',
-            description: maxCount == 1
-                ? 'Suggest code to write.' +
-                ' You may make one suggestion.' +
-                ' Your suggestion can be a single line or a multi-line code snippet.'
-
-                : 'Suggest code to write.' +
-                ` You may make up to ${maxCount} suggestions, but only one will be used.` +
-                ' Your suggestions can be single lines or multi-line code snippets.',
-            schema: {
-                type: 'object',
-                properties: {
-                    suggestions: {
-                        type: 'array',
-                        items: { type: 'string' },
-                        maxItems: maxCount,
-                    },
-                },
-                required: ['suggestions'],
-                additionalProperties: false,
-            },
-        },
+        completionAction(maxCount),
     ]);
 
     NEURO.client.forceActions(

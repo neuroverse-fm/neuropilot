@@ -13,7 +13,7 @@ import globals from 'globals';
 
 export default tseslint.config(
     {
-        files: ['**/*.{js,mjs,cjs,ts,mts,cts}'],
+        files: ['**/*.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
         ignores: [
             'out/**',
             'playground/**',
@@ -41,12 +41,17 @@ export default tseslint.config(
         'check-malicious-packages.js',
         'coverage-desktop/**',
         'coverage-web/**',
+        'scripts/check-malicious-packages.js', // TODO: Maybe fix the file later
+        'media/**',
     ]),
     js.configs.recommended,
     ...tseslint.configs.recommended,
     ...tseslint.configs.stylistic,
     {
-        files: ['**/*.{ts,mts,cts}'], // Only apply TypeScript rules to TypeScript files
+        files: [
+            '**/*.{ts,mts,cts,tsx}', // Only apply TypeScript rules to TypeScript files
+            'webview/**/*.js', // and webview JS files
+        ],
         plugins: {
             '@stylistic': stylistic,
             'unicorn': eslintPluginUnicorn,
@@ -89,9 +94,7 @@ export default tseslint.config(
         languageOptions: {
             parserOptions: {
                 tsconfigRootDir: import.meta.dirname,
-                project: [
-                    './tsconfig.json',
-                ],
+                projectService: true,
             },
         },
     },

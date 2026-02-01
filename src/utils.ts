@@ -4,7 +4,7 @@ import globToRegExp from 'glob-to-regexp';
 import { fileTypeFromBuffer } from 'file-type';
 
 import { NEURO } from '@/constants';
-import { ACCESS, CONFIG, CONNECTION, CursorPositionContextStyle, getPermissionLevel, PERMISSIONS } from '@/config';
+import { ACCESS, CONFIG, CONNECTION, CursorPositionContextStyle, getPermissionLevel, PermissionLevel, setPermissionLevel } from '@/config';
 
 import { ActionValidationResult, ActionData, actionValidationAccept, actionValidationFailure } from '@/neuro_client_helper';
 import assert from 'node:assert';
@@ -14,8 +14,18 @@ import { fireCursorPositionChangedEvent } from '@events/cursor';
 export const REGEXP_ALWAYS = /^/;
 export const REGEXP_NEVER = /^\b$/;
 
+// Cache compiled include/exclude regexes to avoid recompiling on every call
+let cachedIncludeKey = '';
+let cachedExcludeKey = '';
+let cachedIncludeRegExp: RegExp = REGEXP_ALWAYS;
+let cachedExcludeRegExp: RegExp = REGEXP_NEVER;
+
 export function logOutput(tag: string, message: string) {
     if (!NEURO.outputChannel) {
+        const testFlag = (globalThis as typeof globalThis & { NEUROPILOT_TEST?: boolean }).NEUROPILOT_TEST;
+        if (testFlag === true || globalThis?.process?.env?.NEUROPILOT_TEST === 'true') {
+            return;
+        }
         console.error('Output channel not initialized');
         return;
     }
@@ -31,6 +41,20 @@ let retryTimeout: NodeJS.Timeout | null = null;
 let shouldAutoReconnect = true; // Flag to control auto-reconnection
 
 export function createClient() {
+    const testFlag = (globalThis as typeof globalThis & { NEUROPILOT_TEST?: boolean }).NEUROPILOT_TEST;
+    if (testFlag === true || globalThis?.process?.env?.NEUROPILOT_TEST === 'true') {
+        if (!NEURO.client) {
+            NEURO.client = {
+                sendContext: () => {},
+                disconnect: () => {},
+                registerActions: () => {},
+                unregisterActions: () => {},
+                sendActionResult: () => {},
+                onAction: () => {},
+            } as unknown as NeuroClient;
+        }
+        return;
+    }
     logOutput('INFO', 'Creating Neuro API client');
     if (NEURO.client) {
         // Prevent auto-reconnection when manually disconnecting
@@ -41,7 +65,6 @@ export function createClient() {
     NEURO.connected = false;
     NEURO.waiting = false;
     NEURO.cancelled = false;
-    NEURO.waitingForCookie = false;
 
     // Reset auto-reconnect flag for new connection
     shouldAutoReconnect = true;
@@ -74,6 +97,8 @@ function attemptConnection(currentAttempt: number, maxAttempts: number, interval
             NEURO.connected = false;
             logOutput('INFO', 'Disconnected from Neuro API');
 
+            unregisterAllActions();
+
             // Only auto-reconnect if it wasn't a manual disconnection
             if (shouldAutoReconnect) {
                 if (currentAttempt < maxAttempts) {
@@ -98,8 +123,15 @@ function attemptConnection(currentAttempt: number, maxAttempts: number, interval
         };
 
         NEURO.client.sendContext(
-            vscode.workspace.getConfiguration('neuropilot').get('connection.initialContext', 'Something went wrong, blame Pasu4 and/or KTrain5369 and tell Vedal to file a bug report.'),
+            turtleSafari(vscode.workspace.getConfiguration('neuropilot').get('connection.initialContext', 'Someone tell the NeuroPilot devs that there\'s a problem with their extension.')),
         );
+
+        if (getPermissionLevel(changelogActions.read_changelog.name) !== PermissionLevel.OFF) {
+            NEURO.client.sendContext(`It appears that you have the ability to get changelogs yourself. You should try running the read_changelog action or asking ${CONNECTION.userName} to send it to you via a command, then summarise what it says!`, false);
+        }
+        else {
+            NEURO.client.sendContext(`You don't seem to have the ability to get changelogs yourself. Nonetheless, you should still try and ask ${CONNECTION.userName} to send it via the "NeuroPilot: Ask Neuro to read changelog" command, and then summarise the info.`, false);
+        }
 
         for (const handler of clientConnectedHandlers) {
             handler();
@@ -127,7 +159,7 @@ export async function disconnectClient() {
     shouldAutoReconnect = false;
     if (NEURO.client) {
         NEURO.client.disconnect();
-        if(!await waitFor(() => !NEURO.connected, 100, 5000)) {
+        if (!await waitFor(() => !NEURO.connected, 100, 5000)) {
             logOutput('ERROR', 'Client took too long to disconnect');
             vscode.window.showErrorMessage('Client could not disconnect.');
         }
@@ -304,6 +336,10 @@ export function combineGlobLinesToRegExp(lines: string[]): RegExp {
     return new RegExp(result);
 }
 
+import { fastIsItIgnored } from '@/ignore_files_utils';
+import { unregisterAllActions } from './rce';
+import { changelogActions } from './changelog';
+
 /**
  * Check if an absolute path is safe for Neuro to access.
  * Neuro may not access paths outside the workspace, or files and folders starting with a dot.
@@ -318,8 +354,31 @@ export function isPathNeuroSafe(path: string, checkPatterns = true): boolean {
     const normalizedPath = normalizePath(path);
     const includePattern = ACCESS.includePattern || ['**/*'];
     const excludePattern = ACCESS.excludePattern;
-    const includeRegExp: RegExp = checkPatterns ? combineGlobLinesToRegExp(includePattern) : REGEXP_ALWAYS;
-    const excludeRegExp: RegExp = checkPatterns && excludePattern ? combineGlobLinesToRegExp(excludePattern) : REGEXP_NEVER;
+
+    // Use cached regexes when pattern checking is enabled
+    let includeRegExp: RegExp = REGEXP_ALWAYS;
+    let excludeRegExp: RegExp = REGEXP_NEVER;
+    if (checkPatterns) {
+        const includeKey = includePattern.join('\n');
+        const excludeKey = (excludePattern ?? []).join('\n');
+
+        if (includeKey !== cachedIncludeKey) {
+            cachedIncludeRegExp = combineGlobLinesToRegExp(includePattern);
+            cachedIncludeKey = includeKey;
+        }
+        if (!excludePattern || excludeKey === '') {
+            cachedExcludeRegExp = REGEXP_NEVER;
+            cachedExcludeKey = '';
+        } else if (excludeKey !== cachedExcludeKey) {
+            cachedExcludeRegExp = combineGlobLinesToRegExp(excludePattern);
+            cachedExcludeKey = excludeKey;
+        }
+
+        includeRegExp = cachedIncludeRegExp;
+        excludeRegExp = cachedExcludeRegExp;
+    }
+
+    const ignored = rootFolder ? fastIsItIgnored(normalizedPath) : false;
 
     return rootFolder !== undefined
         // Prevent access to the workspace folder itself
@@ -337,7 +396,9 @@ export function isPathNeuroSafe(path: string, checkPatterns = true): boolean {
         // Check against include pattern
         && includeRegExp.test(normalizedPath)
         // Check against exclude pattern
-        && !excludeRegExp.test(normalizedPath);
+        && !excludeRegExp.test(normalizedPath)
+        // Check if the path is ignored by .gitignore (if so, it's likely a library, or something large and not necessarily needed to be viewed by the user or Neuro).
+        && !ignored;
 }
 
 export const delayAsync = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -446,7 +507,7 @@ export function setVirtualCursor(position?: vscode.Position | null) {
     const editor = vscode.window.activeTextEditor;
     if (!editor) return;
 
-    if (position === null || !getPermissionLevel(PERMISSIONS.editActiveDocument) || !isPathNeuroSafe(editor.document.fileName)) {
+    if (position === null || !isPathNeuroSafe(editor.document.fileName)) {
         removeVirtualCursor();
         return;
     }
@@ -611,7 +672,7 @@ export function showDiffRanges(editor: vscode.TextEditor, ...ranges: DiffRange[]
     const removedRanges = ranges.filter(r => r.type === DiffRangeType.Removed);
 
     const languageId = editor.document.languageId;
-    const user = CONFIG.currentlyAsNeuroAPI;
+    const user = CONNECTION.nameOfAPI;
 
     editor.setDecorations(NEURO.diffAddedDecorationType!, addedRanges.map(range => ({
         range: range.range,
@@ -643,7 +704,7 @@ export function clearDecorations(editor: vscode.TextEditor) {
 /**
  * Checks workspace trust settings and returns an ActionValidationResult accordingly.
  */
-export function checkWorkspaceTrust(_actionData: ActionData): ActionValidationResult {
+export function checkWorkspaceTrust(_actionData?: ActionData): ActionValidationResult {
     if (vscode.workspace.isTrusted) {
         return actionValidationAccept();
     }
@@ -676,7 +737,7 @@ export function getProperty(obj: unknown, path: string): unknown {
 /**
  * Checks if the extension is currently on a virtual file system.
  */
-export function checkVirtualWorkspace(_actionData: ActionData): ActionValidationResult {
+export function checkVirtualWorkspace(_actionData?: ActionData): ActionValidationResult {
     if (vscode.workspace.workspaceFolders?.every(f => f.uri.scheme !== 'file')) {
         return actionValidationFailure('You cannot perform this action in a virtual workspace.');
     }
@@ -892,11 +953,17 @@ export function translatePosition(pos: vscode.Position, delta: vscode.Position):
 }
 
 /**
+ * Replaces all instances of `insert_turtle_here` in the input string with the User Name setting.
+ * @param input String input to check.
+ */
+export const turtleSafari = (input: string) => input.replace(/(?<!\\)insert_turtle_here/g, CONNECTION.userName).replace(/\\insert_turtle_here/g, 'insert_turtle_here');
+
+/**
  * Log a caught exception and surface an error to report to GitHub.
  */
 export function notifyOnCaughtException(name: string, error: Error | unknown): void {
     logOutput('ERROR', `Error occurred while executing action ${name}: ${error}`);
-    vscode.window.showErrorMessage(`${CONFIG.currentlyAsNeuroAPI} tried to run the action "${name}", but an exception was thrown!`, 'View Logs', 'Disable Action for...', 'Report on GitHub').then(
+    vscode.window.showErrorMessage(`${CONNECTION.nameOfAPI} tried to run the action "${name}", but an exception was thrown!`, 'View Logs', 'Disable Action for...', 'Report on GitHub').then(
         async (v) => {
             switch (v) {
                 case 'View Logs':
@@ -915,10 +982,10 @@ export function notifyOnCaughtException(name: string, error: Error | unknown): v
                             NEURO.tempDisabledActions.push(name);
                             break;
                         case 'this entire workspace':
-                            await vscode.workspace.getConfiguration('neuropilot').update('actions.disabledActions', name, vscode.ConfigurationTarget.Workspace);
+                            await setPermissionLevel(name, PermissionLevel.OFF, vscode.ConfigurationTarget.Workspace);
                             break;
                         case 'this user':
-                            await vscode.workspace.getConfiguration('neuropilot').update('actions.disabledActions', name, vscode.ConfigurationTarget.Global);
+                            await setPermissionLevel(name, PermissionLevel.OFF, vscode.ConfigurationTarget.Global);
                             break;
                     }
                     if (disableFor) logOutput('INFO', `Disabled action "${name}" for ${disableFor} due to a caught exception.`);
@@ -927,4 +994,79 @@ export function notifyOnCaughtException(name: string, error: Error | unknown): v
             }
         },
     );
+}
+
+/**
+ * Filter out trailing slashes.
+ * @param string String with trailing slashes
+ * @returns Filtered string.
+ */
+export function stripTailSlashes(string: string): string {
+    return string.replace(/^\/+|\/+$/g, '');
+}
+
+/**
+ * Formats a string by replacing placeholders with properties from the format object, similar to JavaScript template literals.
+ * Allows for accessing nested properties using dot notation.
+ * Use `$$` to insert a literal `$`.
+ * This performs a single pass replacement, so nested placeholders are not processed.
+ * @param template The string to search for replacement patterns in.
+ * @param format The object defining the replacements. Any keys of this object and nested keys must be valid ASCII JavaScript identifiers.
+ * @returns The formatted string.
+ */
+export function formatString(template: string, format: Record<string, unknown>): string {
+    // Process matches in reverse order to avoid messing up indices
+    const matches = Array.from(template.matchAll(/\$\$|\$\{([^}]*)\}/g)).reverse();
+    let result = template;
+    for (const match of matches) {
+        const pos = match.index;
+        const length = match[0].length;
+        const key = match[1];
+        const value = match[0] === '$$' ? '$' : getProperty(format, key);
+        if (value !== undefined) {
+            result = result.substring(0, pos) + String(value) + result.substring(pos + length);
+        }
+    }
+    return result;
+}
+
+/**
+ * Split an identifier into an array of words. Handles camelCase, PascalCase, snake_case and kebab-case.
+ * @param str The string to split.
+ */
+export function splitIdentifier(str: string): string[] {
+    const rx = /[A-Z]{1,}(?=[A-Z][a-z]|$)|[A-Z]?[a-z]+|[A-Z]+|\d+|_|-/g;
+    return Array.from(str.matchAll(rx))
+        .map(m => m[0])
+        .filter(part => part !== '_' && part !== '-');
+}
+
+export function toTitleCase(str: string): string {
+    const allCaps = str.toUpperCase() === str;
+    const parts = splitIdentifier(str);
+    const excludedWords = ['a', 'an', 'and', 'as', 'at', 'but', 'by', 'for', 'if', 'in', 'nor', 'of', 'off', 'on', 'or', 'per', 'so', 'the', 'to', 'up', 'via', 'yet'];
+    return parts
+        .map((part, i) => {
+            if (!allCaps && part.toUpperCase() === part)
+                return part;
+            const lowerPart = part.toLowerCase();
+
+            if (i && excludedWords.includes(lowerPart)) {
+                return lowerPart;
+            } else {
+                return lowerPart.charAt(0).toUpperCase() + lowerPart.slice(1);
+            }
+        })
+        .join(' ');
+}
+
+/**
+ * Checks if the running environment is Windows.
+ * Works in both extension host (Node.js) and web (browser) contexts.
+ * @returns true if the environment is Windows
+ * @todo Transform into generalised platform detector later
+ */
+export function isWindows(): boolean {
+    if (vscode.env.uiKind === vscode.UIKind.Web) return false;
+    else return process.platform === 'win32';
 }

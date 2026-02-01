@@ -4,17 +4,44 @@ import { ActionData } from '@/neuro_client_helper';
 
 // Tests for file action prompt generators using real logic with loose checks
 suite('file Actions', () => {
-    test('get_files has a non-empty fixed prompt', () => {
+    test('get_workspace_files has a non-empty prompt', () => {
         // === Arrange & Act ===
-        const prompt = fileActions.get_files.promptGenerator as string;
+        const prompt = fileActions.list_files_and_folders.promptGenerator({} as ActionData);
 
         // === Assert ===
         assert.ok(typeof prompt === 'string' && prompt.length > 0);
     });
 
+    test('get_workspace_files correctly includes the folder in prompt', () => {
+        // === Arrange & Act ===
+        const prompt = fileActions.list_files_and_folders.promptGenerator({ params: { folder: 'src/' } } as ActionData);
+
+        // === Assert ===
+        assert.ok(typeof prompt === 'string' && prompt.length > 0);
+        assert.ok(prompt.includes('src'));
+    });
+
+    test('get_workspace_files correctly states if Neuro asked for recursive', () => {
+        // === Arrange & Act ===
+        const prompt = fileActions.list_files_and_folders.promptGenerator({ params: { recursive: true } } as ActionData);
+
+        // === Assert ===
+        assert.ok(typeof prompt === 'string' && prompt.length > 0);
+        assert.ok(prompt.toLowerCase().includes('recursively'));
+    });
+
+    test('get_workspace_files correctly omits recursive if Neuro didn\'t ask', () => {
+        // === Arrange & Act ===
+        const prompt = fileActions.list_files_and_folders.promptGenerator({ params: { recursive: false } } as ActionData);
+
+        // === Assert ===
+        assert.ok(typeof prompt === 'string' && prompt.length > 0);
+        assert.ok(!prompt.includes('recursively'));
+    });
+
     test('open_file prompt formats path', () => {
         // === Arrange & Act ===
-        const prompt = fileActions.open_file.promptGenerator({ params: { filePath: 'src/index.ts' } } as ActionData);
+        const prompt = fileActions.switch_files.promptGenerator({ params: { filePath: 'src/index.ts' } } as ActionData);
 
         // === Assert ===
         assert.ok(typeof prompt === 'string' && prompt.length > 0);
@@ -60,7 +87,7 @@ suite('file Actions', () => {
 
     test('delete_file_or_folder prompt formats path', () => {
         // === Arrange & Act ===
-        const prompt = fileActions.delete_file_or_folder.promptGenerator({ params: { pathToDelete: 'old/file.txt' } } as ActionData);
+        const prompt = fileActions.delete_file_or_folder.promptGenerator({ params: { path: 'old/file.txt' } } as ActionData);
 
         // === Assert ===
         assert.ok(typeof prompt === 'string' && prompt.length > 0);

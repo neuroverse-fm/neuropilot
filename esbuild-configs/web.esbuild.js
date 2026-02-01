@@ -1,7 +1,12 @@
 // @ts-check
 import { context } from 'esbuild';
 import { polyfillNode } from 'esbuild-plugin-polyfill-node';
+import { esbuildProblemMatcherPlugin } from './plugins.js';
 
+/**
+ * @param {boolean} prodFlag
+ * @param {boolean} watchFlag
+ */
 export async function web(prodFlag, watchFlag) {
     const ctx = await context({
         entryPoints: ['src/web/extension.ts'],
@@ -16,18 +21,20 @@ export async function web(prodFlag, watchFlag) {
         logLevel: 'warning',
         tsconfig: './tsconfig.web.json',
         plugins: [
-            polyfillNode({ polyfills: { // trying to make the build as small as possible
-                child_process: false,
-                module: false,
-                os: false,
-                path: false,
-                punycode: false,
-                stream: false,
-                sys: false,
-                v8: false,
-                vm: false,
-                zlib: false,
-            }}),
+            polyfillNode({
+                polyfills: { // trying to make the build as small as possible
+                    child_process: false,
+                    module: false,
+                    os: false,
+                    path: false,
+                    punycode: false,
+                    stream: false,
+                    sys: false,
+                    v8: false,
+                    vm: false,
+                    zlib: false,
+                },
+            }),
             /* add to the end of plugins array */
             esbuildProblemMatcherPlugin,
         ],
@@ -40,6 +47,10 @@ export async function web(prodFlag, watchFlag) {
     }
 }
 
+/**
+ * @param {boolean} _prodFlag
+ * @param {boolean} watchFlag
+ */
 export async function webTest(_prodFlag, watchFlag) {
     const ctx = await context({
         entryPoints: ['src/test/suite/web/index.ts'],
@@ -60,24 +71,31 @@ export async function webTest(_prodFlag, watchFlag) {
             '@vscode/test-web',
         ],
         logLevel: 'warning',
+        // This repo's package.json declares "sideEffects": [], which makes esbuild warn loudly
+        // about bare imports used to register mocha suites. Silence that single warning class.
+        logOverride: {
+            'ignored-bare-import': 'silent',
+        },
         define: {
             // Define test environment variables
             'process.env.NODE_ENV': '"test"',
         },
         // Include the same browser polyfills as the web bundle
         plugins: [
-            polyfillNode({ polyfills: {
-                child_process: false,
-                module: false,
-                os: false,
-                path: false,
-                punycode: false,
-                stream: false,
-                sys: false,
-                v8: false,
-                vm: false,
-                zlib: false,
-            }}),
+            polyfillNode({
+                polyfills: {
+                    child_process: false,
+                    module: false,
+                    os: false,
+                    path: false,
+                    punycode: false,
+                    stream: false,
+                    sys: false,
+                    v8: false,
+                    vm: false,
+                    zlib: false,
+                },
+            }),
             esbuildProblemMatcherPlugin,
         ],
     });
@@ -90,6 +108,10 @@ export async function webTest(_prodFlag, watchFlag) {
     }
 }
 
+/**
+ * @param {boolean} _prodFlag
+ * @param {boolean} watchFlag
+ */
 export async function webTestBrowser(_prodFlag, watchFlag) {
     const ctx = await context({
         entryPoints: ['src/test/suite/web/index.browser.ts'],
@@ -109,22 +131,27 @@ export async function webTestBrowser(_prodFlag, watchFlag) {
             '@vscode/test-web',
         ],
         logLevel: 'warning',
+        logOverride: {
+            'ignored-bare-import': 'silent',
+        },
         define: {
             'process.env.NODE_ENV': '"test"',
         },
         plugins: [
-            polyfillNode({ polyfills: {
-                child_process: false,
-                module: false,
-                os: false,
-                path: false,
-                punycode: false,
-                stream: false,
-                sys: false,
-                v8: false,
-                vm: false,
-                zlib: false,
-            }}),
+            polyfillNode({
+                polyfills: {
+                    child_process: false,
+                    module: false,
+                    os: false,
+                    path: false,
+                    punycode: false,
+                    stream: false,
+                    sys: false,
+                    v8: false,
+                    vm: false,
+                    zlib: false,
+                },
+            }),
             esbuildProblemMatcherPlugin,
         ],
     });
@@ -136,24 +163,3 @@ export async function webTestBrowser(_prodFlag, watchFlag) {
         await ctx.dispose();
     }
 }
-
-/**
- * @type {import('esbuild').Plugin}
- */
-const esbuildProblemMatcherPlugin = {
-    name: 'esbuild-problem-matcher',
-
-    setup(build) {
-        build.onStart(() => {
-            console.log('[watch] build started');
-        });
-        build.onEnd(result => {
-            result.errors.forEach(({ text, location }) => {
-                console.error(`✘ [ERROR] ${text}`);
-                if (location == null) return;
-                console.error(`    ${location.file}:${location.line}:${location.column}:`);
-            });
-            console.log('[watch] build finished');
-        });
-    },
-};

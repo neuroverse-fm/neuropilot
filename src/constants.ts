@@ -1,13 +1,23 @@
 import * as vscode from 'vscode';
 import { NeuroClient } from 'neuro-game-sdk';
 import { TerminalSession } from './pseudoterminal';
-import { RceRequest } from './rce';
+import { RceRequest } from '@/rce';
 import type { GitExtension } from '@typing/git.d';
+import { ActionsViewProvider } from '@views/actions';
+import { ImagesViewProvider } from '@views/image';
+import type { ExecuteViewProvider } from '@views/execute';
+import type { ActionData } from '@/neuro_client_helper';
 
 export interface NeuroTask {
     id: string;
     description: string;
     task: vscode.Task;
+}
+
+interface NeuroViewProviders {
+    actions: ActionsViewProvider | null;
+    images: ImagesViewProvider | null;
+    execute: ExecuteViewProvider | null;
 }
 
 interface Neuro {
@@ -35,12 +45,10 @@ interface Neuro {
     cancelled: boolean;
     /** The extension's output channel (logging) */
     outputChannel: vscode.OutputChannel | null;
-    /** Whether Neuro has asked for a cookie. */
-    waitingForCookie: boolean;
     /** The array of tasks that Neuro can execute. */
     tasks: NeuroTask[];
     /** Stores the currently executed task. */
-    currentTaskExecution: vscode.TaskExecution | null;
+    currentTaskExecution: { task: vscode.TaskExecution, data: ActionData } | null;
     /** Whether the current action has been handled. */
     actionHandled: boolean;
     /** Whether or not terminals are currently running. */
@@ -80,6 +88,8 @@ interface Neuro {
     lastKnownUserSelection: vscode.Selection | null;
     /** Any temporarily disabled actions for this session. */
     tempDisabledActions: string[]
+    /** The provider for the actions view. */
+    viewProviders: NeuroViewProviders;
 }
 
 
@@ -93,7 +103,6 @@ export const NEURO: Neuro = {
     waiting: false,
     cancelled: false,
     outputChannel: null,
-    waitingForCookie: false,
     tasks: [],
     currentTaskExecution: null,
     actionHandled: false,
@@ -114,6 +123,11 @@ export const NEURO: Neuro = {
     killSwitch: false,
     lastKnownUserSelection: null,
     tempDisabledActions: [],
+    viewProviders: {
+        actions: null,
+        images: null,
+        execute: null,
+    },
 };
 
 // this will likely be transformed for a different use later when the API rolls around
@@ -126,3 +140,7 @@ export const EXTENSIONS: ExtensionDependencies = {
     copilotChat: false,
     git: null,
 };
+
+export const PROMISE_REJECTION_STRING = 'Promise rejected';
+
+export const EXCEPTION_THROWN_STRING = 'Exception thrown';

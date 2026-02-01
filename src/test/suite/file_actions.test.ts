@@ -2,6 +2,8 @@ import * as assert from 'assert';
 import * as vscode from 'vscode';
 import * as fileActions from '../../file_actions';
 import { assertProperties, checkNoErrorWithTimeout, createTestDirectory, createTestFile } from '../test_utils';
+import { ActionData } from '../../neuro_client_helper';
+import { getPermissionLevel, PermissionLevel } from '../../config';
 import { NeuroClient } from 'neuro-game-sdk';
 import { NEURO } from '../../constants';
 import { anything, capture, instance, mock, verify } from 'ts-mockito';
@@ -10,27 +12,46 @@ suite('File Actions', () => {
     let originalClient: NeuroClient | null = null;
     let mockedClient: NeuroClient;
 
-    setup(async function() {
+    function withTimeout<T>(promise: PromiseLike<T>, label: string, timeoutMs = 5000): Promise<T> {
+        let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
+        const timeoutPromise = new Promise<never>((_, reject) => {
+            timeoutHandle = setTimeout(() => {
+                reject(new Error(`Timeout after ${timeoutMs}ms: ${label}`));
+            }, timeoutMs);
+        });
+        return Promise.race([Promise.resolve(promise), timeoutPromise]).finally(() => {
+            if (timeoutHandle) {
+                clearTimeout(timeoutHandle);
+            }
+        });
+    }
+
+    setup(async function () {
+        this.timeout(10000);
         // Mock the NeuroClient to avoid actual network calls
         originalClient = NEURO.client;
         mockedClient = mock(NeuroClient);
         NEURO.client = instance(mockedClient);
 
         // Close all open editors
-        await vscode.commands.executeCommand('workbench.action.closeAllEditors');
+        await withTimeout(vscode.commands.executeCommand('workbench.action.closeAllEditors'), 'closeAllEditors');
     });
 
-    teardown(async function() {
+    teardown(async function () {
+        this.timeout(10000);
         // Delete all test files created during the tests
         const testFilesDir = vscode.Uri.joinPath(vscode.workspace.workspaceFolders![0].uri, 'test_files');
-        await vscode.workspace.fs.delete(testFilesDir, { recursive: true, useTrash: false });
+        await withTimeout(
+            vscode.workspace.fs.delete(testFilesDir, { recursive: true, useTrash: false }),
+            'delete test_files',
+        );
 
         // Restore the original NeuroClient
         NEURO.client = originalClient;
         originalClient = null;
     });
 
-    test('validatePath', async function() {
+    test('validatePath', async function () {
         const validatePath = fileActions._internals.validatePath;
 
         // === Arrange ===
@@ -51,7 +72,35 @@ suite('File Actions', () => {
         assertProperties(await validatePath(nonexistentPath, false, 'file'), { success: true }, 'Nonexistent path should be valid if shouldExist is false');
     });
 
-    test('neuroSafeRenameValidation', async function() {
+    test('validateIsAFile', async function () {
+        const validateIsAFile = fileActions._internals.validateIsAFile;
+        const baseAction: ActionData = {
+            id: 'abc',
+            name: 'open_file',
+        };
+
+        // === Arrange ===
+        const fileUri = await createTestFile('file-to-validate.txt');
+        const dirUri = await createTestDirectory('dir-to-validate');
+        const filePath = vscode.workspace.asRelativePath(fileUri, false);
+        const dirPath = vscode.workspace.asRelativePath(dirUri, false);
+        const nonExistentPath = 'test_files/does-not-exist.txt';
+
+        // === Act & Assert ===
+        assertProperties(await validateIsAFile(baseAction), { success: false, retry: true }, 'Missing filePath should be invalid');
+        assertProperties(await validateIsAFile({ ...baseAction, params: {} }), { success: false, retry: true }, 'Undefined filePath should be invalid');
+        assertProperties(await validateIsAFile({ ...baseAction, params: { filePath: '' } }), { success: false, retry: true }, 'Empty filePath should be invalid');
+        assertProperties(await validateIsAFile({ ...baseAction, params: { filePath: '/' } }), { success: false, retry: true }, 'Root-only path should be invalid');
+
+        assertProperties(await validateIsAFile({ ...baseAction, params: { filePath: dirPath } }), { success: false, retry: false }, 'Directory path should be invalid');
+        assertProperties(await validateIsAFile({ ...baseAction, params: { filePath: nonExistentPath } }), { success: false, retry: false }, 'Nonexistent file should be invalid');
+
+        assertProperties(await validateIsAFile({ ...baseAction, params: { filePath } }), { success: true }, 'Existing file should be valid');
+        assertProperties(await validateIsAFile({ ...baseAction, params: { filePath: '/' + filePath } }), { success: true }, 'Path with leading slash should be valid');
+        assertProperties(await validateIsAFile({ ...baseAction, params: { filePath: './' + filePath } }), { success: true }, 'Path with leading dot slash should be valid');
+    });
+
+    test('neuroSafeRenameValidation', async function () {
         const neuroSafeRenameValidation = fileActions._internals.neuroSafeRenameValidation;
 
         // === Arrange ===
@@ -122,7 +171,7 @@ suite('File Actions', () => {
         }), { success: false, retry: false }, 'Rename should fail if the old and new paths are the same');
     });
 
-    test('neuroSafeDeleteValidation', async function() {
+    test('neuroSafeDeleteValidation', async function () {
         const neuroSafeDeleteValidation = fileActions._internals.neuroSafeDeleteValidation;
 
         // === Arrange ===
@@ -200,7 +249,41 @@ suite('File Actions', () => {
         }), { success: false, retry: false }, 'Recursive delete should fail for a nonexistent directory');
     });
 
-    test('handleGetFiles', async function() {
+    test('handleGetWorkspaceFiles', async function () {
+        // === Arrange ===
+        const fileUri1 = await createTestFile('file1.js');
+        const fileUri2 = await createTestDirectory('sub');
+        const fileUri3 = await createTestFile('sub/file2.js');
+        const unsafeFileUri = await createTestFile('.unsafe/file.js'); // Neuro-unsafe because it starts with a dot
+        const emptyDirUri = await createTestDirectory('testDir');
+        const filePath1 = vscode.workspace.asRelativePath(fileUri1, false);
+        const filePath2 = vscode.workspace.asRelativePath(fileUri2, false);
+        const filePath3 = vscode.workspace.asRelativePath(fileUri3, false);
+        const unsafeFilePath = vscode.workspace.asRelativePath(unsafeFileUri, false);
+        const emptyDirPath = vscode.workspace.asRelativePath(emptyDirUri, false);
+
+        // === Act ===
+        fileActions.handleGetWorkspaceFiles({ id: 'abc', name: 'get_workspace_files', params: { folder: 'test_files' } });
+
+        // Wait for context to be sent
+        await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); });
+
+        const [context] = capture(mockedClient.sendContext).last();
+        const lines = context.split(/\r?\n/);
+        lines.shift(); // Remove header line
+        lines.shift(); // Remove empty line
+
+        // === Assert ===
+        assert.strictEqual(lines.includes(filePath1), true, 'File file1.js should be in the list of files');
+        const expectedFolderSub = filePath2.endsWith('/') ? filePath2 : filePath2 + '/';
+        assert.strictEqual(lines.includes(expectedFolderSub), true, 'Folder sub should be in the list of files');
+        assert.strictEqual(lines.includes(filePath3), false, 'File sub/file2.js should not be in the list of files');
+        assert.strictEqual(lines.includes(unsafeFilePath), false, 'Unsafe directory .unsafe should not be in the list of files');
+        const expectedEmptyDir = emptyDirPath.endsWith('/') ? emptyDirPath : emptyDirPath + '/';
+        assert.strictEqual(lines.includes(expectedEmptyDir), true, 'Empty directory testDir should still be in the list of files');
+    });
+
+    test('handleGetWorkspaceFiles (recursive)', async function () {
         // === Arrange ===
         const fileUri1 = await createTestFile('file1.js');
         const fileUri2 = await createTestFile('sub/file2.js');
@@ -212,7 +295,7 @@ suite('File Actions', () => {
         const emptyDirPath = vscode.workspace.asRelativePath(emptyDirUri, false);
 
         // === Act ===
-        fileActions.handleGetFiles({ id: 'abc', name: 'get_files' });
+        fileActions.handleGetWorkspaceFiles({ id: 'abc', name: 'get_workspace_files', params: { recursive: true } });
 
         // Wait for context to be sent
         await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); });
@@ -229,7 +312,7 @@ suite('File Actions', () => {
         assert.strictEqual(lines.includes(emptyDirPath), false, 'Empty directory testDir should not be in the list of files');
     });
 
-    test('handleOpenFile', async function() {
+    test('handleOpenFile', async function () {
         // Increase test timeout to make sure it has enough time to finish instead of the default 2s
         this.timeout(10000);
         // === Arrange ===
@@ -265,23 +348,32 @@ suite('File Actions', () => {
         await config.update('sendContentsOnFileChange', originalSetting ?? true, vscode.ConfigurationTarget.Workspace);
     });
 
-    test('handleCreateFile', async function() {
+    test('handleCreateFile', async function () {
         // === Arrange ===
         const relativePath = 'test_files/newFile.js';
         const uri = vscode.Uri.joinPath(vscode.workspace.workspaceFolders![0].uri, relativePath);
 
         // === Act ===
         fileActions.handleCreateFile({ id: 'abc', name: 'create_file', params: { filePath: relativePath } });
-        await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).twice(); });
+        const openAllowed = getPermissionLevel(fileActions.fileActions.switch_files.name) === PermissionLevel.AUTOPILOT;
+        await checkNoErrorWithTimeout(() => {
+            if (openAllowed) {
+                verify(mockedClient.sendContext(anything())).twice();
+            } else {
+                verify(mockedClient.sendContext(anything())).once();
+            }
+        }, 5000, 100);
 
         // === Assert ===
-        assert.strictEqual(vscode.window.activeTextEditor?.document.uri.path.toLowerCase(), uri.path.toLowerCase(), 'The new file should be opened in the active editor');
+        if (openAllowed) {
+            assert.strictEqual(vscode.window.activeTextEditor?.document.uri.path.toLowerCase(), uri.path.toLowerCase(), 'The new file should be opened in the active editor');
+        }
 
         const stat = await vscode.workspace.fs.stat(uri);
         assert.strictEqual(stat.type, vscode.FileType.File, 'The new file should be created successfully');
     });
 
-    test('handleCreateFolder', async function() {
+    test('handleCreateFolder', async function () {
         // === Arrange ===
         const relativePath = 'test_files/newFolder';
         const uri = vscode.Uri.joinPath(vscode.workspace.workspaceFolders![0].uri, relativePath);
@@ -295,7 +387,7 @@ suite('File Actions', () => {
         assert.strictEqual(stat.type, vscode.FileType.Directory, 'The new folder should be created successfully');
     });
 
-    test('handleRenameFileOrFolder: Rename closed file', async function() {
+    test('handleRenameFileOrFolder: Rename closed file', async function () {
         // === Arrange ===
         const fileUri = await createTestFile('fileToRename.js');
         const filePath = vscode.workspace.asRelativePath(fileUri, false);
@@ -321,7 +413,7 @@ suite('File Actions', () => {
         }
     });
 
-    test('handleRenameFileOrFolder: Rename open file', async function() {
+    test('handleRenameFileOrFolder: Rename open file', async function () {
         // === Arrange ===
         const fileUri = await createTestFile('fileToRename.js');
         const filePath = vscode.workspace.asRelativePath(fileUri, false);
@@ -362,7 +454,7 @@ suite('File Actions', () => {
         assert.strictEqual(newStat.type, vscode.FileType.File, 'The file should exist at the new path');
     });
 
-    test('handleRenameFileOrFolder: Rename folder with open file', async function() {
+    test('handleRenameFileOrFolder: Rename folder with open file', async function () {
         // === Arrange ===
         const folderUri = await createTestDirectory('folderToRename');
         const fileUri = await createTestFile('folderToRename/file.js');
@@ -401,7 +493,7 @@ suite('File Actions', () => {
         assert.strictEqual(newFileStat.type, vscode.FileType.File, 'The file should exist at the new path');
     });
 
-    test('handleDeleteFileOrFolder: Delete open file', async function() {
+    test('handleDeleteFileOrFolder: Delete open file', async function () {
         // === Arrange ===
         const fileUri = await createTestFile('fileToDelete.js');
         const filePath = vscode.workspace.asRelativePath(fileUri, false);
@@ -427,7 +519,7 @@ suite('File Actions', () => {
         } // In web (virtual) FS the editor model may remain even after deletion
     });
 
-    test('handleDeleteFileOrFolder: Delete folder', async function() {
+    test('handleDeleteFileOrFolder: Delete folder', async function () {
         // === Arrange ===
         const folderUri = await createTestDirectory('folderToDelete');
         // eslint-disable-next-line @typescript-eslint/no-unused-vars

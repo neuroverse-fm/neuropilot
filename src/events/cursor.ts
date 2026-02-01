@@ -1,9 +1,9 @@
 import * as vscode from 'vscode';
 import { RCECancelEvent } from './utils';
-import { CONFIG } from '../config';
+import { CONNECTION } from '../config';
 
 const _onDidMoveCursor = new vscode.EventEmitter<vscode.Position | null | undefined>();
-const _onDidMoveCursorEvent = _onDidMoveCursor.event;
+export const onDidMoveCursorEvent = _onDidMoveCursor.event;
 export const moveCursorEmitterDiposable = vscode.Disposable.from(_onDidMoveCursor);
 
 /**
@@ -18,9 +18,9 @@ export function fireCursorPositionChangedEvent(position: vscode.Position | null 
 export function createCursorPositionChangedEvent() {
     return new RCECancelEvent({
         reason: 'your cursor position changed.',
-        logReason: (_data) => `${CONFIG.currentlyAsNeuroAPI}'s cursor position changed.`,
+        logReason: (_data) => `${CONNECTION.nameOfAPI}'s cursor position changed.`,
         events: [
-            [_onDidMoveCursorEvent, null],
+            [onDidMoveCursorEvent, null],
         ],
     });
 }

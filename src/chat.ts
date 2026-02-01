@@ -2,8 +2,10 @@ import * as vscode from 'vscode';
 
 import { NEURO } from '@/constants';
 import { filterFileContents, logOutput, simpleFileName } from '@/utils';
-import { CONFIG } from '@/config';
+import { CONFIG, CONNECTION } from '@/config';
 import assert from 'node:assert';
+import { JSONSchema7 } from 'json-schema';
+import { Action } from 'neuro-game-sdk';
 
 interface Participant {
     id: string;
@@ -80,12 +82,12 @@ export function registerChatParticipant() {
         token: vscode.CancellationToken,
     ): Promise<NeuroChatResult> => {
         let prefix = '';
-        const currentAPI = CONFIG.currentlyAsNeuroAPI;
+        const currentAPI = CONNECTION.nameOfAPI;
 
         if (request.command === 'fix') {
-            prefix = 'Vedal wants you to fix the following error(s):\n';
+            prefix = `${CONNECTION.userName} wants you to fix the following error(s):\n`;
         } else if (request.command === 'explain') {
-            prefix = 'Vedal wants you to explain the following:\n';
+            prefix = `${CONNECTION.userName} wants you to explain the following:\n`;
         }
 
         if (!NEURO.connected) {
@@ -99,7 +101,6 @@ export function registerChatParticipant() {
         }
         if (NEURO.waiting) {
             stream.markdown(`Already waiting for a response from ${currentAPI}.`);
-
             stream.button({
                 command: 'neuropilot.reconnect',
                 title: 'Reconnect',
@@ -130,7 +131,7 @@ export function registerChatParticipant() {
                     const text = filterFileContents(document.getText());
                     references.push({
                         fileName: simpleFileName(ref.value.fsPath),
-                        text: text,
+                        text,
                     });
                 });
             } else if (typeof ref.value === 'string') {
@@ -164,16 +165,34 @@ export function registerChatParticipant() {
             chatter.onDidReceiveFeedback((feedback: vscode.ChatResultFeedback) => {
                 if (feedback.kind === vscode.ChatResultFeedbackKind.Helpful) {
                     logOutput('INFO', 'Answer was deemed helpful');
-                    NEURO.client?.sendContext('Vedal found your answer helpful.');
+                    NEURO.client?.sendContext(`${CONNECTION.userName} found your answer helpful.`);
                 } else {
                     logOutput('INFO', 'Answer was deemed unhelpful');
                     logOutput('DEBUG', JSON.stringify(feedback));
-                    NEURO.client?.sendContext('Vedal found your answer unhelpful.');
+                    NEURO.client?.sendContext(`${CONNECTION.userName} found your answer unhelpful.`);
                 }
             }),
         );
     }
 }
+
+export const chatAction: Action = {
+    name: 'chat',
+    description:
+        `Provide an answer to ${CONNECTION.userName}'s request.` +
+        ' Use markdown to format your response.' +
+        ' You may additionally include code blocks by using triple backticks.' +
+        ' Be sure to use the correct language identifier after the first set of backticks.' +
+        ' If you decide to include a code block, make sure to explain what it is doing.',
+    schema: {
+        type: 'object',
+        properties: {
+            answer: { type: 'string' },
+        },
+        required: ['answer'],
+        additionalProperties: false,
+    } satisfies JSONSchema7,
+};
 
 async function requestChatResponse(
     prompt: string,
@@ -186,23 +205,7 @@ async function requestChatResponse(
     NEURO.cancelled = false;
 
     NEURO.client?.registerActions([
-        {
-            name: 'chat',
-            description:
-                'Provide an answer to Vedal\'s request.' +
-                ' Use markdown to format your response.' +
-                ' You may additionally include code blocks by using triple backticks.' +
-                ' Be sure to use the correct language identifier after the first set of backticks.' +
-                ' If you decide to include a code block, make sure to explain what it is doing.',
-            schema: {
-                type: 'object',
-                properties: {
-                    answer: { type: 'string' },
-                },
-                required: ['answer'],
-                additionalProperties: false,
-            },
-        },
+        chatAction,
     ]);
 
     NEURO.client?.forceActions(prompt, ['chat'], state, false);
