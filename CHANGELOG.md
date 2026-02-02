@@ -6,6 +6,13 @@ Since v2.1.0, we're keeping a changelog of each version's changes in NeuroPilot.
 
 Changes between each version before then will not be listed.
 
+## 2.4.1
+
+### Meta changes
+
+This patch was issued to bump some of our dependencies.
+No user-side changes have been included in this update.
+
 ## 2.4.0
 
 ### New features
