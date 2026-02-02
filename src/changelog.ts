@@ -1,10 +1,11 @@
 import * as vscode from 'vscode';
 
-import { NEURO } from '@/constants';
+import { EXCEPTION_THROWN_STRING, NEURO } from '@/constants';
 import { getFence, logOutput } from '@/utils';
 import { ActionData, RCEAction } from '@/neuro_client_helper';
-import { PermissionLevel } from '@/config';
-import { addActions } from './rce';
+import { CONNECTION, PermissionLevel } from '@/config';
+import { addActions, CATEGORY_MISC } from './rce';
+import { updateActionStatus } from './events/actions';
 
 const MEMENTO_KEY = 'lastDeliveredChangelogVersion';
 
@@ -17,7 +18,7 @@ export const changelogActions = {
     read_changelog: {
         name: 'read_changelog',
         description: 'Get changelog entries starting from a specified version. If fromVersion is omitted, any new entries after the last read_changelog command are read.',
-        category: 'Miscellaneous',
+        category: CATEGORY_MISC,
         schema: {
             type: 'object',
             properties: {
@@ -37,7 +38,7 @@ export function addChangelogActions(): void {
     addActions([changelogActions.read_changelog]);
 }
 
-export async function readChangelogAndSendToNeuro(fromVersion?: string): Promise<void> {
+export async function readChangelogAndSendToNeuro(fromVersion?: string, actionData?: ActionData): Promise<void> {
     try {
         if (!NEURO.connected) {
             vscode.window.showErrorMessage('Not connected to Neuro API.');
@@ -46,6 +47,7 @@ export async function readChangelogAndSendToNeuro(fromVersion?: string): Promise
 
         const { sections, latest } = await readAndParseChangelog();
         if (sections.length === 0) {
+            if (actionData) updateActionStatus(actionData, 'failure', 'No version entries in changelog');
             NEURO.client?.sendContext('Could not find any version entries in the changelog.');
             return;
         }
@@ -54,6 +56,7 @@ export async function readChangelogAndSendToNeuro(fromVersion?: string): Promise
         const { selected, startVersion, endVersion, note } = computeSelection(sections, latest, saved, fromVersion);
 
         if (selected.length === 0) {
+            if (actionData) updateActionStatus(actionData, 'failure', 'No matching changelog entries found');
             NEURO.client?.sendContext('No matching changelog entries to send.');
             return;
         }
@@ -66,18 +69,20 @@ export async function readChangelogAndSendToNeuro(fromVersion?: string): Promise
         messageParts.push('\n');
         messageParts.push(`${fence}markdown\n${md}\n${fence}`);
 
-        NEURO.client?.sendContext(messageParts.join('\n'));
+        NEURO.client?.sendContext(messageParts.join('\n') + `\nPlease summarise the changelogs for ${CONNECTION.userName}.`);
+        if (actionData) updateActionStatus(actionData, 'success', 'Sent requested changelog');
 
         // Update memento to latest delivered
         await NEURO.context?.globalState.update(MEMENTO_KEY, endVersion);
     } catch (erm) {
         logOutput('ERROR', `Failed to read changelog: ${erm}`);
         vscode.window.showErrorMessage('Failed to read changelog. See logs for details.');
+        if (actionData) updateActionStatus(actionData, 'failure', EXCEPTION_THROWN_STRING);
     }
 }
 
 function handleReadChangelog(actionData: ActionData): string | undefined {
-    void readChangelogAndSendToNeuro(actionData.params?.fromVersion);
+    void readChangelogAndSendToNeuro(actionData.params?.fromVersion, actionData);
     return undefined;
 }
 

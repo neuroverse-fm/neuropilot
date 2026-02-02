@@ -7,11 +7,14 @@ export interface Message {
 }
 
 export abstract class BaseWebviewViewProvider<TViewMessage extends Message, TProviderMessage extends Message> implements vscode.WebviewViewProvider {
+    /** defaults to test view, override with its own dedicated view when extending this */
+    public static viewId = 'neuropilot.testView';
+
     protected _view?: vscode.WebviewView;
 
     protected onViewReady?(): void | Promise<void>;
 
-    constructor(private _htmlFile: string, private _script: string, private _styles: string[]) { }
+    constructor(private _script: string, private _styles: string[]) { }
 
     async resolveWebviewView(webviewView: vscode.WebviewView, _context: vscode.WebviewViewResolveContext, _token: vscode.CancellationToken): Promise<void> {
         this._view = webviewView;
@@ -45,7 +48,7 @@ export abstract class BaseWebviewViewProvider<TViewMessage extends Message, TPro
         const nonce = getNonce();
 
         // Load HTML file
-        const html = new TextDecoder('utf-8').decode(await vscode.workspace.fs.readFile(vscode.Uri.joinPath(NEURO.context!.extensionUri, 'webview', this._htmlFile)));
+        const html = new TextDecoder('utf-8').decode(await vscode.workspace.fs.readFile(vscode.Uri.joinPath(NEURO.context!.extensionUri, 'webview', 'template.html')));
         const fmt = { scriptUri, styles, nonce, webview };
         if (format) Object.assign(fmt, format);
         const renderedHtml = formatString(html, fmt);

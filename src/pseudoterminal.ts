@@ -13,8 +13,9 @@ import { ActionData, actionValidationAccept, actionValidationFailure, ActionVali
 import { CONFIG } from '@/config';
 import { notifyOnTerminalClose } from '@events/shells';
 import { addActions } from './rce';
+import { updateActionStatus } from './events/actions';
 
-const CATEGORY_TERMINAL = 'Terminal Access';
+export const CATEGORY_TERMINAL = 'Terminal Access';
 
 /*
  * Extended interface for terminal sessions.
@@ -39,7 +40,7 @@ function checkLiveTerminals(actionData: ActionData): ActionValidationResult {
     return actionValidationAccept();
 }
 
-export const terminalAccessHandlers = {
+export const terminalActions = {
     execute_in_terminal: {
         name: 'execute_in_terminal',
         description: 'Run a command directly in the terminal',
@@ -57,7 +58,9 @@ export const terminalAccessHandlers = {
         cancelEvents: [
             (actionData: ActionData) => notifyOnTerminalClose(actionData.params?.shell),
         ],
-        validators: [checkVirtualWorkspace, checkWorkspaceTrust],
+        validators: {
+            sync: [checkVirtualWorkspace, checkWorkspaceTrust],
+        },
         promptGenerator: (actionData: ActionData) => `run "${actionData.params?.command}" in the "${actionData.params?.shell}" shell.`,
         registerCondition: () => checkVirtualWorkspace().success && checkWorkspaceTrust().success,
     },
@@ -77,7 +80,9 @@ export const terminalAccessHandlers = {
         cancelEvents: [
             (actionData: ActionData) => notifyOnTerminalClose(actionData.params?.shell),
         ],
-        validators: [checkLiveTerminals, checkVirtualWorkspace, checkWorkspaceTrust],
+        validators: {
+            sync: [checkLiveTerminals, checkVirtualWorkspace, checkWorkspaceTrust],
+        },
         promptGenerator: (actionData: ActionData) => `kill the "${actionData.params?.shell}" shell.`,
         registerCondition: () => checkVirtualWorkspace().success && checkWorkspaceTrust().success,
     },
@@ -86,7 +91,9 @@ export const terminalAccessHandlers = {
         description: 'Get the list of terminal processes that are spawned.',
         category: CATEGORY_TERMINAL,
         handler: handleGetCurrentlyRunningShells,
-        validators: [checkVirtualWorkspace, checkWorkspaceTrust],
+        validators: {
+            sync: [checkVirtualWorkspace, checkWorkspaceTrust],
+        },
         promptGenerator: 'get the list of currently running shells.',
         registerCondition: () => checkVirtualWorkspace().success && checkWorkspaceTrust().success,
     },
@@ -94,9 +101,9 @@ export const terminalAccessHandlers = {
 
 export function addTerminalActions() {
     addActions([
-        terminalAccessHandlers.execute_in_terminal,
-        terminalAccessHandlers.kill_terminal_process,
-        terminalAccessHandlers.get_currently_running_shells,
+        terminalActions.execute_in_terminal,
+        terminalActions.kill_terminal_process,
+        terminalActions.get_currently_running_shells,
     ]);
 }
 
@@ -286,6 +293,7 @@ export function handleRunCommand(actionData: ActionData): string | undefined {
 
         proc.stdin.write(command + '\n');
         logOutput('DEBUG', `Sent command: ${command}`);
+        updateActionStatus(actionData, 'success', `Wrote to ${shellType}`);
 
     } else {
         // Process is already running; send the new command via stdin.
@@ -293,7 +301,9 @@ export function handleRunCommand(actionData: ActionData): string | undefined {
         if (shellProcess && shellProcess.stdin.writable) {
             shellProcess.stdin.write(command + '\n');
             logOutput('DEBUG', `Sent command: ${command}`);
+            updateActionStatus(actionData, 'success', `Wrote to ${shellType}`);
         } else {
+            updateActionStatus(actionData, 'failure', `Couldn't write to stdin of ${shellType}`);
             return 'Unable to write to shell process.';
         }
     }
@@ -312,6 +322,8 @@ export function handleKillTerminal(actionData: ActionData): string | undefined {
     session.terminal.dispose();
     NEURO.terminalRegistry.delete(shellType);
 
+    updateActionStatus(actionData, 'success', `Successfully killed ${shellType}`);
+
     // Notify Neuro and the user.
     return `Terminal session for shell type "${shellType}" has been terminated.`;
 }
@@ -320,7 +332,7 @@ export function handleKillTerminal(actionData: ActionData): string | undefined {
  * Returns a list of currently running shell types.
  * Each entry includes the shell type and its status.
  */
-export function handleGetCurrentlyRunningShells(_actionData: ActionData): string | undefined {
+export function handleGetCurrentlyRunningShells(actionData: ActionData): string | undefined {
     const runningShells: string[] = [];
 
     for (const [shellType, session] of NEURO.terminalRegistry.entries()) {
@@ -328,10 +340,14 @@ export function handleGetCurrentlyRunningShells(_actionData: ActionData): string
         runningShells.push(`Name: ${shellType}\nStatus: ${status}\n`);
     }
 
-    if (runningShells.length === 0)
+    if (runningShells.length === 0) {
+        updateActionStatus(actionData, 'failure', 'No shells open');
         return contextFailure('No running shells found.');
-    else
+    }
+    else {
+        updateActionStatus(actionData, 'success', `${runningShells.length} Neuro shells running`);
         return `Currently running shells: ${runningShells.join('\n')}`;
+    };
 }
 
 /**

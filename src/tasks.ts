@@ -12,11 +12,12 @@ import { ActionData, RCEAction, actionValidationAccept, actionValidationFailure 
 import { ACTIONS } from '@/config';
 import { notifyOnTaskFinish } from '@events/shells';
 import { addActions, getActions, removeActions } from './rce';
+import { updateActionStatus } from './events/actions';
 
-const CATEGORY_TASKS = 'Tasks';
+export const CATEGORY_TASKS = 'Tasks';
 const CATEGORY_REGISTERED_TASKS = 'Registered Tasks';
 
-export const taskHandlers = {
+export const taskActions = {
     // handleRunTask is used separately and not on this list
     terminate_task: {
         name: 'terminate_task',
@@ -27,10 +28,12 @@ export const taskHandlers = {
             notifyOnTaskFinish,
         ],
         promptGenerator: 'terminate the currently running task.',
-        validators: [checkVirtualWorkspace, checkWorkspaceTrust, () => NEURO.currentTaskExecution !== null
-            ? actionValidationAccept()
-            : actionValidationFailure('No task to terminate.'),
-        ],
+        validators: {
+            sync: [checkVirtualWorkspace, checkWorkspaceTrust, () => NEURO.currentTaskExecution !== null
+                ? actionValidationAccept()
+                : actionValidationFailure('No task to terminate.'),
+            ],
+        },
         registerCondition: () => checkVirtualWorkspace().success && checkWorkspaceTrust().success,
     },
 } satisfies Record<string, RCEAction>;
@@ -38,7 +41,7 @@ export const taskHandlers = {
 export function addTaskActions() {
     // TODO: Maybe only register once a task is running?
     addActions([
-        taskHandlers.terminate_task,
+        taskActions.terminate_task,
     ]);
     // Tasks are registered asynchronously in reloadTasks()
 }
@@ -46,23 +49,28 @@ export function addTaskActions() {
 export function handleTerminateTask(_actionData: ActionData): string | undefined {
     const exe = NEURO.currentTaskExecution!;
     NEURO.currentTaskExecution = null;
-    exe.terminate();
+    exe.task.terminate();
     logOutput('INFO', 'Terminated current task');
     return 'Terminated current task.';
 }
 
 export function handleRunTask(actionData: ActionData): string | undefined {
-    if (NEURO.currentTaskExecution !== null)
+    if (NEURO.currentTaskExecution !== null) {
+        updateActionStatus(actionData, 'failure', 'Task already running');
         return 'Action failed: A task is already running.';
+    }
 
     const task = NEURO.tasks.find(task => task.id === actionData.name);
-    if (task === undefined)
+    if (task === undefined) {
+        updateActionStatus(actionData, 'failure', 'Task not found');
         return `Action failed: Task ${actionData.name} not found.`;
+    }
 
     try {
         vscode.tasks.executeTask(task.task).then(value => {
             logOutput('INFO', `Executing task ${task.id}`);
-            NEURO.currentTaskExecution = value;
+            updateActionStatus(actionData, 'pending', 'Executing task...');
+            NEURO.currentTaskExecution = { task: value, data: actionData };
         });
         return `Executing task ${task.id}`;
     } catch (erm) {
@@ -72,19 +80,22 @@ export function handleRunTask(actionData: ActionData): string | undefined {
 }
 
 export function taskEndedHandler(event: vscode.TaskEndEvent) {
-    if (NEURO.connected && NEURO.client !== null && NEURO.currentTaskExecution !== null) {
-        if (event.execution === NEURO.currentTaskExecution) {
-            logOutput('INFO', 'Neuro task finished');
-            NEURO.currentTaskExecution = null;
-            vscode.commands.executeCommand('workbench.action.terminal.copyLastCommandOutput')
-                .then(
-                    _ => vscode.env.clipboard.readText(),
-                ).then(
-                    text => {
-                        const fence = getFence(text);
-                        NEURO.client?.sendContext(`Task finished! Output:\n\n${fence}\n${text}\n${fence}`);
-                    },
-                );
+    if (NEURO.currentTaskExecution) {
+        updateActionStatus(NEURO.currentTaskExecution.data, 'success', 'Task finished');
+        if (NEURO.connected && NEURO.client !== null) {
+            if (event.execution === NEURO.currentTaskExecution.task) {
+                logOutput('INFO', 'Neuro task finished');
+                NEURO.currentTaskExecution = null;
+                vscode.commands.executeCommand('workbench.action.terminal.copyLastCommandOutput')
+                    .then(
+                        _ => vscode.env.clipboard.readText(),
+                    ).then(
+                        text => {
+                            const fence = getFence(text);
+                            NEURO.client?.sendContext(`Task finished! Output:\n\n${fence}\n${text}\n${fence}`);
+                        },
+                    );
+            }
         }
     }
 }
@@ -129,7 +140,9 @@ export function reloadTasks() {
             category: CATEGORY_REGISTERED_TASKS,
             handler: handleRunTask,
             promptGenerator: `run the task: ${task.description}`,
-            validators: [checkVirtualWorkspace, checkWorkspaceTrust],
+            validators: {
+                sync: [checkVirtualWorkspace, checkWorkspaceTrust],
+            },
             registerCondition: () => checkVirtualWorkspace().success && checkWorkspaceTrust().success,
         })));
     });

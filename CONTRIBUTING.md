@@ -9,6 +9,28 @@ If you make a pull request that contributes code, please run `npm run lint src` 
 
 PRs should generally target the `dev` branch (or another feature branch) unless there is a specific reason to do otherwise (if so, please explain it in your PR).
 
+This repository accepts only TypeScript for the main code. Submissions in JavaScript to the core code will require a conversion to TypeScript first.
+
+## Views
+
+If you are creating a new view for this extension, there are a couple things to keep in mind.
+
+### View rendering (for webviews in view containers)
+
+Please use Preact when making webviews, as this leads to more maintainable code and access to some useful tools.
+When using Preact's `render` function to render your view at the end, please render your component in the element with an ID of `root`.
+
+Additionally, each view can acquire an API to communicate with the view provider and store state.
+You can only acquire that API once, so it is recommended to do this when the component is rendered.
+
+### View providers
+
+If you are using a webview view provider, please place your provider in a separate module in `src/views/`.
+Your view provider **must** extend the `BaseWebviewViewProvider` abstract class.
+Doing so offloads some logic off to the `BaseWebviewViewProvider` so that you can focus on actually creating logic for the view provider.
+
+An exception to this rule is if the view only displays something statically without any need for JavaScript.
+
 ## Debugging
 
 - Clone the repository

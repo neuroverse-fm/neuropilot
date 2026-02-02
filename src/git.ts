@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { EXTENSIONS, NEURO } from '@/constants';
+import { EXTENSIONS, NEURO, PROMISE_REJECTION_STRING } from '@/constants';
 import type { Change, CommitOptions, Commit, Repository, API, GitExtension } from '@typing/git.d';
 import { ForcePushMode } from '@typing/git.d';
 import { StatusStrings, RefTypeStrings } from '@typing/git_status';
@@ -9,8 +9,9 @@ import assert from 'node:assert';
 import { RCECancelEvent } from '@events/utils';
 import { JSONSchema7Definition } from 'json-schema';
 import { addActions, registerAction, reregisterAllActions, unregisterAction } from './rce';
+import { updateActionStatus } from '@events/actions';
 
-const CATEGORY_GIT = 'Git';
+export const CATEGORY_GIT = 'Git';
 
 // Get the Git extension
 let git: API | null = null;
@@ -32,9 +33,9 @@ export function getGitExtension() {
 
 function gitValidator(_actionData: ActionData): ActionValidationResult {
     if (!git)
-        return actionValidationFailure('Git extension not available.');
+        return actionValidationFailure('Git extension not available.', 'Git extension not activated');
     if (!repo)
-        return actionValidationFailure('You are not in a repository.');
+        return actionValidationFailure('You are not in a repository.', 'Not in a repo');
 
     return actionValidationAccept();
 }
@@ -42,7 +43,7 @@ function gitValidator(_actionData: ActionData): ActionValidationResult {
 async function neuroSafeValidationHelper(filePath: string): Promise<ActionValidationResult> {
     const absolutePath = getAbsoluteFilePath(filePath);
     if (!isPathNeuroSafe(absolutePath)) {
-        return actionValidationFailure('You are not allowed to access this file path.');
+        return actionValidationFailure('You are not allowed to access this file path.', 'Access to targeted file disallowed');
     }
 
     const fileUri = vscode.Uri.file(absolutePath);
@@ -50,13 +51,13 @@ async function neuroSafeValidationHelper(filePath: string): Promise<ActionValida
         await vscode.workspace.fs.stat(fileUri);
         return actionValidationAccept();
     } catch {
-        return actionValidationFailure(`File ${filePath} does not exist.`);
+        return actionValidationFailure(`File ${filePath} does not exist.`, 'Targeted file does not exist');
     }
 }
 
 async function filePathGitValidator(actionData: ActionData): Promise<ActionValidationResult> {
     if (actionData.params.filePath === '') {
-        return actionValidationFailure('No file path specified.', true);
+        return actionValidationRetry('No file path specified.');
     };
 
     const filePath: string | string[] = actionData.params?.filePath;
@@ -76,6 +77,7 @@ async function filePathGitValidator(actionData: ActionData): Promise<ActionValid
 
 function gitDiffValidator(actionData: ActionData): ActionValidationResult {
     const diffType: string = actionData.params?.diffType ?? 'diffWithHEAD';
+    const FAIL_NOTE = `Inputs did not match what was necessary to make a ${diffType}-type diff`;
     switch (diffType) {
         case 'diffWithHEAD':
             if (actionData.params?.ref1 || actionData.params?.ref2) {
@@ -86,7 +88,7 @@ function gitDiffValidator(actionData: ActionData): ActionValidationResult {
             if (actionData.params?.ref1 && actionData.params?.ref2) {
                 return actionValidationAccept('Only "ref1" is needed for the "diffWith" diff type.');
             } else if (!actionData.params?.ref1) {
-                return actionValidationRetry('"ref1" is required for the diff type of "diffWith"');
+                return actionValidationRetry('"ref1" is required for the diff type of "diffWith"', FAIL_NOTE);
             } else {
                 return actionValidationAccept();
             }
@@ -99,13 +101,13 @@ function gitDiffValidator(actionData: ActionData): ActionValidationResult {
             if (actionData.params?.ref1 && actionData.params?.ref2) {
                 return actionValidationAccept('Only "ref1" is needed for the "diffIndexWith" diff type.');
             } else if (!actionData.params?.ref1) {
-                return actionValidationRetry('"ref1" is required for the diff type of "diffIndexWith"');
+                return actionValidationRetry('"ref1" is required for the diff type of "diffIndexWith"', FAIL_NOTE);
             } else {
                 return actionValidationAccept();
             }
         case 'diffBetween':
             if (!actionData.params?.ref1 || !actionData.params?.ref2) {
-                return actionValidationRetry('"ref1" AND "ref2" is required for the diff type of "diffWith"');
+                return actionValidationRetry('"ref1" AND "ref2" is required for the diff type of "diffWith"', FAIL_NOTE);
             } else {
                 return actionValidationAccept();
             }
@@ -115,7 +117,7 @@ function gitDiffValidator(actionData: ActionData): ActionValidationResult {
             }
             return actionValidationAccept();
         default:
-            return actionValidationFailure('Unknown diff type.');
+            return actionValidationFailure('Unknown diff type.', 'Unknown/unhandled diff type specified');
     }
 }
 const commonCancelEvents: ((actionData: ActionData) => RCECancelEvent | null)[] = [
@@ -135,10 +137,12 @@ export const gitActions = {
         handler: handleNewGitRepo,
         promptGenerator: 'initialize a Git repository in the workspace.',
         cancelEvents: commonCancelEvents,
-        validators: [(_actionData: ActionData) => {
-            if (!git) return actionValidationFailure('Git extension not available.');
-            return actionValidationAccept();
-        }],
+        validators: {
+            sync: [(_actionData: ActionData) => {
+                if (!git) return actionValidationFailure('Git extension not available.', 'Git extension not activated');
+                return actionValidationAccept();
+            }],
+        },
     },
     add_file_to_git: {
         name: 'add_file_to_git',
@@ -161,7 +165,9 @@ export const gitActions = {
         handler: handleAddFileToGit,
         cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `add the file "${actionData.params.filePath}" to the staging area.`,
-        validators: [gitValidator, filePathGitValidator],
+        validators: {
+            sync: [gitValidator, filePathGitValidator],
+        },
         registerCondition: () => !!repo,
     },
     make_git_commit: {
@@ -175,7 +181,7 @@ export const gitActions = {
                 options: {
                     type: 'array',
                     description: 'Extra options you can choose for committing.',
-                    items: { type: 'string', enum: ['signoff', 'verbose', 'amend'] },
+                    items: { type: 'string', enum: ['signoff', 'verbose', 'amend'], uniqueItems: true },
                 },
             },
             required: ['message'],
@@ -184,7 +190,9 @@ export const gitActions = {
         handler: handleMakeGitCommit,
         cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `commit changes with the message "${actionData.params.message}".`,
-        validators: [gitValidator],
+        validators: {
+            sync: [gitValidator],
+        },
         registerCondition: () => !!repo,
     },
     merge_to_current_branch: {
@@ -202,7 +210,9 @@ export const gitActions = {
         handler: handleGitMerge,
         cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `merge "${actionData.params.ref_to_merge}" into the current branch.`,
-        validators: [gitValidator],
+        validators: {
+            sync: [gitValidator],
+        },
         registerCondition: () => !!repo,
     },
     git_status: {
@@ -212,7 +222,9 @@ export const gitActions = {
         handler: handleGitStatus,
         cancelEvents: commonCancelEvents,
         promptGenerator: 'get the repository\'s Git status.',
-        validators: [gitValidator],
+        validators: {
+            sync: [gitValidator],
+        },
         registerCondition: () => !!repo,
     },
     remove_file_from_git: {
@@ -236,7 +248,9 @@ export const gitActions = {
         handler: handleRemoveFileFromGit,
         cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `remove the file "${actionData.params.filePath}" from the staging area.`,
-        validators: [gitValidator, filePathGitValidator],
+        validators: {
+            sync: [gitValidator, filePathGitValidator],
+        },
         registerCondition: () => !!repo,
     },
     delete_git_branch: {
@@ -255,7 +269,9 @@ export const gitActions = {
         handler: handleDeleteGitBranch,
         cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `delete the branch "${actionData.params.branchName}".`,
-        validators: [gitValidator],
+        validators: {
+            sync: [gitValidator],
+        },
         registerCondition: () => !!repo,
     },
     switch_git_branch: {
@@ -273,7 +289,9 @@ export const gitActions = {
         handler: handleSwitchGitBranch,
         cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `switch to the branch "${actionData.params.branchName}".`,
-        validators: [gitValidator],
+        validators: {
+            sync: [gitValidator],
+        },
         registerCondition: () => !!repo,
     },
     new_git_branch: {
@@ -291,7 +309,9 @@ export const gitActions = {
         handler: handleNewGitBranch,
         cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `create a new branch "${actionData.params.branchName}".`,
-        validators: [gitValidator],
+        validators: {
+            sync: [gitValidator],
+        },
         registerCondition: () => !!repo,
     },
     diff_files: {
@@ -313,7 +333,7 @@ export const gitActions = {
                     properties: {
                         ref1: { type: 'string', description: 'The ref to diff with.' },
                         filePath: { type: 'string', description: 'A file to run diffs against. If omitted, will diff the entire ref.' },
-                        diffType: { type: 'string', enum: ['diffWith', 'diffIndexWith'], description: 'The type of diff to run.'},
+                        diffType: { type: 'string', enum: ['diffWith', 'diffIndexWith'], description: 'The type of diff to run.' },
                     },
                     required: ['ref1', 'diffType'],
                     additionalProperties: false,
@@ -346,7 +366,9 @@ export const gitActions = {
         handler: handleDiffFiles,
         cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `obtain ${actionData.params?.filePath ? `"${actionData.params.filePath}"'s` : 'a'} Git diff${actionData.params?.ref1 && actionData.params?.ref2 ? ` between ${actionData.params.ref1} and ${actionData.params.ref2}` : actionData.params?.ref1 ? ` at ref ${actionData.params.ref1}` : ''}${actionData.params?.diffType ? ` (of type "${actionData.params.diffType}")` : ''}.`,
-        validators: [gitValidator, filePathGitValidator, gitDiffValidator],
+        validators: {
+            sync: [gitValidator, filePathGitValidator, gitDiffValidator],
+        },
         registerCondition: () => !!repo,
     },
     git_log: {
@@ -367,7 +389,9 @@ export const gitActions = {
         handler: handleGitLog,
         cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `get the ${actionData.params?.log_limit ? `${actionData.params.log_limit} most recent commits in the ` : ''}Git log.`,
-        validators: [gitValidator],
+        validators: {
+            sync: [gitValidator],
+        },
         registerCondition: () => !!repo,
     },
     git_blame: {
@@ -385,7 +409,9 @@ export const gitActions = {
         handler: handleGitBlame,
         cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `get the Git blame for the file "${actionData.params.filePath}".`,
-        validators: [gitValidator, filePathGitValidator],
+        validators: {
+            sync: [gitValidator, filePathGitValidator],
+        },
         registerCondition: () => !!repo,
     },
 
@@ -406,13 +432,15 @@ export const gitActions = {
         handler: handleTagHEAD,
         cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `tag the current commit with the name "${actionData.params.name}" and associate it with the "${actionData.params.upstream}" remote.`,
-        validators: [gitValidator, (actionData: ActionData) => {
-            const tagPattern = /^(?![/.@])(?!.*[/.@]$)(?!.*[/.@]{2,})(?:[a-z]+(?:[/.@][a-z]+)*)$/;
-            if (!tagPattern.test(actionData.params.name)) {
-                return actionValidationFailure('The Git tag does not conform to Git\'s tag naming rules.');
-            }
-            return actionValidationAccept();
-        }],
+        validators: {
+            sync: [gitValidator, (actionData: ActionData) => {
+                const tagPattern = /^(?![/.@])(?!.*[/.@]$)(?!.*[/.@]{2,})(?:[a-z]+(?:[/.@][a-z]+)*)$/;
+                if (!tagPattern.test(actionData.params.name)) {
+                    return actionValidationFailure('The Git tag does not conform to Git\'s tag naming rules.');
+                }
+                return actionValidationAccept();
+            }],
+        },
         registerCondition: () => !!repo,
     },
     delete_tag: {
@@ -430,7 +458,9 @@ export const gitActions = {
         handler: handleDeleteTag,
         cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `delete the tag "${actionData.params.name}".`,
-        validators: [gitValidator],
+        validators: {
+            sync: [gitValidator],
+        },
         registerCondition: () => !!repo,
     },
 
@@ -451,7 +481,9 @@ export const gitActions = {
         handler: handleSetGitConfig,
         cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `set the Git config key "${actionData.params.key}" to "${actionData.params.value}".`,
-        validators: [gitValidator],
+        validators: {
+            sync: [gitValidator],
+        },
         registerCondition: () => !!repo,
     },
     get_git_config: {
@@ -468,7 +500,9 @@ export const gitActions = {
         handler: handleGetGitConfig,
         cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => actionData.params?.key ? `get the Git config key "${actionData.params.key}".` : 'get the Git config.',
-        validators: [gitValidator],
+        validators: {
+            sync: [gitValidator],
+        },
         registerCondition: () => !!repo,
     },
 
@@ -496,7 +530,9 @@ export const gitActions = {
                 return `fetch commits from ${actionData.params.branchName}.`;
             return 'fetch commits.';
         },
-        validators: [gitValidator],
+        validators: {
+            sync: [gitValidator],
+        },
         registerCondition: () => !!repo,
     },
     pull_git_commits: {
@@ -506,7 +542,9 @@ export const gitActions = {
         handler: handlePullGitCommits,
         cancelEvents: commonCancelEvents,
         promptGenerator: 'pull commits.',
-        validators: [gitValidator],
+        validators: {
+            sync: [gitValidator],
+        },
         registerCondition: () => !!repo,
     },
     push_git_commits: {
@@ -534,7 +572,9 @@ export const gitActions = {
                 return `${force}push commits to ${actionData.params.branchName}.`;
             return `${force}push commits.`;
         },
-        validators: [gitValidator],
+        validators: {
+            sync: [gitValidator],
+        },
         registerCondition: () => !!repo,
     },
 
@@ -555,7 +595,9 @@ export const gitActions = {
         handler: handleAddGitRemote,
         cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `add a new remote "${actionData.params.remoteName}" with URL "${actionData.params.remoteURL}".`,
-        validators: [gitValidator],
+        validators: {
+            sync: [gitValidator],
+        },
         registerCondition: () => !!repo,
     },
     remove_git_remote: {
@@ -573,7 +615,9 @@ export const gitActions = {
         handler: handleRemoveGitRemote,
         cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `remove the remote "${actionData.params.remoteName}".`,
-        validators: [gitValidator],
+        validators: {
+            sync: [gitValidator],
+        },
         registerCondition: () => !!repo,
     },
     rename_git_remote: {
@@ -592,7 +636,9 @@ export const gitActions = {
         handler: handleRenameGitRemote,
         cancelEvents: commonCancelEvents,
         promptGenerator: (actionData: ActionData) => `rename the remote "${actionData.params.oldRemoteName}" to "${actionData.params.newRemoteName}".`,
-        validators: [gitValidator],
+        validators: {
+            sync: [gitValidator],
+        },
         registerCondition: () => !!repo,
     },
     // Special: Only registered during a merge conflict
@@ -603,7 +649,9 @@ export const gitActions = {
         handler: handleAbortMerge,
         cancelEvents: commonCancelEvents,
         promptGenerator: 'abort the current merge operation.',
-        validators: [gitValidator],
+        validators: {
+            sync: [gitValidator],
+        },
         autoRegister: false,
     },
 } satisfies Record<string, RCEAction>;
@@ -662,15 +710,17 @@ export function addGitActions() {
     }
 }
 
-/**
+/*
  * Actions with the Git repo
  * Requires neuropilot.permission.gitConfig to be enabled.
  */
 
-export function handleNewGitRepo(_actionData: ActionData): string | undefined {
+export function handleNewGitRepo(actionData: ActionData): string | undefined {
     const workspaceFolders = vscode.workspace.workspaceFolders;
-    if (!workspaceFolders || workspaceFolders.length === 0)
+    if (!workspaceFolders || workspaceFolders.length === 0) {
+        updateActionStatus(actionData, 'failure', 'Not in a workspace');
         return contextFailure('No workspace folder is open.');
+    }
 
     const folderPath = workspaceFolders[0].uri.fsPath;
 
@@ -678,9 +728,11 @@ export function handleNewGitRepo(_actionData: ActionData): string | undefined {
         repo = git!.repositories[0]; // Update the repo reference to the new repository, just in case
         reregisterAllActions(true);
         NEURO.client?.sendContext('Initialized a new Git repository in the workspace folder. You should now be able to use git commands.');
+        updateActionStatus(actionData, 'success', 'Repo initialized');
     }, (erm: string) => {
         NEURO.client?.sendContext('Failed to initialize Git repository');
         logOutput('ERROR', `Failed to initialize Git repository: ${erm}`);
+        updateActionStatus(actionData, 'failure', PROMISE_REJECTION_STRING);
     });
 }
 
@@ -693,15 +745,18 @@ export function handleGetGitConfig(actionData: ActionData): string | undefined {
             NEURO.client?.sendContext(`Git config:\n${configs.map((config) =>
                 `- ${config.key}: ${config.value}`,
             ).join('\n')}`);
+            updateActionStatus(actionData, 'success', `Sent ${configs.length} repo Git config(s)`);
             return;
         });
     }
     else {
         repo.getConfig(configKey).then((configValue: string) => {
             NEURO.client?.sendContext(`Git config key "${configKey}": ${configValue}`);
+            updateActionStatus(actionData, 'success', `Sent repo config value for key "${configKey}"`);
         }, (erm: string) => {
             NEURO.client?.sendContext(`Failed to get Git config key "${configKey}"`);
             logOutput('ERROR', `Failed to get Git config key "${configKey}": ${erm}`);
+            updateActionStatus(actionData, 'failure', PROMISE_REJECTION_STRING);
         });
     }
 
@@ -715,15 +770,17 @@ export function handleSetGitConfig(actionData: ActionData): string | undefined {
 
     repo.setConfig(configKey, configValue).then(() => {
         NEURO.client?.sendContext(`Set Git config key "${configKey}" to: ${configValue}`);
+        updateActionStatus(actionData, 'success', `Wrote new repo config value of "${configKey}"`);
     }, (erm: string) => {
         NEURO.client?.sendContext(`Failed to set Git config key "${configKey}"`);
         logOutput('ERROR', `Failed to set Git config key "${configKey}": ${erm}`);
+        updateActionStatus(actionData, 'failure', PROMISE_REJECTION_STRING);
     });
 
     return;
 }
 
-/**
+/*
  * Actions with Git branches
  */
 
@@ -733,9 +790,11 @@ export function handleNewGitBranch(actionData: ActionData): string | undefined {
 
     repo.createBranch(branchName, true).then(() => {
         NEURO.client?.sendContext(`Created and switched to new branch ${branchName}.`);
+        updateActionStatus(actionData, 'success', `Branch "${branchName}" created`);
     }, (erm: string) => {
         NEURO.client?.sendContext(`Failed to create branch ${branchName}`);
         logOutput('ERROR', `Failed to create branch: ${erm}`);
+        updateActionStatus(actionData, 'failure', PROMISE_REJECTION_STRING);
     });
 
     return;
@@ -747,9 +806,11 @@ export function handleSwitchGitBranch(actionData: ActionData): string | undefine
 
     repo.checkout(branchName).then(() => {
         NEURO.client?.sendContext(`Switched to branch ${branchName}.`);
+        updateActionStatus(actionData, 'success', `Branch "${branchName}" checked out`);
     }, (erm: string) => {
         NEURO.client?.sendContext(`Failed to switch to branch ${branchName}`);
         logOutput('ERROR', `Failed to switch branch: ${erm}`);
+        updateActionStatus(actionData, 'failure', PROMISE_REJECTION_STRING);
     });
 
     return;
@@ -762,15 +823,17 @@ export function handleDeleteGitBranch(actionData: ActionData): string | undefine
 
     repo.deleteBranch(branchName, forceDelete).then(() => {
         NEURO.client?.sendContext(`Deleted branch ${branchName}.`);
+        updateActionStatus(actionData, 'success', `Branch "${branchName}"${forceDelete ? ' forcibly' : ''} deleted`);
     }, (erm: string) => {
         NEURO.client?.sendContext(`Failed to delete branch "${branchName}".${forceDelete === false ? '\nEnsure the branch is merged before deleting, or force delete it to discard changes.' : ''}`);
         logOutput('ERROR', `Failed to delete branch: ${erm}`);
+        updateActionStatus(actionData, 'failure', PROMISE_REJECTION_STRING);
     });
 
     return;
 }
 
-/**
+/*
  * Actions with the Git index
  */
 
@@ -781,7 +844,7 @@ interface StateStringProps {
     status: string
 }
 
-export function handleGitStatus(__actionData: ActionData): string | undefined {
+export function handleGitStatus(actionData: ActionData): string | undefined {
     assert(repo);
 
     repo.status().then(() => {
@@ -852,9 +915,11 @@ export function handleGitStatus(__actionData: ActionData): string | undefined {
         const stateStringArray: string[] = [mergeStateString, HEADStateString];
 
         NEURO.client?.sendContext(`Git status:\n\n${stateStringArray.join('\n')}`);
+        updateActionStatus(actionData, 'success', `${repo.state.indexChanges.length + repo.state.workingTreeChanges.length + repo.state.mergeChanges.length} changes + more info sent`);
     }, (erm: string) => {
         NEURO.client?.sendContext('Failed to get Git repository status');
         logOutput('ERROR', `Failed to get Git status: ${erm}`);
+        updateActionStatus(actionData, 'failure', PROMISE_REJECTION_STRING);
     });
 
     return;
@@ -879,9 +944,11 @@ export function handleAddFileToGit(actionData: ActionData): string | undefined {
 
     repo.add(absolutePaths).then(() => {
         NEURO.client?.sendContext(`Added files "${filePath.join(', ')}" to staging area.`);
+        updateActionStatus(actionData, 'success', `Added ${filePath.length} files to staging`);
     }, (erm: string) => {
         NEURO.client?.sendContext('Adding files to staging area failed');
         logOutput('ERROR', `Failed to git add: ${erm}\nTried to add ${absolutePaths}`);
+        updateActionStatus(actionData, 'failure', PROMISE_REJECTION_STRING);
     });
     return;
 }
@@ -897,9 +964,11 @@ export function handleRemoveFileFromGit(actionData: ActionData): string | undefi
 
     repo.revert(absolutePaths).then(() => {
         NEURO.client?.sendContext(`Removed "${filePath.join(', ')}" from the index.`);
+        updateActionStatus(actionData, 'success', `${absolutePaths.length} files removed from staging`);
     }, (erm: string) => {
         NEURO.client?.sendContext('Removing files from the index failed');
         logOutput('ERROR', `Git remove failed: ${erm}\nTried to remove ${absolutePaths}`);
+        updateActionStatus(actionData, 'failure', PROMISE_REJECTION_STRING);
     });
     return;
 }
@@ -934,16 +1003,20 @@ export function handleMakeGitCommit(actionData: ActionData): string | undefined 
                     break;
             }
         });
-        if (invalidCommitOptionCheck === true)
+        if (invalidCommitOptionCheck === true) {
+            updateActionStatus(actionData, 'failure', `${invalidCommitOptions.length} invalid commit options`);
             return contextFailure(`Invalid commit options: ${invalidCommitOptions.join(', ')}`);
+        }
     }
 
     repo.inputBox.value = message;
     repo.commit(message, ExtraCommitOptions).then(() => {
         NEURO.client?.sendContext(`Committed with message: "${message}"\nCommit options used: ${commitOptions ? commitOptions : 'None'}`);
+        updateActionStatus(actionData, 'success', `${ExtraCommitOptions?.amend ? 'Amended c' : 'C'}ommit applied${ExtraCommitOptions?.signoff ? ' with signoff' : ''}`);
     }, (erm: string) => {
         NEURO.client?.sendContext('Failed to record commit');
         logOutput('ERROR', `Failed to commit: ${erm}`);
+        updateActionStatus(actionData, 'failure', PROMISE_REJECTION_STRING);
     });
 
     return;
@@ -955,26 +1028,33 @@ export function handleGitMerge(actionData: ActionData): string | undefined {
 
     repo.merge(refToMerge).then(() => {
         NEURO.client?.sendContext(`Cleanly merged ${refToMerge} into the current branch.`);
+        updateActionStatus(actionData, 'success', `Cleanly merged ${refToMerge}`);
     }, (erm: string) => {
         if (repo?.state.mergeChanges.some(() => true)) {
             registerAction(gitActions.abort_merge.name);
+            NEURO.client?.sendContext(`Encountered merge conflicts while merging ref "${refToMerge}", fix and execute the merge action again once resolved`);
+            updateActionStatus(actionData, 'success', `Merged ${refToMerge} - conflict resolution required`);
+        } else {
+            NEURO.client?.sendContext(`Couldn't merge ${refToMerge}.`);
+            logOutput('ERROR', `Encountered an error when merging ${refToMerge}: ${erm}`);
+            updateActionStatus(actionData, 'failure', PROMISE_REJECTION_STRING);
         }
-        NEURO.client?.sendContext(`Couldn't merge ${refToMerge}: ${erm}`);
-        logOutput('ERROR', `Encountered an error when merging ${refToMerge}: ${erm}`);
     });
 
     return;
 }
 
-export function handleAbortMerge(_actionData: ActionData): string | undefined {
+export function handleAbortMerge(actionData: ActionData): string | undefined {
     assert(repo);
 
     repo.mergeAbort().then(() => {
         unregisterAction(gitActions.abort_merge.name);
         NEURO.client?.sendContext('Merge aborted.');
+        updateActionStatus(actionData, 'success', 'Aborted merging');
     }, (erm: string) => {
         NEURO.client?.sendContext("Couldn't abort merging!");
         logOutput('ERROR', `Failed to abort merge: ${erm}`);
+        updateActionStatus(actionData, 'failure', PROMISE_REJECTION_STRING);
     });
 
     return;
@@ -995,10 +1075,12 @@ export function handleDiffFiles(actionData: ActionData): string | undefined {
             repo.diffWithHEAD(diffThisFile)
                 .then((diff: string) => {
                     NEURO.client?.sendContext(`Diff with HEAD for ${filePath || 'workspace root'}:\n${diff}`);
+                    updateActionStatus(actionData, 'success', 'Sent diff with HEAD');
                 })
                 .catch((erm: string) => {
                     NEURO.client?.sendContext(`Failed to get diff with HEAD for ${filePath || 'workspace root'}.`);
                     logOutput('ERROR', `Failed to get diff with HEAD for ${filePath || 'workspace root'}: ${erm}`);
+                    updateActionStatus(actionData, 'failure', PROMISE_REJECTION_STRING);
                 });
             break;
 
@@ -1007,13 +1089,16 @@ export function handleDiffFiles(actionData: ActionData): string | undefined {
                 repo.diffWith(ref1, diffThisFile)
                     .then((diff: string) => {
                         NEURO.client?.sendContext(`Diff with ref "${ref1}" for ${filePath || 'workspace root'}:\n${diff}`);
+                        updateActionStatus(actionData, 'success', `Sent diff with ref "${ref1}"`);
                     })
                     .catch((erm: string) => {
                         NEURO.client?.sendContext(`Failed to get diff with ref "${ref1}" for ${filePath || 'workspace root'}.`);
                         logOutput('ERROR', `Failed to get diff with ref "${ref1}" for ${filePath || 'workspace root'}: ${erm}`);
+                        updateActionStatus(actionData, 'failure', PROMISE_REJECTION_STRING);
                     });
             } else {
                 NEURO.client?.sendContext('Ref1 is required for diffWith.');
+                updateActionStatus(actionData, 'failure', 'Missing ref1 parameter');
             }
             break;
 
@@ -1021,10 +1106,12 @@ export function handleDiffFiles(actionData: ActionData): string | undefined {
             repo.diffIndexWithHEAD(diffThisFile)
                 .then((diff: string) => {
                     NEURO.client?.sendContext(`Diff index with HEAD for ${filePath || 'workspace root'}:\n${diff}`);
+                    updateActionStatus(actionData, 'success', 'Sent diff index with HEAD');
                 })
                 .catch((erm: string) => {
                     NEURO.client?.sendContext(`Failed to get diff index with HEAD for ${filePath || 'workspace root'}.`);
                     logOutput('ERROR', `Failed to get diff index with HEAD for ${filePath || 'workspace root'}: ${erm}`);
+                    updateActionStatus(actionData, 'failure', PROMISE_REJECTION_STRING);
                 });
             break;
 
@@ -1033,13 +1120,16 @@ export function handleDiffFiles(actionData: ActionData): string | undefined {
                 repo.diffIndexWith(ref1, diffThisFile)
                     .then((diff: string) => {
                         NEURO.client?.sendContext(`Diff index with ref "${ref1}" for ${filePath || 'workspace root'}:\n${diff}`);
+                        updateActionStatus(actionData, 'success', `Sent diff index with ref "${ref1}"`);
                     })
                     .catch((erm: string) => {
                         NEURO.client?.sendContext(`Failed to get diff index with ref "${ref1}" for ${filePath || 'workspace root'}.`);
                         logOutput('ERROR', `Failed to get diff index with ref "${ref1}" for ${filePath || 'workspace root'}: ${erm}`);
+                        updateActionStatus(actionData, 'failure', PROMISE_REJECTION_STRING);
                     });
             } else {
                 NEURO.client?.sendContext('Ref1 is required for diffIndexWith.');
+                updateActionStatus(actionData, 'failure', 'Missing ref1 parameter');
             }
             break;
 
@@ -1048,13 +1138,16 @@ export function handleDiffFiles(actionData: ActionData): string | undefined {
                 repo.diffBetween(ref1, ref2, diffThisFile)
                     .then((diff: string) => {
                         NEURO.client?.sendContext(`Diff between refs "${ref1}" and "${ref2}" for ${filePath || 'workspace root'}:\n${diff}`);
+                        updateActionStatus(actionData, 'success', `Sent diff between "${ref1}" and "${ref2}"`);
                     })
                     .catch((erm: string) => {
                         NEURO.client?.sendContext(`Failed to get diff between refs "${ref1}" and "${ref2}" for ${filePath || 'workspace root'}.`);
                         logOutput('ERROR', `Failed to get diff between refs "${ref1}" and "${ref2}" for ${filePath || 'workspace root'}: ${erm}`);
+                        updateActionStatus(actionData, 'failure', PROMISE_REJECTION_STRING);
                     });
             } else {
                 NEURO.client?.sendContext('Both ref1 and ref2 are required for diffBetween.');
+                updateActionStatus(actionData, 'failure', 'Missing ref1 or ref2 parameter');
             }
             break;
 
@@ -1062,15 +1155,18 @@ export function handleDiffFiles(actionData: ActionData): string | undefined {
             repo.diffWithHEAD(diffThisFile)
                 .then((diff: string) => {
                     NEURO.client?.sendContext(`Full diff for workspace root:\n${diff}`);
+                    updateActionStatus(actionData, 'success', 'Sent full diff');
                 })
                 .catch((erm: string) => {
                     NEURO.client?.sendContext('Failed to get full diff for workspace root.');
                     logOutput('ERROR', `Failed to get full diff for workspace root: ${erm}`);
+                    updateActionStatus(actionData, 'failure', PROMISE_REJECTION_STRING);
                 });
             break;
 
         default:
             NEURO.client?.sendContext(`Invalid diffType "${diffType}".`);
+            updateActionStatus(actionData, 'failure', `Invalid diffType "${diffType}"`);
     }
 
     return;
@@ -1092,9 +1188,11 @@ export function handleGitLog(actionData: ActionData): string | undefined {
         ).join('\n');
 
         NEURO.client?.sendContext(`Commit log:\n${commitLog}`);
+        updateActionStatus(actionData, 'success', `Sent ${commits.length} commit${commits.length !== 1 ? 's' : ''}`);
     }, (erm: string) => {
         NEURO.client?.sendContext('Failed to get git log.');
         logOutput('ERROR', `Failed to get git log: ${erm}`);
+        updateActionStatus(actionData, 'failure', PROMISE_REJECTION_STRING);
     });
 
     return;
@@ -1112,9 +1210,11 @@ export function handleGitBlame(actionData: ActionData): string | undefined {
 
     repo.blame(absolutePath).then((blame: string) => {
         NEURO.client?.sendContext(`Blame attribution for ${filePath}:\n${blame}`);
+        updateActionStatus(actionData, 'success', `Sent blame for ${filePath}`);
     }, (erm: string) => {
         NEURO.client?.sendContext('Failed to get blame attribution.');
         logOutput('ERROR', `Error getting blame attribs for ${filePath}: ${erm}`);
+        updateActionStatus(actionData, 'failure', PROMISE_REJECTION_STRING);
     });
 
     return;
@@ -1132,9 +1232,11 @@ export function handleTagHEAD(actionData: ActionData): string | undefined {
 
     repo.tag(name, upstream).then(() => {
         NEURO.client?.sendContext(`Tag ${name} created for ${upstream}.`);
+        updateActionStatus(actionData, 'success', `Tag "${name}" created`);
     }, (erm: string) => {
         NEURO.client?.sendContext('There was an error during tagging.');
         logOutput('ERROR', `Error trying to tag: ${erm}`);
+        updateActionStatus(actionData, 'failure', PROMISE_REJECTION_STRING);
     });
 
     return;
@@ -1146,15 +1248,17 @@ export function handleDeleteTag(actionData: ActionData): string | undefined {
 
     repo.deleteTag(name).then(() => {
         NEURO.client?.sendContext(`Deleted tag ${name}`);
+        updateActionStatus(actionData, 'success', `Tag "${name}" deleted`);
     }, (erm: string) => {
         NEURO.client?.sendContext(`Couldn't delete tag "${name}"`);
         logOutput('ERROR', `Failed to delete tag ${name}: ${erm}`);
+        updateActionStatus(actionData, 'failure', PROMISE_REJECTION_STRING);
     });
 
     return;
 }
 
-/**
+/*
  * Actions with Git remotes
  * Requires neuropilot.permission.gitRemotes to be enabled.
  */
@@ -1166,22 +1270,26 @@ export function handleFetchGitCommits(actionData: ActionData): string | undefine
 
     repo.fetch(remoteName, branchName).then(() => {
         NEURO.client?.sendContext(`Fetched commits from ${remoteName ? 'remote ' + remoteName : 'default remote'}${branchName ? `, branch "${branchName}"` : ''}.`);
+        updateActionStatus(actionData, 'success', `Fetched from ${remoteName || 'default remote'}`);
     }, (erm: string) => {
         NEURO.client?.sendContext(`Failed to fetch commits from remote "${remoteName}"`);
         logOutput('ERROR', `Failed to fetch commits: ${erm}`);
+        updateActionStatus(actionData, 'failure', PROMISE_REJECTION_STRING);
     });
 
     return;
 }
 
-export function handlePullGitCommits(_actionData: ActionData): string | undefined {
+export function handlePullGitCommits(actionData: ActionData): string | undefined {
     assert(repo);
 
     repo.pull().then(() => {
         NEURO.client?.sendContext('Pulled commits from remote.');
+        updateActionStatus(actionData, 'success', 'Pulled commits');
     }, (erm: string) => {
         NEURO.client?.sendContext(`Failed to pull commits from remote: ${erm}`);
         logOutput('ERROR', `Failed to pull commits: ${erm}`);
+        updateActionStatus(actionData, 'failure', PROMISE_REJECTION_STRING);
     });
 
     return;
@@ -1197,15 +1305,17 @@ export function handlePushGitCommits(actionData: ActionData): string | undefined
 
     repo.push(remoteName, branchName, true, forcePushMode).then(() => {
         NEURO.client?.sendContext(`Pushed commits${remoteName ? ` to remote "${remoteName}"` : ''}${branchName ? `, branch "${branchName}"` : ''}.${forcePush === true ? ' (forced push)' : ''}`);
+        updateActionStatus(actionData, 'success', `Pushed to ${remoteName || 'remote'}${forcePush ? ' (forced)' : ''}`);
     }, (erm: string) => {
         NEURO.client?.sendContext(`Failed to push commits to remote "${remoteName}": ${erm}`);
         logOutput('ERROR', `Failed to push commits: ${erm}`);
+        updateActionStatus(actionData, 'failure', PROMISE_REJECTION_STRING);
     });
 
     return;
 }
 
-/**
+/*
  * THESE ACTIONS ARE CONSIDERED DANGEROUS REMOTE OPERATIONS
  * Requires neuropilot.permission.editRemoteData to be enabled, IN ADDITION to neuropilot.permission.gitRemotes.
  */
@@ -1218,9 +1328,11 @@ export function handleAddGitRemote(actionData: ActionData): string | undefined {
 
     repo.addRemote(remoteName, remoteUrl).then(() => {
         NEURO.client?.sendContext(`Added remote "${remoteName}" with URL: ${remoteUrl}`);
+        updateActionStatus(actionData, 'success', `Remote "${remoteName}" added`);
     }, (erm: string) => {
         NEURO.client?.sendContext(`Failed to add remote "${remoteName}"`);
         logOutput('ERROR', `Failed to add remote: ${erm}`);
+        updateActionStatus(actionData, 'failure', PROMISE_REJECTION_STRING);
     });
 
     return;
@@ -1232,9 +1344,11 @@ export function handleRemoveGitRemote(actionData: ActionData): string | undefine
 
     repo.removeRemote(remoteName).then(() => {
         NEURO.client?.sendContext(`Removed remote "${remoteName}".`);
+        updateActionStatus(actionData, 'success', `Remote "${remoteName}" removed`);
     }, (erm: string) => {
         NEURO.client?.sendContext(`Failed to remove remote "${remoteName}"`);
         logOutput('ERROR', `Failed to remove remote: ${erm}`);
+        updateActionStatus(actionData, 'failure', PROMISE_REJECTION_STRING);
     });
 
     return;
@@ -1247,9 +1361,11 @@ export function handleRenameGitRemote(actionData: ActionData): string | undefine
 
     repo.renameRemote(oldRemoteName, newRemoteName).then(() => {
         NEURO.client?.sendContext(`Renamed remote "${oldRemoteName}" to "${newRemoteName}".`);
+        updateActionStatus(actionData, 'success', `Remote "${oldRemoteName}" renamed to "${newRemoteName}"`);
     }, (erm: string) => {
         NEURO.client?.sendContext(`Failed to rename remote "${oldRemoteName}" to "${newRemoteName}"`);
         logOutput('ERROR', `Failed to rename remote ${oldRemoteName}: ${erm}`);
+        updateActionStatus(actionData, 'failure', PROMISE_REJECTION_STRING);
     });
 
     return;

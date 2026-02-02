@@ -21,5 +21,5 @@ suite('Web Extension Tests', () => {
         assert.ok(acceptable.has(workspaceFolder.name), `Workspace name should be one of ${Array.from(acceptable).join(', ')}`);
     });
 
-    // We also need a test to ensure that polyfilled modules (i.e. assert) are successfully bundled.
+    // TODO: We also need a test to ensure that polyfilled modules (i.e. assert) are successfully bundled.
 });

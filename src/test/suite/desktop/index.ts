@@ -1,6 +1,49 @@
-import Mocha from 'mocha';
+// The VS Code test CLI loads this file directly and sets up Mocha globals.
+// Import suites here so they register with the CLI's Mocha instance.
+import * as vscode from 'vscode';
+import { NeuroClient } from 'neuro-game-sdk';
+import { NEURO } from '@/constants';
 
-// Extension unit tests
+if (globalThis?.process?.env?.NEUROPILOT_TEST === 'true') {
+    const originalError = console.error;
+    const originalWarn = console.warn;
+    const isNoise = (message: string) =>
+        message.includes('WebSocket is not open') ||
+        message.includes('DisposableStore that has already been disposed');
+    console.error = (...args) => {
+        const message = args.map(String).join(' ');
+        if (isNoise(message)) return;
+        originalError(...args);
+    };
+    console.warn = (...args) => {
+        const message = args.map(String).join(' ');
+        if (isNoise(message)) return;
+        originalWarn(...args);
+    };
+}
+
+const globalWithTest = globalThis as typeof globalThis & { NEUROPILOT_TEST?: boolean };
+globalWithTest.NEUROPILOT_TEST = true;
+NeuroClient.prototype.sendContext = () => {};
+NeuroClient.prototype.registerActions = () => {};
+NeuroClient.prototype.unregisterActions = () => {};
+NeuroClient.prototype.sendActionResult = () => {};
+NeuroClient.prototype.onAction = () => {};
+
+if (!NEURO.outputChannel) {
+    NEURO.outputChannel = vscode.window.createOutputChannel('Neuropilot Test');
+}
+if (!NEURO.client) {
+    NEURO.client = {
+        sendContext: () => {},
+        disconnect: () => {},
+        registerActions: () => {},
+        unregisterActions: () => {},
+        sendActionResult: () => {},
+        onAction: () => {},
+    } as unknown as NeuroClient;
+}
+
 import './extension.test';
 import '../file_actions.test';
 import '../utils.test';
@@ -13,7 +56,6 @@ import '../../unit-test/delete_lines.simple.test';
 import '../../unit-test/delete_text.simple.test';
 import '../../unit-test/file_actions.simple.test';
 import '../../unit-test/find_text.simple.test';
-import '../../unit-test/get_file_contents.simple.test';
 import '../../unit-test/get_cursor.simple.test';
 import '../../unit-test/git.simple.test';
 import '../../unit-test/highlight_lines.simple.test';
@@ -31,24 +73,5 @@ import '../../unit-test/undo_and_save.simple.test';
 
 // Testing the meta stuff
 import '../test_utils.test';
-
-export function run(): Promise<void> {
-    const mocha = new Mocha({
-        ui: 'tdd', // or 'bdd' if you prefer that syntax
-        color: true,
-    });
-
-    return new Promise((resolve, reject) => {
-        try {
-            mocha.run((failures: number) => {
-                if (failures > 0) {
-                    reject(new Error(`${failures} tests failed.`));
-                } else {
-                    resolve();
-                }
-            });
-        } catch (erm) {
-            reject(erm);
-        }
-    });
-}
+import '../common/actionMetadataValidation.test';
+import './actionMetadataValidation.test';
