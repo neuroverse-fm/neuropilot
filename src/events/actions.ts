@@ -1,5 +1,5 @@
 import { Disposable, EventEmitter } from 'vscode';
-import { ActionData } from '@/neuro_client_helper';
+import { ActionData } from 'neuro-game-sdk';
 
 export type ActionStatus = 'pending' | 'success' | 'failure' | 'denied' | 'exception' | 'timeout' | 'schema' | 'cancelled';
 

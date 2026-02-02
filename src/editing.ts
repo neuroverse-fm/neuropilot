@@ -1,12 +1,12 @@
 import * as vscode from 'vscode';
+import { ActionData } from 'neuro-game-sdk';
 
 import { NEURO } from '@/constants';
 import { DiffRangeType, escapeRegExp, getDiffRanges, getFence, getPositionContext, getProperty, getVirtualCursor, showDiffRanges, isPathNeuroSafe, logOutput, setVirtualCursor, simpleFileName, substituteMatch, clearDecorations, formatContext, filterFileContents, positionFromIndex, indexFromPosition } from '@/utils';
-import { ActionData, actionValidationAccept, actionValidationFailure, ActionValidationResult, RCEAction, contextFailure, actionValidationRetry } from '@/neuro_client_helper';
+import { actionValidationAccept, actionValidationFailure, ActionValidationResult, RCEAction, contextFailure, actionValidationRetry } from '@/neuro_client_helper';
 import { CONFIG, CONNECTION } from '@/config';
 import { createCursorPositionChangedEvent } from '@events/cursor';
 import { RCECancelEvent } from '@events/utils';
-import type { JSONSchema7 } from 'json-schema';
 import { addActions, registerAction, unregisterAction } from '@/rce';
 import { updateActionStatus } from '@events/actions';
 
@@ -24,7 +24,7 @@ const STATUS_NO_MATCHES_FOUND = 'No matches found';
 
 type MatchOptions = 'firstInFile' | 'lastInFile' | 'firstAfterCursor' | 'lastBeforeCursor' | 'allInFile';
 const MATCH_OPTIONS: MatchOptions[] = ['firstInFile', 'lastInFile', 'firstAfterCursor', 'lastBeforeCursor', 'allInFile'] as const;
-const POSITION_SCHEMA: JSONSchema7 = {
+const POSITION_SCHEMA: RCEAction['schema'] = {
     type: 'object',
     description: 'Position parameters if you want to move your cursor or use a location other than the current location.',
     properties: {
@@ -40,7 +40,7 @@ interface Position {
     column: number;
     type: 'relative' | 'absolute';
 }
-const LINE_RANGE_SCHEMA: JSONSchema7 = {
+const LINE_RANGE_SCHEMA: RCEAction['schema'] = {
     type: 'object',
     description: 'The line range to target.',
     properties: {

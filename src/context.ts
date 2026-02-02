@@ -1,11 +1,12 @@
 import * as vscode from 'vscode';
+import { ActionData } from 'neuro-game-sdk';
 
 import { getFence, logOutput, simpleFileName } from '@/utils';
 import { NEURO } from '@/constants';
 import { CONNECTION, PermissionLevel, getPermissionLevel } from '@/config';
-import { addActions, CATEGORY_MISC } from './rce';
-import { ActionData, RCEAction } from './neuro_client_helper';
-import { updateActionStatus } from './events/actions';
+import { addActions, CATEGORY_MISC } from '@/rce';
+import { RCEAction } from '@/neuro_client_helper';
+import { updateActionStatus } from '@/events/actions';
 
 export function sendCurrentFile() {
     const editor = vscode.window.activeTextEditor;
