@@ -6,7 +6,7 @@ import type { GitExtension } from '@typing/git.d';
 import { ActionsViewProvider } from '@views/actions';
 import { ImagesViewProvider } from '@views/image';
 import type { ExecuteViewProvider } from '@views/execute';
-import type { ActionData } from '@/neuro_client_helper';
+import type { ActionData } from 'neuro-game-sdk';
 
 export interface NeuroTask {
     id: string;

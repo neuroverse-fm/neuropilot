@@ -1,6 +1,6 @@
 import * as assert from 'assert';
 import { editingActions } from '@/editing';
-import { ActionData } from '@/neuro_client_helper';
+import { ActionData } from 'neuro-game-sdk';
 
 // Tests for the delete_lines action prompt generator using real logic
 suite('delete_lines Action', () => {
