@@ -1,12 +1,12 @@
 import * as vscode from 'vscode';
-import { NeuroClient } from 'neuro-game-sdk';
+import { NeuroClient, ActionData } from 'neuro-game-sdk';
 import globToRegExp from 'glob-to-regexp';
 import { fileTypeFromBuffer } from 'file-type';
 
 import { NEURO } from '@/constants';
 import { ACCESS, CONFIG, CONNECTION, CursorPositionContextStyle, getPermissionLevel, PermissionLevel, setPermissionLevel } from '@/config';
 
-import { ActionValidationResult, ActionData, actionValidationAccept, actionValidationFailure } from '@/neuro_client_helper';
+import { ActionValidationResult, actionValidationAccept, actionValidationFailure } from '@/neuro_client_helper';
 import assert from 'node:assert';
 import { patienceDiff } from './patience_diff';
 import { fireCursorPositionChangedEvent } from '@events/cursor';

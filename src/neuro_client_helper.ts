@@ -2,20 +2,11 @@
  * Helper functions and types for interacting with the Neuro Game SDK.
  */
 
-import { Action } from 'neuro-game-sdk';
+import { Action, ActionData } from 'neuro-game-sdk';
 import { ACTIONS, Permission, PermissionLevel } from '@/config';
 import { logOutput, turtleSafari } from '@/utils';
 import { PromptGenerator } from '@/rce';
 import { RCECancelEvent } from '@events/utils';
-import { JSONSchema7 } from 'json-schema';
-
-/** Data used by an action handler. */
-export interface ActionData {
-    id: string;
-    name: string;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    params?: any;
-}
 
 /** The result of attempting to execute an action client-side. */
 export interface ActionValidationResult {
@@ -35,15 +26,13 @@ export interface ActionValidationResult {
     historyNote?: string;
 }
 
-type TypedAction = Omit<Action, 'schema'> & { schema?: JSONSchema7 };
-
 /** ActionHandler to use with constants for records of actions and their corresponding handlers */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export interface RCEAction<T = any> extends TypedAction {
+export interface RCEAction<T = any> extends Action {
     /** A human-friendly name for the action. If not provided, the action's name converted to Title Case will be used. */
     displayName?: string;
     /** The JSON schema for validating the action parameters if experimental schemas are disabled. */
-    schemaFallback?: JSONSchema7;
+    schemaFallback?: Action['schema'];
     /**
      * An object that defines an array of functions to validate the action's "environment".
      * Validators run before requests/executions to ensure environment/input validity.
@@ -110,7 +99,7 @@ export type RCEHandler = (actionData: ActionData) => string | undefined | void;
  * @returns The action stripped to its basic form, without the handler and permissions.
  */
 export function stripToAction(action: RCEAction): Action {
-    let schema: JSONSchema7 | undefined;
+    let schema: Action['schema'];
     if (ACTIONS.experimentalSchemas && action.schemaFallback) {
         schema = action.schema;
     } else {
