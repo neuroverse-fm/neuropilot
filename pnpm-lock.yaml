@@ -24,8 +24,8 @@ importers:
         specifier: ^1.5.0
         version: 1.5.0
       neuro-game-sdk:
-        specifier: ^1.0.8
-        version: 1.0.8(ws@8.18.3)
+        specifier: ^1.0.9
+        version: 1.0.9(ws@8.18.3)
       preact:
         specifier: ^10.28.3
         version: 10.28.3
@@ -505,24 +505,28 @@ packages:
     engines: {node: '>= 10'}
     cpu: [arm64]
     os: [linux]
+    libc: [glibc]
 
   '@node-rs/crc32-linux-arm64-musl@1.10.6':
     resolution: {integrity: sha512-k8ra/bmg0hwRrIEE8JL1p32WfaN9gDlUUpQRWsbxd1WhjqvXea7kKO6K4DwVxyxlPhBS9Gkb5Urq7Y4mXANzaw==}
     engines: {node: '>= 10'}
     cpu: [arm64]
     os: [linux]
+    libc: [musl]
 
   '@node-rs/crc32-linux-x64-gnu@1.10.6':
     resolution: {integrity: sha512-IfjtqcuFK7JrSZ9mlAFhb83xgium30PguvRjIMI45C3FJwu18bnLk1oR619IYb/zetQT82MObgmqfKOtgemEKw==}
     engines: {node: '>= 10'}
     cpu: [x64]
     os: [linux]
+    libc: [glibc]
 
   '@node-rs/crc32-linux-x64-musl@1.10.6':
     resolution: {integrity: sha512-LbFYsA5M9pNunOweSt6uhxenYQF94v3bHDAQRPTQ3rnjn+mK6IC7YTAYoBjvoJP8lVzcvk9hRj8wp4Jyh6Y80g==}
     engines: {node: '>= 10'}
     cpu: [x64]
     os: [linux]
+    libc: [musl]
 
   '@node-rs/crc32-wasm32-wasi@1.10.6':
     resolution: {integrity: sha512-KaejdLgHMPsRaxnM+OG9L9XdWL2TabNx80HLdsCOoX9BVhEkfh39OeahBo8lBmidylKbLGMQoGfIKDjq0YMStw==}
@@ -2280,8 +2284,8 @@ packages:
     resolution: {integrity: sha512-+EUsqGPLsM+j/zdChZjsnX51g4XrHFOIXwfnCVPGlQk/k5giakcKsuxCObBRu6DSm9opw/O6slWbJdghQM4bBg==}
     engines: {node: '>= 0.6'}
 
-  neuro-game-sdk@1.0.8:
-    resolution: {integrity: sha512-sVe/vTTQmveCflejNfnNj2Y7DrPyv753ANEZTT9LYAide+yoNUedqcnuzFgQ7PkowTIf0V3TGgTNw3pq/6Sa9w==}
+  neuro-game-sdk@1.0.9:
+    resolution: {integrity: sha512-hqViST/0D0EOAKeRMUQqQtbIuXfbEP3XctgowpNpiuqiq0+XAf165xS4zIs9EknsJV5069ap0CDIAxwP1zzSHg==}
 
   nice-try@1.0.5:
     resolution: {integrity: sha512-1nh45deeb5olNY7eX82BkPO7SSxR5SSYJiPTrTdFUVYwAl8CKMA5N9PjTYkHiRjisVcxcQ1HXdLhx2qxxJzLNQ==}
@@ -5588,7 +5592,7 @@ snapshots:
 
   negotiator@0.6.3: {}
 
-  neuro-game-sdk@1.0.8(ws@8.18.3):
+  neuro-game-sdk@1.0.9(ws@8.18.3):
     dependencies:
       '@types/json-schema': 7.0.15
       '@types/ws': 8.18.1

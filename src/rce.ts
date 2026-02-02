@@ -4,7 +4,8 @@
  */
 
 import * as vscode from 'vscode';
-import { ActionData, RCEAction, stripToAction, RCEHandler } from '@/neuro_client_helper';
+import { ActionData } from 'neuro-game-sdk';
+import { RCEAction, stripToAction, RCEHandler } from '@/neuro_client_helper';
 import { NEURO } from '@/constants';
 import { logOutput, notifyOnCaughtException } from '@/utils';
 import { ACTIONS, CONFIG, CONNECTION, getAllPermissions, getPermissionLevel, PermissionLevel, stringToPermissionLevel } from '@/config';

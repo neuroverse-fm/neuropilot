@@ -2,7 +2,7 @@ import * as assert from 'assert';
 import * as vscode from 'vscode';
 import * as fileActions from '../../file_actions';
 import { assertProperties, checkNoErrorWithTimeout, createTestDirectory, createTestFile } from '../test_utils';
-import { ActionData } from '../../neuro_client_helper';
+import { ActionData } from 'neuro-game-sdk';
 import { getPermissionLevel, PermissionLevel } from '../../config';
 import { NeuroClient } from 'neuro-game-sdk';
 import { NEURO } from '../../constants';
