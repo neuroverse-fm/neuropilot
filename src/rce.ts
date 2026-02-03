@@ -583,7 +583,7 @@ export async function RCEActionHandler(actionData: ActionData) {
                     action.handler,
                     actionData,
                     eventArray,
-                    action.preview,
+                    ACTIONS.disablePreviewEffects ? undefined : action.preview,
                 );
 
                 NEURO.statusBarItem!.tooltip = new vscode.MarkdownString(prompt);
