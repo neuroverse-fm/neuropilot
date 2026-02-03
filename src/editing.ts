@@ -211,6 +211,39 @@ export const editingActions = {
             description: undefined,
         },
         handler: handlePlaceCursor,
+        preview: (actionData: ActionData) => {
+            let line = actionData.params.line;
+            let column = actionData.params.column;
+            if (actionData.params.type === 'relative') {
+                const cursor = getVirtualCursor()!;
+                line += cursor.line;
+                column += cursor.character;
+            }
+            else {
+                line -= 1;
+                column -= 1;
+            }
+            const disposable = vscode.window.createTextEditorDecorationType({
+                backgroundColor: 'rgba(0, 0, 0, 0)',
+                border: '1px solid rgba(0, 0, 0, 0)',
+                borderRadius: '1px',
+                overviewRulerColor: 'rgb(255, 166, 0)',
+                overviewRulerLane: vscode.OverviewRulerLane.Right,
+                rangeBehavior: vscode.DecorationRangeBehavior.ClosedClosed,
+                before: {
+                    contentText: 'ᛙ',
+                    margin: '0 0 0 -0.25ch',
+                    textDecoration: 'none; position: absolute; display: inline-block; top: 0; font-size: 200%; font-weight: bold, z-index: 1',
+                    color: 'rgb(255, 166, 0)',
+                },
+            });
+            const position = new vscode.Position(line, column);
+            vscode.window.activeTextEditor!.setDecorations(disposable, [{
+                range: new vscode.Range(position, position),
+                hoverMessage: `(Preview) ${NEURO.currentController} wants to move her cursor to this position.`,
+            }] as const);
+            return disposable;
+        },
         validators: {
             sync: [checkCurrentFile, createPositionValidator()],
         },
@@ -247,6 +280,41 @@ export const editingActions = {
             additionalProperties: false,
         },
         handler: handleInsertText,
+        preview: (actionData) => {
+            const positionParam = actionData.params.position;
+            if (!positionParam) return { dispose: () => { } };
+            let line = positionParam.line;
+            let column = positionParam.column;
+            if (positionParam.type === 'relative') {
+                const cursor = getVirtualCursor()!;
+                line += cursor.line;
+                column += cursor.character;
+            }
+            else {
+                line -= 1;
+                column -= 1;
+            }
+            const disposable = vscode.window.createTextEditorDecorationType({
+                backgroundColor: 'rgba(0, 0, 0, 0)',
+                border: '1px solid rgba(0, 0, 0, 0)',
+                borderRadius: '1px',
+                overviewRulerColor: 'rgb(255, 166, 0)',
+                overviewRulerLane: vscode.OverviewRulerLane.Right,
+                rangeBehavior: vscode.DecorationRangeBehavior.ClosedClosed,
+                before: {
+                    contentText: 'ᛙ',
+                    margin: '0 0 0 -0.25ch',
+                    textDecoration: 'none; position: absolute; display: inline-block; top: 0; font-size: 200%; font-weight: bold, z-index: 1',
+                    color: 'rgb(255, 166, 0)',
+                },
+            });
+            const position = new vscode.Position(line, column);
+            vscode.window.activeTextEditor!.setDecorations(disposable, [{
+                range: new vscode.Range(position, position),
+                hoverMessage: `(Preview) ${NEURO.currentController} wants to insert text at this position.`,
+            }] as const);
+            return disposable;
+        },
         cancelEvents: [
             ...commonCancelEvents,
             (actionData: ActionData) => {
@@ -299,6 +367,34 @@ export const editingActions = {
             required: ['text'],
         },
         handler: handleInsertLines,
+        preview: (actionData) => {
+            const length = (actionData.params.text as string).split('\n').length;
+            let line: number | undefined = actionData.params.insertUnder;
+            if (!line) {
+                line = getVirtualCursor()!.line;
+            };
+            const editor = vscode.window.activeTextEditor!;
+            const disposable = vscode.window.createTextEditorDecorationType({
+                backgroundColor: 'rgb(255, 166, 0)',
+                border: '1px solid rgb(255, 136, 0)',
+                borderRadius: '0px',
+                overviewRulerColor: 'rgb(255, 166, 0)',
+                overviewRulerLane: vscode.OverviewRulerLane.Left,
+                rangeBehavior: vscode.DecorationRangeBehavior.ClosedClosed,
+            });
+
+            const startPosition = new vscode.Position(line, 0);
+            const endPosition = new vscode.Position(line, editor.document.lineAt(line).text.length); // TODO: Is this one-based or zero-based?
+
+            editor.setDecorations(disposable, [
+                {
+                    range: new vscode.Range(startPosition, endPosition),
+                    hoverMessage: `(Preview) ${NEURO.currentController} wants to insert ${length} lines of text UNDER this line.`,
+                },
+            ] as const);
+
+            return disposable;
+        },
         cancelEvents: [
             ...commonCancelEvents,
             (actionData: ActionData) => {
