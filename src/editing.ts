@@ -375,10 +375,10 @@ export const editingActions = {
             };
             const editor = vscode.window.activeTextEditor!;
             const disposable = vscode.window.createTextEditorDecorationType({
-                backgroundColor: 'rgb(255, 166, 0)',
-                border: '1px solid rgb(255, 136, 0)',
+                backgroundColor: 'rgba(0, 47, 255, 0.42)',
+                border: '1px solid rgb(0, 225, 255)',
                 borderRadius: '0px',
-                overviewRulerColor: 'rgb(255, 166, 0)',
+                overviewRulerColor: 'rgb(0, 102, 255)',
                 overviewRulerLane: vscode.OverviewRulerLane.Left,
                 rangeBehavior: vscode.DecorationRangeBehavior.ClosedClosed,
             });
