@@ -7,6 +7,7 @@ import { ACTIONS, Permission, PermissionLevel } from '@/config';
 import { logOutput, turtleSafari } from '@/utils';
 import { PromptGenerator } from '@/rce';
 import { RCECancelEvent } from '@events/utils';
+import { ActionStatus } from './events/actions';
 
 /** The result of attempting to execute an action client-side. */
 export interface ActionValidationResult {
@@ -26,12 +27,24 @@ export interface ActionValidationResult {
     historyNote?: string;
 }
 
-/** ActionHandler to use with constants for records of actions and their corresponding handlers */
+/**
+ * ActionHandler to use with constants for records of actions and their corresponding handlers.
+ * 
+ * You may optionally type the interface if you are sure the action will take a specific form.
+ */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export interface RCEAction<T = any> extends Action {
-    /** A human-friendly name for the action. If not provided, the action's name converted to Title Case will be used. */
+    /** 
+     * A human-friendly name for the action. If not provided, the action's name converted to Title Case will be used. 
+     * @example Edit File
+     * @example edit_file -> Edit File // if displayName isn't set
+     */
     displayName?: string;
-    /** The JSON schema for validating the action parameters if experimental schemas are disabled. */
+    /** 
+     * The JSON schema for validating the action parameters if experimental schemas are disabled.
+     * Do not use this if you don't have an "experimental schema". Instead, simply specify {@link Action.schema the normal schema property}.
+     * @todo likely deprecating experimental schemas
+     */
     schemaFallback?: Action['schema'];
     /**
      * An object that defines an array of functions to validate the action's "environment".
@@ -41,12 +54,15 @@ export interface RCEAction<T = any> extends Action {
         /** 
          * Synchronous validators that will block execution of the rest of the thread.
          * As this delays the action result to Neuro, any promises must resolve quickly so as to be effectively synchronous speed-wise. 
+         * 
+         * If you supply validators that ensure certain items are not nullable, you may be able to assert that they are a non-nullable value for {@link RCEAction.promptGenerator generating the Copilot-mode prompt} and/or {@link RCEAction.preview preview effects}.
          */
         sync?: ((actionData: ActionData) => ActionValidationResult | Promise<ActionValidationResult>)[],
         /**
          * Asynchronous validators that will be ran in parallel to each other.
          * These will be executed after an action result, so it's perfect for long-running validators.
-         * Async validators will time out (and consequently fail) after 1 second (1000ms).
+         * 
+         * Async validators will time out (and consequently fail) after 1 second (1000ms). It is planned that this value will be adjustable in the future.
          */
         async?: ((actionData: ActionData) => Promise<ActionValidationResult>)[];
     }
@@ -56,6 +72,7 @@ export interface RCEAction<T = any> extends Action {
      * If one cancellation event fires, the request is cancelled and all listeners will be disposed as soon as possible.
      * 
      * Following VS Code's pattern, Disposables will not be awaited if async.
+     * Returns from calling the `dispose()` function will not be used anywhere.
      */
     cancelEvents?: ((actionData: ActionData) => RCECancelEvent<T> | null)[];
     /**
@@ -69,11 +86,17 @@ export interface RCEAction<T = any> extends Action {
     // The type must be `any`, using `never` causes it to return type errors. 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     preview?: (actionData: ActionData) => { dispose: () => any };
-    /** The function to handle the action. */
+    /** 
+     * The function to handle the action.
+     * This function must be synchronous.
+     * 
+     * You may return `undefined` or void returning in the event your handler requires an asynchronous action. If this happens, you MUST send Neuro the action's results as context when it comes in.
+     */
     handler: RCEHandler;
     /** 
      * The function to generate a prompt for the action request (Copilot Mode). 
      * The prompt should fit the phrasing scheme "Neuro wants to [prompt]".
+     * 
      * It is this way due to a potential new addition in Neuro API "v2". (not officially proposed)
      * More info (comment): https://github.com/VedalAI/neuro-game-sdk/discussions/58#discussioncomment-12938623
      */
@@ -87,11 +110,11 @@ export interface RCEAction<T = any> extends Action {
     category: string | null;
     /** Whether to automatically register the action with Neuro upon addition. Defaults to true. */
     autoRegister?: boolean;
-    /** A condition that must be true for the action to be registered. If not provided, the action is always registered. This function must never throw. */
+    /** A condition that must be true for the action to be registered. If not provided, the action is always registered. **This function must never throw.** */
     registerCondition?: () => boolean;
 }
 
-export type RCEHandler = (actionData: ActionData) => string | undefined | void;
+export type RCEHandler = (actionData: ActionData, statusUpdate: (status: ActionStatus, message: string) => void) => string | undefined | void;
 
 /**
  * Strips an action to the form expected by the API.

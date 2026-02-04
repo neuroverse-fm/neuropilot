@@ -11,7 +11,7 @@ import { logOutput, notifyOnCaughtException } from '@/utils';
 import { ACTIONS, CONFIG, CONNECTION, getAllPermissions, getPermissionLevel, PermissionLevel, stringToPermissionLevel } from '@/config';
 import { validate } from 'jsonschema';
 import type { RCECancelEvent } from '@events/utils';
-import { fireOnActionStart, updateActionStatus } from '@events/actions';
+import { ActionStatus, fireOnActionStart, updateActionStatus } from '@events/actions';
 
 export const CATEGORY_MISC = 'Miscellaneous';
 
@@ -268,7 +268,7 @@ export function acceptRceRequest(): void {
     updateActionStatus(actionData, 'pending', 'Executing...');
 
     try {
-        const result = NEURO.rceRequest.callback(actionData);
+        const result = NEURO.rceRequest.callback(actionData, (status, message) => updateActionStatus(actionData, status, message));
         if (result) NEURO.client?.sendContext(result);
     } catch (erm: unknown) {
         const actionName = actionData.name;
@@ -467,6 +467,7 @@ export function getExtendedActionsInfo(): ExtendedActionInfo[] {
  */
 export async function RCEActionHandler(actionData: ActionData) {
     try {
+        const statusUpdateHandler = (status: ActionStatus, message: string) => updateActionStatus(actionData, status, message);
         if (REGISTERED_ACTIONS.has(actionData.name)) {
             NEURO.actionHandled = true;
 
@@ -560,7 +561,7 @@ export async function RCEActionHandler(actionData: ActionData) {
             if (effectivePermission === PermissionLevel.AUTOPILOT) {
                 updateActionStatus(actionData, 'pending', 'Executing handler...');
                 for (const d of eventArray) d.dispose();
-                const result = action.handler(actionData);
+                const result = action.handler(actionData, statusUpdateHandler);
                 NEURO.client?.sendActionResult(actionData.id, true, result ?? undefined);
             }
             else { // effectivePermission === PermissionLevel.COPILOT
@@ -601,7 +602,7 @@ export async function RCEActionHandler(actionData: ActionData) {
         } else if (actionData.name === 'cancel_request') {
             NEURO.actionHandled = true;
             fireOnActionStart(actionData, 'Executing...');
-            cancelRequestAction.handler(actionData);
+            cancelRequestAction.handler(actionData, statusUpdateHandler);
         }
     } catch (erm: unknown) {
         const actionName = actionData.name;
