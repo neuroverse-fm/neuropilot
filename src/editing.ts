@@ -9,6 +9,7 @@ import { createCursorPositionChangedEvent } from '@events/cursor';
 import { RCECancelEvent } from '@events/utils';
 import { addActions, registerAction, unregisterAction } from '@/rce';
 import { updateActionStatus } from '@events/actions';
+import { createPreviewCursor, createPreviewHighlight } from '@previews/edits';
 
 export const CATEGORY_EDITING = 'Editing';
 
@@ -201,6 +202,32 @@ const commonCancelEventsWithCursor: ((actionData: ActionData) => RCECancelEvent)
     createCursorPositionChangedEvent,
 ];
 
+/**
+ * Common function used to show previews for finding-related actions.
+ */
+export function previewFindFunctions(actionData: ActionData): { dispose: () => unknown } {
+    const lineRange = actionData.params?.lineRange;
+    const highlights: { dispose: () => unknown }[] = [];
+    if (lineRange) {
+        const editor = vscode.window.activeTextEditor!;
+        const lineRangeHighlight = createPreviewHighlight();
+
+        const startPosition = new vscode.Position(lineRange.startLine, 0);
+        const endPosition = new vscode.Position(lineRange.endLine, editor.document.lineAt(lineRange.endLine).text.length);
+
+        editor.setDecorations(lineRangeHighlight, [
+            {
+                range: new vscode.Range(startPosition, endPosition),
+                hoverMessage: `(Preview) ${NEURO.currentController} wants to replace some text in this area. This does not mean all text here will be replaced.`,
+            },
+        ]);
+        highlights.push(lineRangeHighlight);
+    }
+
+    // TODO: Implement highlighting on text matches? Not sure if this feasible at all.
+    return vscode.Disposable.from(...highlights);
+}
+
 export const editingActions = {
     move_cursor_position: {
         name: 'move_cursor_position',
@@ -223,21 +250,8 @@ export const editingActions = {
                 line -= 1;
                 column -= 1;
             }
-            const disposable = vscode.window.createTextEditorDecorationType({
-                backgroundColor: 'rgba(0, 0, 0, 0)',
-                border: '1px solid rgba(0, 0, 0, 0)',
-                borderRadius: '1px',
-                overviewRulerColor: 'rgb(255, 166, 0)',
-                overviewRulerLane: vscode.OverviewRulerLane.Right,
-                rangeBehavior: vscode.DecorationRangeBehavior.ClosedClosed,
-                before: {
-                    contentText: 'ᛙ',
-                    margin: '0 0 0 -0.25ch',
-                    textDecoration: 'none; position: absolute; display: inline-block; top: 0; font-size: 200%; font-weight: bold, z-index: 1',
-                    color: 'rgb(255, 166, 0)',
-                },
-            });
             const position = new vscode.Position(line, column);
+            const disposable = createPreviewCursor();
             vscode.window.activeTextEditor!.setDecorations(disposable, [{
                 range: new vscode.Range(position, position),
                 hoverMessage: `(Preview) ${NEURO.currentController} wants to move her cursor to this position.`,
@@ -294,20 +308,7 @@ export const editingActions = {
                 line -= 1;
                 column -= 1;
             }
-            const disposable = vscode.window.createTextEditorDecorationType({
-                backgroundColor: 'rgba(0, 0, 0, 0)',
-                border: '1px solid rgba(0, 0, 0, 0)',
-                borderRadius: '1px',
-                overviewRulerColor: 'rgb(255, 166, 0)',
-                overviewRulerLane: vscode.OverviewRulerLane.Right,
-                rangeBehavior: vscode.DecorationRangeBehavior.ClosedClosed,
-                before: {
-                    contentText: 'ᛙ',
-                    margin: '0 0 0 -0.25ch',
-                    textDecoration: 'none; position: absolute; display: inline-block; top: 0; font-size: 200%; font-weight: bold, z-index: 1',
-                    color: 'rgb(255, 166, 0)',
-                },
-            });
+            const disposable = createPreviewCursor();
             const position = new vscode.Position(line, column);
             vscode.window.activeTextEditor!.setDecorations(disposable, [{
                 range: new vscode.Range(position, position),
@@ -372,24 +373,19 @@ export const editingActions = {
             let line: number | undefined = actionData.params.insertUnder;
             if (!line) {
                 line = getVirtualCursor()!.line;
+            } else {
+                line -= 1;
             };
             const editor = vscode.window.activeTextEditor!;
-            const disposable = vscode.window.createTextEditorDecorationType({
-                backgroundColor: 'rgba(0, 47, 255, 0.42)',
-                border: '1px solid rgb(0, 225, 255)',
-                borderRadius: '0px',
-                overviewRulerColor: 'rgb(0, 102, 255)',
-                overviewRulerLane: vscode.OverviewRulerLane.Left,
-                rangeBehavior: vscode.DecorationRangeBehavior.ClosedClosed,
-            });
+            const disposable = createPreviewHighlight();
 
             const startPosition = new vscode.Position(line, 0);
-            const endPosition = new vscode.Position(line, editor.document.lineAt(line).text.length); // TODO: Is this one-based or zero-based?
+            const endPosition = new vscode.Position(line, editor.document.lineAt(line).text.length);
 
             editor.setDecorations(disposable, [
                 {
                     range: new vscode.Range(startPosition, endPosition),
-                    hoverMessage: `(Preview) ${NEURO.currentController} wants to insert ${length} lines of text UNDER this line.`,
+                    hoverMessage: `(Preview) ${NEURO.currentController} wants to insert ${length} line${length === 1 ? '' : 's'} of text UNDER this line.`,
                 },
             ] as const);
 
@@ -429,6 +425,7 @@ export const editingActions = {
             required: ['find', 'replaceWith', 'match'],
         },
         handler: handleReplaceText,
+        preview: previewFindFunctions,
         cancelEvents: [cancelOnDidChangeActiveTextEditor],
         validators: {
             sync: [checkCurrentFile, createStringValidator(['find', 'replaceWith']), createLineRangeValidator('lineRange')],
@@ -486,6 +483,7 @@ export const editingActions = {
             additionalProperties: false,
         },
         handler: handleDeleteText,
+        preview: previewFindFunctions,
         cancelEvents: [cancelOnDidChangeActiveTextEditor],
         validators: {
             sync: [checkCurrentFile, createStringValidator(['find']), createLineRangeValidator('lineRange')],
