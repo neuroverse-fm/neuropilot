@@ -205,7 +205,7 @@ const commonCancelEventsWithCursor: ((actionData: ActionData) => RCECancelEvent)
 /**
  * Common function used to show previews for finding-related actions.
  */
-export function previewFindFunctions(actionData: ActionData): { dispose: () => unknown } {
+export function previewFindFunctions(actionData: ActionData, type: 'find' | 'delete' | 'replace'): { dispose: () => unknown } {
     const lineRange = actionData.params?.lineRange;
     const highlights: { dispose: () => unknown }[] = [];
     if (lineRange) {
@@ -218,7 +218,7 @@ export function previewFindFunctions(actionData: ActionData): { dispose: () => u
         editor.setDecorations(lineRangeHighlight, [
             {
                 range: new vscode.Range(startPosition, endPosition),
-                hoverMessage: `(Preview) ${NEURO.currentController} wants to replace some text in this area. This does not mean all text here will be replaced.`,
+                hoverMessage: `(Preview) ${NEURO.currentController} wants to ${type} some text in this area. This does not mean all text here will be replaced.`,
             },
         ]);
         highlights.push(lineRangeHighlight);
@@ -425,7 +425,7 @@ export const editingActions = {
             required: ['find', 'replaceWith', 'match'],
         },
         handler: handleReplaceText,
-        preview: previewFindFunctions,
+        preview: (actionData) => previewFindFunctions(actionData, 'replace'),
         cancelEvents: [cancelOnDidChangeActiveTextEditor],
         validators: {
             sync: [checkCurrentFile, createStringValidator(['find', 'replaceWith']), createLineRangeValidator('lineRange')],
@@ -483,7 +483,7 @@ export const editingActions = {
             additionalProperties: false,
         },
         handler: handleDeleteText,
-        preview: previewFindFunctions,
+        preview: (actionData) => previewFindFunctions(actionData, 'delete'),
         cancelEvents: [cancelOnDidChangeActiveTextEditor],
         validators: {
             sync: [checkCurrentFile, createStringValidator(['find']), createLineRangeValidator('lineRange')],
@@ -547,6 +547,7 @@ export const editingActions = {
             additionalProperties: false,
         },
         handler: handleFindText,
+        preview: (actionData) => previewFindFunctions(actionData, 'find'),
         cancelEvents: [cancelOnDidChangeActiveTextEditor],
         validators: {
             sync: [checkCurrentFile, createStringValidator(['find']), createLineRangeValidator('lineRange')],
@@ -1234,7 +1235,7 @@ export function handleFindText(actionData: ActionData, updateStatus: (status: Ac
     }
 }
 
-export function handleUndo(actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
+export function handleUndo(_actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
     const document = vscode.window.activeTextEditor?.document;
     if (document === undefined) {
         updateStatus('failure', STATUS_NO_ACTIVE_DOCUMENT);
@@ -1249,24 +1250,24 @@ export function handleUndo(actionData: ActionData, updateStatus: (status: Action
 
     vscode.commands.executeCommand('undo').then(
         () => {
-            logOutput('INFO', 'Undoing last action in document');
+            logOutput('INFO', 'Undoing last edit in document');
             // We don't keep track of the virtual cursor position in the undo stack, so we reset it to the real cursor position
             const cursorContext = getPositionContext(document, vscode.window.activeTextEditor!.selection.active);
             setVirtualCursor(vscode.window.activeTextEditor!.selection.active);
-            updateStatus('success', 'Undid last action');
-            NEURO.client?.sendContext(`Undid last action in document\n\n${formatContext(cursorContext)}`);
+            updateStatus('success', 'Undid last edit');
+            NEURO.client?.sendContext(`Undid last edit in document\n\n${formatContext(cursorContext)}`);
         },
         (erm) => {
-            logOutput('ERROR', `Failed to undo last action: ${erm}`);
+            logOutput('ERROR', `Failed to undo last edit: ${erm}`);
             updateStatus('failure', 'Failed to undo');
-            NEURO.client?.sendContext(contextFailure('Failed to undo last action'));
+            NEURO.client?.sendContext(contextFailure('Failed to undo last edit'));
         },
     );
 
     return undefined;
 }
 
-export function handleSave(actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
+export function handleSave(_actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
     const document = vscode.window.activeTextEditor?.document;
     if (document === undefined) {
         updateStatus('failure', STATUS_NO_ACTIVE_DOCUMENT);
