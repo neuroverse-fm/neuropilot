@@ -228,6 +228,30 @@ export function previewFindFunctions(actionData: ActionData, type: 'find' | 'del
     return vscode.Disposable.from(...highlights);
 }
 
+/**
+ * Common function used to show previews for cursor movement actions
+ */
+export function previewCursorMovement(positionParam: { line: number, column: number, type: 'absolute' | 'relative' }, prompt: string) {
+    let line = positionParam.line;
+    let column = positionParam.column;
+    if (positionParam.type === 'relative') {
+        const cursor = getVirtualCursor()!;
+        line += cursor.line;
+        column += cursor.character;
+    }
+    else {
+        line -= 1;
+        column -= 1;
+    }
+    const disposable = createPreviewCursor();
+    const position = new vscode.Position(line, column);
+    vscode.window.activeTextEditor!.setDecorations(disposable, [{
+        range: new vscode.Range(position, position),
+        hoverMessage: `(Preview) ${NEURO.currentController} wants to ${prompt}`,
+    }] as const);
+    return disposable;
+}
+
 export const editingActions = {
     move_cursor_position: {
         name: 'move_cursor_position',
@@ -238,26 +262,7 @@ export const editingActions = {
             description: undefined,
         },
         handler: handlePlaceCursor,
-        preview: (actionData: ActionData) => {
-            let line = actionData.params.line;
-            let column = actionData.params.column;
-            if (actionData.params.type === 'relative') {
-                const cursor = getVirtualCursor()!;
-                line += cursor.line;
-                column += cursor.character;
-            }
-            else {
-                line -= 1;
-                column -= 1;
-            }
-            const position = new vscode.Position(line, column);
-            const disposable = createPreviewCursor();
-            vscode.window.activeTextEditor!.setDecorations(disposable, [{
-                range: new vscode.Range(position, position),
-                hoverMessage: `(Preview) ${NEURO.currentController} wants to move her cursor to this position.`,
-            }] as const);
-            return disposable;
-        },
+        preview: (actionData: ActionData) => previewCursorMovement(actionData.params, 'move her cursor to this position.'),
         validators: {
             sync: [checkCurrentFile, createPositionValidator()],
         },
@@ -297,24 +302,7 @@ export const editingActions = {
         preview: (actionData) => {
             const positionParam = actionData.params.position;
             if (!positionParam) return { dispose: () => { } };
-            let line = positionParam.line;
-            let column = positionParam.column;
-            if (positionParam.type === 'relative') {
-                const cursor = getVirtualCursor()!;
-                line += cursor.line;
-                column += cursor.character;
-            }
-            else {
-                line -= 1;
-                column -= 1;
-            }
-            const disposable = createPreviewCursor();
-            const position = new vscode.Position(line, column);
-            vscode.window.activeTextEditor!.setDecorations(disposable, [{
-                range: new vscode.Range(position, position),
-                hoverMessage: `(Preview) ${NEURO.currentController} wants to insert text at this position.`,
-            }] as const);
-            return disposable;
+            else return previewCursorMovement(positionParam, 'insert text at this position.');
         },
         cancelEvents: [
             ...commonCancelEvents,
