@@ -209,23 +209,31 @@ export function previewFindFunctions(actionData: ActionData, type: 'find' | 'del
     const lineRange = actionData.params?.lineRange;
     const highlights: { dispose: () => unknown }[] = [];
     if (lineRange) {
-        const editor = vscode.window.activeTextEditor!;
-        const lineRangeHighlight = createPreviewHighlight();
-
-        const startPosition = new vscode.Position(lineRange.startLine, 0);
-        const endPosition = new vscode.Position(lineRange.endLine, editor.document.lineAt(lineRange.endLine).text.length);
-
-        editor.setDecorations(lineRangeHighlight, [
-            {
-                range: new vscode.Range(startPosition, endPosition),
-                hoverMessage: `(Preview) ${NEURO.currentController} wants to ${type} some text in this area. This does not mean all text here will be replaced.`,
-            },
-        ]);
-        highlights.push(lineRangeHighlight);
+        highlights.push(previewLineHighlights(lineRange, `${type} some text in this area. This does not mean all text here will be replaced.`));
     }
 
     // TODO: Implement highlighting on text matches? Not sure if this feasible at all.
     return vscode.Disposable.from(...highlights);
+}
+
+/**
+ * Common function used to create highlighted lines for previews
+ */
+export function previewLineHighlights(lineRange: { startLine: number, endLine: number }, prompt: string) {
+    const editor = vscode.window.activeTextEditor!;
+    const lineRangeHighlight = createPreviewHighlight();
+
+    const startPosition = new vscode.Position(lineRange.startLine, 0);
+    const endPosition = new vscode.Position(lineRange.endLine, editor.document.lineAt(lineRange.endLine).text.length);
+
+    editor.setDecorations(lineRangeHighlight, [
+        {
+            range: new vscode.Range(startPosition, endPosition),
+            hoverMessage: `(Preview) ${NEURO.currentController} wants to ${prompt}`,
+        },
+    ]);
+
+    return lineRangeHighlight;
 }
 
 /**
@@ -626,6 +634,21 @@ export const editingActions = {
             additionalProperties: false,
         },
         handler: handleRewriteAll,
+        preview: () => {
+            const editor = vscode.window.activeTextEditor!;
+            const fullRange = new vscode.Range(
+                editor.document.positionAt(0),
+                editor.document.positionAt(editor.document.getText().length),
+            );
+            const highlight = createPreviewHighlight();
+            editor.setDecorations(highlight, [
+                {
+                    range: fullRange,
+                    hoverMessage: `(Preview) ${NEURO.currentController} wants to rewrite this entire file. Good luck!`,
+                },
+            ]);
+            return highlight;
+        },
         cancelEvents: [cancelOnDidChangeActiveTextEditor],
         validators: {
             sync: [checkCurrentFile, createStringValidator(['content'])],
@@ -651,6 +674,7 @@ export const editingActions = {
             additionalProperties: false,
         },
         handler: handleRewriteLines,
+        preview: (actionData) => previewLineHighlights(actionData.params, 'rewrite these lines.'),
         cancelEvents: commonCancelEvents,
         validators: {
             sync: [checkCurrentFile, createLineRangeValidator(), createStringValidator(['content'])],
@@ -668,6 +692,7 @@ export const editingActions = {
         category: CATEGORY_EDITING,
         schema: LINE_RANGE_SCHEMA,
         handler: handleDeleteLines,
+        preview: (actionData) => previewLineHighlights(actionData.params, 'delete these lines.'),
         cancelEvents: commonCancelEvents,
         validators: {
             sync: [checkCurrentFile, createLineRangeValidator()],
@@ -697,6 +722,7 @@ export const editingActions = {
             + ' This will not move your own cursor.',
         category: CATEGORY_EDITING,
         handler: handleGetUserSelection,
+        // No preview effect needed, intended preview effect is the user cursor
         validators: {
             sync: [checkCurrentFile],
         },
@@ -718,6 +744,7 @@ export const editingActions = {
             required: ['content', 'requireSelectionUnchanged'],
         },
         handler: handleReplaceUserSelection,
+        // No preview effect needed, intended preview effect is the highlighted text
         cancelEvents: [
             ...commonCancelEvents,
             (actionData: ActionData) => {
