@@ -108,3 +108,10 @@ export async function setupDocument(text: string, options: SetupDocumentOptions 
         setVirtualCursor(cursorPosition);
     }
 }
+
+/**
+ * Function that simply returns a mock function.
+ */
+export function returnMockFunction() {
+    return () => undefined;
+}

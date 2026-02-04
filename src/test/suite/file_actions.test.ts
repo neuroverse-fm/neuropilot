@@ -1,11 +1,11 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
-import * as fileActions from '../../file_actions';
-import { assertProperties, checkNoErrorWithTimeout, createTestDirectory, createTestFile } from '../test_utils';
+import * as fileActions from '@/file_actions';
+import { assertProperties, checkNoErrorWithTimeout, createTestDirectory, createTestFile, returnMockFunction } from '@test/test_utils';
 import { ActionData } from 'neuro-game-sdk';
-import { getPermissionLevel, PermissionLevel } from '../../config';
+import { getPermissionLevel, PermissionLevel } from '@/config';
 import { NeuroClient } from 'neuro-game-sdk';
-import { NEURO } from '../../constants';
+import { NEURO } from '@/constants';
 import { anything, capture, instance, mock, verify } from 'ts-mockito';
 
 suite('File Actions', () => {
@@ -263,7 +263,7 @@ suite('File Actions', () => {
         const emptyDirPath = vscode.workspace.asRelativePath(emptyDirUri, false);
 
         // === Act ===
-        fileActions.handleGetWorkspaceFiles({ id: 'abc', name: 'get_workspace_files', params: { folder: 'test_files' } });
+        fileActions.handleGetWorkspaceFiles({ id: 'abc', name: 'get_workspace_files', params: { folder: 'test_files' } }, returnMockFunction());
 
         // Wait for context to be sent
         await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); });
@@ -295,7 +295,7 @@ suite('File Actions', () => {
         const emptyDirPath = vscode.workspace.asRelativePath(emptyDirUri, false);
 
         // === Act ===
-        fileActions.handleGetWorkspaceFiles({ id: 'abc', name: 'get_workspace_files', params: { recursive: true } });
+        fileActions.handleGetWorkspaceFiles({ id: 'abc', name: 'get_workspace_files', params: { recursive: true } }, returnMockFunction());
 
         // Wait for context to be sent
         await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); });
@@ -333,7 +333,7 @@ suite('File Actions', () => {
         NEURO.client = instance(mockedClient);
 
         // === Act ===
-        fileActions.handleOpenFile({ id: 'abc', name: 'open_file', params: { filePath: filePath } });
+        fileActions.handleOpenFile({ id: 'abc', name: 'open_file', params: { filePath: filePath } }, returnMockFunction());
         // Allow VS Code to open and show the document before asserting
         await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); }, 5000, 100);
         // Brief delay to ensure activeTextEditor is updated across platforms
@@ -354,7 +354,7 @@ suite('File Actions', () => {
         const uri = vscode.Uri.joinPath(vscode.workspace.workspaceFolders![0].uri, relativePath);
 
         // === Act ===
-        fileActions.handleCreateFile({ id: 'abc', name: 'create_file', params: { filePath: relativePath } });
+        fileActions.handleCreateFile({ id: 'abc', name: 'create_file', params: { filePath: relativePath } }, returnMockFunction());
         const openAllowed = getPermissionLevel(fileActions.fileActions.switch_files.name) === PermissionLevel.AUTOPILOT;
         await checkNoErrorWithTimeout(() => {
             if (openAllowed) {
@@ -379,7 +379,7 @@ suite('File Actions', () => {
         const uri = vscode.Uri.joinPath(vscode.workspace.workspaceFolders![0].uri, relativePath);
 
         // === Act ===
-        fileActions.handleCreateFolder({ id: 'abc', name: 'create_folder', params: { folderPath: relativePath } });
+        fileActions.handleCreateFolder({ id: 'abc', name: 'create_folder', params: { folderPath: relativePath } }, returnMockFunction());
         await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); });
 
         // === Assert ===
@@ -395,7 +395,7 @@ suite('File Actions', () => {
         const newFileUri = vscode.Uri.joinPath(vscode.workspace.workspaceFolders![0].uri, newFilePath);
 
         // === Act ===
-        fileActions.handleRenameFileOrFolder({ id: 'abc', name: 'rename_file_or_folder', params: { oldPath: filePath, newPath: newFilePath } });
+        fileActions.handleRenameFileOrFolder({ id: 'abc', name: 'rename_file_or_folder', params: { oldPath: filePath, newPath: newFilePath } }, returnMockFunction());
         await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); });
 
         // === Assert ===
@@ -425,7 +425,7 @@ suite('File Actions', () => {
         await vscode.window.showTextDocument(fileUri, { preview: false });
         await vscode.window.showTextDocument(otherFileUri, { preview: false });
 
-        fileActions.handleRenameFileOrFolder({ id: 'abc', name: 'rename_file_or_folder', params: { oldPath: filePath, newPath: newFilePath } });
+        fileActions.handleRenameFileOrFolder({ id: 'abc', name: 'rename_file_or_folder', params: { oldPath: filePath, newPath: newFilePath } }, returnMockFunction());
         await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); });
 
         // Wait for the editor to update
@@ -467,7 +467,7 @@ suite('File Actions', () => {
         // === Act ===
         await vscode.window.showTextDocument(fileUri, { preview: false });
 
-        fileActions.handleRenameFileOrFolder({ id: 'abc', name: 'rename_file_or_folder', params: { oldPath: folderPath, newPath: newFolderPath } });
+        fileActions.handleRenameFileOrFolder({ id: 'abc', name: 'rename_file_or_folder', params: { oldPath: folderPath, newPath: newFolderPath } }, returnMockFunction());
         await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); });
 
         // Wait for the editor to update
@@ -501,7 +501,7 @@ suite('File Actions', () => {
         // === Act ===
         vscode.window.showTextDocument(fileUri, { preview: false });
 
-        fileActions.handleDeleteFileOrFolder({ id: 'abc', name: 'delete_file_or_folder', params: { path: filePath, recursive: false } });
+        fileActions.handleDeleteFileOrFolder({ id: 'abc', name: 'delete_file_or_folder', params: { path: filePath, recursive: false } }, returnMockFunction());
         await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); });
 
         // === Assert ===
@@ -531,7 +531,7 @@ suite('File Actions', () => {
         // This only happens in the test environment for some reason.
         // await vscode.window.showTextDocument(fileUri, { preview: false });
 
-        fileActions.handleDeleteFileOrFolder({ id: 'abc', name: 'delete_file_or_folder', params: { path: folderPath, recursive: true } });
+        fileActions.handleDeleteFileOrFolder({ id: 'abc', name: 'delete_file_or_folder', params: { path: folderPath, recursive: true } }, returnMockFunction());
         await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); });
 
         // Wait for the editor to update

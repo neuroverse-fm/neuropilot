@@ -95,7 +95,7 @@ export function deactivate() {
     handleTerminateTask({
         id: 'none',
         name: 'terminate_task',
-    });
+    }, () => null);
     commonDeactivate();
 }
 

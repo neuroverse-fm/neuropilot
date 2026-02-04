@@ -7,7 +7,7 @@ import { actionValidationAccept, actionValidationFailure, ActionValidationResult
 import assert from 'node:assert';
 import { targetedFileLintingResolvedEvent, targetedFolderLintingResolvedEvent, workspaceLintingResolvedEvent } from '@events/linting';
 import { addActions } from '@/rce';
-import { updateActionStatus } from '@events/actions';
+import { ActionStatus } from '@events/actions';
 
 export const CATEGORY_LINTING = 'Linting';
 
@@ -218,7 +218,7 @@ export function getFormattedDiagnosticsForFile(filePath: string, diagnostics: vs
 
 
 // Handle diagnostics for a single file
-export function handleGetFileLintProblems(actionData: ActionData): string | undefined {
+export function handleGetFileLintProblems(actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
     const relativePath = actionData.params.file;
     const workspaceUri = getWorkspaceUri()!;
 
@@ -227,21 +227,21 @@ export function handleGetFileLintProblems(actionData: ActionData): string | unde
 
         const rawDiagnostics = vscode.languages.getDiagnostics(workspaceUri.with({ path: normalizedPath }));
         if (rawDiagnostics.length === 0) {
-            updateActionStatus(actionData, 'success', 'No linting issues found');
+            updateStatus('success', 'No linting issues found');
             return `No linting problems found for file ${relativePath}.`;
         }
 
         const formattedDiagnostics = getFormattedDiagnosticsForFile(relativePath, rawDiagnostics);
-        updateActionStatus(actionData, 'success', `${rawDiagnostics.length} linting issues sent`);
+        updateStatus('success', `${rawDiagnostics.length} linting issues sent`);
         return `Linting problems for file ${relativePath}:${formattedDiagnostics}`;
     } catch (erm) {
         logOutput('ERROR', `Getting diagnostics for ${relativePath} failed: ${erm}`);
-        updateActionStatus(actionData, 'exception', 'Error thrown');
+        updateStatus('exception', 'Error thrown');
         return contextFailure(`Failed to get linting diagnostics for "${relativePath}".`);
     }
 }
 
-export function handleGetFolderLintProblems(actionData: ActionData): string | undefined {
+export function handleGetFolderLintProblems(actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
     const relativeFolder = actionData?.params.folder;
 
     const workspacePath = getWorkspacePath();
@@ -259,7 +259,7 @@ export function handleGetFolderLintProblems(actionData: ActionData): string | un
         });
 
         if (folderDiagnostics.length === 0) {
-            updateActionStatus(actionData, 'success', 'No linting issues found');
+            updateStatus('success', 'No linting issues found');
             return contextFailure(`No linting problems found for folder "${relativeFolder}".`);
         }
 
@@ -268,17 +268,17 @@ export function handleGetFolderLintProblems(actionData: ActionData): string | un
             return getFormattedDiagnosticsForFile(relative, diags);
         }).join('\n');
 
-        updateActionStatus(actionData, 'success', `${folderDiagnostics.length} linting issues sent`);
+        updateStatus('success', `${folderDiagnostics.length} linting issues sent`);
         return `Linting problems for folder "${relativeFolder}":\n${formattedDiagnostics}`;
     } catch (erm) {
         logOutput('ERROR', `Getting diagnostics for folder ${relativeFolder} failed: ${erm}`);
-        updateActionStatus(actionData, 'exception', 'Error thrown');
+        updateStatus('exception', 'Error thrown');
         return contextFailure(`Failed to get linting diagnostics for folder "${relativeFolder}".`);
     }
 }
 
 // Handle diagnostics for the entire workspace
-export function handleGetWorkspaceLintProblems(actionData: ActionData): string | undefined {
+export function handleGetWorkspaceLintProblems(actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
     const workspacePath = getWorkspacePath();
     if (!workspacePath) {
         return contextFailure('No workspace opened.');
@@ -292,7 +292,7 @@ export function handleGetWorkspaceLintProblems(actionData: ActionData): string |
         );
 
         if (safeDiagnostics.length === 0) {
-            updateActionStatus(actionData, 'success', 'No linting issues found');
+            updateStatus('success', 'No linting issues found');
             return contextFailure('No linting problems found for the current workspace.');
         }
 
@@ -301,11 +301,11 @@ export function handleGetWorkspaceLintProblems(actionData: ActionData): string |
             return getFormattedDiagnosticsForFile(relative, diags);
         }).join('\n\n');
 
-        updateActionStatus(actionData, 'success', `${safeDiagnostics.length} linting issues found`);
+        updateStatus('success', `${safeDiagnostics.length} linting issues found`);
         return `Linting problems for the current workspace:\n${formattedDiagnostics}`;
     } catch (erm) {
         logOutput('ERROR', `Failed to get diagnostics for workspace: ${erm}`);
-        updateActionStatus(actionData, 'exception', 'Error thrown');
+        updateStatus('exception', 'Error thrown');
         return contextFailure("Couldn't get diagnostics for the workspace.");
     }
 }

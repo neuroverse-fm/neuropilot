@@ -14,7 +14,7 @@ import { actionValidationAccept, actionValidationFailure, ActionValidationResult
 import { CONFIG } from '@/config';
 import { notifyOnTerminalClose } from '@events/shells';
 import { addActions } from './rce';
-import { updateActionStatus } from './events/actions';
+import { ActionStatus } from './events/actions';
 
 export const CATEGORY_TERMINAL = 'Terminal Access';
 
@@ -217,7 +217,7 @@ function getOrCreateTerminal(shellType: string, terminalName: string): TerminalS
 * Checks permissions, executes the command in the requested shell,
 * captures STDOUT and STDERR, logs the output, and sends it to nwero.
 */
-export function handleRunCommand(actionData: ActionData): string | undefined {
+export function handleRunCommand(actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
 
     // Get the command and shell.
     const command: string = actionData.params?.command;
@@ -294,7 +294,7 @@ export function handleRunCommand(actionData: ActionData): string | undefined {
 
         proc.stdin.write(command + '\n');
         logOutput('DEBUG', `Sent command: ${command}`);
-        updateActionStatus(actionData, 'success', `Wrote to ${shellType}`);
+        updateStatus('success', `Wrote to ${shellType}`);
 
     } else {
         // Process is already running; send the new command via stdin.
@@ -302,9 +302,9 @@ export function handleRunCommand(actionData: ActionData): string | undefined {
         if (shellProcess && shellProcess.stdin.writable) {
             shellProcess.stdin.write(command + '\n');
             logOutput('DEBUG', `Sent command: ${command}`);
-            updateActionStatus(actionData, 'success', `Wrote to ${shellType}`);
+            updateStatus('success', `Wrote to ${shellType}`);
         } else {
-            updateActionStatus(actionData, 'failure', `Couldn't write to stdin of ${shellType}`);
+            updateStatus('failure', `Couldn't write to stdin of ${shellType}`);
             return 'Unable to write to shell process.';
         }
     }
@@ -314,7 +314,7 @@ export function handleRunCommand(actionData: ActionData): string | undefined {
  * Kill terminal handler.
  * Checks if the terminal registry contains the open shell and forcefully kills the shell if found.
  */
-export function handleKillTerminal(actionData: ActionData): string | undefined {
+export function handleKillTerminal(actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
     // Validate shell type parameter.
     const shellType: string = actionData.params?.shell;
     const session = NEURO.terminalRegistry.get(shellType)!;
@@ -323,7 +323,7 @@ export function handleKillTerminal(actionData: ActionData): string | undefined {
     session.terminal.dispose();
     NEURO.terminalRegistry.delete(shellType);
 
-    updateActionStatus(actionData, 'success', `Successfully killed ${shellType}`);
+    updateStatus('success', `Successfully killed ${shellType}`);
 
     // Notify Neuro and the user.
     return `Terminal session for shell type "${shellType}" has been terminated.`;
@@ -333,7 +333,7 @@ export function handleKillTerminal(actionData: ActionData): string | undefined {
  * Returns a list of currently running shell types.
  * Each entry includes the shell type and its status.
  */
-export function handleGetCurrentlyRunningShells(actionData: ActionData): string | undefined {
+export function handleGetCurrentlyRunningShells(actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
     const runningShells: string[] = [];
 
     for (const [shellType, session] of NEURO.terminalRegistry.entries()) {
@@ -342,11 +342,11 @@ export function handleGetCurrentlyRunningShells(actionData: ActionData): string 
     }
 
     if (runningShells.length === 0) {
-        updateActionStatus(actionData, 'failure', 'No shells open');
+        updateStatus('failure', 'No shells open');
         return contextFailure('No running shells found.');
     }
     else {
-        updateActionStatus(actionData, 'success', `${runningShells.length} Neuro shells running`);
+        updateStatus('success', `${runningShells.length} Neuro shells running`);
         return `Currently running shells: ${runningShells.join('\n')}`;
     };
 }

@@ -13,7 +13,7 @@ import { RCEAction, actionValidationAccept, actionValidationFailure } from '@/ne
 import { ACTIONS } from '@/config';
 import { notifyOnTaskFinish } from '@events/shells';
 import { addActions, getActions, removeActions } from './rce';
-import { updateActionStatus } from './events/actions';
+import { ActionStatus, updateActionStatus } from '@events/actions';
 
 export const CATEGORY_TASKS = 'Tasks';
 const CATEGORY_REGISTERED_TASKS = 'Registered Tasks';
@@ -47,30 +47,31 @@ export function addTaskActions() {
     // Tasks are registered asynchronously in reloadTasks()
 }
 
-export function handleTerminateTask(_actionData: ActionData): string | undefined {
+export function handleTerminateTask(_actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
     const exe = NEURO.currentTaskExecution!;
     NEURO.currentTaskExecution = null;
     exe.task.terminate();
     logOutput('INFO', 'Terminated current task');
+    updateStatus('success', 'Terminated task.');
     return 'Terminated current task.';
 }
 
-export function handleRunTask(actionData: ActionData): string | undefined {
+export function handleRunTask(actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
     if (NEURO.currentTaskExecution !== null) {
-        updateActionStatus(actionData, 'failure', 'Task already running');
+        updateStatus('failure', 'Task already running');
         return 'Action failed: A task is already running.';
     }
 
     const task = NEURO.tasks.find(task => task.id === actionData.name);
     if (task === undefined) {
-        updateActionStatus(actionData, 'failure', 'Task not found');
+        updateStatus('failure', 'Task not found');
         return `Action failed: Task ${actionData.name} not found.`;
     }
 
     try {
         vscode.tasks.executeTask(task.task).then(value => {
             logOutput('INFO', `Executing task ${task.id}`);
-            updateActionStatus(actionData, 'pending', 'Executing task...');
+            updateStatus('pending', 'Executing task...');
             NEURO.currentTaskExecution = { task: value, data: actionData };
         });
         return `Executing task ${task.id}`;
