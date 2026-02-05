@@ -8,6 +8,12 @@ Changes between each version before then will not be listed.
 
 ## 2.5.0
 
+### Additions
+
+- Certain actions can now emit preview effects if Neuro is using an action with its permission set to Copilot.
+  - These preview effects will be emitted primarily for editing actions (cursor and highlight effects), as well as file, linting and some git actions (file list effects).
+  - Any preview effects with built-in actions are done with blue colours, to differentiate with the other visual effects that this & other extensions have.
+
 ### Fixes
 
 - A small amount of action handlers (like `terminate_task`) weren't updating their execution status correctly. Alongside a refactoring of the way handlers can update status, these handlers have also been fixed to actually update the execution status.
