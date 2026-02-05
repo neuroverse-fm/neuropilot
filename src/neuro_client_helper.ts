@@ -133,11 +133,12 @@ export interface RCEStorage {
     [additionalProperties: string | number | symbol]: unknown;
 }
 
-export class RCEContext<T extends JSONSchema7Object | undefined, K> extends Disposable {
+export class RCEContext<T extends JSONSchema7Object | undefined, K, E> extends Disposable {
     name: string;
     success: boolean | null;
     data: Omit<ActionData<T>, 'name'>;
     action: Omit<RCEAction<K>, 'name' & 'description'>;
+    events: RCECancelEvent<E>[] = [];
     storage?: RCEStorage;
     constructor(data: ActionData<T>, action: RCEAction<K>) {
         assert(action.name === data.name, 'The action name and name of action in the data should be the same!');
