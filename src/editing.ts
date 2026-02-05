@@ -804,6 +804,7 @@ export const editingActions = {
             additionalProperties: false,
         },
         handler: handleDiffPatch,
+        // TODO: I'm not sure if or how this action would have a preview effect, like would it work if a big highlight range was added to the targted text?
         validators: {
             sync: [checkCurrentFile, (actionData: ActionData) => {
                 const patch = parseDiffPatch(actionData.params.diff);

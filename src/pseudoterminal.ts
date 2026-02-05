@@ -56,6 +56,7 @@ export const terminalActions = {
             additionalProperties: false,
         },
         handler: handleRunCommand,
+        // TODO: Auto-switch to targeted terminal (if already started) as preview effect
         cancelEvents: [
             (actionData: ActionData) => notifyOnTerminalClose(actionData.params?.shell),
         ],
@@ -78,6 +79,7 @@ export const terminalActions = {
             additionalProperties: false,
         },
         handler: handleKillTerminal,
+        // TODO: Auto-switch to targeted terminal as preview effect
         cancelEvents: [
             (actionData: ActionData) => notifyOnTerminalClose(actionData.params?.shell),
         ],

@@ -25,6 +25,7 @@ export const taskActions = {
         description: 'Terminate the currently running task',
         category: CATEGORY_TASKS,
         handler: handleTerminateTask,
+        // TODO: Auto-switch to task output (if already opened) as preview effect
         cancelEvents: [
             notifyOnTaskFinish,
         ],
@@ -141,6 +142,7 @@ export function reloadTasks() {
             description: task.description,
             category: CATEGORY_REGISTERED_TASKS,
             handler: handleRunTask,
+            // TODO: Auto-switch to task output (if already opened) as preview effect
             promptGenerator: `run the task: ${task.description}`,
             validators: {
                 sync: [checkVirtualWorkspace, checkWorkspaceTrust],

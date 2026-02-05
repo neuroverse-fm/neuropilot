@@ -29,6 +29,7 @@ export const changelogActions = {
         },
         defaultPermission: PermissionLevel.COPILOT,
         handler: handleReadChangelog,
+        // TODO: Have a very specific preview effect? (I don't think it's worth it lol)
         promptGenerator: (actionData: ActionData) => actionData.params?.fromVersion
             ? `read all changelog entries starting from version ${actionData.params.fromVersion} (inclusive).`
             : 'read the latest changelog entries.',
