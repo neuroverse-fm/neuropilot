@@ -5,7 +5,7 @@
 
 import * as vscode from 'vscode';
 import { ActionData } from 'neuro-game-sdk';
-import { RCEAction, stripToAction, RCEHandler } from '@/neuro_client_helper';
+import { RCEAction, stripToAction, RCEHandler, RCEContext } from '@/neuro_client_helper';
 import { NEURO } from '@/constants';
 import { logOutput, notifyOnCaughtException } from '@/utils';
 import { ACTIONS, CONFIG, CONNECTION, getAllPermissions, getPermissionLevel, PermissionLevel, stringToPermissionLevel } from '@/config';
@@ -476,6 +476,8 @@ export async function RCEActionHandler(actionData: ActionData) {
 
             const action = getAction(actionData.name)!;
 
+            const context = new RCEContext(actionData, action);
+
             const effectivePermission = getPermissionLevel(action.name);
             if (effectivePermission === PermissionLevel.OFF) {
                 NEURO.client?.sendActionResult(actionData.id, true, 'Action failed: You don\'t have permission to execute this action.');
@@ -498,6 +500,7 @@ export async function RCEActionHandler(actionData: ActionData) {
                     const schemaFailures = `- ${messagesArray.join('\n- ')}`;
                     const message = 'Action failed, your inputs did not pass schema validation due to these problems:\n\n' + schemaFailures + '\n\nPlease pay attention to the schema and the above errors if you choose to retry.';
                     NEURO.client?.sendActionResult(actionData.id, false, message);
+                    context.done(false);
                     updateActionStatus(actionData, 'schema', `${messagesArray.length} schema validation rules failed`);
                     return;
                 }
@@ -511,6 +514,7 @@ export async function RCEActionHandler(actionData: ActionData) {
                         const actionResult = await validate(actionData);
                         if (!actionResult.success) {
                             NEURO.client?.sendActionResult(actionData.id, !(actionResult.retry ?? false), actionResult.message);
+                            context.done(false);
                             updateActionStatus(
                                 actionData,
                                 'failure',
@@ -547,6 +551,7 @@ export async function RCEActionHandler(actionData: ActionData) {
                     }
                     logOutput('WARN', `${CONNECTION.nameOfAPI}'${CONNECTION.nameOfAPI.endsWith('s') ? '' : 's'} action ${action.name} was cancelled because ${createdLogReason}`);
                     NEURO.client?.sendContext(`Your request was cancelled because ${createdReason}`);
+                    context.done(false);
                     updateActionStatus(actionData, 'cancelled', `Cancelled because ${createdLogReason}`);
                     clearRceRequest();
                 };
@@ -563,6 +568,7 @@ export async function RCEActionHandler(actionData: ActionData) {
                 for (const d of eventArray) d.dispose();
                 const result = action.handler(actionData, statusUpdateHandler);
                 NEURO.client?.sendActionResult(actionData.id, true, result ?? undefined);
+                context.done(true);
             }
             else { // effectivePermission === PermissionLevel.COPILOT
                 if (NEURO.rceRequest) {
