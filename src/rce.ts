@@ -466,8 +466,8 @@ export function getExtendedActionsInfo(): ExtendedActionInfo[] {
  * @param checkTasks Whether or not to check for tasks.
  */
 export async function RCEActionHandler(actionData: ActionData) {
+    const statusUpdateHandler = (status: ActionStatus, message: string) => updateActionStatus(actionData, status, message);
     try {
-        const statusUpdateHandler = (status: ActionStatus, message: string) => updateActionStatus(actionData, status, message);
         if (REGISTERED_ACTIONS.has(actionData.name)) {
             NEURO.actionHandled = true;
 
@@ -479,13 +479,13 @@ export async function RCEActionHandler(actionData: ActionData) {
             const effectivePermission = getPermissionLevel(action.name);
             if (effectivePermission === PermissionLevel.OFF) {
                 NEURO.client?.sendActionResult(actionData.id, true, 'Action failed: You don\'t have permission to execute this action.');
-                updateActionStatus(actionData, 'denied', 'Permission denied');
+                statusUpdateHandler('denied', 'Permission denied');
                 return;
             }
 
             // Validate schema
             if (action.schema) {
-                updateActionStatus(actionData, 'pending', 'Validating schema...');
+                statusUpdateHandler('pending', 'Validating schema...');
                 const schema = ACTIONS.experimentalSchemas ? action.schema ?? action.schemaFallback : action.schema;
                 const schemaValidationResult = validate(actionData.params, schema, { required: true });
                 if (!schemaValidationResult.valid) {
@@ -498,7 +498,7 @@ export async function RCEActionHandler(actionData: ActionData) {
                     const schemaFailures = `- ${messagesArray.join('\n- ')}`;
                     const message = 'Action failed, your inputs did not pass schema validation due to these problems:\n\n' + schemaFailures + '\n\nPlease pay attention to the schema and the above errors if you choose to retry.';
                     NEURO.client?.sendActionResult(actionData.id, false, message);
-                    updateActionStatus(actionData, 'schema', `${messagesArray.length} schema validation rules failed`);
+                    statusUpdateHandler('schema', `${messagesArray.length} schema validation rules failed`);
                     return;
                 }
             }
@@ -506,13 +506,12 @@ export async function RCEActionHandler(actionData: ActionData) {
             // Validate custom
             if (action.validators) {
                 if (action.validators.sync) {
-                    updateActionStatus(actionData, 'pending', 'Running validators...');
+                    statusUpdateHandler('pending', 'Running validators...');
                     for (const validate of action.validators.sync) {
                         const actionResult = await validate(actionData);
                         if (!actionResult.success) {
                             NEURO.client?.sendActionResult(actionData.id, !(actionResult.retry ?? false), actionResult.message);
-                            updateActionStatus(
-                                actionData,
+                            statusUpdateHandler(
                                 'failure',
                                 actionResult.historyNote ? `Validator failed: ${actionResult.historyNote}` : 'Validator failed' + actionResult.retry ? '\nRequesting retry' : '',
                             );
@@ -547,7 +546,7 @@ export async function RCEActionHandler(actionData: ActionData) {
                     }
                     logOutput('WARN', `${CONNECTION.nameOfAPI}'${CONNECTION.nameOfAPI.endsWith('s') ? '' : 's'} action ${action.name} was cancelled because ${createdLogReason}`);
                     NEURO.client?.sendContext(`Your request was cancelled because ${createdReason}`);
-                    updateActionStatus(actionData, 'cancelled', `Cancelled because ${createdLogReason}`);
+                    statusUpdateHandler('cancelled', `Cancelled because ${createdLogReason}`);
                     clearRceRequest();
                 };
                 for (const eventObject of action.cancelEvents) {
@@ -559,7 +558,7 @@ export async function RCEActionHandler(actionData: ActionData) {
             }
 
             if (effectivePermission === PermissionLevel.AUTOPILOT) {
-                updateActionStatus(actionData, 'pending', 'Executing handler...');
+                statusUpdateHandler('pending', 'Executing handler...');
                 for (const d of eventArray) d.dispose();
                 const result = action.handler(actionData, statusUpdateHandler);
                 NEURO.client?.sendActionResult(actionData.id, true, result ?? undefined);
@@ -567,11 +566,11 @@ export async function RCEActionHandler(actionData: ActionData) {
             else { // effectivePermission === PermissionLevel.COPILOT
                 if (NEURO.rceRequest) {
                     NEURO.client?.sendActionResult(actionData.id, true, 'Action failed: Already waiting for permission to run another action.');
-                    updateActionStatus(actionData, 'failure', 'Another action pending approval');
+                    statusUpdateHandler('failure', 'Another action pending approval');
                     return;
                 }
 
-                updateActionStatus(actionData, 'pending', `Waiting for approval from ${CONNECTION.userName}`);
+                statusUpdateHandler('pending', `Waiting for approval from ${CONNECTION.userName}`);
 
                 const prompt = (NEURO.currentController
                     ? NEURO.currentController
@@ -610,7 +609,7 @@ export async function RCEActionHandler(actionData: ActionData) {
         NEURO.client?.sendActionResult(actionData.id, true, `An error occurred while executing the action "${actionName}". You can retry if you like, but it may be better to ask Vedal to check what's up.`);
 
         // Track execution error
-        updateActionStatus(actionData, 'exception', 'Uncaught exception while executing action');
+        statusUpdateHandler('exception', 'Uncaught exception while executing action');
         return;
     }
 }
