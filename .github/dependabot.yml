@@ -3,6 +3,23 @@ updates:
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
+      interval: "weekly"
+      time: "00:00"
+      timezone: "Etc/UTC"
+    labels:
+      - dependabot
+      - meta
+    target-branch: dev
+    allow:
+      - dependency-name: "@vscode/test-web"
+    groups:
+      vscode-test-web:
+        applies-to: version-updates
+        update-types:
+          - patch
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
       interval: "monthly"
       time: "00:00"
       timezone: "Etc/UTC"
