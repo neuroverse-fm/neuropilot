@@ -21,7 +21,7 @@ const REGISTERED_ACTIONS: Set<string> = /* @__PURE__ */ new Set<string>();
 /**
  * A prompt parameter can either be a string or a function that converts ActionData into a prompt string.
  */
-export type PromptGenerator = string | ((actionData: ActionData) => string);
+export type PromptGenerator = string | ((actionData: ActionData, previewsEnabled: boolean) => string);
 
 /**
  * RCE request object
@@ -577,7 +577,7 @@ export async function RCEActionHandler(actionData: ActionData) {
                     ? NEURO.currentController
                     : 'The Neuro API server') +
                     ' wants to ' +
-                    (typeof action.promptGenerator === 'string' ? action.promptGenerator : action.promptGenerator(actionData)).trim();
+                    (typeof action.promptGenerator === 'string' ? action.promptGenerator : action.promptGenerator(actionData, !ACTIONS.disablePreviewEffects)).trim();
 
                 createRceRequest(
                     prompt,
