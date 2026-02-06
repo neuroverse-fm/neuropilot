@@ -9,7 +9,7 @@ import { esbuildProblemMatcherPlugin } from './plugins.js';
  */
 export async function webview(prodFlag, watchFlag) {
     const ctx = await context({
-        entryPoints: ['webview/**/*.ts', 'webview/**/*.tsx'],
+        entryPoints: ['webview/**/*.tsx'],
         bundle: true,
         format: 'cjs',
         minify: prodFlag,
