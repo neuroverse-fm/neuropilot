@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { NEURO } from '@/constants';
-import { logOutput } from '@/utils';
+import { logOutput } from '@/utils/misc';
 import { getAction } from '@/rce';
 
 //#region Types

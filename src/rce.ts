@@ -5,9 +5,9 @@
 
 import * as vscode from 'vscode';
 import { ActionData } from 'neuro-game-sdk';
-import { RCEAction, stripToAction, RCEHandler } from '@/neuro_client_helper';
+import { RCEAction, stripToAction, RCEHandler } from '@/utils/neuro_client';
 import { NEURO } from '@/constants';
-import { logOutput, notifyOnCaughtException } from '@/utils';
+import { logOutput, notifyOnCaughtException } from '@/utils/misc';
 import { ACTIONS, CONFIG, CONNECTION, getAllPermissions, getPermissionLevel, PermissionLevel, stringToPermissionLevel } from '@/config';
 import { validate } from 'jsonschema';
 import type { RCECancelEvent } from '@events/utils';

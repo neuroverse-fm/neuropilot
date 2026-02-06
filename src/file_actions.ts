@@ -2,8 +2,8 @@ import * as vscode from 'vscode';
 import { ActionData } from 'neuro-game-sdk';
 
 import { EXCEPTION_THROWN_STRING, NEURO, PROMISE_REJECTION_STRING } from '@/constants';
-import { filterFileContents, formatContext, getFence, getPositionContext, getVirtualCursor, getWorkspacePath, getWorkspaceUri, isBinary, isPathNeuroSafe, logOutput, NeuroPositionContext, normalizePath, notifyOnCaughtException, simpleFileName, stripTailSlashes } from '@/utils';
-import { contextFailure, contextNoAccess, RCEAction, actionValidationFailure, actionValidationAccept, ActionValidationResult, actionValidationRetry } from '@/neuro_client_helper';
+import { filterFileContents, formatContext, getFence, getPositionContext, getVirtualCursor, getWorkspacePath, getWorkspaceUri, isBinary, isPathNeuroSafe, logOutput, NeuroPositionContext, normalizePath, notifyOnCaughtException, simpleFileName, stripTailSlashes } from '@/utils/misc';
+import { contextFailure, contextNoAccess, RCEAction, actionValidationFailure, actionValidationAccept, ActionValidationResult, actionValidationRetry } from '@/utils/neuro_client';
 import { CONFIG, PermissionLevel, getPermissionLevel } from '@/config';
 import { targetedFileCreatedEvent, targetedFileDeletedEvent } from '@events/files';
 import { RCECancelEvent } from '@events/utils';

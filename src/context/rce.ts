@@ -1,5 +1,5 @@
 import type { JSONSchema7Object } from 'json-schema';
-import type { ActionValidationResult, RCEAction } from '@/neuro_client_helper';
+import type { ActionValidationResult, RCEAction } from '@/utils/neuro_client';
 import type { ActionData } from 'neuro-game-sdk';
 import { RCECancelEvent } from '../events/utils';
 import { Disposable } from 'vscode';

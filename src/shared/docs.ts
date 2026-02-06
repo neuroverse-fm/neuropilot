@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { logOutput } from '@/utils';
+import { logOutput } from '@/utils/misc';
 import { CONFIG } from '@/config';
 
 // Shared docs management

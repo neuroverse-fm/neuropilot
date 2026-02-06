@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 
 import { NEURO } from '@/constants';
-import { filterFileContents, logOutput, simpleFileName } from '@/utils';
+import { filterFileContents, logOutput, simpleFileName } from '@/utils/misc';
 import { CONFIG, CONNECTION } from '@/config';
 import assert from 'node:assert';
 import { JSONSchema7 } from 'json-schema';

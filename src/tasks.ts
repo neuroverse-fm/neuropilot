@@ -7,9 +7,9 @@
 import * as vscode from 'vscode';
 
 import { NEURO } from '@/constants';
-import { logOutput, formatActionID, getFence, checkWorkspaceTrust, checkVirtualWorkspace } from '@/utils';
+import { logOutput, formatActionID, getFence, checkWorkspaceTrust, checkVirtualWorkspace } from '@/utils/misc';
 import { ActionData } from 'neuro-game-sdk';
-import { RCEAction, actionValidationAccept, actionValidationFailure } from '@/neuro_client_helper';
+import { RCEAction, actionValidationAccept, actionValidationFailure } from '@/utils/neuro_client';
 import { ACTIONS } from '@/config';
 import { notifyOnTaskFinish } from '@events/shells';
 import { addActions, getActions, removeActions } from './rce';

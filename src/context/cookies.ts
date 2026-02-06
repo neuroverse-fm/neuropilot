@@ -1,11 +1,11 @@
 import * as vscode from 'vscode';
 import { ActionData } from 'neuro-game-sdk';
 
-import { logOutput } from '@/utils';
+import { logOutput } from '@/utils/misc';
 import { NEURO } from '@/constants';
 import { CONNECTION, PermissionLevel, getPermissionLevel } from '@/config';
 import { addActions, CATEGORY_MISC } from '@/rce';
-import { RCEAction } from '@/neuro_client_helper';
+import { RCEAction } from '@/utils/neuro_client';
 import { SimplifiedStatusUpdateHandler } from '@context/rce';
 
 export const REQUEST_COOKIE_ACTION: RCEAction = {

@@ -4,7 +4,7 @@
 
 import { Action, ActionData } from 'neuro-game-sdk';
 import { ACTIONS, Permission, PermissionLevel } from '@/config';
-import { logOutput, turtleSafari } from '@/utils';
+import { logOutput, turtleSafari } from '@/utils/misc';
 import { PromptGenerator } from '@/rce';
 import { RCECancelEvent } from '@events/utils';
 import { SimplifiedStatusUpdateHandler } from '@context/rce';

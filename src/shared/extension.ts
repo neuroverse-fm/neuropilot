@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { NEURO, EXTENSIONS } from '@/constants';
-import { logOutput, createClient, onClientConnected, setVirtualCursor, showAPIMessage, disconnectClient, reconnectClient, getWorkspaceUri, getFence, simpleFileName } from '@/utils';
+import { logOutput, createClient, onClientConnected, setVirtualCursor, showAPIMessage, disconnectClient, reconnectClient, getWorkspaceUri, getFence, simpleFileName } from '@/utils/misc';
 import { completionsProvider, registerCompletionResultHandler } from '@/completions';
 import { giveCookie } from '@context/cookies';
 import { registerChatResponseHandler } from '@/chat';
@@ -13,10 +13,10 @@ import { getGitExtension } from '@/git';
 import { openDocsOnTarget, registerDocsCommands, registerDocsLink } from './docs';
 import { readChangelogAndSendToNeuro } from '@/changelog';
 import { moveCursorEmitterDiposable } from '@events/cursor';
-import { loadIgnoreFiles } from '@/ignore_files_utils';
-import { getWorkspacePath, normalizePath } from '@/utils';
+import { loadIgnoreFiles } from '@/utils/ignore_files';
+import { getWorkspacePath, normalizePath } from '@/utils/misc';
 import { ActionsViewProvider } from '@/views/actions';
-import { ImagesViewProvider } from '../views/image';
+import { ImagesViewProvider } from '@/views/image';
 import { ExecuteViewProvider, addCustomExecutionHistoryItem } from '@/views/execute';
 
 // Shared commands

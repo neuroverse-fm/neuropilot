@@ -1,7 +1,7 @@
 import { Action, NeuroClient } from 'neuro-game-sdk';
 import * as vscode from 'vscode';
 import { NEURO } from '@/constants';
-import { logOutput, simpleFileName, getPositionContext } from '@/utils';
+import { logOutput, simpleFileName, getPositionContext } from '@/utils/misc';
 import assert from 'node:assert';
 import { CONFIG } from '@/config';
 import { JSONSchema7 } from 'json-schema';

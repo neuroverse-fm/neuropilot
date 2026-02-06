@@ -2,8 +2,8 @@ import * as vscode from 'vscode';
 import { ActionData } from 'neuro-game-sdk';
 
 import { EXCEPTION_THROWN_STRING, NEURO } from '@/constants';
-import { getFence, logOutput } from '@/utils';
-import { RCEAction } from '@/neuro_client_helper';
+import { getFence, logOutput } from '@/utils/misc';
+import { RCEAction } from '@/utils/neuro_client';
 import { CONNECTION, PermissionLevel } from '@/config';
 import { addActions, CATEGORY_MISC } from './rce';
 import { SimplifiedStatusUpdateHandler } from '@context/rce';

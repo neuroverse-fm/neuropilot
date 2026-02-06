@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { NEURO } from '../constants';
-import { formatString } from '../utils';
+import { formatString } from '@/utils/misc';
 
 export interface Message {
     type: string;

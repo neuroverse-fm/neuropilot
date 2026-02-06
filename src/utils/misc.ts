@@ -6,9 +6,9 @@ import { fileTypeFromBuffer } from 'file-type';
 import { NEURO } from '@/constants';
 import { ACCESS, CONFIG, CONNECTION, CursorPositionContextStyle, getPermissionLevel, PermissionLevel, setPermissionLevel } from '@/config';
 
-import { ActionValidationResult, actionValidationAccept, actionValidationFailure } from '@/neuro_client_helper';
+import { ActionValidationResult, actionValidationAccept, actionValidationFailure } from './neuro_client';
 import assert from 'node:assert';
-import { patienceDiff } from './patience_diff';
+import { patienceDiff } from '../patience_diff';
 import { fireCursorPositionChangedEvent } from '@events/cursor';
 
 export const REGEXP_ALWAYS = /^/;
@@ -45,12 +45,12 @@ export function createClient() {
     if (testFlag === true || globalThis?.process?.env?.NEUROPILOT_TEST === 'true') {
         if (!NEURO.client) {
             NEURO.client = {
-                sendContext: () => {},
-                disconnect: () => {},
-                registerActions: () => {},
-                unregisterActions: () => {},
-                sendActionResult: () => {},
-                onAction: () => {},
+                sendContext: () => { },
+                disconnect: () => { },
+                registerActions: () => { },
+                unregisterActions: () => { },
+                sendActionResult: () => { },
+                onAction: () => { },
             } as unknown as NeuroClient;
         }
         return;
@@ -336,9 +336,9 @@ export function combineGlobLinesToRegExp(lines: string[]): RegExp {
     return new RegExp(result);
 }
 
-import { fastIsItIgnored } from '@/ignore_files_utils';
-import { unregisterAllActions } from './rce';
-import { changelogActions } from './changelog';
+import { fastIsItIgnored } from './ignore_files';
+import { unregisterAllActions } from '../rce';
+import { changelogActions } from '../changelog';
 
 /**
  * Check if an absolute path is safe for Neuro to access.
