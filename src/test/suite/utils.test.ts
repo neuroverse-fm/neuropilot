@@ -1,6 +1,6 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
-import * as utils from '../@/utils/misc';
+import * as utils from '@/utils/misc';
 import { NEURO } from '../../constants';
 import { anyString, capture, reset, spy, verify } from 'ts-mockito';
 
