@@ -20,12 +20,12 @@ import {
     getHighlightDecorationRenderOptions,
     showUpdateReminder,
     startupCreateClient,
-} from '@shared/extension';
+} from '../shared/extension';
 import { registerChatParticipant } from '@/chat';
 import { addUnsupervisedActions, registerUnsupervisedHandlers } from './unsupervised';
 import { registerSendSelectionToNeuro } from '@/editing';
 import { loadIgnoreFiles } from '@/utils/ignore_files';
-import { reregisterAllActions } from '../rce';
+import { reregisterAllActions } from '../../rce';
 
 export function activate(context: vscode.ExtensionContext) {
     loadIgnoreFiles(

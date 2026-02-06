@@ -18,6 +18,9 @@
 			"@context/*": [
 				"./src/context/*"
 			],
+			"@entry/*": [
+				"./src/in/*"
+			],
 			"@events/*": [
 				"./src/events/*"
 			],

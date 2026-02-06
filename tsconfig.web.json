@@ -10,11 +10,11 @@
     "outDir": "./out/web" // ESBuild will bundle anyway
   },
   "include": [
-    "src/web/**/*",
+    "src/in/web/**/*",
     "src/**/*"
   ],
   "exclude": [
-    "src/desktop/**/*",
+    "src/in/desktop/**/*",
     "src/test/**/*"
   ]
 }
