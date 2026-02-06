@@ -1,7 +1,6 @@
 import type { JSONSchema7Object } from 'json-schema';
 import type { ActionValidationResult, RCEAction } from '@/utils/neuro_client';
 import type { ActionData } from 'neuro-game-sdk';
-import { RCECancelEvent } from '../events/utils';
 import { Disposable } from 'vscode';
 import assert from 'assert';
 import { ActionStatus } from '../events/actions';
@@ -12,15 +11,14 @@ export interface RCEStorage {
     [additionalProperties: string | number | symbol]: unknown;
 }
 
-export interface RCELifecycleMetadata<E> {
-    readonly validatorResults?: readonly ActionValidationResult[];
-    readonly copilotPrompt?: string;
-    readonly events?: RCECancelEvent<E>[];
+export interface RCELifecycleMetadata {
+    events?: Disposable[];
+    preview?: { dispose: () => unknown };
 }
 
 export type SimplifiedStatusUpdateHandler = (status: ActionStatus, message: string) => void;
 
-export class RCEContext<T extends JSONSchema7Object | undefined, K, E> extends Disposable {
+export class RCEContext<T extends JSONSchema7Object | undefined, K> extends Disposable {
     name: string;
     success: boolean | null;
     executedAt: string = new Date().toLocaleTimeString();
@@ -29,7 +27,7 @@ export class RCEContext<T extends JSONSchema7Object | undefined, K, E> extends D
     action: Omit<RCEAction<K>, 'name' & 'description'>;
 
     /** Lifecycle-specific data */
-    private lifecycle: RCELifecycleMetadata<E> = {};
+    readonly lifecycle: RCELifecycleMetadata = {};
     public storage?: RCEStorage;
     readonly updateStatus: SimplifiedStatusUpdateHandler;
 
@@ -39,7 +37,9 @@ export class RCEContext<T extends JSONSchema7Object | undefined, K, E> extends D
         action.name = undefined as never;
         action.description = undefined as never;
         super(() => {
-            this.lifecycle = {};
+            for (const k in this.lifecycle) {
+                this.lifecycle[k as keyof typeof this.lifecycle] = undefined;
+            };
             this.storage = undefined;
             this.data = {} as never;
             this.action = {} as never;
@@ -56,7 +56,7 @@ export class RCEContext<T extends JSONSchema7Object | undefined, K, E> extends D
         this.dispose();
     };
 
-    getLifecycle(item?: keyof RCELifecycleMetadata<E>) {
+    getLifecycle(item?: keyof RCELifecycleMetadata) {
         if (item) return this.lifecycle[item];
         else return this.lifecycle;
     };

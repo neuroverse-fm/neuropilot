@@ -12,7 +12,7 @@ import { ACTIONS, CONFIG, CONNECTION, getAllPermissions, getPermissionLevel, Per
 import { validate } from 'jsonschema';
 import type { RCECancelEvent } from '@events/utils';
 import { ActionStatus, fireOnActionStart, updateActionStatus } from '@events/actions';
-import { RCEContext } from './context/rce';
+import { RCEContext, SimplifiedStatusUpdateHandler } from './context/rce';
 
 export const CATEGORY_MISC = 'Miscellaneous';
 
@@ -468,7 +468,7 @@ export function getExtendedActionsInfo(): ExtendedActionInfo[] {
  */
 export async function RCEActionHandler(actionData: ActionData) {
     try {
-        const statusUpdateHandler = (status: ActionStatus, message: string) => updateActionStatus(actionData, status, message);
+        const statusUpdateHandler: SimplifiedStatusUpdateHandler = (status: ActionStatus, message: string) => updateActionStatus(actionData, status, message);
         if (REGISTERED_ACTIONS.has(actionData.name)) {
             NEURO.actionHandled = true;
 
@@ -564,6 +564,8 @@ export async function RCEActionHandler(actionData: ActionData) {
                 }
             }
 
+            context.lifecycle.events = eventArray;
+
             if (effectivePermission === PermissionLevel.AUTOPILOT) {
                 updateActionStatus(actionData, 'pending', 'Executing handler...');
                 for (const d of eventArray) d.dispose();
@@ -575,6 +577,7 @@ export async function RCEActionHandler(actionData: ActionData) {
                 if (NEURO.rceRequest) {
                     NEURO.client?.sendActionResult(actionData.id, true, 'Action failed: Already waiting for permission to run another action.');
                     updateActionStatus(actionData, 'failure', 'Another action pending approval');
+                    context.done(false);
                     return;
                 }
 
