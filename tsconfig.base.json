@@ -15,6 +15,12 @@
 			"@/*": [
 				"./src/*"
 			],
+			"@context/*": [
+				"./src/context/*"
+			],
+			"@events/*": [
+				"./src/events/*"
+			],
 			"@shared/*": [
 				"./src/shared/*"
 			],
@@ -23,9 +29,6 @@
 			],
 			"@test/*": [
 				"./src/test/*"
-			],
-			"@events/*": [
-				"./src/events/*"
 			],
 			"@views/*": [
 				"./src/views/*"

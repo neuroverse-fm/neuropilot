@@ -12,7 +12,7 @@ export abstract class BaseWebviewViewProvider<TViewMessage extends Message, TPro
 
     protected _view?: vscode.WebviewView;
 
-    protected onViewReady?(): void | Promise<void>;
+    protected abstract onViewReady(): void | Promise<void>;
 
     constructor(private _script: string, private _styles: string[]) { }
 
@@ -31,7 +31,7 @@ export abstract class BaseWebviewViewProvider<TViewMessage extends Message, TPro
         });
 
         // Call onViewReady if it exists (for subclasses that implement it)
-        void this.onViewReady?.();
+        void this.onViewReady();
     }
 
     protected abstract handleMessage(message: TViewMessage): void;

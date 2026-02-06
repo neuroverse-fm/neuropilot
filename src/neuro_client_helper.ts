@@ -7,10 +7,7 @@ import { ACTIONS, Permission, PermissionLevel } from '@/config';
 import { logOutput, turtleSafari } from '@/utils';
 import { PromptGenerator } from '@/rce';
 import { RCECancelEvent } from '@events/utils';
-import { ActionStatus } from './events/actions';
-import { Disposable } from 'vscode';
-import { JSONSchema7Object } from 'json-schema';
-import assert from 'assert';
+import { SimplifiedStatusUpdateHandler } from '@context/rce';
 
 /** The result of attempting to execute an action client-side. */
 export interface ActionValidationResult {
@@ -125,41 +122,7 @@ export interface RCEAction<T = any> extends Action {
     ephemeralStorage?: boolean;
 }
 
-export type RCEHandler = (actionData: ActionData, statusUpdate: (status: ActionStatus, message: string) => void) => string | undefined | void;
-
-export interface RCEStorage {
-    readonly validatorResults?: readonly ActionValidationResult[];
-    readonly copilotPrompt?: string;
-    [additionalProperties: string | number | symbol]: unknown;
-}
-
-export class RCEContext<T extends JSONSchema7Object | undefined, K, E> extends Disposable {
-    name: string;
-    success: boolean | null;
-    data: Omit<ActionData<T>, 'name'>;
-    action: Omit<RCEAction<K>, 'name' & 'description'>;
-    events: RCECancelEvent<E>[] = [];
-    storage?: RCEStorage;
-    constructor(data: ActionData<T>, action: RCEAction<K>) {
-        assert(action.name === data.name, 'The action name and name of action in the data should be the same!');
-        data.name = undefined as never;
-        action.name = undefined as never;
-        action.description = undefined as never;
-        super(() => {
-            this.storage = undefined;
-            this.data = {} as never;
-            this.action = {} as never;
-        });
-        this.data = data;
-        this.action = action;
-        this.name = action.name;
-        this.success = null;
-    }
-    done(success: boolean): void {
-        this.success = success;
-        this.dispose();
-    };
-}
+export type RCEHandler = (actionData: ActionData, statusUpdate: SimplifiedStatusUpdateHandler) => string | undefined | void;
 
 /**
  * Strips an action to the form expected by the API.

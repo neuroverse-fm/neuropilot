@@ -8,7 +8,7 @@ import { CONFIG, CONNECTION } from '@/config';
 import { createCursorPositionChangedEvent } from '@events/cursor';
 import { RCECancelEvent } from '@events/utils';
 import { addActions, registerAction, unregisterAction } from '@/rce';
-import { ActionStatus } from '@events/actions';
+import { SimplifiedStatusUpdateHandler } from './context/rce';
 
 export const CATEGORY_EDITING = 'Editing';
 
@@ -756,7 +756,7 @@ export function toggleSaveAction(): void {
     }
 }
 
-export function handlePlaceCursor(actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
+export function handlePlaceCursor(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
     // One-based line and column (depending on config)
     let line = actionData.params.line;
     let column = actionData.params.column;
@@ -799,7 +799,7 @@ export function handlePlaceCursor(actionData: ActionData, updateStatus: (status:
     return `Cursor placed at (${basedLine}:${basedColumn})\n\n${formatContext(cursorContext)}`;
 }
 
-export function handleGetCursor(_actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
+export function handleGetCursor(_actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
     const document = vscode.window.activeTextEditor?.document;
     if (document === undefined) {
         updateStatus('failure', STATUS_NO_ACTIVE_DOCUMENT);
@@ -822,7 +822,7 @@ export function handleGetCursor(_actionData: ActionData, updateStatus: (status: 
     return `In file ${relativePath}.\n\n${formatContext(cursorContext)}`;
 }
 
-export function handleInsertText(actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
+export function handleInsertText(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
     const text: string = actionData.params.text;
     const cursor = getVirtualCursor()!;
     let position = actionData.params.position;
@@ -883,7 +883,7 @@ export function handleInsertText(actionData: ActionData, updateStatus: (status: 
     return undefined;
 }
 
-export function handleInsertLines(actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
+export function handleInsertLines(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
     /**
      * The current implementation is a lazy one of just appending a newline and pasting the text in
      * We want to allow specification of the line to insert under, with the default set to the current cursor location
@@ -937,7 +937,7 @@ export function handleInsertLines(actionData: ActionData, updateStatus: (status:
     return;
 }
 
-export function handleReplaceText(actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
+export function handleReplaceText(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
     const find: string = actionData.params.find;
     const replaceWith: string = actionData.params.replaceWith;
     const match: string = actionData.params.match;
@@ -1006,7 +1006,7 @@ export function handleReplaceText(actionData: ActionData, updateStatus: (status:
     });
 }
 
-export function handleDeleteText(actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
+export function handleDeleteText(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
     const find: string = actionData.params.find;
     const match: string = actionData.params.match;
     const useRegex: boolean = actionData.params.useRegex ?? false;
@@ -1071,7 +1071,7 @@ export function handleDeleteText(actionData: ActionData, updateStatus: (status: 
     });
 }
 
-export function handleFindText(actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
+export function handleFindText(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
     const find: string = actionData.params.find;
     const match: MatchOptions = actionData.params.match;
     const useRegex: boolean = actionData.params.useRegex ?? false;
@@ -1140,7 +1140,7 @@ export function handleFindText(actionData: ActionData, updateStatus: (status: Ac
     }
 }
 
-export function handleUndo(actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
+export function handleUndo(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
     const document = vscode.window.activeTextEditor?.document;
     if (document === undefined) {
         updateStatus('failure', STATUS_NO_ACTIVE_DOCUMENT);
@@ -1172,7 +1172,7 @@ export function handleUndo(actionData: ActionData, updateStatus: (status: Action
     return undefined;
 }
 
-export function handleSave(actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
+export function handleSave(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
     const document = vscode.window.activeTextEditor?.document;
     if (document === undefined) {
         updateStatus('failure', STATUS_NO_ACTIVE_DOCUMENT);
@@ -1209,7 +1209,7 @@ export function handleSave(actionData: ActionData, updateStatus: (status: Action
     return undefined;
 }
 
-export function handleRewriteAll(actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
+export function handleRewriteAll(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
     const content: string = actionData.params.content;
 
     const document = vscode.window.activeTextEditor?.document;
@@ -1258,7 +1258,7 @@ export function handleRewriteAll(actionData: ActionData, updateStatus: (status: 
     return undefined;
 }
 
-export function handleDeleteLines(actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
+export function handleDeleteLines(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
     const startLine = actionData.params.startLine;
     const endLine = actionData.params.endLine;
 
@@ -1337,7 +1337,7 @@ export function handleDeleteLines(actionData: ActionData, updateStatus: (status:
     return undefined;
 }
 
-export function handleRewriteLines(actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
+export function handleRewriteLines(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
     const startLine = actionData.params.startLine;
     const endLine = actionData.params.endLine;
     const content = actionData.params.content;
@@ -1393,7 +1393,7 @@ export function handleRewriteLines(actionData: ActionData, updateStatus: (status
     return undefined;
 }
 
-export function handleHighlightLines(actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
+export function handleHighlightLines(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
     const startLine: number = actionData.params.startLine;
     const endLine: number = actionData.params.endLine;
 
@@ -1423,7 +1423,7 @@ export function handleHighlightLines(actionData: ActionData, updateStatus: (stat
     return `Highlighted lines ${startLine}-${endLine}.`;
 }
 
-export function handleDiffPatch(actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
+export function handleDiffPatch(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
     const diff = actionData.params.diff;
 
     const document = vscode.window.activeTextEditor?.document;
@@ -1505,7 +1505,7 @@ export function handleDiffPatch(actionData: ActionData, updateStatus: (status: A
     return undefined;
 }
 
-function handleGetUserSelection(_actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
+function handleGetUserSelection(_actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
     const editor = vscode.window.activeTextEditor;
     const document = editor?.document;
     if (editor === undefined || document === undefined) {
@@ -1538,7 +1538,7 @@ function handleGetUserSelection(_actionData: ActionData, updateStatus: (status: 
     return `${preamble}\n\n${formatContext(cursorContext)}${postamble}`;
 }
 
-export function handleReplaceUserSelection(actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
+export function handleReplaceUserSelection(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
     const content: string = actionData.params.content;
 
     const editor = vscode.window.activeTextEditor;

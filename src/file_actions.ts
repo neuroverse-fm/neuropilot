@@ -8,7 +8,7 @@ import { CONFIG, PermissionLevel, getPermissionLevel } from '@/config';
 import { targetedFileCreatedEvent, targetedFileDeletedEvent } from '@events/files';
 import { RCECancelEvent } from '@events/utils';
 import { addActions } from './rce';
-import { ActionStatus } from '@events/actions';
+import { SimplifiedStatusUpdateHandler } from '@context/rce';
 
 export const CATEGORY_FILE_ACTIONS = 'File Actions';
 const ACTION_FAIL_NOTES = {
@@ -415,7 +415,7 @@ export function addFileActions() {
     ]);
 }
 
-export function handleCreateFile(actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
+export function handleCreateFile(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
     const relativePathParam = actionData.params.filePath;
     const relativePath = normalizePath(relativePathParam).replace(/^\//, '');
     const absolutePath = getWorkspacePath() + '/' + relativePath;
@@ -481,7 +481,7 @@ export function handleCreateFile(actionData: ActionData, updateStatus: (status: 
     }
 }
 
-export function handleCreateFolder(actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
+export function handleCreateFolder(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
     const relativePathParam = actionData.params.folderPath;
     const relativePath = normalizePath(relativePathParam).replace(/^\/|\/$/g, '');
     const absolutePath = getWorkspacePath() + '/' + relativePath;
@@ -531,7 +531,7 @@ export function handleCreateFolder(actionData: ActionData, updateStatus: (status
     }
 }
 
-export function handleRenameFileOrFolder(actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
+export function handleRenameFileOrFolder(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
     const oldRelativePathParam = actionData.params.oldPath;
     const newRelativePathParam = actionData.params.newPath;
 
@@ -603,7 +603,7 @@ export function handleRenameFileOrFolder(actionData: ActionData, updateStatus: (
     }
 }
 
-export function handleDeleteFileOrFolder(actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
+export function handleDeleteFileOrFolder(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
     const relativePathParam = actionData.params.path;
     const recursive = actionData.params.recursive ?? false;
 
@@ -686,7 +686,7 @@ export function handleDeleteFileOrFolder(actionData: ActionData, updateStatus: (
     }
 }
 
-export function handleGetWorkspaceFiles(actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
+export function handleGetWorkspaceFiles(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
     const workspaceFolder = vscode.workspace.workspaceFolders![0];
 
     // Start tracking execution
@@ -756,7 +756,7 @@ export function handleGetWorkspaceFiles(actionData: ActionData, updateStatus: (s
     }
 }
 
-export function handleOpenFile(actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
+export function handleOpenFile(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
     const relativePath = actionData.params.filePath;
 
     const workspaceUri = getWorkspaceUri()!;
@@ -810,7 +810,7 @@ export function handleOpenFile(actionData: ActionData, updateStatus: (status: Ac
     }
 }
 
-export function handleReadFile(actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
+export function handleReadFile(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
     const editor = vscode.window.activeTextEditor;
     if (!editor) {
         return contextFailure('No active text editor.');

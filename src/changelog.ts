@@ -6,7 +6,7 @@ import { getFence, logOutput } from '@/utils';
 import { RCEAction } from '@/neuro_client_helper';
 import { CONNECTION, PermissionLevel } from '@/config';
 import { addActions, CATEGORY_MISC } from './rce';
-import { ActionStatus } from './events/actions';
+import { SimplifiedStatusUpdateHandler } from '@context/rce';
 
 const MEMENTO_KEY = 'lastDeliveredChangelogVersion';
 
@@ -39,7 +39,7 @@ export function addChangelogActions(): void {
     addActions([changelogActions.read_changelog]);
 }
 
-export async function readChangelogAndSendToNeuro(fromVersion?: string, updateStatus?: (status: ActionStatus, message: string) => void): Promise<void> {
+export async function readChangelogAndSendToNeuro(fromVersion?: string, updateStatus?: SimplifiedStatusUpdateHandler): Promise<void> {
     try {
         if (!NEURO.connected) {
             vscode.window.showErrorMessage('Not connected to Neuro API.');
@@ -82,7 +82,7 @@ export async function readChangelogAndSendToNeuro(fromVersion?: string, updateSt
     }
 }
 
-function handleReadChangelog(actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
+function handleReadChangelog(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
     void readChangelogAndSendToNeuro(actionData.params?.fromVersion, updateStatus);
     return undefined;
 }

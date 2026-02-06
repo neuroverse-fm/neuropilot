@@ -4,7 +4,7 @@ import { CATEGORY_FILE_ACTIONS, fileActions } from '~/src/file_actions';
 import assert from 'node:assert';
 import { CATEGORY_EDITING, editingActions } from '~/src/editing';
 import { changelogActions } from '~/src/changelog';
-import { REQUEST_COOKIE_ACTION } from '~/src/context';
+import { REQUEST_COOKIE_ACTION } from '@context/cookies';
 import { CATEGORY_GIT, gitActions } from '~/src/git';
 import { chatAction } from '~/src/chat';
 import { completionAction } from '~/src/completions';

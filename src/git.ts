@@ -10,7 +10,7 @@ import assert from 'node:assert';
 import { RCECancelEvent } from '@events/utils';
 import { JSONSchema7Definition } from 'json-schema';
 import { addActions, registerAction, reregisterAllActions, unregisterAction } from './rce';
-import { ActionStatus } from '@events/actions';
+import { SimplifiedStatusUpdateHandler } from '@context/rce';
 
 export const CATEGORY_GIT = 'Git';
 
@@ -716,7 +716,7 @@ export function addGitActions() {
  * Requires neuropilot.permission.gitConfig to be enabled.
  */
 
-export function handleNewGitRepo(actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
+export function handleNewGitRepo(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
     const workspaceFolders = vscode.workspace.workspaceFolders;
     if (!workspaceFolders || workspaceFolders.length === 0) {
         updateStatus('failure', 'Not in a workspace');
@@ -737,7 +737,7 @@ export function handleNewGitRepo(actionData: ActionData, updateStatus: (status: 
     });
 }
 
-export function handleGetGitConfig(actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
+export function handleGetGitConfig(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
     assert(repo);
     const configKey: string | undefined = actionData.params.key;
 
@@ -764,7 +764,7 @@ export function handleGetGitConfig(actionData: ActionData, updateStatus: (status
     return;
 }
 
-export function handleSetGitConfig(actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
+export function handleSetGitConfig(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
     assert(repo);
     const configKey: string = actionData.params.key;
     const configValue: string = actionData.params.value;
@@ -785,7 +785,7 @@ export function handleSetGitConfig(actionData: ActionData, updateStatus: (status
  * Actions with Git branches
  */
 
-export function handleNewGitBranch(actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
+export function handleNewGitBranch(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
     assert(repo);
     const branchName: string = actionData.params.branchName;
 
@@ -801,7 +801,7 @@ export function handleNewGitBranch(actionData: ActionData, updateStatus: (status
     return;
 }
 
-export function handleSwitchGitBranch(actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
+export function handleSwitchGitBranch(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
     assert(repo);
     const branchName: string = actionData.params.branchName;
 
@@ -817,7 +817,7 @@ export function handleSwitchGitBranch(actionData: ActionData, updateStatus: (sta
     return;
 }
 
-export function handleDeleteGitBranch(actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
+export function handleDeleteGitBranch(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
     assert(repo);
     const branchName: string = actionData.params.branchName;
     const forceDelete: boolean = actionData.params.force ?? false;
@@ -845,7 +845,7 @@ interface StateStringProps {
     status: string
 }
 
-export function handleGitStatus(actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
+export function handleGitStatus(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
     assert(repo);
 
     repo.status().then(() => {
@@ -934,7 +934,7 @@ function getAbsoluteFilePath(filePath = '.'): string {
     return normalizePath(workspaceFolder + '/' + filePath);
 }
 
-export function handleAddFileToGit(actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
+export function handleAddFileToGit(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
     assert(repo);
     const filePath: string[] = actionData.params.filePath;
     const absolutePaths: string[] = [];
@@ -954,7 +954,7 @@ export function handleAddFileToGit(actionData: ActionData, updateStatus: (status
     return;
 }
 
-export function handleRemoveFileFromGit(actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
+export function handleRemoveFileFromGit(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
     assert(repo);
     const filePath: string[] = actionData.params.filePath;
     const absolutePaths: string[] = [];
@@ -974,7 +974,7 @@ export function handleRemoveFileFromGit(actionData: ActionData, updateStatus: (s
     return;
 }
 
-export function handleMakeGitCommit(actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
+export function handleMakeGitCommit(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
     assert(repo);
     const message = `${NEURO.currentController} committed: ${actionData.params?.message}`;
     const commitOptions: string[] | undefined = actionData.params?.options;
@@ -1023,7 +1023,7 @@ export function handleMakeGitCommit(actionData: ActionData, updateStatus: (statu
     return;
 }
 
-export function handleGitMerge(actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
+export function handleGitMerge(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
     assert(repo);
     const refToMerge = actionData.params.ref_to_merge;
 
@@ -1045,7 +1045,7 @@ export function handleGitMerge(actionData: ActionData, updateStatus: (status: Ac
     return;
 }
 
-export function handleAbortMerge(actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
+export function handleAbortMerge(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
     assert(repo);
 
     repo.mergeAbort().then(() => {
@@ -1061,7 +1061,7 @@ export function handleAbortMerge(actionData: ActionData, updateStatus: (status: 
     return;
 }
 
-export function handleDiffFiles(actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
+export function handleDiffFiles(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
     assert(repo);
 
     const ref1: string | undefined = actionData.params.ref1;
@@ -1173,7 +1173,7 @@ export function handleDiffFiles(actionData: ActionData, updateStatus: (status: A
     return;
 }
 
-export function handleGitLog(actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
+export function handleGitLog(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
     assert(repo);
 
     const logLimit: number | undefined = actionData.params?.log_limit;
@@ -1199,7 +1199,7 @@ export function handleGitLog(actionData: ActionData, updateStatus: (status: Acti
     return;
 }
 
-export function handleGitBlame(actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
+export function handleGitBlame(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
     assert(repo);
     const filePath: string = actionData.params.filePath;
     const absolutePath: string = getAbsoluteFilePath(filePath);
@@ -1226,7 +1226,7 @@ export function handleGitBlame(actionData: ActionData, updateStatus: (status: Ac
  * Requires neuropilot.permission.gitTags to be enabled.
  */
 
-export function handleTagHEAD(actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
+export function handleTagHEAD(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
     assert(repo);
     const name: string = actionData.params.name;
     const upstream: string = actionData.params.upstream ?? 'HEAD';
@@ -1243,7 +1243,7 @@ export function handleTagHEAD(actionData: ActionData, updateStatus: (status: Act
     return;
 }
 
-export function handleDeleteTag(actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
+export function handleDeleteTag(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
     assert(repo);
     const name: string = actionData.params.name;
 
@@ -1264,7 +1264,7 @@ export function handleDeleteTag(actionData: ActionData, updateStatus: (status: A
  * Requires neuropilot.permission.gitRemotes to be enabled.
  */
 
-export function handleFetchGitCommits(actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
+export function handleFetchGitCommits(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
     assert(repo);
     const remoteName: string = actionData.params.remoteName;
     const branchName: string = actionData.params.branchName;
@@ -1281,7 +1281,7 @@ export function handleFetchGitCommits(actionData: ActionData, updateStatus: (sta
     return;
 }
 
-export function handlePullGitCommits(_actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
+export function handlePullGitCommits(_actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
     assert(repo);
 
     repo.pull().then(() => {
@@ -1296,7 +1296,7 @@ export function handlePullGitCommits(_actionData: ActionData, updateStatus: (sta
     return;
 }
 
-export function handlePushGitCommits(actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
+export function handlePushGitCommits(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
     assert(repo);
     const remoteName: string | undefined = actionData.params.remoteName;
     const branchName: string | undefined = actionData.params.branchName;
@@ -1321,7 +1321,7 @@ export function handlePushGitCommits(actionData: ActionData, updateStatus: (stat
  * Requires neuropilot.permission.editRemoteData to be enabled, IN ADDITION to neuropilot.permission.gitRemotes.
  */
 
-export function handleAddGitRemote(actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
+export function handleAddGitRemote(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
     assert(repo);
 
     const remoteName: string = actionData.params.remoteName;
@@ -1339,7 +1339,7 @@ export function handleAddGitRemote(actionData: ActionData, updateStatus: (status
     return;
 }
 
-export function handleRemoveGitRemote(actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
+export function handleRemoveGitRemote(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
     assert(repo);
     const remoteName: string = actionData.params.remoteName;
 
@@ -1355,7 +1355,7 @@ export function handleRemoveGitRemote(actionData: ActionData, updateStatus: (sta
     return;
 }
 
-export function handleRenameGitRemote(actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
+export function handleRenameGitRemote(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
     assert(repo);
     const oldRemoteName: string = actionData.params.oldRemoteName;
     const newRemoteName: string = actionData.params.newRemoteName;

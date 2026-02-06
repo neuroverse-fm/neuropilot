@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 import { NEURO, EXTENSIONS } from '@/constants';
-import { logOutput, createClient, onClientConnected, setVirtualCursor, showAPIMessage, disconnectClient, reconnectClient, getWorkspaceUri } from '@/utils';
+import { logOutput, createClient, onClientConnected, setVirtualCursor, showAPIMessage, disconnectClient, reconnectClient, getWorkspaceUri, getFence, simpleFileName } from '@/utils';
 import { completionsProvider, registerCompletionResultHandler } from '@/completions';
-import { giveCookie, sendCurrentFile } from '@/context';
+import { giveCookie } from '@context/cookies';
 import { registerChatResponseHandler } from '@/chat';
 import { ACCESS, ACTIONS, checkDeprecatedSettings, CONFIG, CONNECTION, PermissionLevel, setPermissions } from '@/config';
 import { explainWithNeuro, fixWithNeuro, NeuroCodeActionsProvider, sendDiagnosticsDiff } from '@/lint_problems';
@@ -484,4 +484,27 @@ async function clearAllMementos(): Promise<void> {
     await Promise.all(updates);
 
     vscode.window.showInformationMessage('NeuroPilot mementos cleared.');
+}
+
+export function sendCurrentFile() {
+    const editor = vscode.window.activeTextEditor;
+    if (!editor) {
+        logOutput('ERROR', 'No active text editor');
+        vscode.window.showErrorMessage('No active text editor.');
+        return;
+    }
+    const document = editor.document;
+    const fileName = simpleFileName(document.fileName);
+    const language = document.languageId;
+    const text = document.getText();
+
+    if (!NEURO.connected) {
+        logOutput('ERROR', 'Attempted to send current file while disconnected');
+        vscode.window.showErrorMessage('Not connected to Neuro API.');
+        return;
+    }
+
+    logOutput('INFO', 'Sending current file to Neuro API');
+    const fence = getFence(text);
+    NEURO.client?.sendContext(`${CONNECTION.userName} sent you the contents of the file ${fileName}.\n\nContent:\n\n${fence}${language}\n${text}\n${fence}`);
 }

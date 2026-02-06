@@ -5,13 +5,14 @@
 
 import * as vscode from 'vscode';
 import { ActionData } from 'neuro-game-sdk';
-import { RCEAction, stripToAction, RCEHandler, RCEContext } from '@/neuro_client_helper';
+import { RCEAction, stripToAction, RCEHandler } from '@/neuro_client_helper';
 import { NEURO } from '@/constants';
 import { logOutput, notifyOnCaughtException } from '@/utils';
 import { ACTIONS, CONFIG, CONNECTION, getAllPermissions, getPermissionLevel, PermissionLevel, stringToPermissionLevel } from '@/config';
 import { validate } from 'jsonschema';
 import type { RCECancelEvent } from '@events/utils';
 import { ActionStatus, fireOnActionStart, updateActionStatus } from '@events/actions';
+import { RCEContext } from './context/rce';
 
 export const CATEGORY_MISC = 'Miscellaneous';
 
@@ -476,7 +477,7 @@ export async function RCEActionHandler(actionData: ActionData) {
 
             const action = getAction(actionData.name)!;
 
-            const context = new RCEContext(actionData, action);
+            const context = new RCEContext(actionData, action, statusUpdateHandler);
 
             const effectivePermission = getPermissionLevel(action.name);
             if (effectivePermission === PermissionLevel.OFF) {

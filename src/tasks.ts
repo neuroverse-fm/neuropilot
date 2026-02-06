@@ -13,7 +13,8 @@ import { RCEAction, actionValidationAccept, actionValidationFailure } from '@/ne
 import { ACTIONS } from '@/config';
 import { notifyOnTaskFinish } from '@events/shells';
 import { addActions, getActions, removeActions } from './rce';
-import { ActionStatus, updateActionStatus } from '@events/actions';
+import { updateActionStatus } from '@events/actions';
+import { SimplifiedStatusUpdateHandler } from '@context/rce';
 
 export const CATEGORY_TASKS = 'Tasks';
 const CATEGORY_REGISTERED_TASKS = 'Registered Tasks';
@@ -47,7 +48,7 @@ export function addTaskActions() {
     // Tasks are registered asynchronously in reloadTasks()
 }
 
-export function handleTerminateTask(_actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
+export function handleTerminateTask(_actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
     const exe = NEURO.currentTaskExecution!;
     NEURO.currentTaskExecution = null;
     exe.task.terminate();
@@ -56,7 +57,7 @@ export function handleTerminateTask(_actionData: ActionData, updateStatus: (stat
     return 'Terminated current task.';
 }
 
-export function handleRunTask(actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
+export function handleRunTask(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
     if (NEURO.currentTaskExecution !== null) {
         updateStatus('failure', 'Task already running');
         return 'Action failed: A task is already running.';

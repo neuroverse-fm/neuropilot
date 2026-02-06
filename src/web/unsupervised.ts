@@ -5,7 +5,7 @@ import { ActionData } from 'neuro-game-sdk';
 import { addLintActions } from '@/lint_problems';
 import { RCEActionHandler } from '@/rce';
 import { addChangelogActions } from '@/changelog';
-import { addRequestCookieAction } from '@/context';
+import { addRequestCookieAction } from '@context/cookies';
 
 export function addUnsupervisedActions() {
     addFileActions();

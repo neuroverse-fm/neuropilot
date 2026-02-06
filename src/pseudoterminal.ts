@@ -13,8 +13,8 @@ import { logOutput, delayAsync, getFence } from '@/utils';
 import { actionValidationAccept, actionValidationFailure, ActionValidationResult, RCEAction, contextFailure } from '@/neuro_client_helper';
 import { CONFIG } from '@/config';
 import { notifyOnTerminalClose } from '@events/shells';
-import { addActions } from './rce';
-import { ActionStatus } from './events/actions';
+import { addActions } from '@/rce';
+import { SimplifiedStatusUpdateHandler } from '@context/rce';
 
 export const CATEGORY_TERMINAL = 'Terminal Access';
 
@@ -217,7 +217,7 @@ function getOrCreateTerminal(shellType: string, terminalName: string): TerminalS
 * Checks permissions, executes the command in the requested shell,
 * captures STDOUT and STDERR, logs the output, and sends it to nwero.
 */
-export function handleRunCommand(actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
+export function handleRunCommand(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
 
     // Get the command and shell.
     const command: string = actionData.params?.command;
@@ -314,7 +314,7 @@ export function handleRunCommand(actionData: ActionData, updateStatus: (status: 
  * Kill terminal handler.
  * Checks if the terminal registry contains the open shell and forcefully kills the shell if found.
  */
-export function handleKillTerminal(actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
+export function handleKillTerminal(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
     // Validate shell type parameter.
     const shellType: string = actionData.params?.shell;
     const session = NEURO.terminalRegistry.get(shellType)!;
@@ -333,7 +333,7 @@ export function handleKillTerminal(actionData: ActionData, updateStatus: (status
  * Returns a list of currently running shell types.
  * Each entry includes the shell type and its status.
  */
-export function handleGetCurrentlyRunningShells(actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
+export function handleGetCurrentlyRunningShells(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
     const runningShells: string[] = [];
 
     for (const [shellType, session] of NEURO.terminalRegistry.entries()) {

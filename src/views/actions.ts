@@ -49,6 +49,8 @@ export class ActionsViewProvider extends BaseWebviewViewProvider<ActionsViewMess
         super('actions/main.js', ['actions/style.css']);
     }
 
+    protected onViewReady() { }
+
     public refreshActions() {
         const actionsInfo = getExtendedActionsInfo();
         const actionNodes = actionsInfo.map(info => ({

@@ -1,35 +1,12 @@
 import * as vscode from 'vscode';
 import { ActionData } from 'neuro-game-sdk';
 
-import { getFence, logOutput, simpleFileName } from '@/utils';
+import { logOutput } from '@/utils';
 import { NEURO } from '@/constants';
 import { CONNECTION, PermissionLevel, getPermissionLevel } from '@/config';
 import { addActions, CATEGORY_MISC } from '@/rce';
 import { RCEAction } from '@/neuro_client_helper';
-import { ActionStatus } from '@/events/actions';
-
-export function sendCurrentFile() {
-    const editor = vscode.window.activeTextEditor;
-    if (!editor) {
-        logOutput('ERROR', 'No active text editor');
-        vscode.window.showErrorMessage('No active text editor.');
-        return;
-    }
-    const document = editor.document;
-    const fileName = simpleFileName(document.fileName);
-    const language = document.languageId;
-    const text = document.getText();
-
-    if (!NEURO.connected) {
-        logOutput('ERROR', 'Attempted to send current file while disconnected');
-        vscode.window.showErrorMessage('Not connected to Neuro API.');
-        return;
-    }
-
-    logOutput('INFO', 'Sending current file to Neuro API');
-    const fence = getFence(text);
-    NEURO.client?.sendContext(`${CONNECTION.userName} sent you the contents of the file ${fileName}.\n\nContent:\n\n${fence}${language}\n${text}\n${fence}`);
-}
+import { SimplifiedStatusUpdateHandler } from '@context/rce';
 
 export const REQUEST_COOKIE_ACTION: RCEAction = {
     name: 'request_cookie',
@@ -51,7 +28,7 @@ export function addRequestCookieAction() {
     addActions([REQUEST_COOKIE_ACTION]);
 }
 
-function handleRequestCookie(actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void) {
+function handleRequestCookie(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler) {
     const permission = getPermissionLevel(actionData.name);
 
     switch (permission) {
@@ -96,7 +73,7 @@ function handleRequestCookie(actionData: ActionData, updateStatus: (status: Acti
     // }
 }
 
-export function giveCookie(isRequested = false, defaultFlavor = 'Chocolate Chip', updateStatus?: (status: ActionStatus, message: string) => void) {
+export function giveCookie(isRequested = false, defaultFlavor = 'Chocolate Chip', updateStatus?: SimplifiedStatusUpdateHandler) {
     if (!NEURO.connected) {
         logOutput('ERROR', 'Attempted to give cookie while disconnected');
         vscode.window.showErrorMessage('Not connected to Neuro API.');

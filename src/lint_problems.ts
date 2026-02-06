@@ -7,7 +7,7 @@ import { actionValidationAccept, actionValidationFailure, ActionValidationResult
 import assert from 'node:assert';
 import { targetedFileLintingResolvedEvent, targetedFolderLintingResolvedEvent, workspaceLintingResolvedEvent } from '@events/linting';
 import { addActions } from '@/rce';
-import { ActionStatus } from '@events/actions';
+import { SimplifiedStatusUpdateHandler } from '@context/rce';
 
 export const CATEGORY_LINTING = 'Linting';
 
@@ -122,7 +122,7 @@ export const lintActions = {
                 const diagnostics = vscode.languages.getDiagnostics();
                 const folderDiagnostics = diagnostics.filter(async ([diagUri, diags]) => {
                     return normalizePath(diagUri.fsPath).startsWith(normalizedFolderPath) &&
-                isPathNeuroSafe(diagUri.fsPath) && diags.length > 0;
+                        isPathNeuroSafe(diagUri.fsPath) && diags.length > 0;
                 });
 
                 if (folderDiagnostics.length === 0) return actionValidationFailure(`No linting problems found for folder "${relativeFolder}".`);
@@ -218,7 +218,7 @@ export function getFormattedDiagnosticsForFile(filePath: string, diagnostics: vs
 
 
 // Handle diagnostics for a single file
-export function handleGetFileLintProblems(actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
+export function handleGetFileLintProblems(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
     const relativePath = actionData.params.file;
     const workspaceUri = getWorkspaceUri()!;
 
@@ -241,7 +241,7 @@ export function handleGetFileLintProblems(actionData: ActionData, updateStatus: 
     }
 }
 
-export function handleGetFolderLintProblems(actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
+export function handleGetFolderLintProblems(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
     const relativeFolder = actionData?.params.folder;
 
     const workspacePath = getWorkspacePath();
@@ -278,7 +278,7 @@ export function handleGetFolderLintProblems(actionData: ActionData, updateStatus
 }
 
 // Handle diagnostics for the entire workspace
-export function handleGetWorkspaceLintProblems(actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
+export function handleGetWorkspaceLintProblems(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
     const workspacePath = getWorkspacePath();
     if (!workspacePath) {
         return contextFailure('No workspace opened.');
