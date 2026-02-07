@@ -118,6 +118,14 @@ export interface RCEAction<T = any> extends Action {
      * 
      * This storage object is part of a disposable object that will be effectively destroyed when the RCEAction lifecycle is complete.
      * Do not store this object as it is worthless after the lifecycle ends.
+     * 
+     * RCE executes the methods of {@link RCEAction} in the following order:
+     * 1. Validators (sync)
+     * 2. Cancel events setup
+     * 3. Prompt Generator
+     * 4. Preview effects
+     *  - Some arbitrary time in between here, event listeners for cancel events may also be fired, and the predicate will receive the storage as well.
+     * 5. Handler
      */
     ephemeralStorage?: boolean;
 }
