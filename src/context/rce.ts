@@ -2,40 +2,38 @@ import type { JSONSchema7Object } from 'json-schema';
 import type { ActionValidationResult, RCEAction } from '@/utils/neuro_client';
 import type { ActionData } from 'neuro-game-sdk';
 import { Disposable } from 'vscode';
-import assert from 'assert';
-import { ActionStatus } from '../events/actions';
+import { ActionStatus, updateActionStatus } from '../events/actions';
+import { getAction } from '../rce';
 
-export interface RCEStorage {
-    readonly validatorResults?: readonly ActionValidationResult[];
-    readonly copilotPrompt?: string;
-    [additionalProperties: string | number | symbol]: unknown;
-}
+export type RCEStorage = Record<string | number | symbol, unknown>;
 
 export interface RCELifecycleMetadata {
     events?: Disposable[];
     preview?: { dispose: () => unknown };
+    validatorResults?: {
+        sync: ActionValidationResult[];
+    };
+    copilotPrompt?: string;
 }
 
 export type SimplifiedStatusUpdateHandler = (status: ActionStatus, message: string) => void;
 
-export class RCEContext<T extends JSONSchema7Object | undefined, K> extends Disposable {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export class RCEContext<T extends JSONSchema7Object | undefined = any, K = any> extends Disposable {
     name: string;
     success: boolean | null;
     createdAt: string = new Date().toLocaleTimeString();
 
-    data: Omit<ActionData<T>, 'name'>;
-    action: Omit<RCEAction<K>, 'name' & 'description'>;
+    data: ActionData<T>;
+    action: RCEAction<K>;
 
     /** Lifecycle-specific data */
     readonly lifecycle: RCELifecycleMetadata = {};
     public storage?: RCEStorage;
-    readonly updateStatus: SimplifiedStatusUpdateHandler;
+    private _updateStatus: SimplifiedStatusUpdateHandler = (status: ActionStatus, message: string) => updateActionStatus(this.data, status, message);
+    readonly updateStatus: SimplifiedStatusUpdateHandler = (status: ActionStatus, message: string) => this._updateStatus(status, message);
 
-    constructor(data: ActionData<T>, action: RCEAction<K>, updateStatusFunction: SimplifiedStatusUpdateHandler) {
-        assert(action.name === data.name, 'The action name and name of action in the data should be the same!');
-        data.name = undefined as never;
-        action.name = undefined as never;
-        action.description = undefined as never;
+    constructor(data: ActionData<T>) {
         super(() => {
             for (const k in this.lifecycle) {
                 this.lifecycle[k as keyof typeof this.lifecycle] = undefined;
@@ -47,12 +45,12 @@ export class RCEContext<T extends JSONSchema7Object | undefined, K> extends Disp
             for (const d of this.lifecycle.events ?? []) {
                 d.dispose();
             }
+            this._updateStatus = (_status, _message) => undefined;
         });
         this.data = data;
-        this.action = action;
-        this.name = action.name;
+        this.action = getAction(data.name)!;
+        this.name = data.name;
         this.success = null;
-        this.updateStatus = updateStatusFunction;
     }
 
     done(success: boolean): void {
