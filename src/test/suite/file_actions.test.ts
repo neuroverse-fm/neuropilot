@@ -3,10 +3,13 @@ import * as vscode from 'vscode';
 import * as fileActions from '@/file_actions';
 import { assertProperties, checkNoErrorWithTimeout, createTestDirectory, createTestFile, returnMockFunction } from '@test/test_utils';
 import { ActionData } from 'neuro-game-sdk';
+import type { RCEContext } from '@/context/rce';
 import { getPermissionLevel, PermissionLevel } from '@/config';
 import { NeuroClient } from 'neuro-game-sdk';
 import { NEURO } from '@/constants';
 import { anything, capture, instance, mock, verify } from 'ts-mockito';
+
+const makeContext = (data: ActionData) => ({ data, updateStatus: returnMockFunction() } as unknown as RCEContext);
 
 suite('File Actions', () => {
     let originalClient: NeuroClient | null = null;
@@ -87,17 +90,17 @@ suite('File Actions', () => {
         const nonExistentPath = 'test_files/does-not-exist.txt';
 
         // === Act & Assert ===
-        assertProperties(await validateIsAFile(baseAction), { success: false, retry: true }, 'Missing filePath should be invalid');
-        assertProperties(await validateIsAFile({ ...baseAction, params: {} }), { success: false, retry: true }, 'Undefined filePath should be invalid');
-        assertProperties(await validateIsAFile({ ...baseAction, params: { filePath: '' } }), { success: false, retry: true }, 'Empty filePath should be invalid');
-        assertProperties(await validateIsAFile({ ...baseAction, params: { filePath: '/' } }), { success: false, retry: true }, 'Root-only path should be invalid');
+        assertProperties(await validateIsAFile(makeContext(baseAction)), { success: false, retry: true }, 'Missing filePath should be invalid');
+        assertProperties(await validateIsAFile(makeContext({ ...baseAction, params: {} })), { success: false, retry: true }, 'Undefined filePath should be invalid');
+        assertProperties(await validateIsAFile(makeContext({ ...baseAction, params: { filePath: '' } })), { success: false, retry: true }, 'Empty filePath should be invalid');
+        assertProperties(await validateIsAFile(makeContext({ ...baseAction, params: { filePath: '/' } })), { success: false, retry: true }, 'Root-only path should be invalid');
 
-        assertProperties(await validateIsAFile({ ...baseAction, params: { filePath: dirPath } }), { success: false, retry: false }, 'Directory path should be invalid');
-        assertProperties(await validateIsAFile({ ...baseAction, params: { filePath: nonExistentPath } }), { success: false, retry: false }, 'Nonexistent file should be invalid');
+        assertProperties(await validateIsAFile(makeContext({ ...baseAction, params: { filePath: dirPath } })), { success: false, retry: false }, 'Directory path should be invalid');
+        assertProperties(await validateIsAFile(makeContext({ ...baseAction, params: { filePath: nonExistentPath } })), { success: false, retry: false }, 'Nonexistent file should be invalid');
 
-        assertProperties(await validateIsAFile({ ...baseAction, params: { filePath } }), { success: true }, 'Existing file should be valid');
-        assertProperties(await validateIsAFile({ ...baseAction, params: { filePath: '/' + filePath } }), { success: true }, 'Path with leading slash should be valid');
-        assertProperties(await validateIsAFile({ ...baseAction, params: { filePath: './' + filePath } }), { success: true }, 'Path with leading dot slash should be valid');
+        assertProperties(await validateIsAFile(makeContext({ ...baseAction, params: { filePath } })), { success: true }, 'Existing file should be valid');
+        assertProperties(await validateIsAFile(makeContext({ ...baseAction, params: { filePath: '/' + filePath } })), { success: true }, 'Path with leading slash should be valid');
+        assertProperties(await validateIsAFile(makeContext({ ...baseAction, params: { filePath: './' + filePath } })), { success: true }, 'Path with leading dot slash should be valid');
     });
 
     test('neuroSafeRenameValidation', async function () {
@@ -116,59 +119,59 @@ suite('File Actions', () => {
 
         // === Act & Assert ===
 
-        assertProperties(await neuroSafeRenameValidation({
+        assertProperties(await neuroSafeRenameValidation(makeContext({
             id: 'abc',
             name: 'rename_file_or_folder',
             params: {
                 oldPath: filePath1,
                 newPath: nonexistentPath,
             },
-        }), { success: true }, 'Rename should succeed if there is no file with the new name');
+        } as ActionData)), { success: true }, 'Rename should succeed if there is no file with the new name');
 
-        assertProperties(await neuroSafeRenameValidation({
+        assertProperties(await neuroSafeRenameValidation(makeContext({
             id: 'abc',
             name: 'rename_file_or_folder',
             params: {
                 oldPath: filePath1,
                 newPath: filePath2,
             },
-        }), { success: false, retry: false }, 'Rename should fail if a file with the new name already exists');
+        } as ActionData)), { success: false, retry: false }, 'Rename should fail if a file with the new name already exists');
 
-        assertProperties(await neuroSafeRenameValidation({
+        assertProperties(await neuroSafeRenameValidation(makeContext({
             id: 'abc',
             name: 'rename_file_or_folder',
             params: {
                 oldPath: filePath1,
                 newPath: unsafeNonexistentPath,
             },
-        }), { success: false, retry: false }, 'Rename should fail if the new path is unsafe');
+        } as ActionData)), { success: false, retry: false }, 'Rename should fail if the new path is unsafe');
 
-        assertProperties(await neuroSafeRenameValidation({
+        assertProperties(await neuroSafeRenameValidation(makeContext({
             id: 'abc',
             name: 'rename_file_or_folder',
             params: {
                 oldPath: unsafePath,
                 newPath: nonexistentPath,
             },
-        }), { success: false, retry: false }, 'Rename should fail if the old path is unsafe');
+        } as ActionData)), { success: false, retry: false }, 'Rename should fail if the old path is unsafe');
 
-        assertProperties(await neuroSafeRenameValidation({
+        assertProperties(await neuroSafeRenameValidation(makeContext({
             id: 'abc',
             name: 'rename_file_or_folder',
             params: {
                 oldPath: nonexistentPath,
                 newPath: nonexistentPath2,
             },
-        }), { success: false, retry: false }, 'Rename should fail if the old path does not exist');
+        } as ActionData)), { success: false, retry: false }, 'Rename should fail if the old path does not exist');
 
-        assertProperties(await neuroSafeRenameValidation({
+        assertProperties(await neuroSafeRenameValidation(makeContext({
             id: 'abc',
             name: 'rename_file_or_folder',
             params: {
                 oldPath: filePath1,
                 newPath: filePath1,
             },
-        }), { success: false, retry: false }, 'Rename should fail if the old and new paths are the same');
+        } as ActionData)), { success: false, retry: false }, 'Rename should fail if the old and new paths are the same');
     });
 
     test('neuroSafeDeleteValidation', async function () {
@@ -185,68 +188,68 @@ suite('File Actions', () => {
         const nonexistentDirPath = 'nonexistent/dir';
 
         // === Act & Assert ===
-        assertProperties(await neuroSafeDeleteValidation({
+        assertProperties(await neuroSafeDeleteValidation(makeContext({
             id: 'abc',
             name: 'delete_file_or_folder',
             params: {
                 path: filePath,
                 recursive: false,
             },
-        }), { success: true }, 'Non-recursive delete should succeed for an existing file');
+        } as ActionData)), { success: true }, 'Non-recursive delete should succeed for an existing file');
 
-        assertProperties(await neuroSafeDeleteValidation({
+        assertProperties(await neuroSafeDeleteValidation(makeContext({
             id: 'abc',
             name: 'delete_file_or_folder',
             params: {
                 path: filePath,
                 recursive: true,
             },
-        }), { success: false, retry: false }, 'Recursive delete should fail for an existing file');
+        } as ActionData)), { success: false, retry: false }, 'Recursive delete should fail for an existing file');
 
-        assertProperties(await neuroSafeDeleteValidation({
+        assertProperties(await neuroSafeDeleteValidation(makeContext({
             id: 'abc',
             name: 'delete_file_or_folder',
             params: {
                 path: dirPath,
                 recursive: false,
             },
-        }), { success: false, retry: false }, 'Non-recursive delete should fail for an existing directory');
+        } as ActionData)), { success: false, retry: false }, 'Non-recursive delete should fail for an existing directory');
 
-        assertProperties(await neuroSafeDeleteValidation({
+        assertProperties(await neuroSafeDeleteValidation(makeContext({
             id: 'abc',
             name: 'delete_file_or_folder',
             params: {
                 path: dirPath,
                 recursive: true,
             },
-        }), { success: true }, 'Recursive delete should succeed for an existing directory');
+        } as ActionData)), { success: true }, 'Recursive delete should succeed for an existing directory');
 
-        assertProperties(await neuroSafeDeleteValidation({
+        assertProperties(await neuroSafeDeleteValidation(makeContext({
             id: 'abc',
             name: 'delete_file_or_folder',
             params: {
                 path: unsafePath,
                 recursive: false,
             },
-        }), { success: false, retry: false }, 'Delete should fail for an unsafe file');
+        } as ActionData)), { success: false, retry: false }, 'Delete should fail for an unsafe file');
 
-        assertProperties(await neuroSafeDeleteValidation({
+        assertProperties(await neuroSafeDeleteValidation(makeContext({
             id: 'abc',
             name: 'delete_file_or_folder',
             params: {
                 path: nonexistentFilePath,
                 recursive: false,
             },
-        }), { success: false, retry: false }, 'Non-recursive delete should fail for a nonexistent file');
+        } as ActionData)), { success: false, retry: false }, 'Non-recursive delete should fail for a nonexistent file');
 
-        assertProperties(await neuroSafeDeleteValidation({
+        assertProperties(await neuroSafeDeleteValidation(makeContext({
             id: 'abc',
             name: 'delete_file_or_folder',
             params: {
                 path: nonexistentDirPath,
                 recursive: true,
             },
-        }), { success: false, retry: false }, 'Recursive delete should fail for a nonexistent directory');
+        } as ActionData)), { success: false, retry: false }, 'Recursive delete should fail for a nonexistent directory');
     });
 
     test('handleGetWorkspaceFiles', async function () {
@@ -263,7 +266,7 @@ suite('File Actions', () => {
         const emptyDirPath = vscode.workspace.asRelativePath(emptyDirUri, false);
 
         // === Act ===
-        fileActions.handleGetWorkspaceFiles({ id: 'abc', name: 'get_workspace_files', params: { folder: 'test_files' } }, returnMockFunction());
+        fileActions.handleGetWorkspaceFiles(makeContext({ id: 'abc', name: 'get_workspace_files', params: { folder: 'test_files' } } as ActionData));
 
         // Wait for context to be sent
         await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); });
@@ -295,7 +298,7 @@ suite('File Actions', () => {
         const emptyDirPath = vscode.workspace.asRelativePath(emptyDirUri, false);
 
         // === Act ===
-        fileActions.handleGetWorkspaceFiles({ id: 'abc', name: 'get_workspace_files', params: { recursive: true } }, returnMockFunction());
+        fileActions.handleGetWorkspaceFiles(makeContext({ id: 'abc', name: 'get_workspace_files', params: { recursive: true } } as ActionData));
 
         // Wait for context to be sent
         await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); });
@@ -333,7 +336,7 @@ suite('File Actions', () => {
         NEURO.client = instance(mockedClient);
 
         // === Act ===
-        fileActions.handleOpenFile({ id: 'abc', name: 'open_file', params: { filePath: filePath } }, returnMockFunction());
+        fileActions.handleOpenFile(makeContext({ id: 'abc', name: 'open_file', params: { filePath: filePath } } as ActionData));
         // Allow VS Code to open and show the document before asserting
         await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); }, 5000, 100);
         // Brief delay to ensure activeTextEditor is updated across platforms
@@ -354,7 +357,7 @@ suite('File Actions', () => {
         const uri = vscode.Uri.joinPath(vscode.workspace.workspaceFolders![0].uri, relativePath);
 
         // === Act ===
-        fileActions.handleCreateFile({ id: 'abc', name: 'create_file', params: { filePath: relativePath } }, returnMockFunction());
+        fileActions.handleCreateFile(makeContext({ id: 'abc', name: 'create_file', params: { filePath: relativePath } } as ActionData));
         const openAllowed = getPermissionLevel(fileActions.fileActions.switch_files.name) === PermissionLevel.AUTOPILOT;
         await checkNoErrorWithTimeout(() => {
             if (openAllowed) {
@@ -379,7 +382,7 @@ suite('File Actions', () => {
         const uri = vscode.Uri.joinPath(vscode.workspace.workspaceFolders![0].uri, relativePath);
 
         // === Act ===
-        fileActions.handleCreateFolder({ id: 'abc', name: 'create_folder', params: { folderPath: relativePath } }, returnMockFunction());
+        fileActions.handleCreateFolder(makeContext({ id: 'abc', name: 'create_folder', params: { folderPath: relativePath } } as ActionData));
         await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); });
 
         // === Assert ===
@@ -395,7 +398,7 @@ suite('File Actions', () => {
         const newFileUri = vscode.Uri.joinPath(vscode.workspace.workspaceFolders![0].uri, newFilePath);
 
         // === Act ===
-        fileActions.handleRenameFileOrFolder({ id: 'abc', name: 'rename_file_or_folder', params: { oldPath: filePath, newPath: newFilePath } }, returnMockFunction());
+        fileActions.handleRenameFileOrFolder(makeContext({ id: 'abc', name: 'rename_file_or_folder', params: { oldPath: filePath, newPath: newFilePath } } as ActionData));
         await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); });
 
         // === Assert ===
@@ -425,7 +428,7 @@ suite('File Actions', () => {
         await vscode.window.showTextDocument(fileUri, { preview: false });
         await vscode.window.showTextDocument(otherFileUri, { preview: false });
 
-        fileActions.handleRenameFileOrFolder({ id: 'abc', name: 'rename_file_or_folder', params: { oldPath: filePath, newPath: newFilePath } }, returnMockFunction());
+        fileActions.handleRenameFileOrFolder(makeContext({ id: 'abc', name: 'rename_file_or_folder', params: { oldPath: filePath, newPath: newFilePath } } as ActionData));
         await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); });
 
         // Wait for the editor to update
@@ -467,7 +470,7 @@ suite('File Actions', () => {
         // === Act ===
         await vscode.window.showTextDocument(fileUri, { preview: false });
 
-        fileActions.handleRenameFileOrFolder({ id: 'abc', name: 'rename_file_or_folder', params: { oldPath: folderPath, newPath: newFolderPath } }, returnMockFunction());
+        fileActions.handleRenameFileOrFolder(makeContext({ id: 'abc', name: 'rename_file_or_folder', params: { oldPath: folderPath, newPath: newFolderPath } } as ActionData));
         await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); });
 
         // Wait for the editor to update
@@ -501,7 +504,7 @@ suite('File Actions', () => {
         // === Act ===
         vscode.window.showTextDocument(fileUri, { preview: false });
 
-        fileActions.handleDeleteFileOrFolder({ id: 'abc', name: 'delete_file_or_folder', params: { path: filePath, recursive: false } }, returnMockFunction());
+        fileActions.handleDeleteFileOrFolder(makeContext({ id: 'abc', name: 'delete_file_or_folder', params: { path: filePath, recursive: false } } as ActionData));
         await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); });
 
         // === Assert ===
@@ -531,7 +534,7 @@ suite('File Actions', () => {
         // This only happens in the test environment for some reason.
         // await vscode.window.showTextDocument(fileUri, { preview: false });
 
-        fileActions.handleDeleteFileOrFolder({ id: 'abc', name: 'delete_file_or_folder', params: { path: folderPath, recursive: true } }, returnMockFunction());
+        fileActions.handleDeleteFileOrFolder(makeContext({ id: 'abc', name: 'delete_file_or_folder', params: { path: folderPath, recursive: true } } as ActionData));
         await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); });
 
         // Wait for the editor to update

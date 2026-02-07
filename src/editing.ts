@@ -1,5 +1,4 @@
 import * as vscode from 'vscode';
-import { ActionData } from 'neuro-game-sdk';
 
 import { NEURO } from '@/constants';
 import { DiffRangeType, escapeRegExp, getDiffRanges, getFence, getPositionContext, getProperty, getVirtualCursor, showDiffRanges, isPathNeuroSafe, logOutput, setVirtualCursor, simpleFileName, substituteMatch, clearDecorations, formatContext, filterFileContents, positionFromIndex, indexFromPosition } from '@/utils/misc';
@@ -8,7 +7,7 @@ import { CONFIG, CONNECTION } from '@/config';
 import { createCursorPositionChangedEvent } from '@events/cursor';
 import { RCECancelEvent } from '@events/utils';
 import { addActions, registerAction, unregisterAction } from '@/rce';
-import { SimplifiedStatusUpdateHandler } from './context/rce';
+import { RCEContext } from '@/context/rce';
 
 export const CATEGORY_EDITING = 'Editing';
 
@@ -62,7 +61,8 @@ interface LineRange {
  * @returns A function that validates the specified string parameters
  */
 function createStringValidator(paramPaths: string[], maxLength = 100000) {
-    return (actionData: ActionData): ActionValidationResult => {
+    return (context: RCEContext): ActionValidationResult => {
+        const actionData = context.data;
         for (const path of paramPaths) {
             const value = getProperty(actionData.params, path);
 
@@ -88,7 +88,8 @@ function createStringValidator(paramPaths: string[], maxLength = 100000) {
  * @returns A function that validates the position in the action data.
  */
 function createPositionValidator(path = '') {
-    return (actionData: ActionData): ActionValidationResult => {
+    return (context: RCEContext): ActionValidationResult => {
+        const actionData = context.data;
         const position = getProperty(actionData.params, path) as Position | undefined;
 
         // If position is undefined, it is not required by the schema (otherwise the schema check would fail first)
@@ -132,7 +133,7 @@ function createPositionValidator(path = '') {
     };
 }
 
-function checkCurrentFile(_actionData: ActionData): ActionValidationResult {
+function checkCurrentFile(_context: RCEContext): ActionValidationResult {
     const document = vscode.window.activeTextEditor?.document;
     if (document === undefined)
         return actionValidationFailure(CONTEXT_NO_ACTIVE_DOCUMENT);
@@ -149,7 +150,8 @@ function checkCurrentFile(_actionData: ActionData): ActionValidationResult {
  * @returns A function that validates the line range in the action data.
  */
 function createLineRangeValidator(path = '') {
-    return (actionData: ActionData) => {
+    return (context: RCEContext) => {
+        const actionData = context.data;
         const range = getProperty(actionData.params, path) as LineRange | undefined;
 
         // If it's undefined it's not required
@@ -191,12 +193,12 @@ const cancelOnDidChangeActiveTextEditor = () => new RCECancelEvent({
     ],
 });
 
-const commonCancelEvents: ((actionData: ActionData) => RCECancelEvent)[] = [
+const commonCancelEvents: ((context: RCEContext) => RCECancelEvent)[] = [
     cancelOnDidChangeTextDocument,
     cancelOnDidChangeActiveTextEditor,
 ];
 
-const commonCancelEventsWithCursor: ((actionData: ActionData) => RCECancelEvent)[] = [
+const commonCancelEventsWithCursor: ((context: RCEContext) => RCECancelEvent)[] = [
     ...commonCancelEvents,
     createCursorPositionChangedEvent,
 ];
@@ -215,7 +217,10 @@ export const editingActions = {
             sync: [checkCurrentFile, createPositionValidator()],
         },
         cancelEvents: commonCancelEvents,
-        promptGenerator: (actionData: ActionData) => `${actionData.params.type === 'absolute' ? 'place her cursor at' : 'move her cursor by'} (${actionData.params.line}:${actionData.params.column}).`,
+        promptGenerator: (context: RCEContext) => {
+            const actionData = context.data;
+            return `${actionData.params.type === 'absolute' ? 'place her cursor at' : 'move her cursor by'} (${actionData.params.line}:${actionData.params.column}).`;
+        },
     },
     get_cursor_position: {
         name: 'get_cursor_position',
@@ -249,14 +254,15 @@ export const editingActions = {
         handler: handleInsertText,
         cancelEvents: [
             ...commonCancelEvents,
-            (actionData: ActionData) => {
-                return actionData.params.position ? null : createCursorPositionChangedEvent();
+            (context: RCEContext) => {
+                return context.data.params.position ? null : createCursorPositionChangedEvent();
             },
         ],
         validators: {
             sync: [checkCurrentFile, createPositionValidator('position'), createStringValidator(['text'])],
         },
-        promptGenerator: (actionData: ActionData) => {
+        promptGenerator: (context: RCEContext) => {
+            const actionData = context.data;
             const lineCount = actionData.params.text.trim().split('\n').length;
             let text = `insert ${lineCount} line${lineCount === 1 ? '' : 's'} of code`;
             if (actionData.params.position) {
@@ -301,14 +307,15 @@ export const editingActions = {
         handler: handleInsertLines,
         cancelEvents: [
             ...commonCancelEvents,
-            (actionData: ActionData) => {
-                return actionData.params.position ? null : createCursorPositionChangedEvent();
+            (context: RCEContext) => {
+                return context.data.params.position ? null : createCursorPositionChangedEvent();
             },
         ],
         validators: {
             sync: [checkCurrentFile, createStringValidator(['lines'])],
         },
-        promptGenerator: (actionData: ActionData) => {
+        promptGenerator: (context: RCEContext) => {
+            const actionData = context.data;
             const lines = actionData.params.text.trim().split('\n').length;
             const insertUnder = actionData.params.insertUnder;
             return `insert ${lines} line${lines !== 1 ? 's' : ''} of code below ${insertUnder ? `line ${insertUnder}` : 'her cursor'}.`;
@@ -337,7 +344,8 @@ export const editingActions = {
         validators: {
             sync: [checkCurrentFile, createStringValidator(['find', 'replaceWith']), createLineRangeValidator('lineRange')],
         },
-        promptGenerator: (actionData: ActionData) => {
+        promptGenerator: (context: RCEContext) => {
+            const actionData = context.data;
             let text = 'replace ';
             const target = actionData.params.useRegex ? escapeRegExp(actionData.params.find) : actionData.params.find;
             switch (actionData.params.match as MatchOptions) {
@@ -394,7 +402,8 @@ export const editingActions = {
         validators: {
             sync: [checkCurrentFile, createStringValidator(['find']), createLineRangeValidator('lineRange')],
         },
-        promptGenerator: (actionData: ActionData) => {
+        promptGenerator: (context: RCEContext) => {
+            const actionData = context.data;
             let text = 'delete ';
             const target = actionData.params.useRegex ? escapeRegExp(actionData.params.find) : actionData.params.find;
             switch (actionData.params.match as MatchOptions) {
@@ -457,7 +466,8 @@ export const editingActions = {
         validators: {
             sync: [checkCurrentFile, createStringValidator(['find']), createLineRangeValidator('lineRange')],
         },
-        promptGenerator: (actionData: ActionData) => {
+        promptGenerator: (context: RCEContext) => {
+            const actionData = context.data;
             let text = 'find ';
             const target = actionData.params.useRegex ? escapeRegExp(actionData.params.find) : actionData.params.find;
             if (actionData.params.highlight) text += 'and highlight ';
@@ -547,7 +557,8 @@ export const editingActions = {
         validators: {
             sync: [checkCurrentFile, createStringValidator(['content'])],
         },
-        promptGenerator: (actionData: ActionData) => {
+        promptGenerator: (context: RCEContext) => {
+            const actionData = context.data;
             const lineCount = actionData.params.content.trim().split('\n').length;
             return `rewrite the entire file with ${lineCount} line${lineCount === 1 ? '' : 's'} of content.`;
         },
@@ -572,7 +583,8 @@ export const editingActions = {
         validators: {
             sync: [checkCurrentFile, createLineRangeValidator(), createStringValidator(['content'])],
         },
-        promptGenerator: (actionData: ActionData) => {
+        promptGenerator: (context: RCEContext) => {
+            const actionData = context.data;
             const lineCount = actionData.params.content.trim().split('\n').length;
             return `rewrite lines ${actionData.params.startLine}-${actionData.params.endLine} with ${lineCount} line${lineCount === 1 ? '' : 's'} of content.`;
         },
@@ -589,8 +601,8 @@ export const editingActions = {
         validators: {
             sync: [checkCurrentFile, createLineRangeValidator()],
         },
-        promptGenerator: (actionData: ActionData) => {
-            return `delete lines ${actionData.params.startLine}-${actionData.params.endLine}.`;
+        promptGenerator: (context: RCEContext) => {
+            return `delete lines ${context.data.params.startLine}-${context.data.params.endLine}.`;
         },
     },
     highlight_lines: {
@@ -606,7 +618,7 @@ export const editingActions = {
         validators: {
             sync: [checkCurrentFile, createLineRangeValidator()],
         },
-        promptGenerator: (actionData: ActionData) => `highlight lines ${actionData.params.startLine}-${actionData.params.endLine}.`,
+        promptGenerator: (context: RCEContext) => `highlight lines ${context.data.params.startLine}-${context.data.params.endLine}.`,
     },
     get_user_selection: {
         name: 'get_user_selection',
@@ -637,8 +649,8 @@ export const editingActions = {
         handler: handleReplaceUserSelection,
         cancelEvents: [
             ...commonCancelEvents,
-            (actionData: ActionData) => {
-                if (actionData.params.requireSelectionUnchanged)
+            (context: RCEContext) => {
+                if (context.data.params.requireSelectionUnchanged)
                     return new RCECancelEvent({
                         reason: `${CONNECTION.userName}'s selection changed.`,
                         logReason: `${CONNECTION.userName}'s selection changed and requireSelectionUnchanged is set to true.`,
@@ -651,8 +663,8 @@ export const editingActions = {
             sync: [
                 checkCurrentFile,
                 createStringValidator(['content']),
-                (actionData: ActionData) => { // Validate that the selection is known and unchanged if required
-                    if (!actionData.params.requireSelectionUnchanged)
+                (context: RCEContext) => { // Validate that the selection is known and unchanged if required
+                    if (!context.data.params.requireSelectionUnchanged)
                         return actionValidationAccept();
                     if (NEURO.lastKnownUserSelection === null || NEURO.lastKnownUserSelection !== vscode.window.activeTextEditor?.selection)
                         return actionValidationFailure(`${CONNECTION.userName}'s selection has changed since it was last obtained.`);
@@ -660,7 +672,8 @@ export const editingActions = {
                 },
             ],
         },
-        promptGenerator: (actionData: ActionData) => {
+        promptGenerator: (context: RCEContext) => {
+            const actionData = context.data;
             const lineCount = actionData.params.content.trim().split('\n').length;
             return `replace your current selection with ${lineCount} line${lineCount === 1 ? '' : 's'} of content.`;
         },
@@ -695,8 +708,8 @@ export const editingActions = {
         },
         handler: handleDiffPatch,
         validators: {
-            sync: [checkCurrentFile, (actionData: ActionData) => {
-                const patch = parseDiffPatch(actionData.params.diff);
+            sync: [checkCurrentFile, (context: RCEContext) => {
+                const patch = parseDiffPatch(context.data.params.diff);
                 if (!patch) {
                     return actionValidationFailure('Invalid diff format. Expected format:\n\n```\n>>>>>> SEARCH\n[code to find]\n======\n[replacement code]\n<<<<<< REPLACE\n```');
                 }
@@ -718,8 +731,8 @@ export const editingActions = {
             }],
         },
         cancelEvents: commonCancelEvents,
-        promptGenerator: (actionData: ActionData) => {
-            const patch = parseDiffPatch(actionData.params.diff)!;
+        promptGenerator: (context: RCEContext) => {
+            const patch = parseDiffPatch(context.data.params.diff)!;
             const { linesAdded, linesRemoved } = countLineDifferences(patch.search, patch.replace);
             return `apply a diff patch ( +${linesAdded} | -${linesRemoved} ).`;
         },
@@ -756,7 +769,8 @@ export function toggleSaveAction(): void {
     }
 }
 
-export function handlePlaceCursor(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
+export function handlePlaceCursor(context: RCEContext): string | undefined {
+    const { data: actionData, updateStatus } = context;
     // One-based line and column (depending on config)
     let line = actionData.params.line;
     let column = actionData.params.column;
@@ -799,7 +813,8 @@ export function handlePlaceCursor(actionData: ActionData, updateStatus: Simplifi
     return `Cursor placed at (${basedLine}:${basedColumn})\n\n${formatContext(cursorContext)}`;
 }
 
-export function handleGetCursor(_actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
+export function handleGetCursor(context: RCEContext): string | undefined {
+    const { updateStatus } = context;
     const document = vscode.window.activeTextEditor?.document;
     if (document === undefined) {
         updateStatus('failure', STATUS_NO_ACTIVE_DOCUMENT);
@@ -822,7 +837,8 @@ export function handleGetCursor(_actionData: ActionData, updateStatus: Simplifie
     return `In file ${relativePath}.\n\n${formatContext(cursorContext)}`;
 }
 
-export function handleInsertText(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
+export function handleInsertText(context: RCEContext): string | undefined {
+    const { data: actionData, updateStatus } = context;
     const text: string = actionData.params.text;
     const cursor = getVirtualCursor()!;
     let position = actionData.params.position;
@@ -883,7 +899,8 @@ export function handleInsertText(actionData: ActionData, updateStatus: Simplifie
     return undefined;
 }
 
-export function handleInsertLines(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
+export function handleInsertLines(context: RCEContext): string | undefined {
+    const { data: actionData, updateStatus } = context;
     /**
      * The current implementation is a lazy one of just appending a newline and pasting the text in
      * We want to allow specification of the line to insert under, with the default set to the current cursor location
@@ -937,7 +954,8 @@ export function handleInsertLines(actionData: ActionData, updateStatus: Simplifi
     return;
 }
 
-export function handleReplaceText(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
+export function handleReplaceText(context: RCEContext): string | undefined {
+    const { data: actionData, updateStatus } = context;
     const find: string = actionData.params.find;
     const replaceWith: string = actionData.params.replaceWith;
     const match: string = actionData.params.match;
@@ -1006,7 +1024,8 @@ export function handleReplaceText(actionData: ActionData, updateStatus: Simplifi
     });
 }
 
-export function handleDeleteText(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
+export function handleDeleteText(context: RCEContext): string | undefined {
+    const { data: actionData, updateStatus } = context;
     const find: string = actionData.params.find;
     const match: string = actionData.params.match;
     const useRegex: boolean = actionData.params.useRegex ?? false;
@@ -1071,7 +1090,8 @@ export function handleDeleteText(actionData: ActionData, updateStatus: Simplifie
     });
 }
 
-export function handleFindText(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
+export function handleFindText(context: RCEContext): string | undefined {
+    const { data: actionData, updateStatus } = context;
     const find: string = actionData.params.find;
     const match: MatchOptions = actionData.params.match;
     const useRegex: boolean = actionData.params.useRegex ?? false;
@@ -1140,7 +1160,8 @@ export function handleFindText(actionData: ActionData, updateStatus: SimplifiedS
     }
 }
 
-export function handleUndo(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
+export function handleUndo(context: RCEContext): string | undefined {
+    const { data: actionData, updateStatus } = context;
     const document = vscode.window.activeTextEditor?.document;
     if (document === undefined) {
         updateStatus('failure', STATUS_NO_ACTIVE_DOCUMENT);
@@ -1172,7 +1193,8 @@ export function handleUndo(actionData: ActionData, updateStatus: SimplifiedStatu
     return undefined;
 }
 
-export function handleSave(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
+export function handleSave(context: RCEContext): string | undefined {
+    const { data: actionData, updateStatus } = context;
     const document = vscode.window.activeTextEditor?.document;
     if (document === undefined) {
         updateStatus('failure', STATUS_NO_ACTIVE_DOCUMENT);
@@ -1209,7 +1231,8 @@ export function handleSave(actionData: ActionData, updateStatus: SimplifiedStatu
     return undefined;
 }
 
-export function handleRewriteAll(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
+export function handleRewriteAll(context: RCEContext): string | undefined {
+    const { data: actionData, updateStatus } = context;
     const content: string = actionData.params.content;
 
     const document = vscode.window.activeTextEditor?.document;
@@ -1258,7 +1281,8 @@ export function handleRewriteAll(actionData: ActionData, updateStatus: Simplifie
     return undefined;
 }
 
-export function handleDeleteLines(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
+export function handleDeleteLines(context: RCEContext): string | undefined {
+    const { data: actionData, updateStatus } = context;
     const startLine = actionData.params.startLine;
     const endLine = actionData.params.endLine;
 
@@ -1337,7 +1361,8 @@ export function handleDeleteLines(actionData: ActionData, updateStatus: Simplifi
     return undefined;
 }
 
-export function handleRewriteLines(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
+export function handleRewriteLines(context: RCEContext): string | undefined {
+    const { data: actionData, updateStatus } = context;
     const startLine = actionData.params.startLine;
     const endLine = actionData.params.endLine;
     const content = actionData.params.content;
@@ -1393,7 +1418,8 @@ export function handleRewriteLines(actionData: ActionData, updateStatus: Simplif
     return undefined;
 }
 
-export function handleHighlightLines(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
+export function handleHighlightLines(context: RCEContext): string | undefined {
+    const { data: actionData, updateStatus } = context;
     const startLine: number = actionData.params.startLine;
     const endLine: number = actionData.params.endLine;
 
@@ -1423,7 +1449,8 @@ export function handleHighlightLines(actionData: ActionData, updateStatus: Simpl
     return `Highlighted lines ${startLine}-${endLine}.`;
 }
 
-export function handleDiffPatch(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
+export function handleDiffPatch(context: RCEContext): string | undefined {
+    const { data: actionData, updateStatus } = context;
     const diff = actionData.params.diff;
 
     const document = vscode.window.activeTextEditor?.document;
@@ -1505,7 +1532,8 @@ export function handleDiffPatch(actionData: ActionData, updateStatus: Simplified
     return undefined;
 }
 
-function handleGetUserSelection(_actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
+function handleGetUserSelection(context: RCEContext): string | undefined {
+    const { updateStatus } = context;
     const editor = vscode.window.activeTextEditor;
     const document = editor?.document;
     if (editor === undefined || document === undefined) {
@@ -1538,7 +1566,8 @@ function handleGetUserSelection(_actionData: ActionData, updateStatus: Simplifie
     return `${preamble}\n\n${formatContext(cursorContext)}${postamble}`;
 }
 
-export function handleReplaceUserSelection(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
+export function handleReplaceUserSelection(context: RCEContext): string | undefined {
+    const { data: actionData, updateStatus } = context;
     const content: string = actionData.params.content;
 
     const editor = vscode.window.activeTextEditor;

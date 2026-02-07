@@ -1,14 +1,14 @@
 import * as assert from 'assert';
 import { editingActions } from '@/editing';
-import { ActionData } from 'neuro-game-sdk';
+import type { RCEContext } from '@/context/rce';
 
 // Tests for the find_text action prompt generator using real logic
 suite('find_text Action', () => {
     test('generates a prompt and includes escaped find when useRegex is true', () => {
         // === Arrange & Act ===
         const prompt = editingActions.find_text.promptGenerator({
-            params: { find: 'foo(bar)', useRegex: true },
-        } as ActionData);
+            data: { params: { find: 'foo(bar)', useRegex: true } },
+        } as RCEContext);
 
         // === Assert ===
         assert.ok(typeof prompt === 'string' && prompt.length > 0);
@@ -18,8 +18,8 @@ suite('find_text Action', () => {
     test('generates a prompt and includes raw find when useRegex is false', () => {
         // === Arrange & Act ===
         const prompt = editingActions.find_text.promptGenerator({
-            params: { find: 'baz', useRegex: false },
-        } as ActionData);
+            data: { params: { find: 'baz', useRegex: false } },
+        } as RCEContext);
 
         // === Assert ===
         assert.ok(typeof prompt === 'string' && prompt.length > 0);

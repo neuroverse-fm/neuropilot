@@ -5,14 +5,14 @@
 
 import * as vscode from 'vscode';
 import { ActionData } from 'neuro-game-sdk';
-import { RCEAction, stripToAction, RCEHandler } from '@/utils/neuro_client';
+import { RCEAction, stripToAction } from '@/utils/neuro_client';
 import { NEURO } from '@/constants';
 import { logOutput, notifyOnCaughtException } from '@/utils/misc';
 import { ACTIONS, CONFIG, CONNECTION, getAllPermissions, getPermissionLevel, PermissionLevel, stringToPermissionLevel } from '@/config';
 import { validate } from 'jsonschema';
 import type { RCECancelEvent } from '@events/utils';
 import { fireOnActionStart, updateActionStatus } from '@events/actions';
-import { RCEContext } from './context/rce';
+import { RCEContext, RCERequestState } from './context/rce';
 
 export const CATEGORY_MISC = 'Miscellaneous';
 
@@ -20,53 +20,18 @@ const ACTIONS_ARRAY: RCEAction[] = [];
 const REGISTERED_ACTIONS: Set<string> = /* @__PURE__ */ new Set<string>();
 
 /**
- * A prompt parameter can either be a string or a function that converts ActionData into a prompt string.
+ * A prompt parameter can either be a string or a function that converts an RCEContext into a prompt string.
  */
-export type PromptGenerator = string | ((actionData: ActionData) => string);
+export type PromptGenerator = string | ((context: RCEContext) => string);
 
-/**
- * RCE request object
- */
-export interface RceRequest {
-    /**
-     * The prompt that describes the request.
-     */
-    prompt: string;
-    /**
-     * The callback function to be executed when the request is accepted.
-     */
-    callback: RCEHandler;
-    /**
-     * Resolve the request, closing all attached notifications and clearing timers.
-     */
-    resolve: () => void;
-    /**
-     * Attach a `window.showProgress` notification to the request, allowing it to be dismissed on request resolution.
-     * @param progress The progress object from `window.withProgress` to report the prompt and time passed to.
-     * @returns A promise that resolves when the request is resolved.
-     */
-    attachNotification: (progress: vscode.Progress<{ message?: string; increment?: number }>) => Promise<void>;
-    /**
-     * Whether the notification has been revealed already.
-     */
-    notificationVisible: boolean;
-    /**
-     * Disposable events
-     */
-    cancelEvents?: vscode.Disposable[];
-    /**
-     * The function to call for preview effects.
-     */
-    preview?: (actionData: ActionData) => vscode.Disposable;
-    /**
-     * Preview effect disposable.
-     * @todo redesign how this works later.
-     */
-    previewDisposable?: vscode.Disposable;
-    /**
-     * The action data associated with this request.
-     */
-    actionData: ActionData;
+let activeRequestContext: RCEContext | null = null;
+
+function getActiveRequestContext(): RCEContext | null {
+    return activeRequestContext;
+}
+
+function setActiveRequestContext(context: RCEContext | null): void {
+    activeRequestContext = context;
 }
 
 export interface ExtendedActionInfo {
@@ -90,15 +55,17 @@ export const cancelRequestAction: RCEAction = {
 /**
  * Handles cancellation requests from Neuro.
  */
-export function handleCancelRequest(actionData: ActionData): string | undefined {
-    if (!NEURO.rceRequest) {
-        updateActionStatus(actionData, 'failure', 'No active request.');
+export function handleCancelRequest(context: RCEContext): string | undefined {
+    const activeContext = getActiveRequestContext();
+    if (!activeContext?.request) {
+        context.updateStatus('failure', 'No active request.');
         return 'No active request to cancel.';
     }
-    const data = NEURO.rceRequest!.actionData;
-    clearRceRequest();
+    const data = activeContext.data;
+    clearRceRequest(activeContext);
+    activeContext.done(false);
     updateActionStatus(data, 'cancelled', 'Cancelled on Neuro\'s request');
-    updateActionStatus(actionData, 'success', `Cancelled action "${data.name}"`);
+    context.updateStatus('success', `Cancelled action "${data.name}"`);
     return 'Request cancelled.';
 }
 
@@ -108,31 +75,30 @@ export function handleCancelRequest(actionData: ActionData): string | undefined 
  * Only runs if there is an RCE callback in NEURO.
  */
 export function emergencyDenyRequests(): void {
-    if (!NEURO.rceRequest) {
+    const activeContext = getActiveRequestContext();
+    if (!activeContext?.request) {
         return;
     }
-    const data = NEURO.rceRequest.actionData;
+    const data = activeContext.data;
     updateActionStatus(data, 'cancelled', 'Emergency shutdown activated');
-    clearRceRequest();
-    logOutput('INFO', `Cancelled ${NEURO.rceRequest.callback} due to emergency shutdown.`);
+    clearRceRequest(activeContext);
+    activeContext.done(false);
+    logOutput('INFO', `Cancelled ${activeContext.action.name} due to emergency shutdown.`);
     NEURO.client?.sendContext('Your last request was denied.');
     vscode.window.showInformationMessage(`The last request from ${NEURO.currentController} has been denied automatically.`);
 }
 
-export function clearRceRequest(): void {
-    if (!NEURO.rceRequest) return;
-    NEURO.rceRequest.resolve();
-    if (NEURO.rceRequest.cancelEvents) {
-        for (const disposable of NEURO.rceRequest.cancelEvents) {
-            try { disposable.dispose(); } catch (erm: unknown) { logOutput('ERROR', `Failed to dispose a cancellation event: ${erm}. This could contribute to a memory leak.`); }
-        }
+export function clearRceRequest(context: RCEContext | null = getActiveRequestContext()): void {
+    if (!context?.request) return;
+    context.request.resolve();
+    context.request = undefined;
+    if (getActiveRequestContext() === context) {
+        setActiveRequestContext(null);
+        NEURO.client?.unregisterActions([cancelRequestAction.name]);
+        NEURO.statusBarItem!.tooltip = 'No active request';
+        NEURO.statusBarItem!.color = new vscode.ThemeColor('statusBarItem.foreground');
+        NEURO.statusBarItem!.backgroundColor = new vscode.ThemeColor('statusBarItem.background');
     }
-    NEURO.rceRequest.previewDisposable?.dispose();
-    NEURO.rceRequest = null;
-    NEURO.client?.unregisterActions([cancelRequestAction.name]);
-    NEURO.statusBarItem!.tooltip = 'No active request';
-    NEURO.statusBarItem!.color = new vscode.ThemeColor('statusBarItem.foreground');
-    NEURO.statusBarItem!.backgroundColor = new vscode.ThemeColor('statusBarItem.background');
 }
 
 /**
@@ -147,22 +113,19 @@ export function createRceRequest(
     prompt: string,
     context: RCEContext,
 ): void {
-    NEURO.rceRequest = {
+    setActiveRequestContext(context);
+    const request: RCERequestState = {
         prompt,
-        callback: context.action.handler,
         notificationVisible: false,
-
-        // these immediately get replaced synchronously, this is just so we don't have them be nullable in the type
+        resolved: false,
         resolve: () => { },
         attachNotification: async () => { },
-        cancelEvents: context.lifecycle.events,
-        actionData: context.data,
-        preview: context.action.preview,
     };
+    context.request = request;
 
     const promise = new Promise<void>((resolve) => {
         // we can't add any buttons to progress, so we have to add the accept link
-        const message = `${NEURO.rceRequest!.prompt} [Accept](command:neuropilot.acceptRceRequest)`;
+        const message = `${request.prompt} [Accept](command:neuropilot.acceptRceRequest)`;
 
         // this is null initially but will be assigned when a notification gets spawned
         let progress: vscode.Progress<{ message?: string; increment?: number }> | null = null;
@@ -189,25 +152,28 @@ export function createRceRequest(
 
             // actually handle the timeout
             timeout = setTimeout(() => {
-                clearRceRequest();
+                clearRceRequest(context);
                 NEURO.client?.sendContext('Request expired.');
                 context.updateStatus('timeout', `Timed out waiting for approval from ${CONNECTION.userName}`);
                 context.done(false);
             }, timeoutDuration);
         }
+        request.interval = interval;
+        request.timeout = timeout;
 
         // this will be called on request resolution
-        NEURO.rceRequest!.resolve = () => {
+        request.resolve = () => {
+            if (request.resolved) return;
+            request.resolved = true;
             if (interval)
                 clearInterval(interval);
             if (timeout)
                 clearTimeout(timeout);
 
             resolve();
-            context.done(true);
         };
 
-        NEURO.rceRequest!.attachNotification = async (p) => {
+        request.attachNotification = async (p) => {
             // set internal progress to the one from the notification
             progress = p;
             // we need to set the prompt and report time passed if there's a timeout
@@ -223,15 +189,18 @@ export function createRceRequest(
  * Reveals the RCE notification for the current request if it is not already visible.
  */
 export function revealRceNotification(): void {
-    if (!NEURO.rceRequest)
+    const activeContext = getActiveRequestContext();
+    if (!activeContext?.request)
         return;
 
     // don't show the notification if it's already open
-    if (NEURO.rceRequest.notificationVisible)
+    if (activeContext.request.notificationVisible)
         return;
 
-    NEURO.rceRequest.notificationVisible = true;
-    NEURO.rceRequest.previewDisposable = NEURO.rceRequest.preview?.(NEURO.rceRequest.actionData);
+    activeContext.request.notificationVisible = true;
+    if (activeContext.action.preview) {
+        activeContext.lifecycle.preview = activeContext.action.preview(activeContext);
+    }
 
     // weirdly enough, a "notification" isn't actually a thing in vscode.
     // it's either a message, or in this case, progress report that takes shape of a notification
@@ -247,7 +216,7 @@ export function revealRceNotification(): void {
                 denyRceRequest();
             });
 
-            return NEURO.rceRequest!.attachNotification(progress);
+            return activeContext.request!.attachNotification(progress);
         },
     );
 }
@@ -257,18 +226,19 @@ export function revealRceNotification(): void {
  * If there is no request to accept, an error message is shown to the user.
  */
 export function acceptRceRequest(): void {
-    if (!NEURO.rceRequest) {
+    const activeContext = getActiveRequestContext();
+    if (!activeContext?.request) {
         vscode.window.showErrorMessage(`No active request from ${NEURO.currentController} to accept.`);
         return;
     }
 
     NEURO.client?.sendContext(`${CONNECTION.userName} has accepted your request.`);
 
-    const actionData = NEURO.rceRequest.actionData;
+    const actionData = activeContext.data;
     updateActionStatus(actionData, 'pending', 'Executing...');
 
     try {
-        const result = NEURO.rceRequest.callback(actionData, (status, message) => updateActionStatus(actionData, status, message));
+        const result = activeContext.action.handler(activeContext);
         if (result) NEURO.client?.sendContext(result);
     } catch (erm: unknown) {
         const actionName = actionData.name;
@@ -279,7 +249,8 @@ export function acceptRceRequest(): void {
         updateActionStatus(actionData, 'failure', 'Uncaught exception while executing action');
     }
 
-    clearRceRequest();
+    clearRceRequest(activeContext);
+    activeContext.done(true);
 }
 
 /**
@@ -287,7 +258,8 @@ export function acceptRceRequest(): void {
  * If there is no request to deny, an error message is shown to the user.
  */
 export function denyRceRequest(): void {
-    if (!NEURO.rceRequest) {
+    const activeContext = getActiveRequestContext();
+    if (!activeContext?.request) {
         vscode.window.showErrorMessage(`No active request from ${NEURO.currentController} to deny.`);
         return;
     }
@@ -296,12 +268,13 @@ export function denyRceRequest(): void {
 
     // Track denial
     updateActionStatus(
-        NEURO.rceRequest.actionData,
+        activeContext.data,
         'denied',
         `Denied by ${CONNECTION.userName}`,
     );
 
-    clearRceRequest();
+    clearRceRequest(activeContext);
+    activeContext.done(false);
 }
 
 /**
@@ -476,6 +449,9 @@ export async function RCEActionHandler(actionData: ActionData) {
             const context = new RCEContext(actionData);
 
             const effectivePermission = getPermissionLevel(context.action.name);
+            if (context.action.ephemeralStorage) {
+                context.storage = {};
+            }
             if (effectivePermission === PermissionLevel.OFF) {
                 NEURO.client?.sendActionResult(actionData.id, true, 'Action failed: You don\'t have permission to execute this action.');
                 context.updateStatus('denied', 'Permission denied');
@@ -509,7 +485,7 @@ export async function RCEActionHandler(actionData: ActionData) {
                 if (context.action.validators.sync) {
                     context.updateStatus('pending', 'Running validators...');
                     for (const validate of context.action.validators.sync) {
-                        const actionResult = await validate(actionData);
+                        const actionResult = await validate(context);
                         context.lifecycle.validatorResults?.sync.push(actionResult);
                         if (!actionResult.success) {
                             NEURO.client?.sendActionResult(actionData.id, !(actionResult.retry ?? false), actionResult.message);
@@ -549,13 +525,14 @@ export async function RCEActionHandler(actionData: ActionData) {
                     logOutput('WARN', `${CONNECTION.nameOfAPI}'${CONNECTION.nameOfAPI.endsWith('s') ? '' : 's'} action ${context.action.name} was cancelled because ${createdLogReason}`);
                     NEURO.client?.sendContext(`Your request was cancelled because ${createdReason}`);
                     context.updateStatus('cancelled', `Cancelled because ${createdLogReason}`);
+                    clearRceRequest(context);
                     context.done(false);
-                    clearRceRequest();
                 };
                 for (const eventObject of context.action.cancelEvents) {
-                    const eventDetails = eventObject(context.data);
+                    const eventDetails = eventObject(context);
                     if (eventDetails) {
-                        context.lifecycle.events.push(eventDetails.event((eventData) => eventListener(eventDetails, eventData)), eventDetails.disposable);
+                        const subscription = eventDetails.event((eventData) => eventListener(eventDetails, eventData));
+                        context.lifecycle.events.push(vscode.Disposable.from(subscription, eventDetails.disposable));
                     }
                 }
             }
@@ -563,12 +540,12 @@ export async function RCEActionHandler(actionData: ActionData) {
             if (effectivePermission === PermissionLevel.AUTOPILOT) {
                 context.updateStatus('pending', 'Executing handler...');
                 for (const d of context.lifecycle.events ?? []) d.dispose();
-                const result = context.action.handler(actionData, context.updateStatus);
+                const result = context.action.handler(context);
                 NEURO.client?.sendActionResult(actionData.id, true, result ?? undefined);
                 context.done(true);
             }
             else { // effectivePermission === PermissionLevel.COPILOT
-                if (NEURO.rceRequest) {
+                if (getActiveRequestContext()?.request) {
                     NEURO.client?.sendActionResult(actionData.id, true, 'Action failed: Already waiting for permission to run another action.');
                     context.done(false);
                     context.updateStatus('failure', 'Another action pending approval');
@@ -581,7 +558,7 @@ export async function RCEActionHandler(actionData: ActionData) {
                     ? NEURO.currentController
                     : 'The Neuro API server') +
                     ' wants to ' +
-                    (typeof context.action.promptGenerator === 'string' ? context.action.promptGenerator : context.action.promptGenerator(actionData)).trim();
+                    (typeof context.action.promptGenerator === 'string' ? context.action.promptGenerator : context.action.promptGenerator(context)).trim();
 
                 if (context.storage) context.lifecycle.copilotPrompt = prompt;
 
@@ -605,7 +582,9 @@ export async function RCEActionHandler(actionData: ActionData) {
         } else if (actionData.name === 'cancel_request') {
             NEURO.actionHandled = true;
             fireOnActionStart(actionData, 'Executing...');
-            cancelRequestAction.handler(actionData, (status, message) => updateActionStatus(actionData, status, message)); // TODO: Make the context more global so cancelRequestAction can also use it
+            const cancelContext = new RCEContext(actionData);
+            cancelRequestAction.handler(cancelContext);
+            cancelContext.done(true);
         }
     } catch (erm: unknown) {
         const actionName = actionData.name;

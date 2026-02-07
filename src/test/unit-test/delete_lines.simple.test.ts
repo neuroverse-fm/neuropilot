@@ -1,14 +1,14 @@
 import * as assert from 'assert';
 import { editingActions } from '@/editing';
-import { ActionData } from 'neuro-game-sdk';
+import type { RCEContext } from '@/context/rce';
 
 // Tests for the delete_lines action prompt generator using real logic
 suite('delete_lines Action', () => {
     test('generates a prompt and includes start and end for a normal range', () => {
         // === Arrange & Act ===
         const prompt = editingActions.delete_lines.promptGenerator({
-            params: { startLine: 3, endLine: 7 },
-        } as ActionData);
+            data: { params: { startLine: 3, endLine: 7 } },
+        } as RCEContext);
 
         // === Assert ===
         assert.ok(typeof prompt === 'string' && prompt.length > 0, 'prompt should be a non-empty string');
@@ -19,8 +19,8 @@ suite('delete_lines Action', () => {
     test('generates a prompt and includes the single line when start=end', () => {
         // === Arrange & Act ===
         const prompt = editingActions.delete_lines.promptGenerator({
-            params: { startLine: 5, endLine: 5 },
-        } as ActionData);
+            data: { params: { startLine: 5, endLine: 5 } },
+        } as RCEContext);
 
         // === Assert ===
         assert.ok(typeof prompt === 'string' && prompt.length > 0, 'prompt should be a non-empty string');
@@ -30,8 +30,8 @@ suite('delete_lines Action', () => {
     test('generates a prompt even for reversed ranges (format-only responsibility)', () => {
         // === Arrange & Act ===
         const prompt = editingActions.delete_lines.promptGenerator({
-            params: { startLine: 7, endLine: 3 },
-        } as ActionData);
+            data: { params: { startLine: 7, endLine: 3 } },
+        } as RCEContext);
         // Prompt generator formats only; validation handles correctness elsewhere        
 
         // === Assert ===

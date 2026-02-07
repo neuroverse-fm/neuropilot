@@ -1,12 +1,11 @@
 import * as vscode from 'vscode';
-import { ActionData } from 'neuro-game-sdk';
 
 import { EXCEPTION_THROWN_STRING, NEURO } from '@/constants';
 import { getFence, logOutput } from '@/utils/misc';
 import { RCEAction } from '@/utils/neuro_client';
 import { CONNECTION, PermissionLevel } from '@/config';
 import { addActions, CATEGORY_MISC } from './rce';
-import { SimplifiedStatusUpdateHandler } from '@context/rce';
+import { RCEContext, SimplifiedStatusUpdateHandler } from '@context/rce';
 
 const MEMENTO_KEY = 'lastDeliveredChangelogVersion';
 
@@ -29,8 +28,8 @@ export const changelogActions = {
         },
         defaultPermission: PermissionLevel.COPILOT,
         handler: handleReadChangelog,
-        promptGenerator: (actionData: ActionData) => actionData.params?.fromVersion
-            ? `read all changelog entries starting from version ${actionData.params.fromVersion} (inclusive).`
+        promptGenerator: (context: RCEContext) => context.data.params?.fromVersion
+            ? `read all changelog entries starting from version ${context.data.params.fromVersion} (inclusive).`
             : 'read the latest changelog entries.',
     },
 } satisfies Record<string, RCEAction>;
@@ -82,8 +81,8 @@ export async function readChangelogAndSendToNeuro(fromVersion?: string, updateSt
     }
 }
 
-function handleReadChangelog(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
-    void readChangelogAndSendToNeuro(actionData.params?.fromVersion, updateStatus);
+function handleReadChangelog(context: RCEContext): string | undefined {
+    void readChangelogAndSendToNeuro(context.data.params?.fromVersion, context.updateStatus);
     return undefined;
 }
 

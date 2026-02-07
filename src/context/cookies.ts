@@ -1,12 +1,11 @@
 import * as vscode from 'vscode';
-import { ActionData } from 'neuro-game-sdk';
 
 import { logOutput } from '@/utils/misc';
 import { NEURO } from '@/constants';
 import { CONNECTION, PermissionLevel, getPermissionLevel } from '@/config';
 import { addActions, CATEGORY_MISC } from '@/rce';
 import { RCEAction } from '@/utils/neuro_client';
-import { SimplifiedStatusUpdateHandler } from '@context/rce';
+import { RCEContext, SimplifiedStatusUpdateHandler } from '@context/rce';
 
 export const REQUEST_COOKIE_ACTION: RCEAction = {
     name: 'request_cookie',
@@ -20,7 +19,7 @@ export const REQUEST_COOKIE_ACTION: RCEAction = {
         additionalProperties: false,
     },
     handler: handleRequestCookie,
-    promptGenerator: (actionData) => `have a${actionData.params?.flavor ? ' ' + actionData.params.flavor : ''} cookie.`,
+    promptGenerator: (context: RCEContext) => `have a${context.data.params?.flavor ? ' ' + context.data.params.flavor : ''} cookie.`,
     defaultPermission: PermissionLevel.COPILOT,
 };
 
@@ -28,7 +27,8 @@ export function addRequestCookieAction() {
     addActions([REQUEST_COOKIE_ACTION]);
 }
 
-function handleRequestCookie(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler) {
+function handleRequestCookie(context: RCEContext) {
+    const { data: actionData, updateStatus } = context;
     const permission = getPermissionLevel(actionData.name);
 
     switch (permission) {

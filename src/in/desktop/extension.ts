@@ -92,10 +92,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 export function deactivate() {
     emergencyTerminalShutdown();
-    handleTerminateTask({
-        id: 'none',
-        name: 'terminate_task',
-    }, () => null);
+    handleTerminateTask();
     commonDeactivate();
 }
 

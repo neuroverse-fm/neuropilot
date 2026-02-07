@@ -1,7 +1,7 @@
 import type { JSONSchema7Object } from 'json-schema';
 import type { ActionValidationResult, RCEAction } from '@/utils/neuro_client';
 import type { ActionData } from 'neuro-game-sdk';
-import { Disposable } from 'vscode';
+import { Disposable, Progress } from 'vscode';
 import { ActionStatus, updateActionStatus } from '../events/actions';
 import { getAction } from '../rce';
 
@@ -18,6 +18,16 @@ export interface RCELifecycleMetadata {
 
 export type SimplifiedStatusUpdateHandler = (status: ActionStatus, message: string) => void;
 
+export interface RCERequestState {
+    prompt: string;
+    notificationVisible: boolean;
+    attachNotification: (progress: Progress<{ message?: string; increment?: number }>) => Promise<void>;
+    resolve: () => void;
+    resolved: boolean;
+    interval?: NodeJS.Timeout | null;
+    timeout?: NodeJS.Timeout | null;
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export class RCEContext<T extends JSONSchema7Object | undefined = any, K = any> extends Disposable {
     name: string;
@@ -29,6 +39,8 @@ export class RCEContext<T extends JSONSchema7Object | undefined = any, K = any> 
 
     /** Lifecycle-specific data */
     readonly lifecycle: RCELifecycleMetadata = {};
+    /** Request-specific data (copilot mode only) */
+    request?: RCERequestState;
     public storage?: RCEStorage;
     private _updateStatus: SimplifiedStatusUpdateHandler = (status: ActionStatus, message: string) => updateActionStatus(this.data, status, message);
     readonly updateStatus: SimplifiedStatusUpdateHandler = (status: ActionStatus, message: string) => this._updateStatus(status, message);
@@ -38,6 +50,8 @@ export class RCEContext<T extends JSONSchema7Object | undefined = any, K = any> 
             for (const k in this.lifecycle) {
                 this.lifecycle[k as keyof typeof this.lifecycle] = undefined;
             };
+            this.request?.resolve();
+            this.request = undefined;
             this.storage = undefined;
             this.data = {} as never;
             this.action = {} as never;

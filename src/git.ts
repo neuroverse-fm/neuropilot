@@ -5,12 +5,11 @@ import { ForcePushMode } from '@typing/git.d';
 import { StatusStrings, RefTypeStrings } from '@typing/git_status';
 import { logOutput, simpleFileName, isPathNeuroSafe, normalizePath, getWorkspacePath } from '@/utils/misc';
 import { ActionValidationResult, actionValidationAccept, actionValidationFailure, RCEAction, contextFailure, actionValidationRetry } from '@/utils/neuro_client';
-import { ActionData } from 'neuro-game-sdk';
 import assert from 'node:assert';
 import { RCECancelEvent } from '@events/utils';
 import { JSONSchema7Definition } from 'json-schema';
 import { addActions, registerAction, reregisterAllActions, unregisterAction } from './rce';
-import { SimplifiedStatusUpdateHandler } from '@context/rce';
+import { RCEContext } from '@context/rce';
 
 export const CATEGORY_GIT = 'Git';
 
@@ -32,7 +31,7 @@ export function getGitExtension() {
     }
 }
 
-function gitValidator(_actionData: ActionData): ActionValidationResult {
+function gitValidator(_context: RCEContext): ActionValidationResult {
     if (!git)
         return actionValidationFailure('Git extension not available.', 'Git extension not activated');
     if (!repo)
@@ -56,7 +55,8 @@ async function neuroSafeValidationHelper(filePath: string): Promise<ActionValida
     }
 }
 
-async function filePathGitValidator(actionData: ActionData): Promise<ActionValidationResult> {
+async function filePathGitValidator(context: RCEContext): Promise<ActionValidationResult> {
+    const actionData = context.data;
     if (actionData.params.filePath === '') {
         return actionValidationRetry('No file path specified.');
     };
@@ -76,7 +76,8 @@ async function filePathGitValidator(actionData: ActionData): Promise<ActionValid
     return actionValidationAccept();
 }
 
-function gitDiffValidator(actionData: ActionData): ActionValidationResult {
+function gitDiffValidator(context: RCEContext): ActionValidationResult {
+    const actionData = context.data;
     const diffType: string = actionData.params?.diffType ?? 'diffWithHEAD';
     const FAIL_NOTE = `Inputs did not match what was necessary to make a ${diffType}-type diff`;
     switch (diffType) {
@@ -121,7 +122,7 @@ function gitDiffValidator(actionData: ActionData): ActionValidationResult {
             return actionValidationFailure('Unknown diff type.', 'Unknown/unhandled diff type specified');
     }
 }
-const commonCancelEvents: ((actionData: ActionData) => RCECancelEvent | null)[] = [
+const commonCancelEvents: ((context: RCEContext) => RCECancelEvent | null)[] = [
     () => new RCECancelEvent({
         reason: 'the Git extension was disabled.',
         events: [
@@ -139,7 +140,7 @@ export const gitActions = {
         promptGenerator: 'initialize a Git repository in the workspace.',
         cancelEvents: commonCancelEvents,
         validators: {
-            sync: [(_actionData: ActionData) => {
+            sync: [(_context: RCEContext) => {
                 if (!git) return actionValidationFailure('Git extension not available.', 'Git extension not activated');
                 return actionValidationAccept();
             }],
@@ -165,7 +166,7 @@ export const gitActions = {
         },
         handler: handleAddFileToGit,
         cancelEvents: commonCancelEvents,
-        promptGenerator: (actionData: ActionData) => `add the file "${actionData.params.filePath}" to the staging area.`,
+        promptGenerator: (context: RCEContext) => `add the file "${context.data.params.filePath}" to the staging area.`,
         validators: {
             sync: [gitValidator, filePathGitValidator],
         },
@@ -190,7 +191,7 @@ export const gitActions = {
         },
         handler: handleMakeGitCommit,
         cancelEvents: commonCancelEvents,
-        promptGenerator: (actionData: ActionData) => `commit changes with the message "${actionData.params.message}".`,
+        promptGenerator: (context: RCEContext) => `commit changes with the message "${context.data.params.message}".`,
         validators: {
             sync: [gitValidator],
         },
@@ -210,7 +211,7 @@ export const gitActions = {
         },
         handler: handleGitMerge,
         cancelEvents: commonCancelEvents,
-        promptGenerator: (actionData: ActionData) => `merge "${actionData.params.ref_to_merge}" into the current branch.`,
+        promptGenerator: (context: RCEContext) => `merge "${context.data.params.ref_to_merge}" into the current branch.`,
         validators: {
             sync: [gitValidator],
         },
@@ -248,7 +249,7 @@ export const gitActions = {
         },
         handler: handleRemoveFileFromGit,
         cancelEvents: commonCancelEvents,
-        promptGenerator: (actionData: ActionData) => `remove the file "${actionData.params.filePath}" from the staging area.`,
+        promptGenerator: (context: RCEContext) => `remove the file "${context.data.params.filePath}" from the staging area.`,
         validators: {
             sync: [gitValidator, filePathGitValidator],
         },
@@ -269,7 +270,7 @@ export const gitActions = {
         },
         handler: handleDeleteGitBranch,
         cancelEvents: commonCancelEvents,
-        promptGenerator: (actionData: ActionData) => `delete the branch "${actionData.params.branchName}".`,
+        promptGenerator: (context: RCEContext) => `delete the branch "${context.data.params.branchName}".`,
         validators: {
             sync: [gitValidator],
         },
@@ -289,7 +290,7 @@ export const gitActions = {
         },
         handler: handleSwitchGitBranch,
         cancelEvents: commonCancelEvents,
-        promptGenerator: (actionData: ActionData) => `switch to the branch "${actionData.params.branchName}".`,
+        promptGenerator: (context: RCEContext) => `switch to the branch "${context.data.params.branchName}".`,
         validators: {
             sync: [gitValidator],
         },
@@ -309,7 +310,7 @@ export const gitActions = {
         },
         handler: handleNewGitBranch,
         cancelEvents: commonCancelEvents,
-        promptGenerator: (actionData: ActionData) => `create a new branch "${actionData.params.branchName}".`,
+        promptGenerator: (context: RCEContext) => `create a new branch "${context.data.params.branchName}".`,
         validators: {
             sync: [gitValidator],
         },
@@ -366,7 +367,7 @@ export const gitActions = {
         },
         handler: handleDiffFiles,
         cancelEvents: commonCancelEvents,
-        promptGenerator: (actionData: ActionData) => `obtain ${actionData.params?.filePath ? `"${actionData.params.filePath}"'s` : 'a'} Git diff${actionData.params?.ref1 && actionData.params?.ref2 ? ` between ${actionData.params.ref1} and ${actionData.params.ref2}` : actionData.params?.ref1 ? ` at ref ${actionData.params.ref1}` : ''}${actionData.params?.diffType ? ` (of type "${actionData.params.diffType}")` : ''}.`,
+        promptGenerator: (context: RCEContext) => `obtain ${context.data.params?.filePath ? `"${context.data.params.filePath}"'s` : 'a'} Git diff${context.data.params?.ref1 && context.data.params?.ref2 ? ` between ${context.data.params.ref1} and ${context.data.params.ref2}` : context.data.params?.ref1 ? ` at ref ${context.data.params.ref1}` : ''}${context.data.params?.diffType ? ` (of type "${context.data.params.diffType}")` : ''}.`,
         validators: {
             sync: [gitValidator, filePathGitValidator, gitDiffValidator],
         },
@@ -389,7 +390,7 @@ export const gitActions = {
         },
         handler: handleGitLog,
         cancelEvents: commonCancelEvents,
-        promptGenerator: (actionData: ActionData) => `get the ${actionData.params?.log_limit ? `${actionData.params.log_limit} most recent commits in the ` : ''}Git log.`,
+        promptGenerator: (context: RCEContext) => `get the ${context.data.params?.log_limit ? `${context.data.params.log_limit} most recent commits in the ` : ''}Git log.`,
         validators: {
             sync: [gitValidator],
         },
@@ -409,7 +410,7 @@ export const gitActions = {
         },
         handler: handleGitBlame,
         cancelEvents: commonCancelEvents,
-        promptGenerator: (actionData: ActionData) => `get the Git blame for the file "${actionData.params.filePath}".`,
+        promptGenerator: (context: RCEContext) => `get the Git blame for the file "${context.data.params.filePath}".`,
         validators: {
             sync: [gitValidator, filePathGitValidator],
         },
@@ -432,11 +433,11 @@ export const gitActions = {
         },
         handler: handleTagHEAD,
         cancelEvents: commonCancelEvents,
-        promptGenerator: (actionData: ActionData) => `tag the current commit with the name "${actionData.params.name}" and associate it with the "${actionData.params.upstream}" remote.`,
+        promptGenerator: (context: RCEContext) => `tag the current commit with the name "${context.data.params.name}" and associate it with the "${context.data.params.upstream}" remote.`,
         validators: {
-            sync: [gitValidator, (actionData: ActionData) => {
+            sync: [gitValidator, (context: RCEContext) => {
                 const tagPattern = /^(?![/.@])(?!.*[/.@]$)(?!.*[/.@]{2,})(?:[a-z]+(?:[/.@][a-z]+)*)$/;
-                if (!tagPattern.test(actionData.params.name)) {
+                if (!tagPattern.test(context.data.params.name)) {
                     return actionValidationFailure('The Git tag does not conform to Git\'s tag naming rules.');
                 }
                 return actionValidationAccept();
@@ -458,7 +459,7 @@ export const gitActions = {
         },
         handler: handleDeleteTag,
         cancelEvents: commonCancelEvents,
-        promptGenerator: (actionData: ActionData) => `delete the tag "${actionData.params.name}".`,
+        promptGenerator: (context: RCEContext) => `delete the tag "${context.data.params.name}".`,
         validators: {
             sync: [gitValidator],
         },
@@ -481,7 +482,7 @@ export const gitActions = {
         },
         handler: handleSetGitConfig,
         cancelEvents: commonCancelEvents,
-        promptGenerator: (actionData: ActionData) => `set the Git config key "${actionData.params.key}" to "${actionData.params.value}".`,
+        promptGenerator: (context: RCEContext) => `set the Git config key "${context.data.params.key}" to "${context.data.params.value}".`,
         validators: {
             sync: [gitValidator],
         },
@@ -500,7 +501,7 @@ export const gitActions = {
         },
         handler: handleGetGitConfig,
         cancelEvents: commonCancelEvents,
-        promptGenerator: (actionData: ActionData) => actionData.params?.key ? `get the Git config key "${actionData.params.key}".` : 'get the Git config.',
+        promptGenerator: (context: RCEContext) => context.data.params?.key ? `get the Git config key "${context.data.params.key}".` : 'get the Git config.',
         validators: {
             sync: [gitValidator],
         },
@@ -522,13 +523,13 @@ export const gitActions = {
         },
         handler: handleFetchGitCommits,
         cancelEvents: commonCancelEvents,
-        promptGenerator: (actionData: ActionData) => {
-            if (actionData.params.remoteName && actionData.params.branchName)
-                return `fetch commits ${actionData.params.remoteName}/${actionData.params.branchName}.`;
-            else if (actionData.params.remoteName)
-                return `fetch commits from ${actionData.params.remoteName}.`;
-            else if (actionData.params.branchName)
-                return `fetch commits from ${actionData.params.branchName}.`;
+        promptGenerator: (context: RCEContext) => {
+            if (context.data.params.remoteName && context.data.params.branchName)
+                return `fetch commits ${context.data.params.remoteName}/${context.data.params.branchName}.`;
+            else if (context.data.params.remoteName)
+                return `fetch commits from ${context.data.params.remoteName}.`;
+            else if (context.data.params.branchName)
+                return `fetch commits from ${context.data.params.branchName}.`;
             return 'fetch commits.';
         },
         validators: {
@@ -563,14 +564,14 @@ export const gitActions = {
         },
         handler: handlePushGitCommits,
         cancelEvents: commonCancelEvents,
-        promptGenerator: (actionData: ActionData) => {
-            const force = actionData.params.forcePush ? 'force ' : '';
-            if (actionData.params.remoteName && actionData.params.branchName)
-                return `${force}push commits to ${actionData.params.remoteName}/${actionData.params.branchName}.`;
-            else if (actionData.params.remoteName)
-                return `${force}push commits to ${actionData.params.remoteName}.`;
-            else if (actionData.params.branchName)
-                return `${force}push commits to ${actionData.params.branchName}.`;
+        promptGenerator: (context: RCEContext) => {
+            const force = context.data.params.forcePush ? 'force ' : '';
+            if (context.data.params.remoteName && context.data.params.branchName)
+                return `${force}push commits to ${context.data.params.remoteName}/${context.data.params.branchName}.`;
+            else if (context.data.params.remoteName)
+                return `${force}push commits to ${context.data.params.remoteName}.`;
+            else if (context.data.params.branchName)
+                return `${force}push commits to ${context.data.params.branchName}.`;
             return `${force}push commits.`;
         },
         validators: {
@@ -595,7 +596,7 @@ export const gitActions = {
         },
         handler: handleAddGitRemote,
         cancelEvents: commonCancelEvents,
-        promptGenerator: (actionData: ActionData) => `add a new remote "${actionData.params.remoteName}" with URL "${actionData.params.remoteURL}".`,
+        promptGenerator: (context: RCEContext) => `add a new remote "${context.data.params.remoteName}" with URL "${context.data.params.remoteURL}".`,
         validators: {
             sync: [gitValidator],
         },
@@ -615,7 +616,7 @@ export const gitActions = {
         },
         handler: handleRemoveGitRemote,
         cancelEvents: commonCancelEvents,
-        promptGenerator: (actionData: ActionData) => `remove the remote "${actionData.params.remoteName}".`,
+        promptGenerator: (context: RCEContext) => `remove the remote "${context.data.params.remoteName}".`,
         validators: {
             sync: [gitValidator],
         },
@@ -636,7 +637,7 @@ export const gitActions = {
         },
         handler: handleRenameGitRemote,
         cancelEvents: commonCancelEvents,
-        promptGenerator: (actionData: ActionData) => `rename the remote "${actionData.params.oldRemoteName}" to "${actionData.params.newRemoteName}".`,
+        promptGenerator: (context: RCEContext) => `rename the remote "${context.data.params.oldRemoteName}" to "${context.data.params.newRemoteName}".`,
         validators: {
             sync: [gitValidator],
         },
@@ -716,7 +717,8 @@ export function addGitActions() {
  * Requires neuropilot.permission.gitConfig to be enabled.
  */
 
-export function handleNewGitRepo(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
+export function handleNewGitRepo(context: RCEContext): string | undefined {
+    const { data: actionData, updateStatus } = context;
     const workspaceFolders = vscode.workspace.workspaceFolders;
     if (!workspaceFolders || workspaceFolders.length === 0) {
         updateStatus('failure', 'Not in a workspace');
@@ -737,7 +739,8 @@ export function handleNewGitRepo(actionData: ActionData, updateStatus: Simplifie
     });
 }
 
-export function handleGetGitConfig(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
+export function handleGetGitConfig(context: RCEContext): string | undefined {
+    const { data: actionData, updateStatus } = context;
     assert(repo);
     const configKey: string | undefined = actionData.params.key;
 
@@ -764,7 +767,8 @@ export function handleGetGitConfig(actionData: ActionData, updateStatus: Simplif
     return;
 }
 
-export function handleSetGitConfig(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
+export function handleSetGitConfig(context: RCEContext): string | undefined {
+    const { data: actionData, updateStatus } = context;
     assert(repo);
     const configKey: string = actionData.params.key;
     const configValue: string = actionData.params.value;
@@ -785,7 +789,8 @@ export function handleSetGitConfig(actionData: ActionData, updateStatus: Simplif
  * Actions with Git branches
  */
 
-export function handleNewGitBranch(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
+export function handleNewGitBranch(context: RCEContext): string | undefined {
+    const { data: actionData, updateStatus } = context;
     assert(repo);
     const branchName: string = actionData.params.branchName;
 
@@ -801,7 +806,8 @@ export function handleNewGitBranch(actionData: ActionData, updateStatus: Simplif
     return;
 }
 
-export function handleSwitchGitBranch(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
+export function handleSwitchGitBranch(context: RCEContext): string | undefined {
+    const { data: actionData, updateStatus } = context;
     assert(repo);
     const branchName: string = actionData.params.branchName;
 
@@ -817,7 +823,8 @@ export function handleSwitchGitBranch(actionData: ActionData, updateStatus: Simp
     return;
 }
 
-export function handleDeleteGitBranch(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
+export function handleDeleteGitBranch(context: RCEContext): string | undefined {
+    const { data: actionData, updateStatus } = context;
     assert(repo);
     const branchName: string = actionData.params.branchName;
     const forceDelete: boolean = actionData.params.force ?? false;
@@ -845,7 +852,8 @@ interface StateStringProps {
     status: string
 }
 
-export function handleGitStatus(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
+export function handleGitStatus(context: RCEContext): string | undefined {
+    const { data: actionData, updateStatus } = context;
     assert(repo);
 
     repo.status().then(() => {
@@ -934,7 +942,8 @@ function getAbsoluteFilePath(filePath = '.'): string {
     return normalizePath(workspaceFolder + '/' + filePath);
 }
 
-export function handleAddFileToGit(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
+export function handleAddFileToGit(context: RCEContext): string | undefined {
+    const { data: actionData, updateStatus } = context;
     assert(repo);
     const filePath: string[] = actionData.params.filePath;
     const absolutePaths: string[] = [];
@@ -954,7 +963,8 @@ export function handleAddFileToGit(actionData: ActionData, updateStatus: Simplif
     return;
 }
 
-export function handleRemoveFileFromGit(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
+export function handleRemoveFileFromGit(context: RCEContext): string | undefined {
+    const { data: actionData, updateStatus } = context;
     assert(repo);
     const filePath: string[] = actionData.params.filePath;
     const absolutePaths: string[] = [];
@@ -974,7 +984,8 @@ export function handleRemoveFileFromGit(actionData: ActionData, updateStatus: Si
     return;
 }
 
-export function handleMakeGitCommit(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
+export function handleMakeGitCommit(context: RCEContext): string | undefined {
+    const { data: actionData, updateStatus } = context;
     assert(repo);
     const message = `${NEURO.currentController} committed: ${actionData.params?.message}`;
     const commitOptions: string[] | undefined = actionData.params?.options;
@@ -1023,7 +1034,8 @@ export function handleMakeGitCommit(actionData: ActionData, updateStatus: Simpli
     return;
 }
 
-export function handleGitMerge(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
+export function handleGitMerge(context: RCEContext): string | undefined {
+    const { data: actionData, updateStatus } = context;
     assert(repo);
     const refToMerge = actionData.params.ref_to_merge;
 
@@ -1045,7 +1057,8 @@ export function handleGitMerge(actionData: ActionData, updateStatus: SimplifiedS
     return;
 }
 
-export function handleAbortMerge(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
+export function handleAbortMerge(context: RCEContext): string | undefined {
+    const { data: actionData, updateStatus } = context;
     assert(repo);
 
     repo.mergeAbort().then(() => {
@@ -1061,7 +1074,8 @@ export function handleAbortMerge(actionData: ActionData, updateStatus: Simplifie
     return;
 }
 
-export function handleDiffFiles(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
+export function handleDiffFiles(context: RCEContext): string | undefined {
+    const { data: actionData, updateStatus } = context;
     assert(repo);
 
     const ref1: string | undefined = actionData.params.ref1;
@@ -1173,7 +1187,8 @@ export function handleDiffFiles(actionData: ActionData, updateStatus: Simplified
     return;
 }
 
-export function handleGitLog(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
+export function handleGitLog(context: RCEContext): string | undefined {
+    const { data: actionData, updateStatus } = context;
     assert(repo);
 
     const logLimit: number | undefined = actionData.params?.log_limit;
@@ -1199,7 +1214,8 @@ export function handleGitLog(actionData: ActionData, updateStatus: SimplifiedSta
     return;
 }
 
-export function handleGitBlame(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
+export function handleGitBlame(context: RCEContext): string | undefined {
+    const { data: actionData, updateStatus } = context;
     assert(repo);
     const filePath: string = actionData.params.filePath;
     const absolutePath: string = getAbsoluteFilePath(filePath);
@@ -1226,7 +1242,8 @@ export function handleGitBlame(actionData: ActionData, updateStatus: SimplifiedS
  * Requires neuropilot.permission.gitTags to be enabled.
  */
 
-export function handleTagHEAD(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
+export function handleTagHEAD(context: RCEContext): string | undefined {
+    const { data: actionData, updateStatus } = context;
     assert(repo);
     const name: string = actionData.params.name;
     const upstream: string = actionData.params.upstream ?? 'HEAD';
@@ -1243,7 +1260,8 @@ export function handleTagHEAD(actionData: ActionData, updateStatus: SimplifiedSt
     return;
 }
 
-export function handleDeleteTag(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
+export function handleDeleteTag(context: RCEContext): string | undefined {
+    const { data: actionData, updateStatus } = context;
     assert(repo);
     const name: string = actionData.params.name;
 
@@ -1264,7 +1282,8 @@ export function handleDeleteTag(actionData: ActionData, updateStatus: Simplified
  * Requires neuropilot.permission.gitRemotes to be enabled.
  */
 
-export function handleFetchGitCommits(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
+export function handleFetchGitCommits(context: RCEContext): string | undefined {
+    const { data: actionData, updateStatus } = context;
     assert(repo);
     const remoteName: string = actionData.params.remoteName;
     const branchName: string = actionData.params.branchName;
@@ -1281,7 +1300,8 @@ export function handleFetchGitCommits(actionData: ActionData, updateStatus: Simp
     return;
 }
 
-export function handlePullGitCommits(_actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
+export function handlePullGitCommits(context: RCEContext): string | undefined {
+    const { updateStatus } = context;
     assert(repo);
 
     repo.pull().then(() => {
@@ -1296,7 +1316,8 @@ export function handlePullGitCommits(_actionData: ActionData, updateStatus: Simp
     return;
 }
 
-export function handlePushGitCommits(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
+export function handlePushGitCommits(context: RCEContext): string | undefined {
+    const { data: actionData, updateStatus } = context;
     assert(repo);
     const remoteName: string | undefined = actionData.params.remoteName;
     const branchName: string | undefined = actionData.params.branchName;
@@ -1321,7 +1342,8 @@ export function handlePushGitCommits(actionData: ActionData, updateStatus: Simpl
  * Requires neuropilot.permission.editRemoteData to be enabled, IN ADDITION to neuropilot.permission.gitRemotes.
  */
 
-export function handleAddGitRemote(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
+export function handleAddGitRemote(context: RCEContext): string | undefined {
+    const { data: actionData, updateStatus } = context;
     assert(repo);
 
     const remoteName: string = actionData.params.remoteName;
@@ -1339,7 +1361,8 @@ export function handleAddGitRemote(actionData: ActionData, updateStatus: Simplif
     return;
 }
 
-export function handleRemoveGitRemote(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
+export function handleRemoveGitRemote(context: RCEContext): string | undefined {
+    const { data: actionData, updateStatus } = context;
     assert(repo);
     const remoteName: string = actionData.params.remoteName;
 
@@ -1355,7 +1378,8 @@ export function handleRemoveGitRemote(actionData: ActionData, updateStatus: Simp
     return;
 }
 
-export function handleRenameGitRemote(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
+export function handleRenameGitRemote(context: RCEContext): string | undefined {
+    const { data: actionData, updateStatus } = context;
     assert(repo);
     const oldRemoteName: string = actionData.params.oldRemoteName;
     const newRemoteName: string = actionData.params.newRemoteName;

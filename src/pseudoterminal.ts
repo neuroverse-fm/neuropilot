@@ -5,7 +5,6 @@
  */
 
 import * as vscode from 'vscode';
-import { ActionData } from 'neuro-game-sdk';
 import { spawn, ChildProcessWithoutNullStreams } from 'node:child_process';
 import { NEURO } from '@/constants';
 import { checkWorkspaceTrust, checkVirtualWorkspace, logOutput, delayAsync, getFence } from '@/utils/misc';
@@ -13,7 +12,7 @@ import { actionValidationAccept, actionValidationFailure, ActionValidationResult
 import { CONFIG } from '@/config';
 import { notifyOnTerminalClose } from '@events/shells';
 import { addActions } from '@/rce';
-import { SimplifiedStatusUpdateHandler } from '@context/rce';
+import { RCEContext } from '@context/rce';
 
 export const CATEGORY_TERMINAL = 'Terminal Access';
 
@@ -32,8 +31,8 @@ export interface TerminalSession {
     shellType: string;
 }
 
-function checkLiveTerminals(actionData: ActionData): ActionValidationResult {
-    const shellType: string = actionData.params.shell;
+function checkLiveTerminals(context: RCEContext): ActionValidationResult {
+    const shellType: string = context.data.params.shell;
     const session = NEURO.terminalRegistry.get(shellType);
     if (!session)
         return actionValidationFailure(`No terminal session found for shell type "${shellType}".`);
@@ -56,12 +55,12 @@ export const terminalActions = {
         },
         handler: handleRunCommand,
         cancelEvents: [
-            (actionData: ActionData) => notifyOnTerminalClose(actionData.params?.shell),
+            (context: RCEContext) => notifyOnTerminalClose(context.data.params?.shell),
         ],
         validators: {
             sync: [checkVirtualWorkspace, checkWorkspaceTrust],
         },
-        promptGenerator: (actionData: ActionData) => `run "${actionData.params?.command}" in the "${actionData.params?.shell}" shell.`,
+        promptGenerator: (context: RCEContext) => `run "${context.data.params?.command}" in the "${context.data.params?.shell}" shell.`,
         registerCondition: () => checkVirtualWorkspace().success && checkWorkspaceTrust().success,
     },
     kill_terminal_process: {
@@ -78,12 +77,12 @@ export const terminalActions = {
         },
         handler: handleKillTerminal,
         cancelEvents: [
-            (actionData: ActionData) => notifyOnTerminalClose(actionData.params?.shell),
+            (context: RCEContext) => notifyOnTerminalClose(context.data.params?.shell),
         ],
         validators: {
             sync: [checkLiveTerminals, checkVirtualWorkspace, checkWorkspaceTrust],
         },
-        promptGenerator: (actionData: ActionData) => `kill the "${actionData.params?.shell}" shell.`,
+        promptGenerator: (context: RCEContext) => `kill the "${context.data.params?.shell}" shell.`,
         registerCondition: () => checkVirtualWorkspace().success && checkWorkspaceTrust().success,
     },
     get_currently_running_shells: {
@@ -216,7 +215,8 @@ function getOrCreateTerminal(shellType: string, terminalName: string): TerminalS
 * Checks permissions, executes the command in the requested shell,
 * captures STDOUT and STDERR, logs the output, and sends it to nwero.
 */
-export function handleRunCommand(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
+export function handleRunCommand(context: RCEContext): string | undefined {
+    const { data: actionData, updateStatus } = context;
 
     // Get the command and shell.
     const command: string = actionData.params?.command;
@@ -313,7 +313,8 @@ export function handleRunCommand(actionData: ActionData, updateStatus: Simplifie
  * Kill terminal handler.
  * Checks if the terminal registry contains the open shell and forcefully kills the shell if found.
  */
-export function handleKillTerminal(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
+export function handleKillTerminal(context: RCEContext): string | undefined {
+    const { data: actionData, updateStatus } = context;
     // Validate shell type parameter.
     const shellType: string = actionData.params?.shell;
     const session = NEURO.terminalRegistry.get(shellType)!;
@@ -332,7 +333,8 @@ export function handleKillTerminal(actionData: ActionData, updateStatus: Simplif
  * Returns a list of currently running shell types.
  * Each entry includes the shell type and its status.
  */
-export function handleGetCurrentlyRunningShells(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
+export function handleGetCurrentlyRunningShells(context: RCEContext): string | undefined {
+    const { data: actionData, updateStatus } = context;
     const runningShells: string[] = [];
 
     for (const [shellType, session] of NEURO.terminalRegistry.entries()) {

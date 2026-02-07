@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { NeuroClient, ActionData } from 'neuro-game-sdk';
+import type { RCEContext } from '@/context/rce';
 import globToRegExp from 'glob-to-regexp';
 import { fileTypeFromBuffer } from 'file-type';
 
@@ -704,7 +705,7 @@ export function clearDecorations(editor: vscode.TextEditor) {
 /**
  * Checks workspace trust settings and returns an ActionValidationResult accordingly.
  */
-export function checkWorkspaceTrust(_actionData?: ActionData): ActionValidationResult {
+export function checkWorkspaceTrust(_context?: RCEContext | ActionData): ActionValidationResult {
     if (vscode.workspace.isTrusted) {
         return actionValidationAccept();
     }
@@ -737,7 +738,7 @@ export function getProperty(obj: unknown, path: string): unknown {
 /**
  * Checks if the extension is currently on a virtual file system.
  */
-export function checkVirtualWorkspace(_actionData?: ActionData): ActionValidationResult {
+export function checkVirtualWorkspace(_context?: RCEContext | ActionData): ActionValidationResult {
     if (vscode.workspace.workspaceFolders?.every(f => f.uri.scheme !== 'file')) {
         return actionValidationFailure('You cannot perform this action in a virtual workspace.');
     }

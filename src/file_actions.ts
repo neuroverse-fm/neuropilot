@@ -1,5 +1,4 @@
 import * as vscode from 'vscode';
-import { ActionData } from 'neuro-game-sdk';
 
 import { EXCEPTION_THROWN_STRING, NEURO, PROMISE_REJECTION_STRING } from '@/constants';
 import { filterFileContents, formatContext, getFence, getPositionContext, getVirtualCursor, getWorkspacePath, getWorkspaceUri, isBinary, isPathNeuroSafe, logOutput, NeuroPositionContext, normalizePath, notifyOnCaughtException, simpleFileName, stripTailSlashes } from '@/utils/misc';
@@ -8,7 +7,7 @@ import { CONFIG, PermissionLevel, getPermissionLevel } from '@/config';
 import { targetedFileCreatedEvent, targetedFileDeletedEvent } from '@events/files';
 import { RCECancelEvent } from '@events/utils';
 import { addActions } from './rce';
-import { SimplifiedStatusUpdateHandler } from '@context/rce';
+import { RCEContext } from '@context/rce';
 
 export const CATEGORY_FILE_ACTIONS = 'File Actions';
 const ACTION_FAIL_NOTES = {
@@ -64,7 +63,8 @@ async function getUriExistence(uri: vscode.Uri): Promise<boolean> {
     }
 }
 
-async function neuroSafeValidation(actionData: ActionData): Promise<ActionValidationResult> {
+async function neuroSafeValidation(context: RCEContext): Promise<ActionValidationResult> {
+    const actionData = context.data;
     let result: ActionValidationResult = actionValidationAccept();
     const falseList = [
         'open_file',
@@ -81,7 +81,8 @@ async function neuroSafeValidation(actionData: ActionData): Promise<ActionValida
     return result;
 }
 
-async function neuroSafeDeleteValidation(actionData: ActionData): Promise<ActionValidationResult> {
+async function neuroSafeDeleteValidation(context: RCEContext): Promise<ActionValidationResult> {
+    const actionData = context.data;
     const check = await validatePath(actionData.params.path, true, actionData.params.recursive ? 'folder' : 'file');
     if (!check.success) return check;
 
@@ -96,7 +97,8 @@ async function neuroSafeDeleteValidation(actionData: ActionData): Promise<Action
     return actionValidationAccept();
 }
 
-async function neuroSafeRenameValidation(actionData: ActionData): Promise<ActionValidationResult> {
+async function neuroSafeRenameValidation(context: RCEContext): Promise<ActionValidationResult> {
+    const actionData = context.data;
     let check = await validatePath(actionData.params.oldPath, true, 'directory');
     if (!check.success) {
         check.historyNote = check.historyNote!.replace('Targeted', 'Old').replace('targeted', 'old');
@@ -117,7 +119,8 @@ async function neuroSafeRenameValidation(actionData: ActionData): Promise<Action
  * @param actionData The action data.
  * @returns The validation result.
  */
-async function binaryFileValidation(actionData: ActionData): Promise<ActionValidationResult> {
+async function binaryFileValidation(context: RCEContext): Promise<ActionValidationResult> {
+    const actionData = context.data;
     const relativePath = actionData.params.filePath;
 
     const workspaceUri = getWorkspaceUri();
@@ -145,7 +148,8 @@ async function binaryFileValidation(actionData: ActionData): Promise<ActionValid
  * Validates if the targeted file is a file.
  * @returns The validation result.
  */
-async function validateIsAFile(actionData: ActionData): Promise<ActionValidationResult> {
+async function validateIsAFile(context: RCEContext): Promise<ActionValidationResult> {
+    const actionData = context.data;
     const filePath = actionData.params?.filePath;
     if (!filePath)
         return actionValidationRetry('No file path specified.', ACTION_FAIL_NOTES.noFilePath);
@@ -178,9 +182,9 @@ async function validateIsAFile(actionData: ActionData): Promise<ActionValidation
     return actionValidationAccept();
 }
 
-const commonFileEvents: ((actionData: ActionData) => RCECancelEvent | null)[] = [
-    (actionData: ActionData) => targetedFileCreatedEvent(actionData.params?.filePath),
-    (actionData: ActionData) => targetedFileDeletedEvent(actionData.params?.filePath),
+const commonFileEvents: ((context: RCEContext) => RCECancelEvent | null)[] = [
+    (context: RCEContext) => targetedFileCreatedEvent(context.data.params?.filePath),
+    (context: RCEContext) => targetedFileDeletedEvent(context.data.params?.filePath),
 ];
 
 export const fileActions = {
@@ -198,11 +202,11 @@ export const fileActions = {
         category: CATEGORY_FILE_ACTIONS,
         handler: handleGetWorkspaceFiles,
         validators: {
-            sync: [async (actionData: ActionData) => {
+            sync: [async (context: RCEContext) => {
                 const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
                 if (workspaceFolder === undefined)
                     return actionValidationFailure('No open workspace to get files from.');
-                let folder = actionData.params?.folder as string;
+                let folder = context.data.params?.folder as string;
                 if (folder) {
                     folder = stripTailSlashes(folder);
                     const relativeFolderPath = normalizePath(folder);
@@ -215,13 +219,13 @@ export const fileActions = {
             }],
         },
         cancelEvents: [
-            (actionData: ActionData) => {
-                if (actionData.params?.folder) {
-                    return targetedFileDeletedEvent(stripTailSlashes(actionData.params.folder));
+            (context: RCEContext) => {
+                if (context.data.params?.folder) {
+                    return targetedFileDeletedEvent(stripTailSlashes(context.data.params.folder));
                 } else return null;
             },
         ],
-        promptGenerator: (actionData: ActionData) => `${actionData.params?.recursive ? 'recursively get' : 'get'} a list of files in ${actionData.params?.folder ? `"${stripTailSlashes(actionData.params.folder)}"` : 'the workspace'}.`,
+        promptGenerator: (context: RCEContext) => `${context.data.params?.recursive ? 'recursively get' : 'get'} a list of files in ${context.data.params?.folder ? `"${stripTailSlashes(context.data.params.folder)}"` : 'the workspace'}.`,
     },
     switch_files: {
         name: 'switch_files',
@@ -237,12 +241,12 @@ export const fileActions = {
         },
         handler: handleOpenFile,
         cancelEvents: [
-            (actionData: ActionData) => targetedFileDeletedEvent(actionData.params?.filePath),
+            (context: RCEContext) => targetedFileDeletedEvent(context.data.params?.filePath),
         ],
         validators: {
             sync: [neuroSafeValidation, validateIsAFile, binaryFileValidation],
         },
-        promptGenerator: (actionData: ActionData) => `open the file "${actionData.params?.filePath}".`,
+        promptGenerator: (context: RCEContext) => `open the file "${context.data.params?.filePath}".`,
     },
     read_file: {
         name: 'read_file',
@@ -258,8 +262,8 @@ export const fileActions = {
         },
         handler: handleReadFile,
         cancelEvents: [
-            (actionData: ActionData) => {
-                if (!actionData.params?.filePath) {
+            (context: RCEContext) => {
+                if (!context.data.params?.filePath) {
                     // For current file, cancel on document change
                     return new RCECancelEvent({
                         reason: 'the active document was changed.',
@@ -271,11 +275,12 @@ export const fileActions = {
                 // it looks more readable this way okay
                 return null;
             },
-            (actionData: ActionData) => actionData.params?.filePath ? targetedFileDeletedEvent(actionData.params.filePath) : null,
+            (context: RCEContext) => context.data.params?.filePath ? targetedFileDeletedEvent(context.data.params.filePath) : null,
         ],
         validators: {
             sync: [
-                async (actionData: ActionData) => {
+                async (context: RCEContext) => {
+                    const actionData = context.data;
                     const workspaceUri = getWorkspaceUri();
                     if (!workspaceUri) {
                         return actionValidationFailure('You are not in a workspace.', 'Not in a workspace.');
@@ -296,22 +301,22 @@ export const fileActions = {
                     }
 
                     // Run all validators with the resolved filePath
-                    const neuroSafeResult = await neuroSafeValidation(actionData);
+                    const neuroSafeResult = await neuroSafeValidation(context);
                     if (!neuroSafeResult.success) return neuroSafeResult;
 
-                    const binaryResult = await binaryFileValidation(actionData);
+                    const binaryResult = await binaryFileValidation(context);
                     if (!binaryResult.success) return binaryResult;
 
-                    const fileResult = await validateIsAFile(actionData);
+                    const fileResult = await validateIsAFile(context);
                     if (!fileResult.success) return fileResult;
 
                     return actionValidationAccept();
                 },
             ],
         },
-        promptGenerator: (actionData: ActionData) => {
-            if (actionData.params?.filePath) {
-                return `read the file "${actionData.params.filePath}" (without opening it).`;
+        promptGenerator: (context: RCEContext) => {
+            if (context.data.params?.filePath) {
+                return `read the file "${context.data.params.filePath}" (without opening it).`;
             }
             return 'get the current file\'s contents.';
         },
@@ -333,7 +338,7 @@ export const fileActions = {
         validators: {
             sync: [neuroSafeValidation],
         },
-        promptGenerator: (actionData: ActionData) => `create the file "${actionData.params?.filePath}".`,
+        promptGenerator: (context: RCEContext) => `create the file "${context.data.params?.filePath}".`,
     },
     create_folder: {
         name: 'create_folder',
@@ -349,12 +354,12 @@ export const fileActions = {
         },
         handler: handleCreateFolder,
         cancelEvents: [
-            (actionData: ActionData) => targetedFileCreatedEvent(actionData.params?.folderPath),
+            (context: RCEContext) => targetedFileCreatedEvent(context.data.params?.folderPath),
         ],
         validators: {
             sync: [neuroSafeValidation],
         },
-        promptGenerator: (actionData: ActionData) => `create the folder "${actionData.params?.folderPath}".`,
+        promptGenerator: (context: RCEContext) => `create the folder "${context.data.params?.folderPath}".`,
     },
     rename_file_or_folder: {
         name: 'rename_file_or_folder',
@@ -371,13 +376,13 @@ export const fileActions = {
         },
         handler: handleRenameFileOrFolder,
         cancelEvents: [
-            (actionData: ActionData) => targetedFileCreatedEvent(actionData.params?.newPath),
-            (actionData: ActionData) => targetedFileDeletedEvent(actionData.params?.oldPath),
+            (context: RCEContext) => targetedFileCreatedEvent(context.data.params?.newPath),
+            (context: RCEContext) => targetedFileDeletedEvent(context.data.params?.oldPath),
         ],
         validators: {
             sync: [neuroSafeRenameValidation],
         },
-        promptGenerator: (actionData: ActionData) => `rename "${actionData.params?.oldPath}" to "${actionData.params?.newPath}".`,
+        promptGenerator: (context: RCEContext) => `rename "${context.data.params?.oldPath}" to "${context.data.params?.newPath}".`,
     },
     delete_file_or_folder: {
         name: 'delete_file_or_folder',
@@ -394,12 +399,12 @@ export const fileActions = {
         },
         handler: handleDeleteFileOrFolder,
         cancelEvents: [
-            (actionData: ActionData) => targetedFileDeletedEvent(actionData.params?.path),
+            (context: RCEContext) => targetedFileDeletedEvent(context.data.params?.path),
         ],
         validators: {
             sync: [neuroSafeDeleteValidation],
         },
-        promptGenerator: (actionData: ActionData) => `delete "${actionData.params?.path}".`,
+        promptGenerator: (context: RCEContext) => `delete "${context.data.params?.path}".`,
     },
 } satisfies Record<string, RCEAction>;
 
@@ -415,7 +420,8 @@ export function addFileActions() {
     ]);
 }
 
-export function handleCreateFile(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
+export function handleCreateFile(context: RCEContext): string | undefined {
+    const { data: actionData, updateStatus } = context;
     const relativePathParam = actionData.params.filePath;
     const relativePath = normalizePath(relativePathParam).replace(/^\//, '');
     const absolutePath = getWorkspacePath() + '/' + relativePath;
@@ -481,7 +487,8 @@ export function handleCreateFile(actionData: ActionData, updateStatus: Simplifie
     }
 }
 
-export function handleCreateFolder(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
+export function handleCreateFolder(context: RCEContext): string | undefined {
+    const { data: actionData, updateStatus } = context;
     const relativePathParam = actionData.params.folderPath;
     const relativePath = normalizePath(relativePathParam).replace(/^\/|\/$/g, '');
     const absolutePath = getWorkspacePath() + '/' + relativePath;
@@ -531,7 +538,8 @@ export function handleCreateFolder(actionData: ActionData, updateStatus: Simplif
     }
 }
 
-export function handleRenameFileOrFolder(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
+export function handleRenameFileOrFolder(context: RCEContext): string | undefined {
+    const { data: actionData, updateStatus } = context;
     const oldRelativePathParam = actionData.params.oldPath;
     const newRelativePathParam = actionData.params.newPath;
 
@@ -603,7 +611,8 @@ export function handleRenameFileOrFolder(actionData: ActionData, updateStatus: S
     }
 }
 
-export function handleDeleteFileOrFolder(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
+export function handleDeleteFileOrFolder(context: RCEContext): string | undefined {
+    const { data: actionData, updateStatus } = context;
     const relativePathParam = actionData.params.path;
     const recursive = actionData.params.recursive ?? false;
 
@@ -686,7 +695,8 @@ export function handleDeleteFileOrFolder(actionData: ActionData, updateStatus: S
     }
 }
 
-export function handleGetWorkspaceFiles(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
+export function handleGetWorkspaceFiles(context: RCEContext): string | undefined {
+    const { data: actionData, updateStatus } = context;
     const workspaceFolder = vscode.workspace.workspaceFolders![0];
 
     // Start tracking execution
@@ -756,7 +766,8 @@ export function handleGetWorkspaceFiles(actionData: ActionData, updateStatus: Si
     }
 }
 
-export function handleOpenFile(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
+export function handleOpenFile(context: RCEContext): string | undefined {
+    const { data: actionData, updateStatus } = context;
     const relativePath = actionData.params.filePath;
 
     const workspaceUri = getWorkspaceUri()!;
@@ -810,7 +821,8 @@ export function handleOpenFile(actionData: ActionData, updateStatus: SimplifiedS
     }
 }
 
-export function handleReadFile(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
+export function handleReadFile(context: RCEContext): string | undefined {
+    const { data: actionData, updateStatus } = context;
     const editor = vscode.window.activeTextEditor;
     if (!editor) {
         return contextFailure('No active text editor.');

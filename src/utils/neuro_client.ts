@@ -2,12 +2,12 @@
  * Helper functions and types for interacting with the Neuro Game SDK.
  */
 
-import { Action, ActionData } from 'neuro-game-sdk';
+import { Action } from 'neuro-game-sdk';
 import { ACTIONS, Permission, PermissionLevel } from '@/config';
 import { logOutput, turtleSafari } from '@/utils/misc';
 import { PromptGenerator } from '@/rce';
 import { RCECancelEvent } from '@events/utils';
-import { SimplifiedStatusUpdateHandler } from '@context/rce';
+import type { RCEContext } from '@context/rce';
 
 /** The result of attempting to execute an action client-side. */
 export interface ActionValidationResult {
@@ -57,14 +57,14 @@ export interface RCEAction<T = any> extends Action {
          * 
          * If you supply validators that ensure certain items are not nullable, you may be able to assert that they are a non-nullable value for {@link RCEAction.promptGenerator generating the Copilot-mode prompt} and/or {@link RCEAction.preview preview effects}.
          */
-        sync?: ((actionData: ActionData) => ActionValidationResult | Promise<ActionValidationResult>)[],
+        sync?: ((context: RCEContext) => ActionValidationResult | Promise<ActionValidationResult>)[],
         /**
          * Asynchronous validators that will be ran in parallel to each other.
          * These will be executed after an action result, so it's perfect for long-running validators.
          * 
          * Async validators will time out (and consequently fail) after 1 second (1000ms). It is planned that this value will be adjustable in the future.
          */
-        async?: ((actionData: ActionData) => Promise<ActionValidationResult>)[];
+        async?: ((context: RCEContext) => Promise<ActionValidationResult>)[];
     }
     /**
      * Cancellation events attached to the action that will be automatically set up.
@@ -74,7 +74,7 @@ export interface RCEAction<T = any> extends Action {
      * Following VS Code's pattern, Disposables will not be awaited if async.
      * Returns from calling the `dispose()` function will not be used anywhere.
      */
-    cancelEvents?: ((actionData: ActionData) => RCECancelEvent<T> | null)[];
+    cancelEvents?: ((context: RCEContext) => RCECancelEvent<T> | null)[];
     /**
      * A function that is used to preview the action's effects.
      * This function will be called while awaiting user approval, if the action is set to Copilot permission.
@@ -85,7 +85,7 @@ export interface RCEAction<T = any> extends Action {
      */
     // The type must be `any`, using `never` causes it to return type errors. 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    preview?: (actionData: ActionData) => { dispose: () => any };
+    preview?: (context: RCEContext) => { dispose: () => any };
     /** 
      * The function to handle the action.
      * This function must be synchronous.
@@ -130,7 +130,7 @@ export interface RCEAction<T = any> extends Action {
     ephemeralStorage?: boolean;
 }
 
-export type RCEHandler = (actionData: ActionData, statusUpdate: SimplifiedStatusUpdateHandler) => string | undefined | void;
+export type RCEHandler = (context: RCEContext) => string | undefined | void;
 
 /**
  * Strips an action to the form expected by the API.

@@ -8,13 +8,12 @@ import * as vscode from 'vscode';
 
 import { NEURO } from '@/constants';
 import { logOutput, formatActionID, getFence, checkWorkspaceTrust, checkVirtualWorkspace } from '@/utils/misc';
-import { ActionData } from 'neuro-game-sdk';
 import { RCEAction, actionValidationAccept, actionValidationFailure } from '@/utils/neuro_client';
 import { ACTIONS } from '@/config';
 import { notifyOnTaskFinish } from '@events/shells';
 import { addActions, getActions, removeActions } from './rce';
 import { updateActionStatus } from '@events/actions';
-import { SimplifiedStatusUpdateHandler } from '@context/rce';
+import { RCEContext } from '@context/rce';
 
 export const CATEGORY_TASKS = 'Tasks';
 const CATEGORY_REGISTERED_TASKS = 'Registered Tasks';
@@ -48,8 +47,13 @@ export function addTaskActions() {
     // Tasks are registered asynchronously in reloadTasks()
 }
 
-export function handleTerminateTask(_actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
-    const exe = NEURO.currentTaskExecution!;
+export function handleTerminateTask(context?: RCEContext): string | undefined {
+    const updateStatus = context?.updateStatus ?? (() => undefined);
+    const exe = NEURO.currentTaskExecution;
+    if (!exe) {
+        updateStatus('failure', 'No task to terminate');
+        return 'No task to terminate.';
+    }
     NEURO.currentTaskExecution = null;
     exe.task.terminate();
     logOutput('INFO', 'Terminated current task');
@@ -57,7 +61,8 @@ export function handleTerminateTask(_actionData: ActionData, updateStatus: Simpl
     return 'Terminated current task.';
 }
 
-export function handleRunTask(actionData: ActionData, updateStatus: SimplifiedStatusUpdateHandler): string | undefined {
+export function handleRunTask(context: RCEContext): string | undefined {
+    const { data: actionData, updateStatus } = context;
     if (NEURO.currentTaskExecution !== null) {
         updateStatus('failure', 'Task already running');
         return 'Action failed: A task is already running.';

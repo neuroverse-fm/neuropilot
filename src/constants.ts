@@ -1,7 +1,6 @@
 import * as vscode from 'vscode';
 import { NeuroClient } from 'neuro-game-sdk';
 import { TerminalSession } from './pseudoterminal';
-import { RceRequest } from '@/rce';
 import type { GitExtension } from '@typing/git.d';
 import { ActionsViewProvider } from '@views/actions';
 import { ImagesViewProvider } from '@views/image';
@@ -59,8 +58,6 @@ interface Neuro {
     previousDiagnosticsMap: Map<string, vscode.Diagnostic[]>;
     /** Whether or not Neuro is manually saving. */
     saving: boolean;
-    /** Stores the current RCE request prompt & callback. */
-    rceRequest: RceRequest | null;
     /** Stores the state of the status bar item. */
     statusBarItem: vscode.StatusBarItem | null;
     /** Whether or not to warn when requesting completions while the relevant permission is disabled. */
@@ -110,7 +107,6 @@ export const NEURO: Neuro = {
     terminalRegistry: new Map(),
     previousDiagnosticsMap: new Map(),
     saving: false,
-    rceRequest: null,
     statusBarItem: null,
     warnOnCompletionsOff: true,
     cursorOffsets: new Map(),
