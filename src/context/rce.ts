@@ -21,7 +21,7 @@ export type SimplifiedStatusUpdateHandler = (status: ActionStatus, message: stri
 export class RCEContext<T extends JSONSchema7Object | undefined, K> extends Disposable {
     name: string;
     success: boolean | null;
-    executedAt: string = new Date().toLocaleTimeString();
+    createdAt: string = new Date().toLocaleTimeString();
 
     data: Omit<ActionData<T>, 'name'>;
     action: Omit<RCEAction<K>, 'name' & 'description'>;
@@ -43,6 +43,10 @@ export class RCEContext<T extends JSONSchema7Object | undefined, K> extends Disp
             this.storage = undefined;
             this.data = {} as never;
             this.action = {} as never;
+            this.lifecycle.preview?.dispose();
+            for (const d of this.lifecycle.events ?? []) {
+                d.dispose();
+            }
         });
         this.data = data;
         this.action = action;
