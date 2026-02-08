@@ -237,6 +237,33 @@ export function actionValidationRetry(message: string, historyNote?: string): Ac
 
 //#endregion
 
+//#region Action handler helpers
+
+export interface ActionHandlerResult {
+    success: boolean;
+    message?: string;
+    historyNote?: string;
+}
+
+export function actionHandlerSuccess(message?: string, historyNote?: string): ActionHandlerResult {
+    return {
+        success: true,
+        message,
+        historyNote,
+    };
+}
+
+export function actionHandlerFailure(message: string, historyNote: string): ActionHandlerResult {
+    logOutput('WARNING', 'Action failed: ' + message);
+    return {
+        success: false,
+        message: 'Action failed: ' + message,
+        historyNote,
+    };
+}
+
+//#endregion
+
 //#region Old validation result functions
 
 /**
