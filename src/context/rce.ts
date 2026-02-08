@@ -11,7 +11,7 @@ export interface RCELifecycleMetadata {
     events?: Disposable[];
     preview?: { dispose: () => unknown };
     validatorResults?: {
-        sync: ActionValidationResult[];
+        sync?: ActionValidationResult[];
     };
 }
 
@@ -30,7 +30,7 @@ export interface RCERequestState {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export class RCEContext<T extends JSONSchema7Object | undefined = any, K = any> extends Disposable {
     name: string;
-    success: boolean | null;
+    private success: boolean | null;
     createdAt: string = new Date().toLocaleTimeString();
 
     data: ActionData<T>;
@@ -87,6 +87,7 @@ export class RCEContext<T extends JSONSchema7Object | undefined = any, K = any> 
     }
 
     done(success: boolean): void {
+        if (this.success !== null) throw new Error('Context object already destroyed!');
         this.success = success;
         this.dispose();
     };

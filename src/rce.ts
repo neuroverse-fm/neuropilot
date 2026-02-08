@@ -13,7 +13,6 @@ import { validate } from 'jsonschema';
 import type { RCECancelEvent } from '@events/utils';
 import { fireOnActionStart, updateActionStatus } from '@events/actions';
 import { RCEContext } from '@/context/rce';
-import assert from 'node:assert';
 
 export const CATEGORY_MISC = 'Miscellaneous';
 
@@ -481,15 +480,21 @@ export async function RCEActionHandler(actionData: ActionData) {
             // Validate custom
             if (context.action.validators) {
                 if (context.action.validators.sync) {
-                    context.updateStatus('pending', 'Running validators...');
-                    for (const validate of context.action.validators.sync) {
-                        const actionResult = await validate(context);
-                        context.lifecycle.validatorResults?.sync.push(actionResult);
-                        if (!actionResult.success) {
+                    if (!context.lifecycle.validatorResults) {
+                        context.lifecycle.validatorResults = {};
+                    }
+                    if (!context.lifecycle.validatorResults.sync) {
+                        context.lifecycle.validatorResults.sync = [];
+                    }
+                    if (context.action.validators.sync) {
+                        context.updateStatus('pending', 'Running validators...');
+                        for (const validate of context.action.validators.sync) {
+                            const actionResult = await validate(context);
+                            context.lifecycle.validatorResults.sync.push(actionResult);
                             NEURO.client?.sendActionResult(actionData.id, !(actionResult.retry ?? false), actionResult.message);
                             context.updateStatus(
                                 'failure',
-                                actionResult.historyNote ? `Validator failed: ${actionResult.historyNote}` : 'Validator failed' + actionResult.retry ? '\nRequesting retry' : '',
+                                actionResult.historyNote ? `Validator failed: ${actionResult.historyNote}` : 'Validator failed' + (actionResult.retry ? '\nRequesting retry' : ''),
                             );
                             context.done(false);
                             return;

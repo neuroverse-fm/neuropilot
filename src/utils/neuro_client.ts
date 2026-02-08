@@ -184,7 +184,6 @@ export function actionValidationAccept(message?: string, historyNote?: string): 
  * @param message The message to send to Neuro.
  * This should explain, if possible, why the action failed.
  * If omitted, will just send "Action failed.".
- * @param retry It's highly recommended you use {@link actionValidationRetry} instead.
  * @param historyNote A note for the history panel. Will be changed to be required soon.
  * @returns A successful action result with the specified message.
  */
@@ -229,6 +228,8 @@ export function actionValidationRetry(message: string, historyNote?: string): Ac
         historyNote,
     };
 }
+
+//#region Old validation result functions
 
 /**
  * Create an action result that tells Neuro that a required parameter is missing.
@@ -290,3 +291,5 @@ export function actionResultEnumFailure<T>(parameterName: string, validValues: T
         message: `Action failed: "${parameterName}" must be one of ${JSON.stringify(validValues)}, but got ${JSON.stringify(value)}.`,
     };
 }
+
+//#endregion

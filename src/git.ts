@@ -718,7 +718,7 @@ export function addGitActions() {
  */
 
 export function handleNewGitRepo(context: RCEContext): string | undefined {
-    const { data: actionData, updateStatus } = context;
+    const { updateStatus } = context;
     const workspaceFolders = vscode.workspace.workspaceFolders;
     if (!workspaceFolders || workspaceFolders.length === 0) {
         updateStatus('failure', 'Not in a workspace');
@@ -853,7 +853,7 @@ interface StateStringProps {
 }
 
 export function handleGitStatus(context: RCEContext): string | undefined {
-    const { data: actionData, updateStatus } = context;
+    const { updateStatus } = context;
     assert(repo);
 
     repo.status().then(() => {
@@ -1058,7 +1058,7 @@ export function handleGitMerge(context: RCEContext): string | undefined {
 }
 
 export function handleAbortMerge(context: RCEContext): string | undefined {
-    const { data: actionData, updateStatus } = context;
+    const { updateStatus } = context;
     assert(repo);
 
     repo.mergeAbort().then(() => {
