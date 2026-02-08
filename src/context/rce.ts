@@ -13,7 +13,6 @@ export interface RCELifecycleMetadata {
     validatorResults?: {
         sync: ActionValidationResult[];
     };
-    copilotPrompt?: string;
 }
 
 export type SimplifiedStatusUpdateHandler = (status: ActionStatus, message: string) => void;
@@ -41,8 +40,14 @@ export class RCEContext<T extends JSONSchema7Object | undefined = any, K = any> 
     readonly lifecycle: RCELifecycleMetadata = {};
     /** Request-specific data (copilot mode only) */
     request?: RCERequestState;
+    /** Ephemeral storage */
     public storage?: RCEStorage;
     private _updateStatus: SimplifiedStatusUpdateHandler = (status: ActionStatus, message: string) => updateActionStatus(this.data, status, message);
+    /**
+     * Updates the status of the action on the action execution history panel
+     * @param status The new status to update to
+     * @param message Message to update the status with
+     */
     readonly updateStatus: SimplifiedStatusUpdateHandler = (status: ActionStatus, message: string) => this._updateStatus(status, message);
 
     constructor(data: ActionData<T>) {

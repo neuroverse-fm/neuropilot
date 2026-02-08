@@ -334,7 +334,7 @@ export function handleKillTerminal(context: RCEContext): string | undefined {
  * Each entry includes the shell type and its status.
  */
 export function handleGetCurrentlyRunningShells(context: RCEContext): string | undefined {
-    const { data: actionData, updateStatus } = context;
+    const { updateStatus } = context;
     const runningShells: string[] = [];
 
     for (const [shellType, session] of NEURO.terminalRegistry.entries()) {

@@ -281,7 +281,7 @@ export function handleGetFolderLintProblems(context: RCEContext): string | undef
 
 // Handle diagnostics for the entire workspace
 export function handleGetWorkspaceLintProblems(context: RCEContext): string | undefined {
-    const { data: actionData, updateStatus } = context;
+    const { updateStatus } = context;
     const workspacePath = getWorkspacePath();
     if (!workspacePath) {
         return contextFailure('No workspace opened.');

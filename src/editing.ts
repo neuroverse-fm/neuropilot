@@ -1161,7 +1161,7 @@ export function handleFindText(context: RCEContext): string | undefined {
 }
 
 export function handleUndo(context: RCEContext): string | undefined {
-    const { data: actionData, updateStatus } = context;
+    const { updateStatus } = context;
     const document = vscode.window.activeTextEditor?.document;
     if (document === undefined) {
         updateStatus('failure', STATUS_NO_ACTIVE_DOCUMENT);
@@ -1194,7 +1194,7 @@ export function handleUndo(context: RCEContext): string | undefined {
 }
 
 export function handleSave(context: RCEContext): string | undefined {
-    const { data: actionData, updateStatus } = context;
+    const { updateStatus } = context;
     const document = vscode.window.activeTextEditor?.document;
     if (document === undefined) {
         updateStatus('failure', STATUS_NO_ACTIVE_DOCUMENT);

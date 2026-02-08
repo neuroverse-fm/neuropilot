@@ -12,7 +12,8 @@ import { ACTIONS, CONFIG, CONNECTION, getAllPermissions, getPermissionLevel, Per
 import { validate } from 'jsonschema';
 import type { RCECancelEvent } from '@events/utils';
 import { fireOnActionStart, updateActionStatus } from '@events/actions';
-import { RCEContext, RCERequestState } from './context/rce';
+import { RCEContext } from './context/rce';
+import assert from 'node:assert';
 
 export const CATEGORY_MISC = 'Miscellaneous';
 
@@ -110,22 +111,14 @@ export function clearRceRequest(context: RCEContext | null = getActiveRequestCon
  * @param preview Optional preview effects function.
  */
 export function createRceRequest(
-    prompt: string,
     context: RCEContext,
 ): void {
     setActiveRequestContext(context);
-    const request: RCERequestState = {
-        prompt,
-        notificationVisible: false,
-        resolved: false,
-        resolve: () => { },
-        attachNotification: async () => { },
-    };
-    context.request = request;
 
     const promise = new Promise<void>((resolve) => {
         // we can't add any buttons to progress, so we have to add the accept link
-        const message = `${request.prompt} [Accept](command:neuropilot.acceptRceRequest)`;
+        assert(context.request, 'Context request object doesn\'t exist when it should!');
+        const message = `${context.request.prompt} [Accept](command:neuropilot.acceptRceRequest)`;
 
         // this is null initially but will be assigned when a notification gets spawned
         let progress: vscode.Progress<{ message?: string; increment?: number }> | null = null;
@@ -158,13 +151,13 @@ export function createRceRequest(
                 context.done(false);
             }, timeoutDuration);
         }
-        request.interval = interval;
-        request.timeout = timeout;
+        context.request.interval = interval;
+        context.request.timeout = timeout;
 
         // this will be called on request resolution
-        request.resolve = () => {
-            if (request.resolved) return;
-            request.resolved = true;
+        context.request.resolve = () => {
+            if (context.request!.resolved) return;
+            context.request!.resolved = true;
             if (interval)
                 clearInterval(interval);
             if (timeout)
@@ -173,7 +166,7 @@ export function createRceRequest(
             resolve();
         };
 
-        request.attachNotification = async (p) => {
+        context.request.attachNotification = async (p) => {
             // set internal progress to the one from the notification
             progress = p;
             // we need to set the prompt and report time passed if there's a timeout
@@ -489,11 +482,11 @@ export async function RCEActionHandler(actionData: ActionData) {
                         context.lifecycle.validatorResults?.sync.push(actionResult);
                         if (!actionResult.success) {
                             NEURO.client?.sendActionResult(actionData.id, !(actionResult.retry ?? false), actionResult.message);
-                            context.done(false);
                             context.updateStatus(
                                 'failure',
                                 actionResult.historyNote ? `Validator failed: ${actionResult.historyNote}` : 'Validator failed' + actionResult.retry ? '\nRequesting retry' : '',
                             );
+                            context.done(false);
                             return;
                         }
                     }
@@ -560,10 +553,15 @@ export async function RCEActionHandler(actionData: ActionData) {
                     ' wants to ' +
                     (typeof context.action.promptGenerator === 'string' ? context.action.promptGenerator : context.action.promptGenerator(context)).trim();
 
-                if (context.storage) context.lifecycle.copilotPrompt = prompt;
+                context.request = {
+                    prompt,
+                    notificationVisible: false,
+                    resolved: false,
+                    resolve: () => { },
+                    attachNotification: async () => { },
+                };
 
                 createRceRequest(
-                    prompt,
                     context,
                 );
 
