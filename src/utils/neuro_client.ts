@@ -9,23 +9,7 @@ import { PromptGenerator } from '@/rce';
 import { RCECancelEvent } from '@events/utils';
 import type { RCEContext } from '@context/rce';
 
-/** The result of attempting to execute an action client-side. */
-export interface ActionValidationResult {
-    /**
-     * If `false`, the action handler is not executed.
-     * Warning: This is *not* the success parameter of the action result.
-     */
-    success: boolean;
-    /**
-     * The message to send Neuro.
-     * If success is `true`, this is optional, otherwise it should be an error message.
-     */
-    message?: string;
-    /** If `true`, Neuro should retry the action if it was forced. */
-    retry?: boolean;
-    /** The reason to show on action panel. */
-    historyNote?: string;
-}
+//#region Action metadata & helpers
 
 /**
  * ActionHandler to use with constants for records of actions and their corresponding handlers.
@@ -161,6 +145,28 @@ export function stripToActions(actions: RCEAction[]): Action[] {
     return actions.map(stripToAction);
 }
 
+//#endregion
+
+//#region Action validation helpers
+
+/** The result of attempting to execute an action client-side. */
+export interface ActionValidationResult {
+    /**
+     * If `false`, the action handler is not executed.
+     * Warning: This is *not* the success parameter of the action result.
+     */
+    success: boolean;
+    /**
+     * The message to send Neuro.
+     * If success is `true`, this is optional, otherwise it should be an error message.
+     */
+    message?: string;
+    /** If `true`, Neuro should retry the action if it was forced. */
+    retry?: boolean;
+    /** The reason to show on action panel. */
+    historyNote?: string;
+}
+
 /**
  * Create a successful action result.
  * This should be used if all parameters have been parsed correctly.
@@ -228,6 +234,8 @@ export function actionValidationRetry(message: string, historyNote?: string): Ac
         historyNote,
     };
 }
+
+//#endregion
 
 //#region Old validation result functions
 
