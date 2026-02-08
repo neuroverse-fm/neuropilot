@@ -245,6 +245,12 @@ export interface ActionHandlerResult {
     historyNote?: string;
 }
 
+/**
+ * Function to return an object that indicates handler success.
+ * @param message The message that will be sent to Neuro
+ * @param historyNote If supplied, an action status update with its status set to success will be fired with the note. Otherwise, assumes that you've already done that yourself.
+ * @returns {ActionHandlerResult} An object with a successful handler result
+ */
 export function actionHandlerSuccess(message?: string, historyNote?: string): ActionHandlerResult {
     return {
         success: true,
@@ -253,7 +259,13 @@ export function actionHandlerSuccess(message?: string, historyNote?: string): Ac
     };
 }
 
-export function actionHandlerFailure(message: string, historyNote: string): ActionHandlerResult {
+/**
+ * Function to return an object that indicates handler failure.
+ * @param message The message that will be sent to Neuro
+ * @param historyNote If supplied, an action status update with its status set to failure will be fired with the note. Otherwise, assumes that you've already done that yourself.
+ * @returns {ActionHandlerResult} An object with a failed handler result
+ */
+export function actionHandlerFailure(message: string, historyNote?: string): ActionHandlerResult {
     logOutput('WARNING', 'Action failed: ' + message);
     return {
         success: false,
