@@ -52,18 +52,32 @@ export class RCEContext<T extends JSONSchema7Object | undefined = any, K = any> 
 
     constructor(data: ActionData<T>) {
         super(() => {
-            for (const k in this.lifecycle) {
-                this.lifecycle[k as keyof typeof this.lifecycle] = undefined;
-            };
-            this.request?.resolve();
-            this.request = undefined;
-            this.storage = undefined;
-            this.data = {} as never;
-            this.action = {} as never;
+            // Dispose lifecycle resources while references are still intact.
             this.lifecycle.preview?.dispose();
             for (const d of this.lifecycle.events ?? []) {
                 d.dispose();
             }
+
+            // Clear any active timers associated with the request before resolving it.
+            if (this.request?.interval) {
+                clearInterval(this.request.interval);
+                this.request.interval = null;
+            }
+            if (this.request?.timeout) {
+                clearTimeout(this.request.timeout);
+                this.request.timeout = null;
+            }
+
+            this.request?.resolve();
+            this.request = undefined;
+
+            // Now clear lifecycle metadata and other fields.
+            for (const k in this.lifecycle) {
+                this.lifecycle[k as keyof typeof this.lifecycle] = undefined;
+            }
+            this.storage = undefined;
+            this.data = {} as never;
+            this.action = {} as never;
             this._updateStatus = (_status, _message) => undefined;
         });
         this.data = data;
