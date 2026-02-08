@@ -117,8 +117,12 @@ export function createRceRequest(
 
     const promise = new Promise<void>((resolve) => {
         // we can't add any buttons to progress, so we have to add the accept link
-        assert(context.request, 'Context request object doesn\'t exist when it should!');
-        const message = `${context.request.prompt} [Accept](command:neuropilot.acceptRceRequest)`;
+        if (!context.request) {
+            context.updateStatus('failure', 'Request not initialized before createRceRequest');
+            return;
+        }
+        const request = context.request;
+        const message = `${request.prompt} [Accept](command:neuropilot.acceptRceRequest)`;
 
         // this is null initially but will be assigned when a notification gets spawned
         let progress: vscode.Progress<{ message?: string; increment?: number }> | null = null;
@@ -151,13 +155,13 @@ export function createRceRequest(
                 context.done(false);
             }, timeoutDuration);
         }
-        context.request.interval = interval;
-        context.request.timeout = timeout;
+        request.interval = interval;
+        request.timeout = timeout;
 
         // this will be called on request resolution
-        context.request.resolve = () => {
-            if (context.request!.resolved) return;
-            context.request!.resolved = true;
+        request.resolve = () => {
+            if (request.resolved) return;
+            request.resolved = true;
             if (interval)
                 clearInterval(interval);
             if (timeout)
@@ -166,7 +170,7 @@ export function createRceRequest(
             resolve();
         };
 
-        context.request.attachNotification = async (p) => {
+        request.attachNotification = async (p) => {
             // set internal progress to the one from the notification
             progress = p;
             // we need to set the prompt and report time passed if there's a timeout
@@ -183,14 +187,15 @@ export function createRceRequest(
  */
 export function revealRceNotification(): void {
     const activeContext = getActiveRequestContext();
-    if (!activeContext?.request)
+    const request = activeContext?.request;
+    if (!request)
         return;
 
     // don't show the notification if it's already open
-    if (activeContext.request.notificationVisible)
+    if (request.notificationVisible)
         return;
 
-    activeContext.request.notificationVisible = true;
+    request.notificationVisible = true;
     if (activeContext.action.preview) {
         activeContext.lifecycle.preview = activeContext.action.preview(activeContext);
     }
@@ -209,7 +214,7 @@ export function revealRceNotification(): void {
                 denyRceRequest();
             });
 
-            return activeContext.request!.attachNotification(progress);
+            return request.attachNotification(progress);
         },
     );
 }
