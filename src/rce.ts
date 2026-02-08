@@ -12,7 +12,7 @@ import { ACTIONS, CONFIG, CONNECTION, getAllPermissions, getPermissionLevel, Per
 import { validate } from 'jsonschema';
 import type { RCECancelEvent } from '@events/utils';
 import { fireOnActionStart, updateActionStatus } from '@events/actions';
-import { RCEContext } from './context/rce';
+import { RCEContext } from '@/context/rce';
 import assert from 'node:assert';
 
 export const CATEGORY_MISC = 'Miscellaneous';
