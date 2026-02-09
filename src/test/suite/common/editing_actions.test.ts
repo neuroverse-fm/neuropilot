@@ -4,6 +4,7 @@ import { anything, capture, instance, mock, reset, verify } from 'ts-mockito';
 import { NEURO } from '@/constants';
 import { ActionData } from 'neuro-game-sdk';
 import type { RCEContext } from '@/context/rce';
+import type { ActionHandlerResult } from '@/utils/neuro_client';
 import {
     handlePlaceCursor,
     handleGetCursor,
@@ -76,31 +77,31 @@ suite('Integration: Editing actions', () => {
         const actionData: ActionData = { id: 't', name: 'place_cursor', params: { line: 4, column: 3, type: 'absolute' } };
 
         // === Act ===
-        const result = handlePlaceCursor(makeContext(actionData));
+        const result = handlePlaceCursor(makeContext(actionData)) as ActionHandlerResult;
 
         // === Assert ===
-        assert.ok(result && result.includes('(4:3)'));
+        assert.ok(result?.message?.includes('(4:3)'));
     });
 
     test('get_cursor returns current position and context', () => {
         // === Act ===        
-        const result = handleGetCursor(makeContext({ id: 't', name: 'get_cursor' } as ActionData));
+        const result = handleGetCursor(makeContext({ id: 't', name: 'get_cursor' } as ActionData)) as ActionHandlerResult;
 
         // === Assert ===
-        assert.ok(result && result.includes('2:1'));
+        assert.ok(result?.message?.includes('2:1'));
     });
 
     test('place_cursor (relative) moves from current position and can be restored', () => {
         // Move relative by +1 line, +1 column from (2:1) -> (3:2)
         // === Act ===
-        const moved = handlePlaceCursor(makeContext({ id: 't', name: 'place_cursor', params: { line: 1, column: 1, type: 'relative' } } as ActionData));
+        const moved = handlePlaceCursor(makeContext({ id: 't', name: 'place_cursor', params: { line: 1, column: 1, type: 'relative' } } as ActionData)) as ActionHandlerResult;
 
         // === Assert ===
-        assert.ok(moved && moved.includes('(3:2)'));
+        assert.ok(moved?.message?.includes('(3:2)'));
 
         // === Act & Assert ===
-        const restored = handlePlaceCursor(makeContext({ id: 't', name: 'place_cursor', params: { line: 2, column: 1, type: 'absolute' } } as ActionData));
-        assert.ok(restored && restored.includes('(2:1)'));
+        const restored = handlePlaceCursor(makeContext({ id: 't', name: 'place_cursor', params: { line: 2, column: 1, type: 'absolute' } } as ActionData)) as ActionHandlerResult;
+        assert.ok(restored?.message?.includes('(2:1)'));
     });
 
     test('insert_text inserts at absolute position and sends context', async () => {
@@ -276,8 +277,8 @@ suite('Integration: Editing actions', () => {
         await setupDocument('Echo\nZulu');
         const actionData: ActionData = { id: 't', name: 'find_text', params: { find: 'Echo', match: 'firstInFile', useRegex: false, highlight: false } };
         // === Act & Assert ===
-        const result = handleFindText(makeContext(actionData));
-        assert.ok(typeof result === 'string' && result.includes('Echo'));
+        const result = handleFindText(makeContext(actionData)) as ActionHandlerResult;
+        assert.ok(result?.message?.includes('Echo'));
     });
 
     test('find_text multiple matches with highlight returns count and lines', async () => {
@@ -285,8 +286,8 @@ suite('Integration: Editing actions', () => {
         await setupDocument('z\nz\nz');
 
         // === Act & Assert ===
-        const result = handleFindText(makeContext({ id: 't', name: 'find_text', params: { find: 'z', match: 'allInFile', useRegex: false, highlight: true } } as ActionData));
-        assert.ok(typeof result === 'string' && result.includes('z'));
+        const result = handleFindText(makeContext({ id: 't', name: 'find_text', params: { find: 'z', match: 'allInFile', useRegex: false, highlight: true } } as ActionData)) as ActionHandlerResult;
+        assert.ok(result?.message?.includes('z'));
     });
 
     test('undo sends context after reverting last change', async () => {
@@ -344,8 +345,8 @@ suite('Integration: Editing actions', () => {
 
         // === Assert ===
         await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); }, 3000, 100);
-        const cursorInfo = handleGetCursor(makeContext({ id: 't', name: 'get_cursor' } as ActionData))!;
-        assert.ok(cursorInfo.includes('1:1'));
+        const cursorInfo = handleGetCursor(makeContext({ id: 't', name: 'get_cursor' } as ActionData))! as ActionHandlerResult;
+        assert.ok(cursorInfo?.message?.includes('1:1'));
     });
 
     test('rewrite_all handles empty content', async () => {
@@ -407,8 +408,8 @@ suite('Integration: Editing actions', () => {
 
         // === Assert ===
         await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); }, 3000, 100);
-        let info = handleGetCursor(makeContext({ id: 't', name: 'get_cursor' } as ActionData))!;
-        assert.ok(info.includes('2:'));
+        let info = handleGetCursor(makeContext({ id: 't', name: 'get_cursor' } as ActionData))! as ActionHandlerResult;
+        assert.ok(info?.message?.includes('2:'));
 
         // Without trailing newline: logicalLines = 2, cursor ends on line 3
         // === Arrange ===
@@ -419,8 +420,8 @@ suite('Integration: Editing actions', () => {
 
         // === Assert ===
         await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); }, 3000, 100);
-        info = handleGetCursor(makeContext({ id: 't', name: 'get_cursor' } as ActionData))!;
-        assert.ok(info.includes('3:'));
+        info = handleGetCursor(makeContext({ id: 't', name: 'get_cursor' } as ActionData))! as ActionHandlerResult;
+        assert.ok(info?.message?.includes('3:'));
     });
 
     test('delete_lines from first line moves cursor to start of file', async () => {
@@ -432,8 +433,8 @@ suite('Integration: Editing actions', () => {
 
         // === Assert ===
         await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); }, 3000, 100);
-        const info = handleGetCursor(makeContext({ id: 't', name: 'get_cursor' } as ActionData))!;
-        assert.ok(info.includes('1:1'));
+        const info = handleGetCursor(makeContext({ id: 't', name: 'get_cursor' } as ActionData))! as ActionHandlerResult;
+        assert.ok(info?.message?.includes('1:1'));
     });
 
     test('highlight_lines returns description string', async function () {
@@ -441,8 +442,8 @@ suite('Integration: Editing actions', () => {
         // Ensure at least two lines exist for the highlight range
         await setupDocument('H1\nH2');
         // === Act & Assert ===
-        const result = handleHighlightLines(makeContext({ id: 't', name: 'highlight_lines', params: { startLine: 1, endLine: 2 } } as ActionData));
-        assert.ok(typeof result === 'string' && result.includes('1-2'));
+        const result = handleHighlightLines(makeContext({ id: 't', name: 'highlight_lines', params: { startLine: 1, endLine: 2 } } as ActionData)) as ActionHandlerResult;
+        assert.ok(result?.message?.includes('1-2'));
     });
 });
 

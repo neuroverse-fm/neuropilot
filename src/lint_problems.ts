@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { NEURO } from '@/constants';
 import { normalizePath, getWorkspacePath, logOutput, isPathNeuroSafe, getWorkspaceUri } from '@/utils/misc';
 import { CONFIG } from '@/config';
-import { actionValidationAccept, actionValidationFailure, ActionValidationResult, RCEAction, contextFailure, actionValidationRetry } from '@/utils/neuro_client';
+import { actionValidationAccept, actionValidationFailure, ActionValidationResult, RCEAction, actionValidationRetry, ActionHandlerResult, actionHandlerSuccess, actionHandlerFailure } from '@/utils/neuro_client';
 import assert from 'node:assert';
 import { targetedFileLintingResolvedEvent, targetedFolderLintingResolvedEvent, workspaceLintingResolvedEvent } from '@events/linting';
 import { addActions } from '@/rce';
@@ -218,7 +218,7 @@ export function getFormattedDiagnosticsForFile(filePath: string, diagnostics: vs
 
 
 // Handle diagnostics for a single file
-export function handleGetFileLintProblems(context: RCEContext): string | undefined {
+export function handleGetFileLintProblems(context: RCEContext): ActionHandlerResult {
     const { data: actionData, updateStatus } = context;
     const relativePath = actionData.params.file;
     const workspaceUri = getWorkspaceUri()!;
@@ -228,21 +228,19 @@ export function handleGetFileLintProblems(context: RCEContext): string | undefin
 
         const rawDiagnostics = vscode.languages.getDiagnostics(workspaceUri.with({ path: normalizedPath }));
         if (rawDiagnostics.length === 0) {
-            updateStatus('success', 'No linting issues found');
-            return `No linting problems found for file ${relativePath}.`;
+            return actionHandlerSuccess(`No linting problems found for file ${relativePath}.`,'No linting issues found');
         }
 
         const formattedDiagnostics = getFormattedDiagnosticsForFile(relativePath, rawDiagnostics);
-        updateStatus('success', `${rawDiagnostics.length} linting issues sent`);
-        return `Linting problems for file ${relativePath}:${formattedDiagnostics}`;
+        return actionHandlerSuccess(`Linting problems for file ${relativePath}:${formattedDiagnostics}`, `${rawDiagnostics.length} linting issues sent`);
     } catch (erm) {
         logOutput('ERROR', `Getting diagnostics for ${relativePath} failed: ${erm}`);
         updateStatus('exception', 'Error thrown');
-        return contextFailure(`Failed to get linting diagnostics for "${relativePath}".`);
+        return actionHandlerFailure(`Failed to get linting diagnostics for "${relativePath}".`);
     }
 }
 
-export function handleGetFolderLintProblems(context: RCEContext): string | undefined {
+export function handleGetFolderLintProblems(context: RCEContext): ActionHandlerResult {
     const { data: actionData, updateStatus } = context;
     const relativeFolder = actionData?.params.folder;
 
@@ -261,8 +259,7 @@ export function handleGetFolderLintProblems(context: RCEContext): string | undef
         });
 
         if (folderDiagnostics.length === 0) {
-            updateStatus('success', 'No linting issues found');
-            return contextFailure(`No linting problems found for folder "${relativeFolder}".`);
+            return actionHandlerSuccess(`No linting problems found for folder "${relativeFolder}".`, 'No linting issues found');
         }
 
         const formattedDiagnostics = folderDiagnostics.map(([uri, diags]) => {
@@ -270,21 +267,20 @@ export function handleGetFolderLintProblems(context: RCEContext): string | undef
             return getFormattedDiagnosticsForFile(relative, diags);
         }).join('\n');
 
-        updateStatus('success', `${folderDiagnostics.length} linting issues sent`);
-        return `Linting problems for folder "${relativeFolder}":\n${formattedDiagnostics}`;
+        return actionHandlerSuccess(`Linting problems for folder "${relativeFolder}":\n${formattedDiagnostics}`, `${folderDiagnostics.length} linting issues sent`);
     } catch (erm) {
         logOutput('ERROR', `Getting diagnostics for folder ${relativeFolder} failed: ${erm}`);
         updateStatus('exception', 'Error thrown');
-        return contextFailure(`Failed to get linting diagnostics for folder "${relativeFolder}".`);
+        return actionHandlerFailure(`Failed to get linting diagnostics for folder "${relativeFolder}".`);
     }
 }
 
 // Handle diagnostics for the entire workspace
-export function handleGetWorkspaceLintProblems(context: RCEContext): string | undefined {
+export function handleGetWorkspaceLintProblems(context: RCEContext): ActionHandlerResult {
     const { updateStatus } = context;
     const workspacePath = getWorkspacePath();
     if (!workspacePath) {
-        return contextFailure('No workspace opened.');
+        return actionHandlerFailure('No workspace opened.', 'No workspace opened.');
     }
 
     try {
@@ -295,8 +291,7 @@ export function handleGetWorkspaceLintProblems(context: RCEContext): string | un
         );
 
         if (safeDiagnostics.length === 0) {
-            updateStatus('success', 'No linting issues found');
-            return contextFailure('No linting problems found for the current workspace.');
+            return actionHandlerSuccess('No linting problems found for the current workspace.', 'No linting issues found');
         }
 
         const formattedDiagnostics = safeDiagnostics.map(([uri, diags]) => {
@@ -304,12 +299,11 @@ export function handleGetWorkspaceLintProblems(context: RCEContext): string | un
             return getFormattedDiagnosticsForFile(relative, diags);
         }).join('\n\n');
 
-        updateStatus('success', `${safeDiagnostics.length} linting issues found`);
-        return `Linting problems for the current workspace:\n${formattedDiagnostics}`;
+        return actionHandlerSuccess(`Linting problems for the current workspace:\n${formattedDiagnostics}`, `${safeDiagnostics.length} linting issues found`);
     } catch (erm) {
         logOutput('ERROR', `Failed to get diagnostics for workspace: ${erm}`);
         updateStatus('exception', 'Error thrown');
-        return contextFailure("Couldn't get diagnostics for the workspace.");
+        return actionHandlerFailure("Couldn't get diagnostics for the workspace.");
     }
 }
 

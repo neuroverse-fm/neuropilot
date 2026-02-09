@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 
 import { NEURO } from '@/constants';
-import { DiffRangeType, escapeRegExp, getDiffRanges, getFence, getPositionContext, getProperty, getVirtualCursor, showDiffRanges, isPathNeuroSafe, logOutput, setVirtualCursor, simpleFileName, substituteMatch, clearDecorations, formatContext, filterFileContents, positionFromIndex, indexFromPosition } from '@/utils/misc';
-import { actionValidationAccept, actionValidationFailure, ActionValidationResult, RCEAction, contextFailure, actionValidationRetry } from '@/utils/neuro_client';
+import { DiffRangeType, escapeRegExp, getDiffRanges, getFence, getPositionContext, getProperty, getVirtualCursor, showDiffRanges, isPathNeuroSafe, logOutput, setVirtualCursor, simpleFileName, substituteMatch, clearDecorations, formatContext, filterFileContents, positionFromIndex, indexFromPosition, NeuroPositionContext } from '@/utils/misc';
+import { actionValidationAccept, actionValidationFailure, ActionValidationResult, RCEAction, contextFailure, actionValidationRetry, RCEHandlerReturns, actionHandlerSuccess, actionHandlerFailure } from '@/utils/neuro_client';
 import { CONFIG, CONNECTION } from '@/config';
 import { createCursorPositionChangedEvent } from '@events/cursor';
 import { RCECancelEvent } from '@events/utils';
@@ -98,9 +98,9 @@ function createPositionValidator(path = '') {
 
         const document = vscode.window.activeTextEditor?.document;
         if (document === undefined)
-            return actionValidationFailure(CONTEXT_NO_ACTIVE_DOCUMENT);
+            return actionValidationFailure(CONTEXT_NO_ACTIVE_DOCUMENT, STATUS_NO_ACTIVE_DOCUMENT);
         if (!isPathNeuroSafe(document.fileName))
-            return actionValidationFailure(CONTEXT_NO_ACCESS);
+            return actionValidationFailure(CONTEXT_NO_ACCESS, STATUS_NO_ACCESS);
 
         let { line, column } = position;
         const type = position.type;
@@ -769,8 +769,8 @@ export function toggleSaveAction(): void {
     }
 }
 
-export function handlePlaceCursor(context: RCEContext): string | undefined {
-    const { data: actionData, updateStatus } = context;
+export function handlePlaceCursor(context: RCEContext): RCEHandlerReturns {
+    const { data: actionData } = context;
     // One-based line and column (depending on config)
     let line = actionData.params.line;
     let column = actionData.params.column;
@@ -778,12 +778,10 @@ export function handlePlaceCursor(context: RCEContext): string | undefined {
 
     const document = vscode.window.activeTextEditor?.document;
     if (document === undefined) {
-        updateStatus('failure', STATUS_NO_ACTIVE_DOCUMENT);
-        return contextFailure(CONTEXT_NO_ACTIVE_DOCUMENT);
+        return actionHandlerFailure(CONTEXT_NO_ACTIVE_DOCUMENT, STATUS_NO_ACTIVE_DOCUMENT);
     }
     if (!isPathNeuroSafe(document.fileName)) {
-        updateStatus('failure', STATUS_NO_ACCESS);
-        return contextFailure(CONTEXT_NO_ACCESS);
+        return actionHandlerFailure(CONTEXT_NO_ACCESS, STATUS_NO_ACCESS);
     }
 
     let basedLine: number, basedColumn: number;
@@ -809,20 +807,16 @@ export function handlePlaceCursor(context: RCEContext): string | undefined {
     const cursorContext = getPositionContext(document, cursorPosition);
     logOutput('INFO', `Placed ${NEURO.currentController}'s virtual cursor at (${basedLine}:${basedColumn}).`);
 
-    updateStatus('success', `Cursor placed at (${basedLine}:${basedColumn})`);
-    return `Cursor placed at (${basedLine}:${basedColumn})\n\n${formatContext(cursorContext)}`;
+    return actionHandlerSuccess(`Cursor placed at (${basedLine}:${basedColumn})\n\n${formatContext(cursorContext)}`, `Cursor placed at (${basedLine}:${basedColumn})`);
 }
 
-export function handleGetCursor(context: RCEContext): string | undefined {
-    const { updateStatus } = context;
+export function handleGetCursor(_context: RCEContext): RCEHandlerReturns {
     const document = vscode.window.activeTextEditor?.document;
     if (document === undefined) {
-        updateStatus('failure', STATUS_NO_ACTIVE_DOCUMENT);
-        return contextFailure(CONTEXT_NO_ACTIVE_DOCUMENT);
+        return actionHandlerFailure(CONTEXT_NO_ACTIVE_DOCUMENT, STATUS_NO_ACTIVE_DOCUMENT);
     }
     if (!isPathNeuroSafe(document.fileName)) {
-        updateStatus('failure', STATUS_NO_ACCESS);
-        return contextFailure(CONTEXT_NO_ACCESS);
+        return actionHandlerFailure(CONTEXT_NO_ACCESS, STATUS_NO_ACCESS);
     }
 
     const cursorPosition = getVirtualCursor()!;
@@ -833,12 +827,11 @@ export function handleGetCursor(context: RCEContext): string | undefined {
     let cursorStyle = CONFIG.cursorPositionContextStyle;
     if (cursorStyle === 'off')
         cursorStyle = 'lineAndColumn';
-    updateStatus('success', `Retrieved cursor at line ${cursorPosition.line + 1}, column ${cursorPosition.character + 1}`);
-    return `In file ${relativePath}.\n\n${formatContext(cursorContext)}`;
+    return actionHandlerSuccess(`In file ${relativePath}.\n\n${formatContext(cursorContext)}`, `Retrieved cursor at line ${cursorPosition.line + 1}, column ${cursorPosition.character + 1}`);
 }
 
-export function handleInsertText(context: RCEContext): string | undefined {
-    const { data: actionData, updateStatus } = context;
+export function handleInsertText(context: RCEContext): RCEHandlerReturns {
+    const { data: actionData } = context;
     const text: string = actionData.params.text;
     const cursor = getVirtualCursor()!;
     let position = actionData.params.position;
@@ -854,12 +847,10 @@ export function handleInsertText(context: RCEContext): string | undefined {
 
     const document = vscode.window.activeTextEditor?.document;
     if (document === undefined) {
-        updateStatus('failure', STATUS_NO_ACTIVE_DOCUMENT);
-        return contextFailure(CONTEXT_NO_ACTIVE_DOCUMENT);
+        return actionHandlerFailure(CONTEXT_NO_ACTIVE_DOCUMENT, STATUS_NO_ACTIVE_DOCUMENT);
     }
     if (!isPathNeuroSafe(document.fileName)) {
-        updateStatus('failure', STATUS_NO_ACCESS);
-        return contextFailure(CONTEXT_NO_ACCESS);
+        return actionHandlerFailure(CONTEXT_NO_ACCESS, STATUS_NO_ACCESS);
     }
 
     if (position.type === 'relative') {
@@ -877,7 +868,7 @@ export function handleInsertText(context: RCEContext): string | undefined {
 
     setVirtualCursor(insertStart);
 
-    vscode.workspace.applyEdit(edit).then(success => {
+    return vscode.workspace.applyEdit(edit).then(success => {
         if (success) {
             logOutput('INFO', 'Inserting text into document');
             const document = vscode.window.activeTextEditor!.document;
@@ -887,20 +878,16 @@ export function handleInsertText(context: RCEContext): string | undefined {
                 type: DiffRangeType.Added,
             });
             const cursorContext = getPositionContext(document, { cursorPosition: insertEnd, position: insertStart, position2: insertEnd });
-            updateStatus('success', `Inserted ${text.length} characters`);
-            NEURO.client?.sendContext(`Inserted text into document and moved your cursor\n\n${formatContext(cursorContext)}`);
+            return actionHandlerSuccess(`Inserted text into document and moved your cursor\n\n${formatContext(cursorContext)}`, `Inserted ${text.length} characters`);
         }
         else {
-            updateStatus('failure', 'Failed to insert text');
-            NEURO.client?.sendContext(contextFailure('Failed to insert text'));
+            return actionHandlerFailure('Failed to insert text', 'Failed to insert text');
         }
     });
-
-    return undefined;
 }
 
-export function handleInsertLines(context: RCEContext): string | undefined {
-    const { data: actionData, updateStatus } = context;
+export function handleInsertLines(context: RCEContext): RCEHandlerReturns {
+    const { data: actionData } = context;
     /**
      * The current implementation is a lazy one of just appending a newline and pasting the text in
      * We want to allow specification of the line to insert under, with the default set to the current cursor location
@@ -911,12 +898,10 @@ export function handleInsertLines(context: RCEContext): string | undefined {
 
     const document = vscode.window.activeTextEditor?.document;
     if (document === undefined) {
-        updateStatus('failure', STATUS_NO_ACTIVE_DOCUMENT);
-        return contextFailure(CONTEXT_NO_ACTIVE_DOCUMENT);
+        return actionHandlerFailure(CONTEXT_NO_ACTIVE_DOCUMENT, STATUS_NO_ACTIVE_DOCUMENT);
     }
     if (!isPathNeuroSafe(document.fileName)) {
-        updateStatus('failure', STATUS_NO_ACCESS);
-        return contextFailure(CONTEXT_NO_ACCESS);
+        return actionHandlerFailure(CONTEXT_NO_ACCESS, STATUS_NO_ACCESS);
     }
 
     // Add newlines for positions past the end of the file
@@ -932,7 +917,7 @@ export function handleInsertLines(context: RCEContext): string | undefined {
     setVirtualCursor(insertStart);
     edit.insert(document.uri, insertStart, text);
 
-    vscode.workspace.applyEdit(edit).then(success => {
+    return vscode.workspace.applyEdit(edit).then(success => {
         if (success) {
             logOutput('INFO', 'Inserting text lines into document');
             const document = vscode.window.activeTextEditor!.document;
@@ -942,20 +927,16 @@ export function handleInsertLines(context: RCEContext): string | undefined {
                 type: DiffRangeType.Added,
             });
             const cursorContext = getPositionContext(document, { cursorPosition: insertEnd, position: insertStart, position2: insertEnd });
-            updateStatus('success', 'Inserted lines');
-            NEURO.client?.sendContext(`Inserted text lines into document\n\n${formatContext(cursorContext)}`);
+            return actionHandlerSuccess(`Inserted text lines into document\n\n${formatContext(cursorContext)}`, `Inserted ${text.split('\n').length} lines`);
         }
         else {
-            updateStatus('failure', 'Failed to insert text lines');
-            NEURO.client?.sendContext(contextFailure('Failed to insert text lines'));
+            return actionHandlerFailure('Failed to insert text lines', 'Failed to insert text lines');
         }
     });
-
-    return;
 }
 
-export function handleReplaceText(context: RCEContext): string | undefined {
-    const { data: actionData, updateStatus } = context;
+export function handleReplaceText(context: RCEContext): RCEHandlerReturns {
+    const { data: actionData } = context;
     const find: string = actionData.params.find;
     const replaceWith: string = actionData.params.replaceWith;
     const match: string = actionData.params.match;
@@ -964,12 +945,10 @@ export function handleReplaceText(context: RCEContext): string | undefined {
 
     const document = vscode.window.activeTextEditor?.document;
     if (document === undefined) {
-        updateStatus('failure', STATUS_NO_ACTIVE_DOCUMENT);
-        return contextFailure(CONTEXT_NO_ACTIVE_DOCUMENT);
+        return actionHandlerFailure(CONTEXT_NO_ACTIVE_DOCUMENT, STATUS_NO_ACTIVE_DOCUMENT);
     }
     if (!isPathNeuroSafe(document.fileName)) {
-        updateStatus('failure', STATUS_NO_ACCESS);
-        return contextFailure(CONTEXT_NO_ACCESS);
+        return actionHandlerFailure(CONTEXT_NO_ACCESS, STATUS_NO_ACCESS);
     }
 
     const originalText = filterFileContents(document.getText());
@@ -978,8 +957,7 @@ export function handleReplaceText(context: RCEContext): string | undefined {
 
     const matches = findAndFilter(regex, originalText, cursorOffset, match, lineRange);
     if (matches.length === 0) {
-        updateStatus('failure', STATUS_NO_MATCHES_FOUND);
-        return 'No matches found for the given parameters.';
+        return actionHandlerFailure('No matches found for the given parameters.', STATUS_NO_MATCHES_FOUND);
     }
 
     const edit = new vscode.WorkspaceEdit();
@@ -989,10 +967,10 @@ export function handleReplaceText(context: RCEContext): string | undefined {
             edit.replace(document.uri, new vscode.Range(positionFromIndex(originalText, m.index), positionFromIndex(originalText, m.index + m[0].length)), replacement);
         } catch (erm) {
             logOutput('ERROR', `Error while substituting match: ${erm}`);
-            return contextFailure(erm instanceof Error ? erm.message : 'Unknown error while substituting match');
+            return actionHandlerFailure(erm instanceof Error ? erm.message : 'Unknown error while substituting match', 'Error while substituting match');
         }
     }
-    vscode.workspace.applyEdit(edit).then(success => {
+    return vscode.workspace.applyEdit(edit).then(success => {
         if (success) {
             logOutput('INFO', 'Replacing text in document');
             const document = vscode.window.activeTextEditor!.document;
@@ -1005,27 +983,24 @@ export function handleReplaceText(context: RCEContext): string | undefined {
                 const diffRanges = getDiffRanges(startPosition, matches[0][0], filterFileContents(document.getText(new vscode.Range(startPosition, endPosition))));
                 showDiffRanges(vscode.window.activeTextEditor!, ...diffRanges);
                 const cursorContext = getPositionContext(document, { cursorPosition: endPosition, position: startPosition, position2: endPosition });
-                updateStatus('success', `Replaced ${matches.length} occurrence`);
-                NEURO.client?.sendContext(`Replaced text in document\n\n${formatContext(cursorContext)}`);
+                return actionHandlerSuccess(`Replaced text in document\n\n${formatContext(cursorContext)}`, `Replaced ${matches.length} occurrence`);
             }
             else {
                 // Multiple matches
                 const diffRanges = getDiffRanges(new vscode.Position(0, 0), originalText, newText);
                 showDiffRanges(vscode.window.activeTextEditor!, ...diffRanges);
                 const cursorContext = getPositionContext(document, { cursorPosition: getVirtualCursor()! });
-                updateStatus('success', `Replaced ${matches.length} occurrences`);
-                NEURO.client?.sendContext(`Deleted ${matches.length} occurrences from the document\n\n${formatContext(cursorContext)}`);
+                return actionHandlerSuccess(`Deleted ${matches.length} occurrences from the document\n\n${formatContext(cursorContext)}`, `Replaced ${matches.length} occurrences`);
             }
         }
         else {
-            updateStatus('failure', 'Failed to replace text');
-            NEURO.client?.sendContext(contextFailure('Failed to replace text'));
+            return actionHandlerFailure('Failed to replace text', 'Failed to replace text');
         }
     });
 }
 
-export function handleDeleteText(context: RCEContext): string | undefined {
-    const { data: actionData, updateStatus } = context;
+export function handleDeleteText(context: RCEContext): RCEHandlerReturns {
+    const { data: actionData } = context;
     const find: string = actionData.params.find;
     const match: string = actionData.params.match;
     const useRegex: boolean = actionData.params.useRegex ?? false;
@@ -1033,12 +1008,10 @@ export function handleDeleteText(context: RCEContext): string | undefined {
 
     const document = vscode.window.activeTextEditor?.document;
     if (document === undefined) {
-        updateStatus('failure', STATUS_NO_ACTIVE_DOCUMENT);
-        return contextFailure(CONTEXT_NO_ACTIVE_DOCUMENT);
+        return actionHandlerFailure(CONTEXT_NO_ACTIVE_DOCUMENT, STATUS_NO_ACTIVE_DOCUMENT);
     }
     if (!isPathNeuroSafe(document.fileName)) {
-        updateStatus('failure', STATUS_NO_ACCESS);
-        return contextFailure(CONTEXT_NO_ACCESS);
+        return actionHandlerFailure(CONTEXT_NO_ACCESS, STATUS_NO_ACCESS);
     }
 
     const originalText = filterFileContents(document.getText());
@@ -1048,15 +1021,14 @@ export function handleDeleteText(context: RCEContext): string | undefined {
 
     const matches = findAndFilter(regex, originalText, cursorOffset, match, lineRange);
     if (matches.length === 0) {
-        updateStatus('failure', STATUS_NO_MATCHES_FOUND);
-        return 'No matches found for the given parameters.';
+        return actionHandlerFailure('No matches found for the given parameters.', STATUS_NO_MATCHES_FOUND);
     }
 
     const edit = new vscode.WorkspaceEdit();
     for (const m of matches) {
         edit.delete(document.uri, new vscode.Range(positionFromIndex(originalText, m.index), positionFromIndex(originalText, m.index + m[0].length)));
     }
-    vscode.workspace.applyEdit(edit).then(success => {
+    return vscode.workspace.applyEdit(edit).then(success => {
         if (success) {
             logOutput('INFO', 'Deleting text from document');
             const document = vscode.window.activeTextEditor!.document;
@@ -1071,26 +1043,23 @@ export function handleDeleteText(context: RCEContext): string | undefined {
                     removedText: matches[0][0],
                 });
                 const cursorContext = getPositionContext(document, position);
-                updateStatus('success', `Deleted ${matches.length} occurrence`);
-                NEURO.client?.sendContext(`Deleted text from document\n\n${formatContext(cursorContext)}`);
+                return actionHandlerSuccess(`Deleted text from document\n\n${formatContext(cursorContext)}`, `Deleted ${matches.length} occurrence`);
             }
             else {
                 // Multiple matches
                 const diffRanges = getDiffRanges(new vscode.Position(0, 0), originalText, newText);
                 showDiffRanges(vscode.window.activeTextEditor!, ...diffRanges);
                 const cursorContext = getPositionContext(document, { cursorPosition: getVirtualCursor()! });
-                updateStatus('success', `Deleted ${matches.length} occurrences`);
-                NEURO.client?.sendContext(`Deleted ${matches.length} occurrences from the document\n\n${formatContext(cursorContext)}`);
+                return actionHandlerSuccess(`Deleted ${matches.length} occurrences from the document\n\n${formatContext(cursorContext)}`, `Deleted ${matches.length} occurrences`);
             }
         }
         else {
-            updateStatus('failure', 'Failed to delete text');
-            NEURO.client?.sendContext(contextFailure('Failed to delete text'));
+            return actionHandlerFailure('Failed to delete text', 'Failed to delete text');
         }
     });
 }
 
-export function handleFindText(context: RCEContext): string | undefined {
+export function handleFindText(context: RCEContext): RCEHandlerReturns {
     const { data: actionData, updateStatus } = context;
     const find: string = actionData.params.find;
     const match: MatchOptions = actionData.params.match;
@@ -1101,12 +1070,10 @@ export function handleFindText(context: RCEContext): string | undefined {
 
     const document = vscode.window.activeTextEditor?.document;
     if (document === undefined) {
-        updateStatus('failure', STATUS_NO_ACTIVE_DOCUMENT);
-        return contextFailure(CONTEXT_NO_ACTIVE_DOCUMENT);
+        return actionHandlerFailure(CONTEXT_NO_ACTIVE_DOCUMENT, STATUS_NO_ACTIVE_DOCUMENT);
     }
     if (!isPathNeuroSafe(document.fileName)) {
-        updateStatus('failure', STATUS_NO_ACCESS);
-        return contextFailure(CONTEXT_NO_ACCESS);
+        return actionHandlerFailure(CONTEXT_NO_ACCESS, STATUS_NO_ACCESS);
     }
 
     const documentText = filterFileContents(document.getText());
@@ -1116,8 +1083,7 @@ export function handleFindText(context: RCEContext): string | undefined {
 
     const matches = findAndFilter(regex, documentText, cursorOffset, match, lineRange);
     if (matches.length === 0) {
-        updateStatus('failure', STATUS_NO_MATCHES_FOUND);
-        return 'No matches found for the given parameters.';
+        return actionHandlerFailure('No matches found for the given parameters.', STATUS_NO_MATCHES_FOUND);
     }
 
     if (matches.length === 1) {
@@ -1136,7 +1102,7 @@ export function handleFindText(context: RCEContext): string | undefined {
         const cursorContext = getPositionContext(document, startPosition);
         logOutput('INFO', `Placed cursor at (${endPosition.line + 1}:${endPosition.character + 1})`);
         updateStatus('success', 'Found 1 match');
-        return `Found match and placed your cursor at (${endPosition.line + 1}:${endPosition.character + 1})\n\n${formatContext(cursorContext)}`;
+        return actionHandlerSuccess(`Found match and placed your cursor at (${endPosition.line + 1}:${endPosition.character + 1})\n\n${formatContext(cursorContext)}`, 'Found 1 match');
     }
     else {
         // Multiple matches
@@ -1156,25 +1122,23 @@ export function handleFindText(context: RCEContext): string | undefined {
         const text = lines.map((line, i) => lineNumberContextFormat.replace('{n}', (positions[i].line + 1).toString()) + line).join('\n');
         const fence = getFence(text);
         updateStatus('success', `Found ${positions.length} matches`);
-        return `Found ${positions.length} matches:\n\n${fence}\n${text}\n${fence}`;
+        return actionHandlerSuccess(`Found ${positions.length} matches:\n\n${fence}\n${text}\n${fence}`, `Found ${positions.length} matches`);
     }
 }
 
-export function handleUndo(context: RCEContext): string | undefined {
+export function handleUndo(context: RCEContext): RCEHandlerReturns {
     const { updateStatus } = context;
     const document = vscode.window.activeTextEditor?.document;
     if (document === undefined) {
-        updateStatus('failure', STATUS_NO_ACTIVE_DOCUMENT);
-        return contextFailure(CONTEXT_NO_ACTIVE_DOCUMENT);
+        return actionHandlerFailure(CONTEXT_NO_ACTIVE_DOCUMENT, STATUS_NO_ACTIVE_DOCUMENT);
     }
     if (!isPathNeuroSafe(document.fileName)) {
-        updateStatus('failure', STATUS_NO_ACCESS);
-        return contextFailure(CONTEXT_NO_ACCESS);
+        return actionHandlerFailure(CONTEXT_NO_ACCESS, STATUS_NO_ACCESS);
     }
 
     clearDecorations(vscode.window.activeTextEditor!);
 
-    vscode.commands.executeCommand('undo').then(
+    return vscode.commands.executeCommand('undo').then(
         () => {
             logOutput('INFO', 'Undoing last action in document');
             // We don't keep track of the virtual cursor position in the undo stack, so we reset it to the real cursor position
@@ -1182,67 +1146,63 @@ export function handleUndo(context: RCEContext): string | undefined {
             setVirtualCursor(vscode.window.activeTextEditor!.selection.active);
             updateStatus('success', 'Undid last action');
             NEURO.client?.sendContext(`Undid last action in document\n\n${formatContext(cursorContext)}`);
+            return actionHandlerSuccess(`Undid last action in document\n\n${formatContext(cursorContext)}`, 'Undid last action');
         },
         (erm) => {
             logOutput('ERROR', `Failed to undo last action: ${erm}`);
-            updateStatus('failure', 'Failed to undo');
             NEURO.client?.sendContext(contextFailure('Failed to undo last action'));
+            return actionHandlerFailure('Failed to undo last action', 'Failed to undo');
         },
     );
-
-    return undefined;
 }
 
-export function handleSave(context: RCEContext): string | undefined {
+export function handleSave(context: RCEContext): RCEHandlerReturns {
     const { updateStatus } = context;
     const document = vscode.window.activeTextEditor?.document;
     if (document === undefined) {
-        updateStatus('failure', STATUS_NO_ACTIVE_DOCUMENT);
-        return contextFailure(CONTEXT_NO_ACTIVE_DOCUMENT);
+        return actionHandlerFailure(CONTEXT_NO_ACTIVE_DOCUMENT, STATUS_NO_ACTIVE_DOCUMENT);
     }
     if (!isPathNeuroSafe(document.fileName)) {
-        updateStatus('failure', STATUS_NO_ACCESS);
-        return contextFailure(CONTEXT_NO_ACCESS);
+        return actionHandlerFailure(CONTEXT_NO_ACCESS, STATUS_NO_ACCESS);
     }
 
     NEURO.saving = true;
     logOutput('INFO', `${NEURO.currentController} is saving the current document.`);
 
-    document.save().then(
+    return document.save().then(
         (saved) => {
             if (saved) {
                 logOutput('INFO', 'Document saved successfully.');
                 updateStatus('success', 'Document saved');
                 NEURO.client?.sendContext('Document saved successfully.', true);
+                NEURO.saving = false;
+                return actionHandlerSuccess('Document saved successfully.', 'Document saved');
             } else {
                 logOutput('WARN', 'Document save returned false.');
-                updateStatus('failure', 'Document did not save');
                 NEURO.client?.sendContext('Document did not save.', false);
+                NEURO.saving = false;
+                return actionHandlerFailure('Document did not save.', 'Document did not save');
             }
-            NEURO.saving = false;
         },
         (erm: string) => {
             logOutput('ERROR', `Failed to save document: ${erm}`);
             NEURO.client?.sendContext(contextFailure('Failed to save document.'), false);
             NEURO.saving = false;
+            return actionHandlerFailure('Failed to save document.', 'Failed to save');
         },
     );
-
-    return undefined;
 }
 
-export function handleRewriteAll(context: RCEContext): string | undefined {
+export function handleRewriteAll(context: RCEContext): RCEHandlerReturns {
     const { data: actionData, updateStatus } = context;
     const content: string = actionData.params.content;
 
     const document = vscode.window.activeTextEditor?.document;
     if (document === undefined) {
-        updateStatus('failure', STATUS_NO_ACTIVE_DOCUMENT);
-        return contextFailure(CONTEXT_NO_ACTIVE_DOCUMENT);
+        return actionHandlerFailure(CONTEXT_NO_ACTIVE_DOCUMENT, STATUS_NO_ACTIVE_DOCUMENT);
     }
     if (!isPathNeuroSafe(document.fileName)) {
-        updateStatus('failure', STATUS_NO_ACCESS);
-        return contextFailure(CONTEXT_NO_ACCESS);
+        return actionHandlerFailure(CONTEXT_NO_ACCESS, STATUS_NO_ACCESS);
     }
 
     const originalText = document.getText();
@@ -1254,7 +1214,7 @@ export function handleRewriteAll(context: RCEContext): string | undefined {
     );
     edit.replace(document.uri, fullRange, content);
 
-    vscode.workspace.applyEdit(edit).then(success => {
+    return vscode.workspace.applyEdit(edit).then(success => {
         if (success) {
             logOutput('INFO', 'Rewrote entire document content');
             const document = vscode.window.activeTextEditor!.document;
@@ -1272,28 +1232,25 @@ export function handleRewriteAll(context: RCEContext): string | undefined {
             const cursorContext = getPositionContext(document, startPosition);
             updateStatus('success', `Rewrote entire file with ${lineCount} lines`);
             NEURO.client?.sendContext(`Rewrote entire file ${relativePath} with ${lineCount} line${lineCount === 1 ? '' : 's'} of content\n\n${formatContext(cursorContext)}`);
+            return actionHandlerSuccess(`Rewrote entire file ${relativePath} with ${lineCount} line${lineCount === 1 ? '' : 's'} of content\n\n${formatContext(cursorContext)}`, `Rewrote entire file with ${lineCount} lines`);
         } else {
-            updateStatus('failure', 'Failed to rewrite document');
             NEURO.client?.sendContext(contextFailure('Failed to rewrite document content'));
+            return actionHandlerFailure('Failed to rewrite document content', 'Failed to rewrite document');
         }
     });
-
-    return undefined;
 }
 
-export function handleDeleteLines(context: RCEContext): string | undefined {
-    const { data: actionData, updateStatus } = context;
+export function handleDeleteLines(context: RCEContext): RCEHandlerReturns {
+    const { data: actionData } = context;
     const startLine = actionData.params.startLine;
     const endLine = actionData.params.endLine;
 
     const document = vscode.window.activeTextEditor?.document;
     if (document === undefined) {
-        updateStatus('failure', STATUS_NO_ACTIVE_DOCUMENT);
-        return contextFailure(CONTEXT_NO_ACTIVE_DOCUMENT);
+        return actionHandlerFailure(CONTEXT_NO_ACTIVE_DOCUMENT, STATUS_NO_ACTIVE_DOCUMENT);
     }
     if (!isPathNeuroSafe(document.fileName)) {
-        updateStatus('failure', STATUS_NO_ACCESS);
-        return contextFailure(CONTEXT_NO_ACCESS);
+        return actionHandlerFailure(CONTEXT_NO_ACCESS, STATUS_NO_ACCESS);
     }
 
     const edit = new vscode.WorkspaceEdit();
@@ -1306,75 +1263,65 @@ export function handleDeleteLines(context: RCEContext): string | undefined {
     const originalText = document.getText(new vscode.Range(startPosition, endPosition));
     edit.delete(document.uri, new vscode.Range(startPosition, endPosition));
 
-    vscode.workspace.applyEdit(edit).then(success => {
+    return vscode.workspace.applyEdit(edit).then(success => {
         if (success) {
             const relativePath = vscode.workspace.asRelativePath(vscode.window.activeTextEditor!.document.uri);
             // Defer cursor update until edits have fully settled
-            setTimeout(() => {
-                const documentPost = vscode.window.activeTextEditor!.document;
-                if (startLine <= 1) {
-                    // If deleting from the first line, place cursor at start of new first line
+            const documentPost = vscode.window.activeTextEditor!.document;
+            let cursorContext: NeuroPositionContext;
+            if (startLine <= 1) {
+                // If deleting from the first line, place cursor at start of new first line
+                const cursorPosition = new vscode.Position(0, 0);
+                setVirtualCursor(cursorPosition);
+                cursorContext = getPositionContext(documentPost, cursorPosition);
+                logOutput('INFO', `Deleted lines ${startLine}-${endLine} and moved cursor to start of line 1`);
+            } else {
+                // Move cursor to end of line before the deleted lines
+                const targetLineZero = Math.max(0, startLine - 2); // 0-based line before deleted block
+                if (targetLineZero < documentPost.lineCount) {
+                    const cursorPosition = new vscode.Position(targetLineZero, documentPost.lineAt(targetLineZero).text.length);
+                    setVirtualCursor(cursorPosition);
+                    cursorContext = getPositionContext(documentPost, cursorPosition);
+                    logOutput('INFO', `Deleted lines ${startLine}-${endLine} and moved cursor to end of line ${targetLineZero + 1}`);
+                } else if (documentPost.lineCount > 0) {
+                    // Fallback: place cursor at the end of the document
+                    const cursorPosition = new vscode.Position(documentPost.lineCount - 1, documentPost.lineAt(documentPost.lineCount - 1).text.length);
+                    setVirtualCursor(cursorPosition);
+                    cursorContext = getPositionContext(documentPost, cursorPosition);
+                    logOutput('INFO', `Deleted lines ${startLine}-${endLine} and moved cursor to end of document`);
+                } else {
+                    // Empty document edge case
                     const cursorPosition = new vscode.Position(0, 0);
                     setVirtualCursor(cursorPosition);
-                    const cursorContext = getPositionContext(documentPost, cursorPosition);
-                    logOutput('INFO', `Deleted lines ${startLine}-${endLine} and moved cursor to start of line 1`);
-                    NEURO.client?.sendContext(`Deleted lines ${startLine}-${endLine} in file ${relativePath}\n\n${formatContext(cursorContext)}`);
-                } else {
-                    // Move cursor to end of line before the deleted lines
-                    const targetLineZero = Math.max(0, startLine - 2); // 0-based line before deleted block
-                    if (targetLineZero < documentPost.lineCount) {
-                        const cursorPosition = new vscode.Position(targetLineZero, documentPost.lineAt(targetLineZero).text.length);
-                        setVirtualCursor(cursorPosition);
-                        const cursorContext = getPositionContext(documentPost, cursorPosition);
-                        logOutput('INFO', `Deleted lines ${startLine}-${endLine} and moved cursor to end of line ${targetLineZero + 1}`);
-                        NEURO.client?.sendContext(`Deleted lines ${startLine}-${endLine} in file ${relativePath}\n\n${formatContext(cursorContext)}`);
-                    } else if (documentPost.lineCount > 0) {
-                        // Fallback: place cursor at the end of the document
-                        const cursorPosition = new vscode.Position(documentPost.lineCount - 1, documentPost.lineAt(documentPost.lineCount - 1).text.length);
-                        setVirtualCursor(cursorPosition);
-                        const cursorContext = getPositionContext(documentPost, cursorPosition);
-                        logOutput('INFO', `Deleted lines ${startLine}-${endLine} and moved cursor to end of document`);
-                        NEURO.client?.sendContext(`Deleted lines ${startLine}-${endLine} in file ${relativePath}\n\n${formatContext(cursorContext)}`);
-                    } else {
-                        // Empty document edge case
-                        const cursorPosition = new vscode.Position(0, 0);
-                        setVirtualCursor(cursorPosition);
-                        const cursorContext = getPositionContext(documentPost, cursorPosition);
-                        logOutput('INFO', `Deleted lines ${startLine}-${endLine} and moved cursor to start of document`);
-                        NEURO.client?.sendContext(`Deleted lines ${startLine}-${endLine} in file ${relativePath}\n\n${formatContext(cursorContext)}`);
-                    }
+                    cursorContext = getPositionContext(documentPost, cursorPosition);
+                    logOutput('INFO', `Deleted lines ${startLine}-${endLine} and moved cursor to start of document`);
                 }
+            }
 
-                showDiffRanges(vscode.window.activeTextEditor!, {
-                    range: new vscode.Range(startPosition, startPosition),
-                    type: DiffRangeType.Removed,
-                    removedText: originalText,
-                });
-                updateStatus('success', `Deleted lines ${startLine}-${endLine}`);
-            }, 0);
+            showDiffRanges(vscode.window.activeTextEditor!, {
+                range: new vscode.Range(startPosition, startPosition),
+                type: DiffRangeType.Removed,
+                removedText: originalText,
+            });
+            return actionHandlerSuccess(`Deleted lines ${startLine}-${endLine} in file ${relativePath}\n\n${formatContext(cursorContext)}`, `Deleted lines ${startLine}-${endLine}`);
         } else {
-            updateStatus('failure', 'Failed to delete lines');
-            NEURO.client?.sendContext(contextFailure('Failed to delete lines'));
+            return actionHandlerFailure('Failed to delete lines', 'Failed to delete lines');
         }
     });
-
-    return undefined;
 }
 
-export function handleRewriteLines(context: RCEContext): string | undefined {
-    const { data: actionData, updateStatus } = context;
+export function handleRewriteLines(context: RCEContext): RCEHandlerReturns {
+    const { data: actionData } = context;
     const startLine = actionData.params.startLine;
     const endLine = actionData.params.endLine;
     const content = actionData.params.content;
 
     const document = vscode.window.activeTextEditor?.document;
     if (document === undefined) {
-        updateStatus('failure', STATUS_NO_ACTIVE_DOCUMENT);
-        return contextFailure(CONTEXT_NO_ACTIVE_DOCUMENT);
+        return actionHandlerFailure(CONTEXT_NO_ACTIVE_DOCUMENT, STATUS_NO_ACTIVE_DOCUMENT);
     }
     if (!isPathNeuroSafe(document.fileName)) {
-        updateStatus('failure', STATUS_NO_ACCESS);
-        return contextFailure(CONTEXT_NO_ACCESS);
+        return actionHandlerFailure(CONTEXT_NO_ACCESS, STATUS_NO_ACCESS);
     }
 
     const edit = new vscode.WorkspaceEdit();
@@ -1385,53 +1332,45 @@ export function handleRewriteLines(context: RCEContext): string | undefined {
     const originalText = document.getText(new vscode.Range(startPosition, endPosition));
     edit.replace(document.uri, new vscode.Range(startPosition, endPosition), content);
 
-    vscode.workspace.applyEdit(edit).then(success => {
+    return vscode.workspace.applyEdit(edit).then(success => {
         if (success) {
             const relativePath = vscode.workspace.asRelativePath(vscode.window.activeTextEditor!.document.uri);
             // Defer cursor update until edits have fully settled
-            setTimeout(() => {
-                const documentPost = vscode.window.activeTextEditor!.document;
-                // Move cursor to end of the last inserted line
-                const hasTrailingNewline = content.endsWith('\n');
-                const contentLines = content.split('\n');
-                const logicalLines = hasTrailingNewline ? contentLines.length - 1 : contentLines.length;
-                const lastInsertedLineZero = Math.min(
-                    documentPost.lineCount - 1,
-                    Math.max(0, startLine - 1 + (logicalLines - 1)),
-                );
-                const cursorPosition = new vscode.Position(lastInsertedLineZero, documentPost.lineAt(lastInsertedLineZero).text.length);
-                setVirtualCursor(cursorPosition);
-                // No need to filter content here, as both texts are directly from the document
-                const diffRanges = getDiffRanges(startPosition, originalText, document.getText(new vscode.Range(startPosition, cursorPosition)));
-                showDiffRanges(vscode.window.activeTextEditor!, ...diffRanges);
-                const cursorContext = getPositionContext(documentPost, { cursorPosition: cursorPosition, position: startPosition, position2: cursorPosition });
-                logOutput('INFO', `Rewrote lines ${startLine}-${endLine} with ${logicalLines} line${logicalLines === 1 ? '' : 's'} of content and moved cursor to end of line ${lastInsertedLineZero + 1}`);
-                updateStatus('success', `Rewrote lines ${startLine}-${endLine}`);
-                NEURO.client?.sendContext(`Rewrote lines ${startLine}-${endLine} in file ${relativePath}\n\n${formatContext(cursorContext)}`);
-            }, 0);
+            const documentPost = vscode.window.activeTextEditor!.document;
+            // Move cursor to end of the last inserted line
+            const hasTrailingNewline = content.endsWith('\n');
+            const contentLines = content.split('\n');
+            const logicalLines = hasTrailingNewline ? contentLines.length - 1 : contentLines.length;
+            const lastInsertedLineZero = Math.min(
+                documentPost.lineCount - 1,
+                Math.max(0, startLine - 1 + (logicalLines - 1)),
+            );
+            const cursorPosition = new vscode.Position(lastInsertedLineZero, documentPost.lineAt(lastInsertedLineZero).text.length);
+            setVirtualCursor(cursorPosition);
+            // No need to filter content here, as both texts are directly from the document
+            const diffRanges = getDiffRanges(startPosition, originalText, document.getText(new vscode.Range(startPosition, cursorPosition)));
+            showDiffRanges(vscode.window.activeTextEditor!, ...diffRanges);
+            const cursorContext = getPositionContext(documentPost, { cursorPosition: cursorPosition, position: startPosition, position2: cursorPosition });
+            logOutput('INFO', `Rewrote lines ${startLine}-${endLine} with ${logicalLines} line${logicalLines === 1 ? '' : 's'} of content and moved cursor to end of line ${lastInsertedLineZero + 1}`);
+            return actionHandlerSuccess(`Rewrote lines ${startLine}-${endLine} in file ${relativePath}\n\n${formatContext(cursorContext)}`, `Rewrote lines ${startLine}-${endLine}`);
         } else {
-            updateStatus('failure', 'Failed to rewrite lines');
-            NEURO.client?.sendContext(contextFailure('Failed to rewrite lines'));
+            return actionHandlerFailure('Failed to rewrite lines', 'Failed to rewrite lines');
         }
     });
-
-    return undefined;
 }
 
-export function handleHighlightLines(context: RCEContext): string | undefined {
-    const { data: actionData, updateStatus } = context;
+export function handleHighlightLines(context: RCEContext): RCEHandlerReturns {
+    const { data: actionData } = context;
     const startLine: number = actionData.params.startLine;
     const endLine: number = actionData.params.endLine;
 
     const editor = vscode.window.activeTextEditor;
     const document = editor?.document;
     if (document === undefined) {
-        updateStatus('failure', STATUS_NO_ACTIVE_DOCUMENT);
-        return contextFailure(CONTEXT_NO_ACTIVE_DOCUMENT);
+        return actionHandlerFailure(CONTEXT_NO_ACTIVE_DOCUMENT, STATUS_NO_ACTIVE_DOCUMENT);
     }
     if (!isPathNeuroSafe(document.fileName)) {
-        updateStatus('failure', STATUS_NO_ACCESS);
-        return contextFailure(CONTEXT_NO_ACCESS);
+        return actionHandlerFailure(CONTEXT_NO_ACCESS, STATUS_NO_ACCESS);
     }
 
     const startPosition = new vscode.Position(startLine - 1, 0);
@@ -1445,22 +1384,19 @@ export function handleHighlightLines(context: RCEContext): string | undefined {
     }]);
     editor!.revealRange(range, vscode.TextEditorRevealType.InCenterIfOutsideViewport);
 
-    updateStatus('success', `Highlighted lines ${startLine}-${endLine}`);
-    return `Highlighted lines ${startLine}-${endLine}.`;
+    return actionHandlerSuccess(`Highlighted lines ${startLine}-${endLine}.`, `Highlighted lines ${startLine}-${endLine}`);
 }
 
-export function handleDiffPatch(context: RCEContext): string | undefined {
-    const { data: actionData, updateStatus } = context;
+export function handleDiffPatch(context: RCEContext): RCEHandlerReturns {
+    const { data: actionData } = context;
     const diff = actionData.params.diff;
 
     const document = vscode.window.activeTextEditor?.document;
     if (document === undefined) {
-        updateStatus('failure', STATUS_NO_ACTIVE_DOCUMENT);
-        return contextFailure(CONTEXT_NO_ACTIVE_DOCUMENT);
+        return actionHandlerFailure(CONTEXT_NO_ACTIVE_DOCUMENT, STATUS_NO_ACTIVE_DOCUMENT);
     }
     if (!isPathNeuroSafe(document.fileName)) {
-        updateStatus('failure', STATUS_NO_ACCESS);
-        return contextFailure(CONTEXT_NO_ACCESS);
+        return actionHandlerFailure(CONTEXT_NO_ACCESS, STATUS_NO_ACCESS);
     }
 
     // Parse the diff patch
@@ -1473,8 +1409,7 @@ export function handleDiffPatch(context: RCEContext): string | undefined {
     const filteredText = filterFileContents(document.getText());
     const searchIndex = filteredText.indexOf(search);
     if (searchIndex === -1) {
-        updateStatus('failure', 'Search text not found');
-        return contextFailure(`Search text not found in the document:\n\n${getFence(search)}\n${search}\n${getFence(search)}`);
+        return actionHandlerFailure(`Search text not found in the document:\n\n${getFence(search)}\n${search}\n${getFence(search)}`, 'Search text not found');
     }
     const startPosition = positionFromIndex(filteredText, searchIndex);
     const endPosition = positionFromIndex(filteredText, searchIndex + search.length);
@@ -1482,8 +1417,7 @@ export function handleDiffPatch(context: RCEContext): string | undefined {
     // Check for multiple occurrences
     const secondOccurrence = filteredText.indexOf(search, searchIndex + 1);
     if (secondOccurrence !== -1) {
-        updateStatus('failure', 'Multiple occurrences found');
-        return contextFailure(`Multiple occurrences of search text found. Please use a longer search term for a unique match:\n\n${getFence(search)}\n${search}\n${getFence(search)}`);
+        return actionHandlerFailure(`Multiple occurrences of search text found. Please use a longer search term for a unique match:\n\n${getFence(search)}\n${search}\n${getFence(search)}`, 'Multiple occurrences found');
     }
 
     // Perform the replacement
@@ -1492,7 +1426,7 @@ export function handleDiffPatch(context: RCEContext): string | undefined {
     const edit = new vscode.WorkspaceEdit();
     edit.replace(document.uri, range, replace);
 
-    vscode.workspace.applyEdit(edit).then(success => {
+    return vscode.workspace.applyEdit(edit).then(success => {
         if (success) {
             logOutput('INFO', 'Applied diff patch to document');
 
@@ -1521,28 +1455,21 @@ export function handleDiffPatch(context: RCEContext): string | undefined {
 
             const { linesAdded, linesRemoved } = countLineDifferences(parsedDiff.search, parsedDiff.replace);
 
-            updateStatus('success', `Applied diff patch [+${linesAdded} | -${linesRemoved}]`);
-            NEURO.client?.sendContext(`Applied diff patch successfully\n\n${formatContext(cursorContext)}`);
+            return actionHandlerSuccess(`Applied diff patch successfully\n\n${formatContext(cursorContext)}`, `Applied diff patch [+${linesAdded} | -${linesRemoved}]`);
         } else {
-            updateStatus('failure', 'Failed to apply diff patch');
-            NEURO.client?.sendContext(contextFailure('Failed to apply diff patch'));
+            return actionHandlerFailure('Failed to apply diff patch', 'Failed to apply diff patch');
         }
     });
-
-    return undefined;
 }
 
-function handleGetUserSelection(context: RCEContext): string | undefined {
-    const { updateStatus } = context;
+function handleGetUserSelection(_context: RCEContext): RCEHandlerReturns {
     const editor = vscode.window.activeTextEditor;
     const document = editor?.document;
     if (editor === undefined || document === undefined) {
-        updateStatus('failure', STATUS_NO_ACTIVE_DOCUMENT);
-        return contextFailure(CONTEXT_NO_ACTIVE_DOCUMENT);
+        return actionHandlerFailure(CONTEXT_NO_ACTIVE_DOCUMENT, STATUS_NO_ACTIVE_DOCUMENT);
     }
     if (!isPathNeuroSafe(document.fileName)) {
-        updateStatus('failure', STATUS_NO_ACCESS);
-        return contextFailure(CONTEXT_NO_ACCESS);
+        return actionHandlerFailure(CONTEXT_NO_ACCESS, STATUS_NO_ACCESS);
     }
 
     NEURO.lastKnownUserSelection = editor.selection;
@@ -1562,23 +1489,20 @@ function handleGetUserSelection(context: RCEContext): string | undefined {
         ? ''
         : `\n\n${CONNECTION.userName}'s selection contains:\n\n${fence}\n${selectedText}\n${fence}`;
 
-    updateStatus('success', `Cursor selection for ${CONNECTION.userName} formatted and sent to ${CONNECTION.nameOfAPI}.`);
-    return `${preamble}\n\n${formatContext(cursorContext)}${postamble}`;
+    return actionHandlerSuccess(`${preamble}\n\n${formatContext(cursorContext)}${postamble}`, `Cursor selection for ${CONNECTION.userName} formatted and sent to ${CONNECTION.nameOfAPI}.`);
 }
 
-export function handleReplaceUserSelection(context: RCEContext): string | undefined {
-    const { data: actionData, updateStatus } = context;
+export function handleReplaceUserSelection(context: RCEContext): RCEHandlerReturns {
+    const { data: actionData } = context;
     const content: string = actionData.params.content;
 
     const editor = vscode.window.activeTextEditor;
     const document = editor?.document;
     if (editor === undefined || document === undefined) {
-        updateStatus('failure', STATUS_NO_ACTIVE_DOCUMENT);
-        return contextFailure(CONTEXT_NO_ACTIVE_DOCUMENT);
+        return actionHandlerFailure(CONTEXT_NO_ACTIVE_DOCUMENT, STATUS_NO_ACTIVE_DOCUMENT);
     }
     if (!isPathNeuroSafe(document.fileName)) {
-        updateStatus('failure', STATUS_NO_ACCESS);
-        return contextFailure(CONTEXT_NO_ACCESS);
+        return actionHandlerFailure(CONTEXT_NO_ACCESS, STATUS_NO_ACCESS);
     }
 
     const edit = new vscode.WorkspaceEdit();
@@ -1588,7 +1512,7 @@ export function handleReplaceUserSelection(context: RCEContext): string | undefi
 
     setVirtualCursor(selection.end);
 
-    vscode.workspace.applyEdit(edit).then(success => {
+    return vscode.workspace.applyEdit(edit).then(success => {
         if (success) {
             logOutput('INFO', 'Replaced user selection in document');
             const diffRanges = getDiffRanges(selection.start, originalText, content);
@@ -1600,12 +1524,11 @@ export function handleReplaceUserSelection(context: RCEContext): string | undefi
                 position: selection.start,
                 position2: cursor,
             });
-            updateStatus('success', 'Replaced user selection');
-            NEURO.client?.sendContext(`Replaced ${CONNECTION.userName}'s selection in the document\n\n${formatContext(cursorContext)}`);
 
             NEURO.lastKnownUserSelection = editor.selection;
+            return actionHandlerSuccess(`Replaced ${CONNECTION.userName}'s selection in the document\n\n${formatContext(cursorContext)}`, 'Replaced user selection');
         } else {
-            updateStatus('failure', 'Failed to replace selection');
+            return actionHandlerFailure('Failed to replace selection', 'Failed to replace selection');
         }
     });
 }

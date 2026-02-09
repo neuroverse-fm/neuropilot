@@ -15,7 +15,7 @@ export interface RCELifecycleMetadata {
     };
 }
 
-export type SimplifiedStatusUpdateHandler = (status: ActionStatus, message: string) => void;
+export type SimplifiedStatusUpdateHandler = (status: ActionStatus, message?: string) => void;
 
 export interface RCERequestState {
     prompt: string;
@@ -35,6 +35,7 @@ export class RCEContext<T extends JSONSchema7Object | undefined = any, K = any> 
 
     data: ActionData<T>;
     action: RCEAction<K>;
+    readonly forced: boolean;
 
     /** Lifecycle-specific data */
     readonly lifecycle: RCELifecycleMetadata = {};
@@ -42,15 +43,15 @@ export class RCEContext<T extends JSONSchema7Object | undefined = any, K = any> 
     request?: RCERequestState;
     /** Ephemeral storage */
     public storage?: RCEStorage;
-    private _updateStatus: SimplifiedStatusUpdateHandler = (status: ActionStatus, message: string) => updateActionStatus(this.data, status, message);
+    private _updateStatus: SimplifiedStatusUpdateHandler = (status: ActionStatus, message?: string) => updateActionStatus(this.data, status, message);
     /**
      * Updates the status of the action on the action execution history panel
      * @param status The new status to update to
      * @param message Message to update the status with
      */
-    readonly updateStatus: SimplifiedStatusUpdateHandler = (status: ActionStatus, message: string) => this._updateStatus(status, message);
+    readonly updateStatus: SimplifiedStatusUpdateHandler = (status: ActionStatus, message?: string) => this._updateStatus(status, message);
 
-    constructor(data: ActionData<T>) {
+    constructor(data: ActionData<T>, forced = false) {
         super(() => {
             // Dispose lifecycle resources while references are still intact.
             this.lifecycle.preview?.dispose();
@@ -84,6 +85,7 @@ export class RCEContext<T extends JSONSchema7Object | undefined = any, K = any> 
         this.action = getAction(data.name)!;
         this.name = data.name;
         this.success = null;
+        this.forced = forced;
     }
 
     done(success: boolean): void {

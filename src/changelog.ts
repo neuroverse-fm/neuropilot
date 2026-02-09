@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 
 import { EXCEPTION_THROWN_STRING, NEURO } from '@/constants';
 import { getFence, logOutput } from '@/utils/misc';
-import { RCEAction } from '@/utils/neuro_client';
+import { ActionHandlerResult, actionHandlerSuccess, RCEAction } from '@/utils/neuro_client';
 import { CONNECTION, PermissionLevel } from '@/config';
 import { addActions, CATEGORY_MISC } from './rce';
 import { RCEContext, SimplifiedStatusUpdateHandler } from '@context/rce';
@@ -81,9 +81,10 @@ export async function readChangelogAndSendToNeuro(fromVersion?: string, updateSt
     }
 }
 
-function handleReadChangelog(context: RCEContext): string | undefined {
-    void readChangelogAndSendToNeuro(context.data.params?.fromVersion, context.updateStatus);
-    return undefined;
+function handleReadChangelog(context: RCEContext): ActionHandlerResult {
+    readChangelogAndSendToNeuro(context.data.params?.fromVersion, context.updateStatus);
+    return actionHandlerSuccess();
+    // TODO, DO NOT MERGE BEFORE THIS IS DONE: Convert this to properly work with the new RCE refactors
 }
 
 async function readAndParseChangelog(): Promise<{ sections: ChangelogSection[]; latest: string; }> {

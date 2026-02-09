@@ -1071,3 +1071,12 @@ export function isWindows(): boolean {
     if (vscode.env.uiKind === vscode.UIKind.Web) return false;
     else return process.platform === 'win32';
 }
+
+/**
+ * Checks if the object is a Thenable object
+ * @param obj The object that could be a Thenable
+ * @returns A boolean that indicates if it is a Thenable
+ */
+export function isThenable<T = unknown>(obj: T | Thenable<T>): boolean {
+    return typeof obj === 'object' && obj !== null && 'then' in obj && typeof obj.then === 'function';
+}

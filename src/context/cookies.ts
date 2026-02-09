@@ -4,7 +4,7 @@ import { logOutput } from '@/utils/misc';
 import { NEURO } from '@/constants';
 import { CONNECTION, PermissionLevel, getPermissionLevel } from '@/config';
 import { addActions, CATEGORY_MISC } from '@/rce';
-import { RCEAction } from '@/utils/neuro_client';
+import { actionHandlerFailure, actionHandlerSuccess, RCEAction } from '@/utils/neuro_client';
 import { RCEContext, SimplifiedStatusUpdateHandler } from '@context/rce';
 
 export const REQUEST_COOKIE_ACTION: RCEAction = {
@@ -34,15 +34,13 @@ function handleRequestCookie(context: RCEContext) {
     switch (permission) {
         case PermissionLevel.COPILOT: {
             giveCookie(true, actionData.params.flavor, updateStatus);
-            updateStatus('pending', 'Waiting for cookie flavor...');
-            return `Waiting on ${CONNECTION.userName} to decide on the flavor.`;
+            return actionHandlerSuccess(`Waiting on ${CONNECTION.userName} to decide on the flavor.`, 'Waiting for cookie flavor...');
         }
         case PermissionLevel.AUTOPILOT: {
             logOutput('INFO', `Neuro grabbed a ${actionData.params.flavor} cookie.`);
             if (actionData.params?.flavor) {
                 // Return flavor as requested
-                updateStatus('success', `${actionData.params.flavor} cookie grabbed`);
-                return `You grabbed a ${actionData.params.flavor} cookie!`;
+                return actionHandlerSuccess(`You grabbed a ${actionData.params.flavor} cookie!`, `${actionData.params.flavor} cookie grabbed`);
             }
             // Funny quotes if no flavor specified
             const base = 'You grabbed an undefined cookie. ';
@@ -60,9 +58,10 @@ function handleRequestCookie(context: RCEContext) {
                 'Segmentation fault (core dumped).',
             ];
             const randomIndex = Math.floor(Math.random() * quotes.length);
-            updateStatus('failure', `${base.replace('You', CONNECTION.nameOfAPI)}${quotes[randomIndex].replace(/you|You/g, CONNECTION.nameOfAPI)} (undefined flavor)`);
-            return base + quotes[randomIndex];
+            return actionHandlerFailure(base + quotes[randomIndex], `${base.replace('You', CONNECTION.nameOfAPI)}${quotes[randomIndex].replace(/you|You/g, CONNECTION.nameOfAPI)} (undefined flavor)`);
         }
+        default:
+            return actionHandlerFailure('Uhhhh, something went wrong', 'Somehow, this action\'s permission wasn\'t set to Copilot or Autopilot, huh???'); // Added for type-safety I guess
     }
     // Removed the try-catch because this shoud be handled by the RCE system now
     // catch (erm) {

@@ -8,7 +8,7 @@ import * as vscode from 'vscode';
 import { spawn, ChildProcessWithoutNullStreams } from 'node:child_process';
 import { NEURO } from '@/constants';
 import { checkWorkspaceTrust, checkVirtualWorkspace, logOutput, delayAsync, getFence } from '@/utils/misc';
-import { actionValidationAccept, actionValidationFailure, ActionValidationResult, RCEAction, contextFailure } from '@/utils/neuro_client';
+import { actionValidationAccept, actionValidationFailure, ActionValidationResult, RCEAction, RCEHandlerReturns, actionHandlerFailure, actionHandlerSuccess, ActionHandlerResult } from '@/utils/neuro_client';
 import { CONFIG } from '@/config';
 import { notifyOnTerminalClose } from '@events/shells';
 import { addActions } from '@/rce';
@@ -215,8 +215,8 @@ function getOrCreateTerminal(shellType: string, terminalName: string): TerminalS
 * Checks permissions, executes the command in the requested shell,
 * captures STDOUT and STDERR, logs the output, and sends it to nwero.
 */
-export function handleRunCommand(context: RCEContext): string | undefined {
-    const { data: actionData, updateStatus } = context;
+export function handleRunCommand(context: RCEContext): RCEHandlerReturns {
+    const { data: actionData } = context;
 
     // Get the command and shell.
     const command: string = actionData.params?.command;
@@ -256,6 +256,10 @@ export function handleRunCommand(context: RCEContext): string | undefined {
         }
     }
 
+    function returnSuccess() {
+        return actionHandlerSuccess(`Wrote to ${shellType}`, 'Wrote command to shell stdin');
+    }
+
     // If no process has been started, spawn it.
     if (!session.processStarted) {
         session.processStarted = true;
@@ -264,7 +268,7 @@ export function handleRunCommand(context: RCEContext): string | undefined {
         logOutput('DEBUG', `Shell: ${shellPath} ${shellArgs}`);
 
         if (!shellPath || typeof shellPath !== 'string')
-            return `Couldn't determine executable for shell profile ${shellType}`;
+            return actionHandlerFailure(`Couldn't determine executable for shell profile ${shellType}`, 'Couldn\'t determine executable for provided shell');
 
         const cwd = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
         session.shellProcess = spawn(shellPath, shellArgs || [], { cwd, env: process.env, stdio: ['pipe', 'pipe', 'pipe'] });
@@ -293,18 +297,16 @@ export function handleRunCommand(context: RCEContext): string | undefined {
 
         proc.stdin.write(command + '\n');
         logOutput('DEBUG', `Sent command: ${command}`);
-        updateStatus('success', `Wrote to ${shellType}`);
-
+        return returnSuccess();
     } else {
         // Process is already running; send the new command via stdin.
         const shellProcess = session.shellProcess;
         if (shellProcess && shellProcess.stdin.writable) {
             shellProcess.stdin.write(command + '\n');
             logOutput('DEBUG', `Sent command: ${command}`);
-            updateStatus('success', `Wrote to ${shellType}`);
+            return returnSuccess();
         } else {
-            updateStatus('failure', `Couldn't write to stdin of ${shellType}`);
-            return 'Unable to write to shell process.';
+            return actionHandlerFailure('Unable to write to shell process.', `Couldn't write to ${shellType} stdin`);
         }
     }
 }
@@ -313,8 +315,8 @@ export function handleRunCommand(context: RCEContext): string | undefined {
  * Kill terminal handler.
  * Checks if the terminal registry contains the open shell and forcefully kills the shell if found.
  */
-export function handleKillTerminal(context: RCEContext): string | undefined {
-    const { data: actionData, updateStatus } = context;
+export function handleKillTerminal(context: RCEContext): RCEHandlerReturns {
+    const { data: actionData } = context;
     // Validate shell type parameter.
     const shellType: string = actionData.params?.shell;
     const session = NEURO.terminalRegistry.get(shellType)!;
@@ -323,18 +325,15 @@ export function handleKillTerminal(context: RCEContext): string | undefined {
     session.terminal.dispose();
     NEURO.terminalRegistry.delete(shellType);
 
-    updateStatus('success', `Successfully killed ${shellType}`);
-
     // Notify Neuro and the user.
-    return `Terminal session for shell type "${shellType}" has been terminated.`;
+    return actionHandlerSuccess(`Terminal session for shell type "${shellType}" has been terminated.`, `Successfully killed ${shellType}`);
 }
 
 /**
  * Returns a list of currently running shell types.
  * Each entry includes the shell type and its status.
  */
-export function handleGetCurrentlyRunningShells(context: RCEContext): string | undefined {
-    const { updateStatus } = context;
+export function handleGetCurrentlyRunningShells(_context: RCEContext): ActionHandlerResult {
     const runningShells: string[] = [];
 
     for (const [shellType, session] of NEURO.terminalRegistry.entries()) {
@@ -343,12 +342,10 @@ export function handleGetCurrentlyRunningShells(context: RCEContext): string | u
     }
 
     if (runningShells.length === 0) {
-        updateStatus('failure', 'No shells open');
-        return contextFailure('No running shells found.');
+        return actionHandlerFailure('No running shells found.', 'No shells open');
     }
     else {
-        updateStatus('success', `${runningShells.length} Neuro shells running`);
-        return `Currently running shells: ${runningShells.join('\n')}`;
+        return actionHandlerSuccess(`Currently running shells: ${runningShells.join('\n')}`, `${runningShells.length} Neuro shells running`);
     };
 }
 

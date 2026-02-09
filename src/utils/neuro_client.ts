@@ -114,7 +114,8 @@ export interface RCEAction<T = any> extends Action {
     ephemeralStorage?: boolean;
 }
 
-export type RCEHandler = (context: RCEContext) => string | undefined | void;
+type RCEHandler = (context: RCEContext) => RCEHandlerReturns;
+export type RCEHandlerReturns = ActionHandlerResult | Thenable<ActionHandlerResult>;
 
 /**
  * Strips an action to the form expected by the API.
@@ -240,10 +241,12 @@ export function actionValidationRetry(message: string, historyNote?: string): Ac
 //#region Action handler helpers
 
 export interface ActionHandlerResult {
-    success: boolean;
+    success: ActionHandlerSuccess;
     message?: string;
     historyNote?: string;
 }
+
+type ActionHandlerSuccess = 'success' | 'failure' | 'retry';
 
 /**
  * Function to return an object that indicates handler success.
@@ -253,7 +256,7 @@ export interface ActionHandlerResult {
  */
 export function actionHandlerSuccess(message?: string, historyNote?: string): ActionHandlerResult {
     return {
-        success: true,
+        success: 'success',
         message,
         historyNote,
     };
@@ -268,8 +271,23 @@ export function actionHandlerSuccess(message?: string, historyNote?: string): Ac
 export function actionHandlerFailure(message: string, historyNote?: string): ActionHandlerResult {
     logOutput('WARNING', 'Action failed: ' + message);
     return {
-        success: false,
-        message: 'Action failed: ' + message,
+        success: 'failure',
+        message,
+        historyNote,
+    };
+}
+
+/**
+ * Function to return an object that indicates handler failure and to retry.
+ * @param message The message that will be sent to Neuro
+ * @param historyNote If supplied, an action status update with its status set to failure will be fired with the note. Otherwise, assumes that you've already done that yourself.
+ * @returns {ActionHandlerResult} An object with a failed handler result
+ */
+export function actionHandlerRetry(message: string, historyNote?: string): ActionHandlerResult {
+    logOutput('WARNING', 'Action failed: ' + message + '\nRequesting retry.');
+    return {
+        success: 'retry',
+        message,
         historyNote,
     };
 }

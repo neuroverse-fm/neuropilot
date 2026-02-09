@@ -4,7 +4,7 @@ import type { Change, CommitOptions, Commit, Repository, API, GitExtension } fro
 import { ForcePushMode } from '@typing/git.d';
 import { StatusStrings, RefTypeStrings } from '@typing/git_status';
 import { logOutput, simpleFileName, isPathNeuroSafe, normalizePath, getWorkspacePath } from '@/utils/misc';
-import { ActionValidationResult, actionValidationAccept, actionValidationFailure, RCEAction, contextFailure, actionValidationRetry } from '@/utils/neuro_client';
+import { ActionValidationResult, actionValidationAccept, actionValidationFailure, RCEAction, actionValidationRetry, RCEHandlerReturns, actionHandlerSuccess, actionHandlerFailure, actionHandlerRetry } from '@/utils/neuro_client';
 import assert from 'node:assert';
 import { RCECancelEvent } from '@events/utils';
 import { JSONSchema7Definition } from 'json-schema';
@@ -717,128 +717,100 @@ export function addGitActions() {
  * Requires neuropilot.permission.gitConfig to be enabled.
  */
 
-export function handleNewGitRepo(context: RCEContext): string | undefined {
-    const { updateStatus } = context;
+export function handleNewGitRepo(_context: RCEContext): RCEHandlerReturns {
     const workspaceFolders = vscode.workspace.workspaceFolders;
     if (!workspaceFolders || workspaceFolders.length === 0) {
-        updateStatus('failure', 'Not in a workspace');
-        return contextFailure('No workspace folder is open.');
+        return actionHandlerFailure('No workspace folder is open.', 'Not in a workspace');
     }
 
     const folderPath = workspaceFolders[0].uri.fsPath;
 
-    git!.init(vscode.Uri.file(folderPath)).then(() => {
+    return git!.init(vscode.Uri.file(folderPath)).then(() => {
         repo = git!.repositories[0]; // Update the repo reference to the new repository, just in case
         reregisterAllActions(true);
-        NEURO.client?.sendContext('Initialized a new Git repository in the workspace folder. You should now be able to use git commands.');
-        updateStatus('success', 'Repo initialized');
+        return actionHandlerSuccess('Initialized a new Git repository in the workspace folder. You should now be able to use git commands.', 'Repo initialized');
     }, (erm: string) => {
-        NEURO.client?.sendContext('Failed to initialize Git repository');
         logOutput('ERROR', `Failed to initialize Git repository: ${erm}`);
-        updateStatus('failure', PROMISE_REJECTION_STRING);
+        return actionHandlerFailure('Failed to initialize Git repository', PROMISE_REJECTION_STRING);
     });
 }
 
-export function handleGetGitConfig(context: RCEContext): string | undefined {
-    const { data: actionData, updateStatus } = context;
+export function handleGetGitConfig(context: RCEContext): RCEHandlerReturns {
+    const { data: actionData } = context;
     assert(repo);
     const configKey: string | undefined = actionData.params.key;
 
     if (!configKey) {
-        repo.getConfigs().then((configs: { key: string; value: string; }[]) => {
-            NEURO.client?.sendContext(`Git config:\n${configs.map((config) =>
-                `- ${config.key}: ${config.value}`,
-            ).join('\n')}`);
-            updateStatus('success', `Sent ${configs.length} repo Git config(s)`);
-            return;
+        return repo.getConfigs().then((configs: { key: string; value: string; }[]) => {
+            return actionHandlerSuccess(`Git config:\n${configs.map((config) => `- ${config.key}: ${config.value}`).join('\n')}`, `Sent ${configs.length} repo Git config(s)`);
         });
     }
     else {
-        repo.getConfig(configKey).then((configValue: string) => {
-            NEURO.client?.sendContext(`Git config key "${configKey}": ${configValue}`);
-            updateStatus('success', `Sent repo config value for key "${configKey}"`);
+        return repo.getConfig(configKey).then((configValue: string) => {
+            return actionHandlerSuccess(`Git config key "${configKey}": ${configValue}`, `Sent repo config value for key "${configKey}"`);
         }, (erm: string) => {
-            NEURO.client?.sendContext(`Failed to get Git config key "${configKey}"`);
             logOutput('ERROR', `Failed to get Git config key "${configKey}": ${erm}`);
-            updateStatus('failure', PROMISE_REJECTION_STRING);
+            return actionHandlerFailure(`Failed to get Git config key "${configKey}"`, PROMISE_REJECTION_STRING);
         });
     }
-
-    return;
 }
 
-export function handleSetGitConfig(context: RCEContext): string | undefined {
-    const { data: actionData, updateStatus } = context;
+export function handleSetGitConfig(context: RCEContext): RCEHandlerReturns {
+    const { data: actionData } = context;
     assert(repo);
     const configKey: string = actionData.params.key;
     const configValue: string = actionData.params.value;
 
-    repo.setConfig(configKey, configValue).then(() => {
-        NEURO.client?.sendContext(`Set Git config key "${configKey}" to: ${configValue}`);
-        updateStatus('success', `Wrote new repo config value of "${configKey}"`);
+    return repo.setConfig(configKey, configValue).then(() => {
+        return actionHandlerSuccess(`Set Git config key "${configKey}" to: ${configValue}`, `Wrote new repo config value of "${configKey}"`);
     }, (erm: string) => {
-        NEURO.client?.sendContext(`Failed to set Git config key "${configKey}"`);
         logOutput('ERROR', `Failed to set Git config key "${configKey}": ${erm}`);
-        updateStatus('failure', PROMISE_REJECTION_STRING);
+        return actionHandlerFailure(`Failed to set Git config key "${configKey}"`, PROMISE_REJECTION_STRING);
     });
-
-    return;
 }
 
 /*
  * Actions with Git branches
  */
 
-export function handleNewGitBranch(context: RCEContext): string | undefined {
-    const { data: actionData, updateStatus } = context;
+export function handleNewGitBranch(context: RCEContext): RCEHandlerReturns {
+    const { data: actionData } = context;
     assert(repo);
     const branchName: string = actionData.params.branchName;
 
-    repo.createBranch(branchName, true).then(() => {
-        NEURO.client?.sendContext(`Created and switched to new branch ${branchName}.`);
-        updateStatus('success', `Branch "${branchName}" created`);
+    return repo.createBranch(branchName, true).then(() => {
+        return actionHandlerSuccess(`Created and switched to new branch ${branchName}.`, `Branch "${branchName}" created`);
     }, (erm: string) => {
-        NEURO.client?.sendContext(`Failed to create branch ${branchName}`);
         logOutput('ERROR', `Failed to create branch: ${erm}`);
-        updateStatus('failure', PROMISE_REJECTION_STRING);
+        return actionHandlerFailure(`Failed to create branch ${branchName}`, PROMISE_REJECTION_STRING);
     });
-
-    return;
 }
 
-export function handleSwitchGitBranch(context: RCEContext): string | undefined {
-    const { data: actionData, updateStatus } = context;
+export function handleSwitchGitBranch(context: RCEContext): RCEHandlerReturns {
+    const { data: actionData } = context;
     assert(repo);
     const branchName: string = actionData.params.branchName;
 
-    repo.checkout(branchName).then(() => {
-        NEURO.client?.sendContext(`Switched to branch ${branchName}.`);
-        updateStatus('success', `Branch "${branchName}" checked out`);
+    return repo.checkout(branchName).then(() => {
+        return actionHandlerSuccess(`Switched to branch ${branchName}.`, `Branch "${branchName}" checked out`);
     }, (erm: string) => {
-        NEURO.client?.sendContext(`Failed to switch to branch ${branchName}`);
         logOutput('ERROR', `Failed to switch branch: ${erm}`);
-        updateStatus('failure', PROMISE_REJECTION_STRING);
+        return actionHandlerFailure(`Failed to switch to branch ${branchName}`, PROMISE_REJECTION_STRING);
     });
-
-    return;
 }
 
-export function handleDeleteGitBranch(context: RCEContext): string | undefined {
-    const { data: actionData, updateStatus } = context;
+export function handleDeleteGitBranch(context: RCEContext): RCEHandlerReturns {
+    const { data: actionData } = context;
     assert(repo);
     const branchName: string = actionData.params.branchName;
     const forceDelete: boolean = actionData.params.force ?? false;
 
-    repo.deleteBranch(branchName, forceDelete).then(() => {
-        NEURO.client?.sendContext(`Deleted branch ${branchName}.`);
-        updateStatus('success', `Branch "${branchName}"${forceDelete ? ' forcibly' : ''} deleted`);
+    return repo.deleteBranch(branchName, forceDelete).then(() => {
+        return actionHandlerSuccess(`Deleted branch ${branchName}.`, `Branch "${branchName}"${forceDelete ? ' forcibly' : ''} deleted`);
     }, (erm: string) => {
-        NEURO.client?.sendContext(`Failed to delete branch "${branchName}".${forceDelete === false ? '\nEnsure the branch is merged before deleting, or force delete it to discard changes.' : ''}`);
         logOutput('ERROR', `Failed to delete branch: ${erm}`);
-        updateStatus('failure', PROMISE_REJECTION_STRING);
+        return actionHandlerFailure(`Failed to delete branch "${branchName}".${forceDelete === false ? '\nEnsure the branch is merged before deleting, or force delete it to discard changes.' : ''}`, PROMISE_REJECTION_STRING);
     });
-
-    return;
 }
 
 /*
@@ -852,11 +824,10 @@ interface StateStringProps {
     status: string
 }
 
-export function handleGitStatus(context: RCEContext): string | undefined {
-    const { updateStatus } = context;
+export function handleGitStatus(_context: RCEContext): RCEHandlerReturns {
     assert(repo);
 
-    repo.status().then(() => {
+    return repo.status().then(() => {
         function translateChange(change: Change) {
             const isRename = change.renameUri !== undefined;
             return {
@@ -867,7 +838,7 @@ export function handleGitStatus(context: RCEContext): string | undefined {
             };
         }
         // Can't stringify the repo state directly (because of getters I assume)
-        if (!repo) return;
+        if (!repo) return actionHandlerFailure('Repo unavailable', 'Repo unavailable');
         const state = {
             indexChanges: repo.state.indexChanges.map((change: Change) => translateChange(change)),
             workingTreeChanges: repo.state.workingTreeChanges.map((change: Change) => translateChange(change)),
@@ -923,15 +894,11 @@ export function handleGitStatus(context: RCEContext): string | undefined {
 
         const stateStringArray: string[] = [mergeStateString, HEADStateString];
 
-        NEURO.client?.sendContext(`Git status:\n\n${stateStringArray.join('\n')}`);
-        updateStatus('success', `${repo.state.indexChanges.length + repo.state.workingTreeChanges.length + repo.state.mergeChanges.length} changes + more info sent`);
+        return actionHandlerSuccess(`Git status:\n\n${stateStringArray.join('\n')}`, `${repo.state.indexChanges.length + repo.state.workingTreeChanges.length + repo.state.mergeChanges.length} changes + more info sent`);
     }, (erm: string) => {
-        NEURO.client?.sendContext('Failed to get Git repository status');
         logOutput('ERROR', `Failed to get Git status: ${erm}`);
-        updateStatus('failure', PROMISE_REJECTION_STRING);
+        return actionHandlerFailure('Failed to get Git repository status', PROMISE_REJECTION_STRING);
     });
-
-    return;
 }
 
 // Helper to convert a provided file path (or wildcard) to an absolute path using the workspace folder (or repo root if not available)
@@ -942,8 +909,8 @@ function getAbsoluteFilePath(filePath = '.'): string {
     return normalizePath(workspaceFolder + '/' + filePath);
 }
 
-export function handleAddFileToGit(context: RCEContext): string | undefined {
-    const { data: actionData, updateStatus } = context;
+export function handleAddFileToGit(context: RCEContext): RCEHandlerReturns {
+    const { data: actionData } = context;
     assert(repo);
     const filePath: string[] = actionData.params.filePath;
     const absolutePaths: string[] = [];
@@ -952,19 +919,16 @@ export function handleAddFileToGit(context: RCEContext): string | undefined {
         absolutePaths.push(getAbsoluteFilePath(path));
     }
 
-    repo.add(absolutePaths).then(() => {
-        NEURO.client?.sendContext(`Added files "${filePath.join(', ')}" to staging area.`);
-        updateStatus('success', `Added ${filePath.length} files to staging`);
+    return repo.add(absolutePaths).then(() => {
+        return actionHandlerSuccess(`Added files "${filePath.join(', ')}" to staging area.`, `Added ${filePath.length} files to staging`);
     }, (erm: string) => {
-        NEURO.client?.sendContext('Adding files to staging area failed');
         logOutput('ERROR', `Failed to git add: ${erm}\nTried to add ${absolutePaths}`);
-        updateStatus('failure', PROMISE_REJECTION_STRING);
+        return actionHandlerFailure('Adding files to staging area failed', PROMISE_REJECTION_STRING);
     });
-    return;
 }
 
-export function handleRemoveFileFromGit(context: RCEContext): string | undefined {
-    const { data: actionData, updateStatus } = context;
+export function handleRemoveFileFromGit(context: RCEContext): RCEHandlerReturns {
+    const { data: actionData } = context;
     assert(repo);
     const filePath: string[] = actionData.params.filePath;
     const absolutePaths: string[] = [];
@@ -973,19 +937,16 @@ export function handleRemoveFileFromGit(context: RCEContext): string | undefined
         absolutePaths.push(getAbsoluteFilePath(path));
     }
 
-    repo.revert(absolutePaths).then(() => {
-        NEURO.client?.sendContext(`Removed "${filePath.join(', ')}" from the index.`);
-        updateStatus('success', `${absolutePaths.length} files removed from staging`);
+    return repo.revert(absolutePaths).then(() => {
+        return actionHandlerSuccess(`Removed "${filePath.join(', ')}" from the index.`, `${absolutePaths.length} files removed from staging`);
     }, (erm: string) => {
-        NEURO.client?.sendContext('Removing files from the index failed');
         logOutput('ERROR', `Git remove failed: ${erm}\nTried to remove ${absolutePaths}`);
-        updateStatus('failure', PROMISE_REJECTION_STRING);
+        return actionHandlerFailure('Removing files from the index failed', PROMISE_REJECTION_STRING);
     });
-    return;
 }
 
-export function handleMakeGitCommit(context: RCEContext): string | undefined {
-    const { data: actionData, updateStatus } = context;
+export function handleMakeGitCommit(context: RCEContext): RCEHandlerReturns {
+    const { data: actionData } = context;
     assert(repo);
     const message = `${NEURO.currentController} committed: ${actionData.params?.message}`;
     const commitOptions: string[] | undefined = actionData.params?.options;
@@ -1016,66 +977,51 @@ export function handleMakeGitCommit(context: RCEContext): string | undefined {
             }
         });
         if (invalidCommitOptionCheck === true) {
-            updateStatus('failure', `${invalidCommitOptions.length} invalid commit options`);
-            return contextFailure(`Invalid commit options: ${invalidCommitOptions.join(', ')}`);
+            return actionHandlerFailure(`Invalid commit options: ${invalidCommitOptions.join(', ')}`, `${invalidCommitOptions.length} invalid commit options provided`);
         }
     }
 
     repo.inputBox.value = message;
-    repo.commit(message, ExtraCommitOptions).then(() => {
-        NEURO.client?.sendContext(`Committed with message: "${message}"\nCommit options used: ${commitOptions ? commitOptions : 'None'}`);
-        updateStatus('success', `${ExtraCommitOptions?.amend ? 'Amended c' : 'C'}ommit applied${ExtraCommitOptions?.signoff ? ' with signoff' : ''}`);
+    return repo.commit(message, ExtraCommitOptions).then(() => {
+        return actionHandlerSuccess(`Committed with message: "${message}"\nCommit options used: ${commitOptions ? commitOptions : 'None'}`, `${ExtraCommitOptions?.amend ? 'Amended c' : 'C'}ommit applied${ExtraCommitOptions?.signoff ? ' with signoff' : ''}`);
     }, (erm: string) => {
-        NEURO.client?.sendContext('Failed to record commit');
         logOutput('ERROR', `Failed to commit: ${erm}`);
-        updateStatus('failure', PROMISE_REJECTION_STRING);
+        return actionHandlerFailure('Failed to record commit', PROMISE_REJECTION_STRING);
     });
-
-    return;
 }
 
-export function handleGitMerge(context: RCEContext): string | undefined {
-    const { data: actionData, updateStatus } = context;
+export function handleGitMerge(context: RCEContext): RCEHandlerReturns {
+    const { data: actionData } = context;
     assert(repo);
     const refToMerge = actionData.params.ref_to_merge;
 
-    repo.merge(refToMerge).then(() => {
-        NEURO.client?.sendContext(`Cleanly merged ${refToMerge} into the current branch.`);
-        updateStatus('success', `Cleanly merged ${refToMerge}`);
+    return repo.merge(refToMerge).then(() => {
+        return actionHandlerSuccess(`Cleanly merged ${refToMerge} into the current branch.`, `Cleanly merged ${refToMerge}`);
     }, (erm: string) => {
         if (repo?.state.mergeChanges.some(() => true)) {
             registerAction(gitActions.abort_merge.name);
-            NEURO.client?.sendContext(`Encountered merge conflicts while merging ref "${refToMerge}", fix and execute the merge action again once resolved`);
-            updateStatus('success', `Merged ${refToMerge} - conflict resolution required`);
+            return actionHandlerSuccess(`Encountered merge conflicts while merging ref "${refToMerge}", fix and execute the merge action again once resolved`, `Merged ${refToMerge} - conflict resolution required`);
         } else {
-            NEURO.client?.sendContext(`Couldn't merge ${refToMerge}.`);
             logOutput('ERROR', `Encountered an error when merging ${refToMerge}: ${erm}`);
-            updateStatus('failure', PROMISE_REJECTION_STRING);
+            return actionHandlerFailure(`Couldn't merge ${refToMerge}.`, PROMISE_REJECTION_STRING);
         }
     });
-
-    return;
 }
 
-export function handleAbortMerge(context: RCEContext): string | undefined {
-    const { updateStatus } = context;
+export function handleAbortMerge(_context: RCEContext): RCEHandlerReturns {
     assert(repo);
 
-    repo.mergeAbort().then(() => {
+    return repo.mergeAbort().then(() => {
         unregisterAction(gitActions.abort_merge.name);
-        NEURO.client?.sendContext('Merge aborted.');
-        updateStatus('success', 'Aborted merging');
+        return actionHandlerSuccess('Merge aborted.', 'Aborted merging');
     }, (erm: string) => {
-        NEURO.client?.sendContext("Couldn't abort merging!");
         logOutput('ERROR', `Failed to abort merge: ${erm}`);
-        updateStatus('failure', PROMISE_REJECTION_STRING);
+        return actionHandlerFailure("Couldn't abort merging!", PROMISE_REJECTION_STRING);
     });
-
-    return;
 }
 
-export function handleDiffFiles(context: RCEContext): string | undefined {
-    const { data: actionData, updateStatus } = context;
+export function handleDiffFiles(context: RCEContext): RCEHandlerReturns {
+    const { data: actionData } = context;
     assert(repo);
 
     const ref1: string | undefined = actionData.params.ref1;
@@ -1087,113 +1033,89 @@ export function handleDiffFiles(context: RCEContext): string | undefined {
 
     switch (diffType) {
         case 'diffWithHEAD':
-            repo.diffWithHEAD(diffThisFile)
+            return repo.diffWithHEAD(diffThisFile)
                 .then((diff: string) => {
-                    NEURO.client?.sendContext(`Diff with HEAD for ${filePath || 'workspace root'}:\n${diff}`);
-                    updateStatus('success', 'Sent diff with HEAD');
+                    return actionHandlerSuccess(`Diff with HEAD for ${filePath || 'workspace root'}:\n${diff}`, 'Sent diff with HEAD');
                 })
                 .catch((erm: string) => {
-                    NEURO.client?.sendContext(`Failed to get diff with HEAD for ${filePath || 'workspace root'}.`);
                     logOutput('ERROR', `Failed to get diff with HEAD for ${filePath || 'workspace root'}: ${erm}`);
-                    updateStatus('failure', PROMISE_REJECTION_STRING);
+                    return actionHandlerFailure(`Failed to get diff with HEAD for ${filePath || 'workspace root'}.`, PROMISE_REJECTION_STRING);
                 });
-            break;
 
         case 'diffWith':
             if (ref1) {
-                repo.diffWith(ref1, diffThisFile)
+                return repo.diffWith(ref1, diffThisFile)
                     .then((diff: string) => {
-                        NEURO.client?.sendContext(`Diff with ref "${ref1}" for ${filePath || 'workspace root'}:\n${diff}`);
-                        updateStatus('success', `Sent diff with ref "${ref1}"`);
+                        return actionHandlerSuccess(`Diff with ref "${ref1}" for ${filePath || 'workspace root'}:\n${diff}`, `Sent diff with ref "${ref1}"`);
                     })
                     .catch((erm: string) => {
-                        NEURO.client?.sendContext(`Failed to get diff with ref "${ref1}" for ${filePath || 'workspace root'}.`);
                         logOutput('ERROR', `Failed to get diff with ref "${ref1}" for ${filePath || 'workspace root'}: ${erm}`);
-                        updateStatus('failure', PROMISE_REJECTION_STRING);
+                        return actionHandlerFailure(`Failed to get diff with ref "${ref1}" for ${filePath || 'workspace root'}.`, PROMISE_REJECTION_STRING);
                     });
             } else {
-                NEURO.client?.sendContext('Ref1 is required for diffWith.');
-                updateStatus('failure', 'Missing ref1 parameter');
+                return actionHandlerRetry('Ref1 is required for diffWith.', 'Missing ref1 parameter');
             }
-            break;
 
         case 'diffIndexWithHEAD':
-            repo.diffIndexWithHEAD(diffThisFile)
+            return repo.diffIndexWithHEAD(diffThisFile)
                 .then((diff: string) => {
-                    NEURO.client?.sendContext(`Diff index with HEAD for ${filePath || 'workspace root'}:\n${diff}`);
-                    updateStatus('success', 'Sent diff index with HEAD');
+                    return actionHandlerSuccess(`Diff index with HEAD for ${filePath || 'workspace root'}:\n${diff}`, 'Sent diff index with HEAD');
                 })
                 .catch((erm: string) => {
-                    NEURO.client?.sendContext(`Failed to get diff index with HEAD for ${filePath || 'workspace root'}.`);
                     logOutput('ERROR', `Failed to get diff index with HEAD for ${filePath || 'workspace root'}: ${erm}`);
-                    updateStatus('failure', PROMISE_REJECTION_STRING);
+                    return actionHandlerFailure(`Failed to get diff index with HEAD for ${filePath || 'workspace root'}.`, PROMISE_REJECTION_STRING);
                 });
-            break;
 
         case 'diffIndexWith':
             if (ref1) {
-                repo.diffIndexWith(ref1, diffThisFile)
+                return repo.diffIndexWith(ref1, diffThisFile)
                     .then((diff: string) => {
-                        NEURO.client?.sendContext(`Diff index with ref "${ref1}" for ${filePath || 'workspace root'}:\n${diff}`);
-                        updateStatus('success', `Sent diff index with ref "${ref1}"`);
+                        return actionHandlerSuccess(`Diff index with ref "${ref1}" for ${filePath || 'workspace root'}:\n${diff}`, `Sent diff index with ref "${ref1}"`);
                     })
                     .catch((erm: string) => {
-                        NEURO.client?.sendContext(`Failed to get diff index with ref "${ref1}" for ${filePath || 'workspace root'}.`);
                         logOutput('ERROR', `Failed to get diff index with ref "${ref1}" for ${filePath || 'workspace root'}: ${erm}`);
-                        updateStatus('failure', PROMISE_REJECTION_STRING);
+                        return actionHandlerFailure(`Failed to get diff index with ref "${ref1}" for ${filePath || 'workspace root'}.`, PROMISE_REJECTION_STRING);
                     });
             } else {
-                NEURO.client?.sendContext('Ref1 is required for diffIndexWith.');
-                updateStatus('failure', 'Missing ref1 parameter');
+                return actionHandlerRetry('Ref1 is required for diffIndexWith.', 'Missing ref1 parameter');
             }
-            break;
 
         case 'diffBetween':
             if (ref1 && ref2) {
-                repo.diffBetween(ref1, ref2, diffThisFile)
+                return repo.diffBetween(ref1, ref2, diffThisFile)
                     .then((diff: string) => {
-                        NEURO.client?.sendContext(`Diff between refs "${ref1}" and "${ref2}" for ${filePath || 'workspace root'}:\n${diff}`);
-                        updateStatus('success', `Sent diff between "${ref1}" and "${ref2}"`);
+                        return actionHandlerSuccess(`Diff between refs "${ref1}" and "${ref2}" for ${filePath || 'workspace root'}:\n${diff}`, `Sent diff between "${ref1}" and "${ref2}"`);
                     })
                     .catch((erm: string) => {
-                        NEURO.client?.sendContext(`Failed to get diff between refs "${ref1}" and "${ref2}" for ${filePath || 'workspace root'}.`);
                         logOutput('ERROR', `Failed to get diff between refs "${ref1}" and "${ref2}" for ${filePath || 'workspace root'}: ${erm}`);
-                        updateStatus('failure', PROMISE_REJECTION_STRING);
+                        return actionHandlerFailure(`Failed to get diff between refs "${ref1}" and "${ref2}" for ${filePath || 'workspace root'}.`, PROMISE_REJECTION_STRING);
                     });
             } else {
-                NEURO.client?.sendContext('Both ref1 and ref2 are required for diffBetween.');
-                updateStatus('failure', 'Missing ref1 or ref2 parameter');
+                return actionHandlerRetry('Both ref1 and ref2 are required for diffBetween.', 'Missing ref1 or ref2 parameter');
             }
-            break;
 
         case 'fullDiff':
-            repo.diffWithHEAD(diffThisFile)
+            return repo.diffWithHEAD(diffThisFile)
                 .then((diff: string) => {
-                    NEURO.client?.sendContext(`Full diff for workspace root:\n${diff}`);
-                    updateStatus('success', 'Sent full diff');
+                    return actionHandlerSuccess(`Full diff for workspace root:\n${diff}`, 'Sent full diff');
                 })
                 .catch((erm: string) => {
-                    NEURO.client?.sendContext('Failed to get full diff for workspace root.');
                     logOutput('ERROR', `Failed to get full diff for workspace root: ${erm}`);
-                    updateStatus('failure', PROMISE_REJECTION_STRING);
+                    return actionHandlerFailure('Failed to get full diff for workspace root.', PROMISE_REJECTION_STRING);
                 });
-            break;
 
         default:
-            NEURO.client?.sendContext(`Invalid diffType "${diffType}".`);
-            updateStatus('failure', `Invalid diffType "${diffType}"`);
+            return actionHandlerFailure(`Invalid diffType "${diffType}".`, `Invalid diffType "${diffType}"`);
     }
-
-    return;
 }
 
-export function handleGitLog(context: RCEContext): string | undefined {
-    const { data: actionData, updateStatus } = context;
+export function handleGitLog(context: RCEContext): RCEHandlerReturns {
+    const { data: actionData } = context;
     assert(repo);
 
     const logLimit: number | undefined = actionData.params?.log_limit;
 
-    repo.log().then((commits: Commit[]) => {
+    return repo.log().then((commits: Commit[]) => {
         // If log_limit is defined, restrict number of commits to that value.
         if (logLimit) {
             commits = commits.slice(0, logLimit);
@@ -1203,38 +1125,29 @@ export function handleGitLog(context: RCEContext): string | undefined {
             `Commit: ${commit.hash}\nMessage: ${commit.message}\nAuthor: ${commit.authorName}\nDate: ${commit.authorDate}\n`,
         ).join('\n');
 
-        NEURO.client?.sendContext(`Commit log:\n${commitLog}`);
-        updateStatus('success', `Sent ${commits.length} commit${commits.length !== 1 ? 's' : ''}`);
+        return actionHandlerSuccess(`Commit log:\n${commitLog}`, `Sent ${commits.length} commit${commits.length !== 1 ? 's' : ''}`);
     }, (erm: string) => {
-        NEURO.client?.sendContext('Failed to get git log.');
         logOutput('ERROR', `Failed to get git log: ${erm}`);
-        updateStatus('failure', PROMISE_REJECTION_STRING);
+        return actionHandlerFailure('Failed to get git log.', PROMISE_REJECTION_STRING);
     });
-
-    return;
 }
 
-export function handleGitBlame(context: RCEContext): string | undefined {
-    const { data: actionData, updateStatus } = context;
+export function handleGitBlame(context: RCEContext): RCEHandlerReturns {
+    const { data: actionData } = context;
     assert(repo);
     const filePath: string = actionData.params.filePath;
     const absolutePath: string = getAbsoluteFilePath(filePath);
 
     if (!isPathNeuroSafe(absolutePath)) {
-        NEURO.client?.sendContext('The provided file path is not allowed.');
-        return;
+        return actionHandlerFailure('The provided file path is not allowed.', 'Access to targeted file disallowed');
     }
 
-    repo.blame(absolutePath).then((blame: string) => {
-        NEURO.client?.sendContext(`Blame attribution for ${filePath}:\n${blame}`);
-        updateStatus('success', `Sent blame for ${filePath}`);
+    return repo.blame(absolutePath).then((blame: string) => {
+        return actionHandlerSuccess(`Blame attribution for ${filePath}:\n${blame}`, `Sent blame for ${filePath}`);
     }, (erm: string) => {
-        NEURO.client?.sendContext('Failed to get blame attribution.');
         logOutput('ERROR', `Error getting blame attribs for ${filePath}: ${erm}`);
-        updateStatus('failure', PROMISE_REJECTION_STRING);
+        return actionHandlerFailure('Failed to get blame attribution.', PROMISE_REJECTION_STRING);
     });
-
-    return;
 }
 
 /**
@@ -1242,39 +1155,31 @@ export function handleGitBlame(context: RCEContext): string | undefined {
  * Requires neuropilot.permission.gitTags to be enabled.
  */
 
-export function handleTagHEAD(context: RCEContext): string | undefined {
-    const { data: actionData, updateStatus } = context;
+export function handleTagHEAD(context: RCEContext): RCEHandlerReturns {
+    const { data: actionData } = context;
     assert(repo);
     const name: string = actionData.params.name;
     const upstream: string = actionData.params.upstream ?? 'HEAD';
 
-    repo.tag(name, upstream).then(() => {
-        NEURO.client?.sendContext(`Tag ${name} created for ${upstream}.`);
-        updateStatus('success', `Tag "${name}" created`);
+    return repo.tag(name, upstream).then(() => {
+        return actionHandlerSuccess(`Tag ${name} created for ${upstream}.`, `Tag "${name}" created`);
     }, (erm: string) => {
-        NEURO.client?.sendContext('There was an error during tagging.');
         logOutput('ERROR', `Error trying to tag: ${erm}`);
-        updateStatus('failure', PROMISE_REJECTION_STRING);
+        return actionHandlerFailure('There was an error during tagging.', PROMISE_REJECTION_STRING);
     });
-
-    return;
 }
 
-export function handleDeleteTag(context: RCEContext): string | undefined {
-    const { data: actionData, updateStatus } = context;
+export function handleDeleteTag(context: RCEContext): RCEHandlerReturns {
+    const { data: actionData } = context;
     assert(repo);
     const name: string = actionData.params.name;
 
-    repo.deleteTag(name).then(() => {
-        NEURO.client?.sendContext(`Deleted tag ${name}`);
-        updateStatus('success', `Tag "${name}" deleted`);
+    return repo.deleteTag(name).then(() => {
+        return actionHandlerSuccess(`Deleted tag ${name}`, `Tag "${name}" deleted`);
     }, (erm: string) => {
-        NEURO.client?.sendContext(`Couldn't delete tag "${name}"`);
         logOutput('ERROR', `Failed to delete tag ${name}: ${erm}`);
-        updateStatus('failure', PROMISE_REJECTION_STRING);
+        return actionHandlerFailure(`Couldn't delete tag "${name}"`, PROMISE_REJECTION_STRING);
     });
-
-    return;
 }
 
 /*
@@ -1282,42 +1187,33 @@ export function handleDeleteTag(context: RCEContext): string | undefined {
  * Requires neuropilot.permission.gitRemotes to be enabled.
  */
 
-export function handleFetchGitCommits(context: RCEContext): string | undefined {
-    const { data: actionData, updateStatus } = context;
+export function handleFetchGitCommits(context: RCEContext): RCEHandlerReturns {
+    const { data: actionData } = context;
     assert(repo);
     const remoteName: string = actionData.params.remoteName;
     const branchName: string = actionData.params.branchName;
 
-    repo.fetch(remoteName, branchName).then(() => {
-        NEURO.client?.sendContext(`Fetched commits from ${remoteName ? 'remote ' + remoteName : 'default remote'}${branchName ? `, branch "${branchName}"` : ''}.`);
-        updateStatus('success', `Fetched from ${remoteName || 'default remote'}`);
+    return repo.fetch(remoteName, branchName).then(() => {
+        return actionHandlerSuccess(`Fetched commits from ${remoteName ? 'remote ' + remoteName : 'default remote'}${branchName ? `, branch "${branchName}"` : ''}.`, `Fetched from ${remoteName || 'default remote'}`);
     }, (erm: string) => {
-        NEURO.client?.sendContext(`Failed to fetch commits from remote "${remoteName}"`);
         logOutput('ERROR', `Failed to fetch commits: ${erm}`);
-        updateStatus('failure', PROMISE_REJECTION_STRING);
+        return actionHandlerFailure(`Failed to fetch commits from remote "${remoteName}"`, PROMISE_REJECTION_STRING);
     });
-
-    return;
 }
 
-export function handlePullGitCommits(context: RCEContext): string | undefined {
-    const { updateStatus } = context;
+export function handlePullGitCommits(_context: RCEContext): RCEHandlerReturns {
     assert(repo);
 
-    repo.pull().then(() => {
-        NEURO.client?.sendContext('Pulled commits from remote.');
-        updateStatus('success', 'Pulled commits');
+    return repo.pull().then(() => {
+        return actionHandlerSuccess('Pulled commits from remote.', 'Pulled commits');
     }, (erm: string) => {
-        NEURO.client?.sendContext(`Failed to pull commits from remote: ${erm}`);
         logOutput('ERROR', `Failed to pull commits: ${erm}`);
-        updateStatus('failure', PROMISE_REJECTION_STRING);
+        return actionHandlerFailure(`Failed to pull commits from remote: ${erm}`, PROMISE_REJECTION_STRING);
     });
-
-    return;
 }
 
-export function handlePushGitCommits(context: RCEContext): string | undefined {
-    const { data: actionData, updateStatus } = context;
+export function handlePushGitCommits(context: RCEContext): RCEHandlerReturns {
+    const { data: actionData } = context;
     assert(repo);
     const remoteName: string | undefined = actionData.params.remoteName;
     const branchName: string | undefined = actionData.params.branchName;
@@ -1325,16 +1221,12 @@ export function handlePushGitCommits(context: RCEContext): string | undefined {
 
     const forcePushMode: ForcePushMode | undefined = forcePush === true ? ForcePushMode.Force : undefined;
 
-    repo.push(remoteName, branchName, true, forcePushMode).then(() => {
-        NEURO.client?.sendContext(`Pushed commits${remoteName ? ` to remote "${remoteName}"` : ''}${branchName ? `, branch "${branchName}"` : ''}.${forcePush === true ? ' (forced push)' : ''}`);
-        updateStatus('success', `Pushed to ${remoteName || 'remote'}${forcePush ? ' (forced)' : ''}`);
+    return repo.push(remoteName, branchName, true, forcePushMode).then(() => {
+        return actionHandlerSuccess(`Pushed commits${remoteName ? ` to remote "${remoteName}"` : ''}${branchName ? `, branch "${branchName}"` : ''}.${forcePush === true ? ' (forced push)' : ''}`, `Pushed to ${remoteName || 'remote'}${forcePush ? ' (forced)' : ''}`);
     }, (erm: string) => {
-        NEURO.client?.sendContext(`Failed to push commits to remote "${remoteName}": ${erm}`);
         logOutput('ERROR', `Failed to push commits: ${erm}`);
-        updateStatus('failure', PROMISE_REJECTION_STRING);
+        return actionHandlerFailure(`Failed to push commits to remote "${remoteName}": ${erm}`, PROMISE_REJECTION_STRING);
     });
-
-    return;
 }
 
 /*
@@ -1342,56 +1234,44 @@ export function handlePushGitCommits(context: RCEContext): string | undefined {
  * Requires neuropilot.permission.editRemoteData to be enabled, IN ADDITION to neuropilot.permission.gitRemotes.
  */
 
-export function handleAddGitRemote(context: RCEContext): string | undefined {
-    const { data: actionData, updateStatus } = context;
+export function handleAddGitRemote(context: RCEContext): RCEHandlerReturns {
+    const { data: actionData } = context;
     assert(repo);
 
     const remoteName: string = actionData.params.remoteName;
     const remoteUrl: string = actionData.params.remoteURL;
 
-    repo.addRemote(remoteName, remoteUrl).then(() => {
-        NEURO.client?.sendContext(`Added remote "${remoteName}" with URL: ${remoteUrl}`);
-        updateStatus('success', `Remote "${remoteName}" added`);
+    return repo.addRemote(remoteName, remoteUrl).then(() => {
+        return actionHandlerSuccess(`Added remote "${remoteName}" with URL: ${remoteUrl}`, `Remote "${remoteName}" added`);
     }, (erm: string) => {
-        NEURO.client?.sendContext(`Failed to add remote "${remoteName}"`);
         logOutput('ERROR', `Failed to add remote: ${erm}`);
-        updateStatus('failure', PROMISE_REJECTION_STRING);
+        return actionHandlerFailure(`Failed to add remote "${remoteName}"`, PROMISE_REJECTION_STRING);
     });
-
-    return;
 }
 
-export function handleRemoveGitRemote(context: RCEContext): string | undefined {
-    const { data: actionData, updateStatus } = context;
+export function handleRemoveGitRemote(context: RCEContext): RCEHandlerReturns {
+    const { data: actionData } = context;
     assert(repo);
     const remoteName: string = actionData.params.remoteName;
 
-    repo.removeRemote(remoteName).then(() => {
-        NEURO.client?.sendContext(`Removed remote "${remoteName}".`);
-        updateStatus('success', `Remote "${remoteName}" removed`);
+    return repo.removeRemote(remoteName).then(() => {
+        return actionHandlerSuccess(`Removed remote "${remoteName}".`, `Remote "${remoteName}" removed`);
     }, (erm: string) => {
-        NEURO.client?.sendContext(`Failed to remove remote "${remoteName}"`);
         logOutput('ERROR', `Failed to remove remote: ${erm}`);
-        updateStatus('failure', PROMISE_REJECTION_STRING);
+        return actionHandlerFailure(`Failed to remove remote "${remoteName}"`, PROMISE_REJECTION_STRING);
     });
-
-    return;
 }
 
-export function handleRenameGitRemote(context: RCEContext): string | undefined {
-    const { data: actionData, updateStatus } = context;
+export function handleRenameGitRemote(context: RCEContext): RCEHandlerReturns {
+    const { data: actionData } = context;
     assert(repo);
     const oldRemoteName: string = actionData.params.oldRemoteName;
     const newRemoteName: string = actionData.params.newRemoteName;
 
-    repo.renameRemote(oldRemoteName, newRemoteName).then(() => {
-        NEURO.client?.sendContext(`Renamed remote "${oldRemoteName}" to "${newRemoteName}".`);
-        updateStatus('success', `Remote "${oldRemoteName}" renamed to "${newRemoteName}"`);
+    return repo.renameRemote(oldRemoteName, newRemoteName).then(() => {
+        return actionHandlerSuccess(`Renamed remote "${oldRemoteName}" to "${newRemoteName}".`, `Remote "${oldRemoteName}" renamed to "${newRemoteName}"`);
     }, (erm: string) => {
-        NEURO.client?.sendContext(`Failed to rename remote "${oldRemoteName}" to "${newRemoteName}"`);
         logOutput('ERROR', `Failed to rename remote ${oldRemoteName}: ${erm}`);
-        updateStatus('failure', PROMISE_REJECTION_STRING);
+        return actionHandlerFailure(`Failed to rename remote "${oldRemoteName}" to "${newRemoteName}"`, PROMISE_REJECTION_STRING);
     });
-
-    return;
 }

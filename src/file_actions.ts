@@ -2,12 +2,13 @@ import * as vscode from 'vscode';
 
 import { EXCEPTION_THROWN_STRING, NEURO, PROMISE_REJECTION_STRING } from '@/constants';
 import { filterFileContents, formatContext, getFence, getPositionContext, getVirtualCursor, getWorkspacePath, getWorkspaceUri, isBinary, isPathNeuroSafe, logOutput, NeuroPositionContext, normalizePath, notifyOnCaughtException, simpleFileName, stripTailSlashes } from '@/utils/misc';
-import { contextFailure, contextNoAccess, RCEAction, actionValidationFailure, actionValidationAccept, ActionValidationResult, actionValidationRetry } from '@/utils/neuro_client';
+import { RCEAction, actionValidationFailure, actionValidationAccept, ActionValidationResult, actionValidationRetry, RCEHandlerReturns, actionHandlerSuccess, actionHandlerFailure } from '@/utils/neuro_client';
 import { CONFIG, PermissionLevel, getPermissionLevel } from '@/config';
 import { targetedFileCreatedEvent, targetedFileDeletedEvent } from '@events/files';
 import { RCECancelEvent } from '@events/utils';
 import { addActions } from './rce';
 import { RCEContext } from '@context/rce';
+import assert from 'node:assert';
 
 export const CATEGORY_FILE_ACTIONS = 'File Actions';
 const ACTION_FAIL_NOTES = {
@@ -420,19 +421,16 @@ export function addFileActions() {
     ]);
 }
 
-export function handleCreateFile(context: RCEContext): string | undefined {
+export function handleCreateFile(context: RCEContext): RCEHandlerReturns {
     const { data: actionData, updateStatus } = context;
     const relativePathParam = actionData.params.filePath;
     const relativePath = normalizePath(relativePathParam).replace(/^\//, '');
     const absolutePath = getWorkspacePath() + '/' + relativePath;
     if (!isPathNeuroSafe(absolutePath)) {
-        updateStatus('failure', ACTION_FAIL_NOTES.noAccess.replace('directory', 'file'));
-        return contextNoAccess(absolutePath);
+        return actionHandlerFailure(`You are not allowed to access ${relativePath}`, ACTION_FAIL_NOTES.noAccess.replace('directory', 'file'));
     }
 
-    checkAndOpenFileAsync(absolutePath, relativePath);
-
-    return;
+    return checkAndOpenFileAsync(absolutePath, relativePath);
 
     // Function to avoid pyramid of doom
     async function checkAndOpenFileAsync(absolutePath: string, relativePath: string) {
@@ -442,14 +440,11 @@ export function handleCreateFile(context: RCEContext): string | undefined {
         try {
             await vscode.workspace.fs.stat(fileUri);
             // If no error is thrown, the file already exists
-            NEURO.client?.sendContext(`Could not create file: File ${relativePath} already exists`);
-            updateStatus('failure', ACTION_FAIL_NOTES.alreadyExists.replace('path', 'file'));
-            return;
+            return actionHandlerFailure(`File ${relativePath} already exists`, ACTION_FAIL_NOTES.alreadyExists.replace('path', 'file'));
         } catch (erm: unknown) {
             if (erm instanceof vscode.FileSystemError && erm.code !== 'FileNotFound') {
                 notifyOnCaughtException('create_file', erm);
-                updateStatus('failure', EXCEPTION_THROWN_STRING);
-                return;
+                return actionHandlerFailure(`Failed to create file ${relativePath}`, EXCEPTION_THROWN_STRING);
             };
             /* else, file does not exist, continue */
         }
@@ -460,46 +455,37 @@ export function handleCreateFile(context: RCEContext): string | undefined {
             await vscode.workspace.fs.writeFile(fileUri, new Uint8Array(0));
         } catch (erm: unknown) {
             notifyOnCaughtException('create_file', erm);
-            NEURO.client?.sendContext(`Failed to create file ${relativePath}`);
-            updateStatus('failure', EXCEPTION_THROWN_STRING);
-            return;
+            return actionHandlerFailure(`Failed to create file ${relativePath}`, EXCEPTION_THROWN_STRING);
         }
 
         logOutput('INFO', `Created file ${relativePath}`);
-        NEURO.client?.sendContext(`Created file ${relativePath}`);
 
         // Open the file if Neuro has permission for open_file
         if (getPermissionLevel(fileActions.switch_files.name) !== PermissionLevel.AUTOPILOT) {
-            updateStatus('success', 'File created');
-            return;
+            return actionHandlerSuccess(`Created file ${relativePath}`, 'File created');
         }
 
         try {
             const document = await vscode.workspace.openTextDocument(fileUri);
             await vscode.window.showTextDocument(document);
-            NEURO.client?.sendContext(`Opened new file ${relativePath}`);
-            updateStatus('success', 'File created and opened');
+            return actionHandlerSuccess(`Created and opened file ${relativePath}`, 'File created and opened');
         } catch (erm: unknown) {
             logOutput('ERROR', `Failed to open new file ${relativePath}: ${erm}`);
-            NEURO.client?.sendContext(`Failed to open new file ${relativePath}`);
-            updateStatus('success', 'File created but failed to open');
+            return actionHandlerSuccess(`Created file ${relativePath} but failed to open`, 'File created but failed to open');
         }
     }
 }
 
-export function handleCreateFolder(context: RCEContext): string | undefined {
+export function handleCreateFolder(context: RCEContext): RCEHandlerReturns {
     const { data: actionData, updateStatus } = context;
     const relativePathParam = actionData.params.folderPath;
     const relativePath = normalizePath(relativePathParam).replace(/^\/|\/$/g, '');
     const absolutePath = getWorkspacePath() + '/' + relativePath;
     if (!isPathNeuroSafe(absolutePath)) {
-        updateStatus('failure', ACTION_FAIL_NOTES.noAccess.replace('directory', 'folder'));
-        return contextNoAccess(absolutePath);
+        return actionHandlerFailure(`You are not allowed to access ${relativePath}`, ACTION_FAIL_NOTES.noAccess.replace('directory', 'folder'));
     }
 
-    checkAndCreateFolderAsync(absolutePath, relativePath);
-
-    return;
+    return checkAndCreateFolderAsync(absolutePath, relativePath);
 
     // Function to avoid pyramid of doom
     async function checkAndCreateFolderAsync(absolutePath: string, relativePath: string) {
@@ -510,14 +496,11 @@ export function handleCreateFolder(context: RCEContext): string | undefined {
         try {
             await vscode.workspace.fs.stat(folderUri);
             // If no error is thrown, the folder already exists
-            NEURO.client?.sendContext(`Could not create folder: Folder ${relativePath} already exists`);
-            updateStatus('failure', ACTION_FAIL_NOTES.alreadyExists.replace('path', 'folder'));
-            return;
+            return actionHandlerFailure(`Folder ${relativePath} already exists`, ACTION_FAIL_NOTES.alreadyExists.replace('path', 'folder'));
         } catch (erm: unknown) {
             if (erm instanceof vscode.FileSystemError && erm.code !== 'FileNotFound') {
                 notifyOnCaughtException('create_folder', erm);
-                updateStatus('failure', EXCEPTION_THROWN_STRING);
-                return;
+                return actionHandlerFailure(`Failed to create folder ${relativePath}`, EXCEPTION_THROWN_STRING);
             }
             /* else, folder does not exist, continue */
         }
@@ -527,36 +510,31 @@ export function handleCreateFolder(context: RCEContext): string | undefined {
             updateStatus('pending', 'Creating folder...');
             await vscode.workspace.fs.createDirectory(folderUri);
             logOutput('INFO', `Created folder ${relativePath}`);
-            NEURO.client?.sendContext(`Created folder ${relativePath}`);
-            updateStatus('success', 'Folder created');
+            return actionHandlerSuccess(`Created folder ${relativePath}`, 'Folder created');
         } catch (erm: unknown) {
             notifyOnCaughtException('create_folder', erm);
-            NEURO.client?.sendContext(`Failed to create folder ${relativePath}`);
-            updateStatus('failure', EXCEPTION_THROWN_STRING);
-            return;
+            return actionHandlerFailure(`Failed to create folder ${relativePath}`, EXCEPTION_THROWN_STRING);
         }
     }
 }
 
-export function handleRenameFileOrFolder(context: RCEContext): string | undefined {
+export function handleRenameFileOrFolder(context: RCEContext): RCEHandlerReturns {
     const { data: actionData, updateStatus } = context;
     const oldRelativePathParam = actionData.params.oldPath;
     const newRelativePathParam = actionData.params.newPath;
 
+    const base = vscode.workspace.workspaceFolders?.[0]?.uri;
+    if (!base) {
+        return actionHandlerFailure('No workspace folder open', 'No workspace folder open');
+    }
+
     const oldRelativePath = normalizePath(oldRelativePathParam).replace(/^\/|\/$/g, '');
     const newRelativePath = normalizePath(newRelativePathParam).replace(/^\/|\/$/g, '');
-    checkAndRenameAsync(oldRelativePath, newRelativePath);
-
-    return;
+    return checkAndRenameAsync(oldRelativePath, newRelativePath);
 
     // Function to avoid pyramid of doom
     async function checkAndRenameAsync(oldRelativePath: string, newRelativePath: string) {
-        const base = vscode.workspace.workspaceFolders?.[0]?.uri;
-        if (!base) {
-            updateStatus('failure', 'No workspace folder open');
-            NEURO.client?.sendContext('Could not rename: no workspace folder open');
-            return;
-        }
+        assert(base, 'Base URI should have already been checked for!');
 
         // Use joinPath so this works in both desktop (file://) and web/virtual FS (e.g. vscode-test-web://mount/)
         const oldUri = vscode.Uri.joinPath(base, oldRelativePath);
@@ -567,14 +545,11 @@ export function handleRenameFileOrFolder(context: RCEContext): string | undefine
             await vscode.workspace.fs.stat(oldUri);
         } catch (erm: unknown) {
             if (erm instanceof vscode.FileSystemError && erm.code === 'FileNotFound') {
-                updateStatus('failure', ACTION_FAIL_NOTES.doesntExist.replace('Targeted', 'Old'));
-                NEURO.client?.sendContext(`Could not rename: ${oldRelativePath} doesn't exist`);
-                return;
+                return actionHandlerFailure(`${oldRelativePath} doesn't exist`, ACTION_FAIL_NOTES.doesntExist.replace('Targeted', 'Old'));
             }
             else {
                 notifyOnCaughtException('rename_file_or_folder', erm);
-                updateStatus('failure', EXCEPTION_THROWN_STRING);
-                return;
+                return actionHandlerFailure(`Failed to rename ${oldRelativePath}`, EXCEPTION_THROWN_STRING);
             };
         }
 
@@ -582,14 +557,11 @@ export function handleRenameFileOrFolder(context: RCEContext): string | undefine
         try {
             await vscode.workspace.fs.stat(newUri);
             // If no error is thrown, the new path already exists
-            NEURO.client?.sendContext(`Could not rename: ${newRelativePath} already exists`);
-            updateStatus('failure', ACTION_FAIL_NOTES.alreadyExists.replace('Targeted', 'New'));
-            return;
+            return actionHandlerFailure(`${newRelativePath} already exists`, ACTION_FAIL_NOTES.alreadyExists.replace('Targeted', 'New'));
         } catch (erm: unknown) {
             if (erm instanceof vscode.FileSystemError && erm.code !== 'FileNotFound') {
                 notifyOnCaughtException('rename_file_or_folder', erm);
-                updateStatus('failure', EXCEPTION_THROWN_STRING);
-                return;
+                return actionHandlerFailure(`Failed to rename ${oldRelativePath}`, EXCEPTION_THROWN_STRING);
             };
             /* New path does not exist, continue */
         }
@@ -600,32 +572,28 @@ export function handleRenameFileOrFolder(context: RCEContext): string | undefine
             await vscode.workspace.fs.rename(oldUri, newUri, { overwrite: false });
         } catch (erm: unknown) {
             notifyOnCaughtException('rename_file_or_folder', erm);
-            NEURO.client?.sendContext(`Failed to rename ${oldRelativePath} to ${newRelativePath}`);
-            updateStatus('failure', EXCEPTION_THROWN_STRING);
-            return;
+            return actionHandlerFailure(`Failed to rename ${oldRelativePath} to ${newRelativePath}`, EXCEPTION_THROWN_STRING);
         }
 
         logOutput('INFO', `Renamed ${oldRelativePath} to ${newRelativePath}`);
-        NEURO.client?.sendContext(`Renamed ${oldRelativePath} to ${newRelativePath}`);
-        updateStatus('success', 'Renamed successfully');
+        return actionHandlerSuccess(`Renamed ${oldRelativePath} to ${newRelativePath}`, 'Renamed successfully');
     }
 }
 
-export function handleDeleteFileOrFolder(context: RCEContext): string | undefined {
+export function handleDeleteFileOrFolder(context: RCEContext): RCEHandlerReturns {
     const { data: actionData, updateStatus } = context;
     const relativePathParam = actionData.params.path;
     const recursive = actionData.params.recursive ?? false;
 
+    const base = vscode.workspace.workspaceFolders![0].uri;
+
     const relativePath = normalizePath(relativePathParam).replace(/^\/|\/$/g, '');
     const absolutePath = getWorkspacePath() + '/' + relativePath;
 
-    checkAndDeleteAsync(absolutePath, relativePath, recursive);
-
-    return;
+    return checkAndDeleteAsync(absolutePath, relativePath, recursive);
 
     // Function to avoid pyramid of doom
-    async function checkAndDeleteAsync(absolutePath: string, relativePath: string, recursive: boolean) {
-        const base = vscode.workspace.workspaceFolders![0].uri;
+    async function checkAndDeleteAsync(_absolutePath: string, relativePath: string, recursive: boolean) {
         const uri = vscode.Uri.joinPath(base, relativePath);
         let stat: vscode.FileStat;
 
@@ -634,21 +602,16 @@ export function handleDeleteFileOrFolder(context: RCEContext): string | undefine
             stat = await vscode.workspace.fs.stat(uri);
         } catch (erm: unknown) {
             if (erm instanceof vscode.FileSystemError && erm.code === 'FileNotFound') {
-                NEURO.client?.sendContext(`Could not delete: ${relativePath} does not exist`);
-                updateStatus('failure', ACTION_FAIL_NOTES.doesntExist);
-                return;
+                return actionHandlerFailure(`${relativePath} does not exist`, ACTION_FAIL_NOTES.doesntExist);
             } else {
                 notifyOnCaughtException('delete_file_or_folder', erm);
-                updateStatus('failure', EXCEPTION_THROWN_STRING);
-                return;
+                return actionHandlerFailure(`Failed to delete ${relativePath}`, EXCEPTION_THROWN_STRING);
             }
         }
 
         // Check for correct recursive parameter
         if (stat.type === vscode.FileType.Directory && !recursive) {
-            NEURO.client?.sendContext(`Could not delete: ${relativePath} is a directory cannot be deleted without the "recursive" parameter`);
-            updateStatus('failure', 'Recursive parameter required for directory');
-            return;
+            return actionHandlerFailure(`${relativePath} requires recursive parameter because it is a directory`, 'Recursive parameter required for directory');
         }
 
         // Delete the file/folder
@@ -658,9 +621,7 @@ export function handleDeleteFileOrFolder(context: RCEContext): string | undefine
             await vscode.workspace.fs.delete(uri, { recursive, useTrash });
         } catch (erm: unknown) {
             logOutput('ERROR', `Failed to delete ${relativePath}: ${erm}`);
-            NEURO.client?.sendContext(`Failed to delete ${relativePath}`);
-            updateStatus('failure', EXCEPTION_THROWN_STRING);
-            return;
+            return actionHandlerFailure(`Failed to delete ${relativePath}`, EXCEPTION_THROWN_STRING);
         }
 
         // If a file was deleted and it was open, close its editor tabs
@@ -690,12 +651,11 @@ export function handleDeleteFileOrFolder(context: RCEContext): string | undefine
         }
 
         logOutput('INFO', `Deleted ${relativePath}`);
-        NEURO.client?.sendContext(`Deleted ${relativePath}`);
-        updateStatus('success', stat.type === vscode.FileType.Directory ? 'Folder deleted' : 'File deleted');
+        return actionHandlerSuccess(`Deleted ${relativePath}`, stat.type === vscode.FileType.Directory ? 'Folder deleted' : 'File deleted');
     }
 }
 
-export function handleGetWorkspaceFiles(context: RCEContext): string | undefined {
+export function handleGetWorkspaceFiles(context: RCEContext): RCEHandlerReturns {
     const { data: actionData, updateStatus } = context;
     const workspaceFolder = vscode.workspace.workspaceFolders![0];
 
@@ -708,7 +668,7 @@ export function handleGetWorkspaceFiles(context: RCEContext): string | undefined
         const relativeFolderPath = normalizePath(stripTailSlashes(folder)).replace(/^\/|\/$/g, '');
         folderUri = vscode.Uri.joinPath(folderUri, ...relativeFolderPath.split('/').filter(Boolean));
     }
-    listWorkspace(folderUri).then(
+    return listWorkspace(folderUri).then(
         (uris) => {
             const paths = uris
                 .filter(uri => isPathNeuroSafe(uri[0].fsPath))
@@ -732,17 +692,13 @@ export function handleGetWorkspaceFiles(context: RCEContext): string | undefined
                 });
             const displayFolder = folder ? `"${stripTailSlashes(folder)}"` : 'workspace';
             logOutput('INFO', `Sending list of files in ${displayFolder} to Neuro`);
-            NEURO.client?.sendContext(`Files in ${displayFolder}:\n\n${paths.join('\n')}`);
-            updateStatus('success', `Listed ${paths.length} files`);
+            return actionHandlerSuccess(`Files in ${displayFolder}:\n\n${paths.join('\n')}`, `Listed ${paths.length} files`);
         },
         (erm: unknown) => {
             logOutput('ERROR', `Could not list workspace files: ${String(erm)}`);
-            NEURO.client?.sendContext('Unable to list workspace files.');
-            updateStatus('failure', 'Error thrown');
+            return actionHandlerFailure('Unable to list workspace files', PROMISE_REJECTION_STRING);
         },
     );
-
-    return undefined;
 
     async function listWorkspace(uri: vscode.Uri): Promise<[vscode.Uri, vscode.FileType][]> {
         const entries: [string, vscode.FileType][] = await vscode.workspace.fs.readDirectory(uri);
@@ -766,22 +722,20 @@ export function handleGetWorkspaceFiles(context: RCEContext): string | undefined
     }
 }
 
-export function handleOpenFile(context: RCEContext): string | undefined {
-    const { data: actionData, updateStatus } = context;
+export function handleOpenFile(context: RCEContext): RCEHandlerReturns {
+    const { data: actionData } = context;
     const relativePath = actionData.params.filePath;
 
     const workspaceUri = getWorkspaceUri()!;
     const relative = normalizePath(relativePath).replace(/^\/|\/$/g, '');
     const absolutePath = getWorkspacePath() + '/' + relative;
     if (!isPathNeuroSafe(absolutePath)) {
-        updateStatus('failure', ACTION_FAIL_NOTES.noAccess);
-        return contextNoAccess(relativePath);
+        return actionHandlerFailure(`You are not allowed to access ${relativePath}`, ACTION_FAIL_NOTES.noAccess);
     }
 
     const fileUri = vscode.Uri.joinPath(workspaceUri, relative);
 
-    openFileAsync();
-    return;
+    return openFileAsync();
 
     async function openFileAsync() {
         try {
@@ -807,25 +761,23 @@ export function handleOpenFile(context: RCEContext): string | undefined {
                     NEURO.client?.sendContext(formatContext(cursorContext));
                 }
             }
-            updateStatus('success', 'File opened');
+            return actionHandlerSuccess(`Opened file ${relativePath}`, 'File opened');
         } catch (erm: unknown) {
             if (erm instanceof vscode.FileSystemError && erm.code === 'FileNotFound') {
-                NEURO.client?.sendContext(`Failed to open file ${relativePath}`);
-                updateStatus('failure', ACTION_FAIL_NOTES.doesntExist);
+                return actionHandlerFailure(`File ${relativePath} not found`, ACTION_FAIL_NOTES.doesntExist);
             } else {
                 notifyOnCaughtException('open_file', erm);
-                NEURO.client?.sendContext(`Failed to open file ${relativePath}`);
-                updateStatus('failure', EXCEPTION_THROWN_STRING);
+                return actionHandlerFailure(`Failed to open file ${relativePath}`, EXCEPTION_THROWN_STRING);
             }
         }
     }
 }
 
-export function handleReadFile(context: RCEContext): string | undefined {
-    const { data: actionData, updateStatus } = context;
+export function handleReadFile(context: RCEContext): RCEHandlerReturns {
+    const { data: actionData } = context;
     const editor = vscode.window.activeTextEditor;
     if (!editor) {
-        return contextFailure('No active text editor.');
+        return actionHandlerFailure('No active text editor.', 'No active text editor.');
     }
     // If no filePath provided, read current file
     if (!actionData.params.filePath || actionData.params.filePath === '' || vscode.workspace.asRelativePath(editor.document.uri) === vscode.workspace.asRelativePath(vscode.Uri.joinPath(getWorkspaceUri()!, actionData.params.filePath))) {
@@ -834,7 +786,7 @@ export function handleReadFile(context: RCEContext): string | undefined {
         const cursor = getVirtualCursor()!;
 
         if (!isPathNeuroSafe(document.fileName)) {
-            return contextNoAccess(fileName);
+            return actionHandlerFailure(`You are not allowed to access ${fileName}`, 'Access denied');
         }
 
         // Manually construct context to include entire file
@@ -847,7 +799,7 @@ export function handleReadFile(context: RCEContext): string | undefined {
             cursorDefined: true,
         };
 
-        return `Contents of the file ${fileName}:\n\n${formatContext(positionContext)}`;
+        return actionHandlerSuccess(`Contents of the file ${fileName}:\n\n${formatContext(positionContext)}`, 'File read');
     }
 
     // Original read_file logic for specific file
@@ -856,27 +808,24 @@ export function handleReadFile(context: RCEContext): string | undefined {
     const workspaceUri = getWorkspaceUri()!;
     const absolute = normalizePath(workspaceUri.fsPath + '/' + file.replace(/^\/|\/$/g, ''));
     if (!isPathNeuroSafe(absolute)) {
-        return contextNoAccess(file);
+        return actionHandlerFailure(`You are not allowed to access ${file}`, 'Access denied');
     }
     const fileAsUri = workspaceUri.with({ path: absolute });
     try {
-        vscode.workspace.fs.readFile(fileAsUri).then(
+        return vscode.workspace.fs.readFile(fileAsUri).then(
             (data: Uint8Array) => {
                 const decodedContent = new TextDecoder('utf-8').decode(data);
                 const fence = getFence(decodedContent);
-                NEURO.client?.sendContext(`Contents of the file ${file}:\n\n${fence}\n${decodedContent}\n${fence}`);
-                updateStatus('success', 'File read');
+                return actionHandlerSuccess(`Contents of the file ${file}:\n\n${fence}\n${decodedContent}\n${fence}`, 'File contents sent');
             },
             (erm: unknown) => {
                 logOutput('ERROR', `Couldn't read file ${absolute}: ${erm}`);
-                NEURO.client?.sendContext(`Couldn't read file ${file}.`);
-                updateStatus('failure', PROMISE_REJECTION_STRING);
+                return actionHandlerFailure(`Couldn't read file ${file}`, PROMISE_REJECTION_STRING);
             },
         );
     } catch (erm: unknown) {
         notifyOnCaughtException('read_file', erm);
-        NEURO.client?.sendContext(`Unable to read file ${file}`);
-        updateStatus('failure', EXCEPTION_THROWN_STRING);
+        return actionHandlerFailure(`Unable to read file ${file}`, EXCEPTION_THROWN_STRING);
     }
 }
 
