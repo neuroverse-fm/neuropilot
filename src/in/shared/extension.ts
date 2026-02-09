@@ -11,7 +11,7 @@ import { emergencyDenyRequests, acceptRceRequest, denyRceRequest, revealRceNotif
 import type { GitExtension } from '@typing/git';
 import { getGitExtension } from '@/git';
 import { openDocsOnTarget, registerDocsCommands, registerDocsLink } from './docs';
-import { readChangelogAndSendToNeuro } from '@/changelog';
+import { sendChangelogOnDemand } from '@/changelog';
 import { moveCursorEmitterDiposable } from '@events/cursor';
 import { loadIgnoreFiles } from '@/utils/ignore_files';
 import { getWorkspacePath, normalizePath } from '@/utils/misc';
@@ -36,7 +36,7 @@ export function registerCommonCommands() {
         vscode.commands.registerCommand('neuropilot.switchNeuroAPIUser', switchCurrentNeuroAPIUser),
         vscode.commands.registerCommand('neuropilot.refreshExtensionDependencyState', obtainExtensionState),
         vscode.commands.registerCommand('neuropilot.resetTemporarilyDisabledActions', () => NEURO.tempDisabledActions = []),
-        vscode.commands.registerCommand('neuropilot.readChangelog', readChangelogAndSendToNeuro),
+        vscode.commands.registerCommand('neuropilot.readChangelog', sendChangelogOnDemand),
         vscode.commands.registerCommand('neuropilot.dev.clearMementos', clearAllMementos),
         vscode.commands.registerCommand('neuropilot.dev.addExecutionHistoryItem', () => {
             if (NEURO.viewProviders.execute) {

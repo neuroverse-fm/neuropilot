@@ -2,10 +2,10 @@ import * as vscode from 'vscode';
 
 import { EXCEPTION_THROWN_STRING, NEURO } from '@/constants';
 import { getFence, logOutput } from '@/utils/misc';
-import { ActionHandlerResult, actionHandlerSuccess, RCEAction } from '@/utils/neuro_client';
+import { actionHandlerFailure, ActionHandlerResult, actionHandlerSuccess, RCEAction } from '@/utils/neuro_client';
 import { CONNECTION, PermissionLevel } from '@/config';
 import { addActions, CATEGORY_MISC } from './rce';
-import { RCEContext, SimplifiedStatusUpdateHandler } from '@context/rce';
+import { RCEContext } from '@context/rce';
 
 const MEMENTO_KEY = 'lastDeliveredChangelogVersion';
 
@@ -38,27 +38,18 @@ export function addChangelogActions(): void {
     addActions([changelogActions.read_changelog]);
 }
 
-export async function readChangelogAndSendToNeuro(fromVersion?: string, updateStatus?: SimplifiedStatusUpdateHandler): Promise<void> {
+export async function readAndStructureChangelog(fromVersion?: string): Promise<ActionHandlerResult> {
     try {
-        if (!NEURO.connected) {
-            vscode.window.showErrorMessage('Not connected to Neuro API.');
-            return;
-        }
-
         const { sections, latest } = await readAndParseChangelog();
         if (sections.length === 0) {
-            updateStatus?.('failure', 'No version entries in changelog');
-            NEURO.client?.sendContext('Could not find any version entries in the changelog.');
-            return;
+            return actionHandlerFailure('Could not find any version entries in the changelog.', 'No version entries in changelog');
         }
 
         const saved = NEURO.context?.globalState.get<string>(MEMENTO_KEY);
         const { selected, startVersion, endVersion, note } = computeSelection(sections, latest, saved, fromVersion);
 
         if (selected.length === 0) {
-            updateStatus?.('failure', 'No matching changelog entries found');
-            NEURO.client?.sendContext('No matching changelog entries to send.');
-            return;
+            return actionHandlerFailure('No matching changelog entries to send.', 'No matching changelog entries found');
         }
 
         const md = selected.map(s => `## ${s.version}\n\n${s.body.trim()}`).join('\n\n');
@@ -69,22 +60,32 @@ export async function readChangelogAndSendToNeuro(fromVersion?: string, updateSt
         messageParts.push('\n');
         messageParts.push(`${fence}markdown\n${md}\n${fence}`);
 
-        NEURO.client?.sendContext(messageParts.join('\n') + `\nPlease summarise the changelogs for ${CONNECTION.userName}.`);
-        updateStatus?.('success', 'Sent requested changelog');
-
         // Update memento to latest delivered
         await NEURO.context?.globalState.update(MEMENTO_KEY, endVersion);
+
+        return actionHandlerSuccess(messageParts.join('\n') + `\nPlease summarise the changelogs for ${CONNECTION.userName}.`, 'Sent requested changelog');
     } catch (erm) {
         logOutput('ERROR', `Failed to read changelog: ${erm}`);
-        vscode.window.showErrorMessage('Failed to read changelog. See logs for details.');
-        updateStatus?.('failure', EXCEPTION_THROWN_STRING);
+        return actionHandlerFailure('Failed to read changelog.', EXCEPTION_THROWN_STRING);
     }
 }
 
-function handleReadChangelog(context: RCEContext): ActionHandlerResult {
-    readChangelogAndSendToNeuro(context.data.params?.fromVersion, context.updateStatus);
-    return actionHandlerSuccess();
-    // TODO, DO NOT MERGE BEFORE THIS IS DONE: Convert this to properly work with the new RCE refactors
+export async function sendChangelogOnDemand() {
+    if (!NEURO.connected) {
+        vscode.window.showErrorMessage('Not connected to the Neuro API');
+        return;
+    }
+
+    const changelog = await readAndStructureChangelog();
+    if (changelog.success === 'success') {
+        NEURO.client?.sendContext(changelog.message!);
+    } else {
+        vscode.window.showErrorMessage(changelog.message ?? 'Reading and structuring the changelog failed, maybe check logs?');
+    }
+}
+
+function handleReadChangelog(context: RCEContext): Thenable<ActionHandlerResult> {
+    return readAndStructureChangelog(context.data.params?.fromVersion);
 }
 
 async function readAndParseChangelog(): Promise<{ sections: ChangelogSection[]; latest: string; }> {
