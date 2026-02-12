@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { NEURO, EXTENSIONS } from '@/constants';
 import { logOutput, createClient, onClientConnected, setVirtualCursor, showAPIMessage, disconnectClient, reconnectClient, getWorkspaceUri, getFence, simpleFileName } from '@/utils/misc';
 import { completionsProvider, registerCompletionResultHandler } from '@/completions';
-import { giveCookie } from '@context/cookies';
+import { giveCookie } from '@/functions/cookies';
 import { registerChatResponseHandler } from '@/chat';
 import { ACCESS, ACTIONS, checkDeprecatedSettings, CONFIG, CONNECTION, PermissionLevel, setPermissions } from '@/config';
 import { explainWithNeuro, fixWithNeuro, NeuroCodeActionsProvider, sendDiagnosticsDiff } from '@/lint_problems';
