@@ -31,7 +31,7 @@ export function getGitExtension() {
     }
 }
 
-function gitValidator(_context: RCEContext): ActionValidationResult {
+function gitValidator(): ActionValidationResult {
     if (!git)
         return actionValidationFailure('Git extension not available.', 'Git extension not activated');
     if (!repo)
@@ -140,7 +140,7 @@ export const gitActions = {
         promptGenerator: 'initialize a Git repository in the workspace.',
         cancelEvents: commonCancelEvents,
         validators: {
-            sync: [(_context: RCEContext) => {
+            sync: [() => {
                 if (!git) return actionValidationFailure('Git extension not available.', 'Git extension not activated');
                 return actionValidationAccept();
             }],
@@ -717,7 +717,7 @@ export function addGitActions() {
  * Requires neuropilot.permission.gitConfig to be enabled.
  */
 
-export function handleNewGitRepo(_context: RCEContext): RCEHandlerReturns {
+export function handleNewGitRepo(): RCEHandlerReturns {
     const workspaceFolders = vscode.workspace.workspaceFolders;
     if (!workspaceFolders || workspaceFolders.length === 0) {
         return actionHandlerFailure('No workspace folder is open.', 'Not in a workspace');
@@ -824,7 +824,7 @@ interface StateStringProps {
     status: string
 }
 
-export function handleGitStatus(_context: RCEContext): RCEHandlerReturns {
+export function handleGitStatus(): RCEHandlerReturns {
     assert(repo);
 
     return repo.status().then(() => {
@@ -1008,7 +1008,7 @@ export function handleGitMerge(context: RCEContext): RCEHandlerReturns {
     });
 }
 
-export function handleAbortMerge(_context: RCEContext): RCEHandlerReturns {
+export function handleAbortMerge(): RCEHandlerReturns {
     assert(repo);
 
     return repo.mergeAbort().then(() => {
@@ -1201,7 +1201,7 @@ export function handleFetchGitCommits(context: RCEContext): RCEHandlerReturns {
     });
 }
 
-export function handlePullGitCommits(_context: RCEContext): RCEHandlerReturns {
+export function handlePullGitCommits(): RCEHandlerReturns {
     assert(repo);
 
     return repo.pull().then(() => {

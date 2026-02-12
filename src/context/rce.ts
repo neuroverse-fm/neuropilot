@@ -88,14 +88,14 @@ export class RCEContext<T extends JSONSchema7Object | undefined = any, K = any> 
         this.forced = forced;
     }
 
+    /**
+     * Marks this context object as done and destroys it.
+     * In normal circumstances you SHOULD NOT BE CALLING THIS FUNCTION, as RCE already handles this for you.
+     * @param success Whether or not the action attempted that spawned this context was successful.
+     */
     done(success: boolean): void {
         if (this.success !== null) throw new Error('Context object already destroyed!');
         this.success = success;
         this.dispose();
-    };
-
-    getLifecycle(item?: keyof RCELifecycleMetadata) {
-        if (item) return this.lifecycle[item];
-        else return this.lifecycle;
     };
 }

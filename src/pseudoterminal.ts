@@ -333,7 +333,7 @@ export function handleKillTerminal(context: RCEContext): RCEHandlerReturns {
  * Returns a list of currently running shell types.
  * Each entry includes the shell type and its status.
  */
-export function handleGetCurrentlyRunningShells(_context: RCEContext): ActionHandlerResult {
+export function handleGetCurrentlyRunningShells(): ActionHandlerResult {
     const runningShells: string[] = [];
 
     for (const [shellType, session] of NEURO.terminalRegistry.entries()) {

@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { NEURO } from '@/constants';
+import { EXCEPTION_THROWN_STRING, NEURO } from '@/constants';
 import { normalizePath, getWorkspacePath, logOutput, isPathNeuroSafe, getWorkspaceUri } from '@/utils/misc';
 import { CONFIG } from '@/config';
 import { actionValidationAccept, actionValidationFailure, ActionValidationResult, RCEAction, actionValidationRetry, ActionHandlerResult, actionHandlerSuccess, actionHandlerFailure } from '@/utils/neuro_client';
@@ -219,7 +219,7 @@ export function getFormattedDiagnosticsForFile(filePath: string, diagnostics: vs
 
 // Handle diagnostics for a single file
 export function handleGetFileLintProblems(context: RCEContext): ActionHandlerResult {
-    const { data: actionData, updateStatus } = context;
+    const { data: actionData } = context;
     const relativePath = actionData.params.file;
     const workspaceUri = getWorkspaceUri()!;
 
@@ -235,13 +235,12 @@ export function handleGetFileLintProblems(context: RCEContext): ActionHandlerRes
         return actionHandlerSuccess(`Linting problems for file ${relativePath}:${formattedDiagnostics}`, `${rawDiagnostics.length} linting issues sent`);
     } catch (erm) {
         logOutput('ERROR', `Getting diagnostics for ${relativePath} failed: ${erm}`);
-        updateStatus('exception', 'Error thrown');
-        return actionHandlerFailure(`Failed to get linting diagnostics for "${relativePath}".`);
+        return actionHandlerFailure(`Failed to get linting diagnostics for "${relativePath}".`, EXCEPTION_THROWN_STRING);
     }
 }
 
 export function handleGetFolderLintProblems(context: RCEContext): ActionHandlerResult {
-    const { data: actionData, updateStatus } = context;
+    const { data: actionData } = context;
     const relativeFolder = actionData?.params.folder;
 
     const workspacePath = getWorkspacePath();
@@ -270,14 +269,12 @@ export function handleGetFolderLintProblems(context: RCEContext): ActionHandlerR
         return actionHandlerSuccess(`Linting problems for folder "${relativeFolder}":\n${formattedDiagnostics}`, `${folderDiagnostics.length} linting issues sent`);
     } catch (erm) {
         logOutput('ERROR', `Getting diagnostics for folder ${relativeFolder} failed: ${erm}`);
-        updateStatus('exception', 'Error thrown');
-        return actionHandlerFailure(`Failed to get linting diagnostics for folder "${relativeFolder}".`);
+        return actionHandlerFailure(`Failed to get linting diagnostics for folder "${relativeFolder}".`, EXCEPTION_THROWN_STRING);
     }
 }
 
 // Handle diagnostics for the entire workspace
-export function handleGetWorkspaceLintProblems(context: RCEContext): ActionHandlerResult {
-    const { updateStatus } = context;
+export function handleGetWorkspaceLintProblems(): ActionHandlerResult {
     const workspacePath = getWorkspacePath();
     if (!workspacePath) {
         return actionHandlerFailure('No workspace opened.', 'No workspace opened.');
@@ -302,8 +299,7 @@ export function handleGetWorkspaceLintProblems(context: RCEContext): ActionHandl
         return actionHandlerSuccess(`Linting problems for the current workspace:\n${formattedDiagnostics}`, `${safeDiagnostics.length} linting issues found`);
     } catch (erm) {
         logOutput('ERROR', `Failed to get diagnostics for workspace: ${erm}`);
-        updateStatus('exception', 'Error thrown');
-        return actionHandlerFailure("Couldn't get diagnostics for the workspace.");
+        return actionHandlerFailure("Couldn't get diagnostics for the workspace.", EXCEPTION_THROWN_STRING);
     }
 }
 

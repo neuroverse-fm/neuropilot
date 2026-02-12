@@ -1,15 +1,18 @@
 import * as vscode from 'vscode';
-import { NeuroClient, ActionData } from 'neuro-game-sdk';
-import type { RCEContext } from '@/context/rce';
+import assert from 'node:assert';
+import { NeuroClient } from 'neuro-game-sdk';
 import globToRegExp from 'glob-to-regexp';
 import { fileTypeFromBuffer } from 'file-type';
 
 import { NEURO } from '@/constants';
 import { ACCESS, CONFIG, CONNECTION, CursorPositionContextStyle, getPermissionLevel, PermissionLevel, setPermissionLevel } from '@/config';
 
+import { fastIsItIgnored } from './ignore_files';
+import { unregisterAllActions } from '@/rce';
+import { changelogActions } from '../changelog';
+
 import { ActionValidationResult, actionValidationAccept, actionValidationFailure } from './neuro_client';
-import assert from 'node:assert';
-import { patienceDiff } from '../patience_diff';
+import { patienceDiff } from '@/patience_diff';
 import { fireCursorPositionChangedEvent } from '@events/cursor';
 
 export const REGEXP_ALWAYS = /^/;
@@ -336,10 +339,6 @@ export function combineGlobLinesToRegExp(lines: string[]): RegExp {
         .join('|');
     return new RegExp(result);
 }
-
-import { fastIsItIgnored } from './ignore_files';
-import { unregisterAllActions } from '../rce';
-import { changelogActions } from '../changelog';
 
 /**
  * Check if an absolute path is safe for Neuro to access.
@@ -705,7 +704,7 @@ export function clearDecorations(editor: vscode.TextEditor) {
 /**
  * Checks workspace trust settings and returns an ActionValidationResult accordingly.
  */
-export function checkWorkspaceTrust(_context?: RCEContext | ActionData): ActionValidationResult {
+export function checkWorkspaceTrust(): ActionValidationResult {
     if (vscode.workspace.isTrusted) {
         return actionValidationAccept();
     }
@@ -738,7 +737,7 @@ export function getProperty(obj: unknown, path: string): unknown {
 /**
  * Checks if the extension is currently on a virtual file system.
  */
-export function checkVirtualWorkspace(_context?: RCEContext | ActionData): ActionValidationResult {
+export function checkVirtualWorkspace(): ActionValidationResult {
     if (vscode.workspace.workspaceFolders?.every(f => f.uri.scheme !== 'file')) {
         return actionValidationFailure('You cannot perform this action in a virtual workspace.');
     }
@@ -1073,7 +1072,7 @@ export function isWindows(): boolean {
 }
 
 /**
- * Checks if the object is a Thenable object
+ * Checks if the object is a {@link Thenable} object
  * @param obj The object that could be a Thenable
  * @returns A boolean that indicates if it is a Thenable
  */
