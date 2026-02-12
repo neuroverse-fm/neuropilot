@@ -47,7 +47,7 @@ export function addTaskActions() {
     // Tasks are registered asynchronously in reloadTasks()
 }
 
-export function handleTerminateTask(_context: RCEContext): ActionHandlerResult {
+export function handleTerminateTask(): ActionHandlerResult {
     const exe = NEURO.currentTaskExecution;
     if (!exe) {
         return actionHandlerFailure('No task to terminate.', 'No task to terminate');
