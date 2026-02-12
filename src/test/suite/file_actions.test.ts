@@ -266,12 +266,8 @@ suite('File Actions', () => {
         const emptyDirPath = vscode.workspace.asRelativePath(emptyDirUri, false);
 
         // === Act ===
-        fileActions.handleGetWorkspaceFiles(makeContext({ id: 'abc', name: 'get_workspace_files', params: { folder: 'test_files' } } as ActionData));
-
-        // Wait for context to be sent
-        await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); });
-
-        const [context] = capture(mockedClient.sendContext).last();
+        const result = await fileActions.handleGetWorkspaceFiles(makeContext({ id: 'abc', name: 'get_workspace_files', params: { folder: 'test_files' } } as ActionData));
+        const context = result?.message ?? '';
         const lines = context.split(/\r?\n/);
         lines.shift(); // Remove header line
         lines.shift(); // Remove empty line
@@ -298,12 +294,8 @@ suite('File Actions', () => {
         const emptyDirPath = vscode.workspace.asRelativePath(emptyDirUri, false);
 
         // === Act ===
-        fileActions.handleGetWorkspaceFiles(makeContext({ id: 'abc', name: 'get_workspace_files', params: { recursive: true } } as ActionData));
-
-        // Wait for context to be sent
-        await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); });
-
-        const [context] = capture(mockedClient.sendContext).last();
+        const result = await fileActions.handleGetWorkspaceFiles(makeContext({ id: 'abc', name: 'get_workspace_files', params: { recursive: true } } as ActionData));
+        const context = result?.message ?? '';
         const lines = context.split(/\r?\n/);
         lines.shift(); // Remove header line
         lines.shift(); // Remove empty line
@@ -357,15 +349,8 @@ suite('File Actions', () => {
         const uri = vscode.Uri.joinPath(vscode.workspace.workspaceFolders![0].uri, relativePath);
 
         // === Act ===
-        fileActions.handleCreateFile(makeContext({ id: 'abc', name: 'create_file', params: { filePath: relativePath } } as ActionData));
+        await fileActions.handleCreateFile(makeContext({ id: 'abc', name: 'create_file', params: { filePath: relativePath } } as ActionData));
         const openAllowed = getPermissionLevel(fileActions.fileActions.switch_files.name) === PermissionLevel.AUTOPILOT;
-        await checkNoErrorWithTimeout(() => {
-            if (openAllowed) {
-                verify(mockedClient.sendContext(anything())).twice();
-            } else {
-                verify(mockedClient.sendContext(anything())).once();
-            }
-        }, 5000, 100);
 
         // === Assert ===
         if (openAllowed) {
@@ -382,8 +367,7 @@ suite('File Actions', () => {
         const uri = vscode.Uri.joinPath(vscode.workspace.workspaceFolders![0].uri, relativePath);
 
         // === Act ===
-        fileActions.handleCreateFolder(makeContext({ id: 'abc', name: 'create_folder', params: { folderPath: relativePath } } as ActionData));
-        await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); });
+        await fileActions.handleCreateFolder(makeContext({ id: 'abc', name: 'create_folder', params: { folderPath: relativePath } } as ActionData));
 
         // === Assert ===
         const stat = await vscode.workspace.fs.stat(uri);
@@ -398,8 +382,7 @@ suite('File Actions', () => {
         const newFileUri = vscode.Uri.joinPath(vscode.workspace.workspaceFolders![0].uri, newFilePath);
 
         // === Act ===
-        fileActions.handleRenameFileOrFolder(makeContext({ id: 'abc', name: 'rename_file_or_folder', params: { oldPath: filePath, newPath: newFilePath } } as ActionData));
-        await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); });
+        await fileActions.handleRenameFileOrFolder(makeContext({ id: 'abc', name: 'rename_file_or_folder', params: { oldPath: filePath, newPath: newFilePath } } as ActionData));
 
         // === Assert ===
         assert.strictEqual(vscode.window.visibleTextEditors.some(editor => editor.document.uri.path.toLowerCase() === newFileUri.path.toLowerCase()), false, 'Renaming a file should not open the renamed file in the editor');
@@ -428,8 +411,7 @@ suite('File Actions', () => {
         await vscode.window.showTextDocument(fileUri, { preview: false });
         await vscode.window.showTextDocument(otherFileUri, { preview: false });
 
-        fileActions.handleRenameFileOrFolder(makeContext({ id: 'abc', name: 'rename_file_or_folder', params: { oldPath: filePath, newPath: newFilePath } } as ActionData));
-        await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); });
+        await fileActions.handleRenameFileOrFolder(makeContext({ id: 'abc', name: 'rename_file_or_folder', params: { oldPath: filePath, newPath: newFilePath } } as ActionData));
 
         // Wait for the editor to update
         await new Promise(resolve => setTimeout(resolve, 200));
@@ -470,8 +452,7 @@ suite('File Actions', () => {
         // === Act ===
         await vscode.window.showTextDocument(fileUri, { preview: false });
 
-        fileActions.handleRenameFileOrFolder(makeContext({ id: 'abc', name: 'rename_file_or_folder', params: { oldPath: folderPath, newPath: newFolderPath } } as ActionData));
-        await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); });
+        await fileActions.handleRenameFileOrFolder(makeContext({ id: 'abc', name: 'rename_file_or_folder', params: { oldPath: folderPath, newPath: newFolderPath } } as ActionData));
 
         // Wait for the editor to update
         await new Promise(resolve => setTimeout(resolve, 100));
@@ -504,8 +485,7 @@ suite('File Actions', () => {
         // === Act ===
         vscode.window.showTextDocument(fileUri, { preview: false });
 
-        fileActions.handleDeleteFileOrFolder(makeContext({ id: 'abc', name: 'delete_file_or_folder', params: { path: filePath, recursive: false } } as ActionData));
-        await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); });
+        await fileActions.handleDeleteFileOrFolder(makeContext({ id: 'abc', name: 'delete_file_or_folder', params: { path: filePath, recursive: false } } as ActionData));
 
         // === Assert ===
         try {
@@ -534,8 +514,7 @@ suite('File Actions', () => {
         // This only happens in the test environment for some reason.
         // await vscode.window.showTextDocument(fileUri, { preview: false });
 
-        fileActions.handleDeleteFileOrFolder(makeContext({ id: 'abc', name: 'delete_file_or_folder', params: { path: folderPath, recursive: true } } as ActionData));
-        await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); });
+        await fileActions.handleDeleteFileOrFolder(makeContext({ id: 'abc', name: 'delete_file_or_folder', params: { path: folderPath, recursive: true } } as ActionData));
 
         // Wait for the editor to update
         await new Promise(resolve => setTimeout(resolve, 100));

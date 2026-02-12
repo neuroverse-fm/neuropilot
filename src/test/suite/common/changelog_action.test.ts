@@ -73,7 +73,7 @@ suite('Integration: read_changelog action', () => {
 
     test('with explicit fromVersion includes that version to latest, oldest→latest', async () => {
         // === Act ===
-        const { message: text } = await readAndStructureChangelog(undefined);
+        const { message: text } = await readAndStructureChangelog('2.2.1');
 
         // === Assert ===
         assert.ok(text?.includes('Changelog entries from 2.2.1 to 2.3.0:'), 'should show correct range');

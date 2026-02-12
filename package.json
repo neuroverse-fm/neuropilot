@@ -783,7 +783,9 @@
 		"compile": "cross-env NODE_ENV=0 pnpm build",
 		"package": "cross-env NODE_ENV=1 pnpm build",
 		"lint": "eslint --fix",
-		"test": "npm-run-all -s test:* --continue-on-error",
+		"test": "npm-run-all -s test:web test:desktop --continue-on-error",
+		"qa:test:clean": "node ./scripts/test-utils/run-all-clean.mjs",
+		"qa:test:summary": "node ./scripts/test-utils/parse-failures.mjs",
 		"postinstall": "husky",
 		"types": "npm-run-all -p build:*:tsc",
 		"types:watch": "npm-run-all -p watch:*:tsc",
@@ -804,7 +806,7 @@
 		"test:web": "pnpm run build:web && npm-run-all -s test:web:tsc test:web:esbuild test:web:browser",
 		"test:web:tsc": "tsc --noEmit --project test-tsconfigs/tsconfig.web.json",
 		"test:web:esbuild": "node ./scripts/esbuild.mjs --mode web --test",
-		"test:web:vscode": "vscode-test --coverage --label webUnitTest --coverage-output ./coverage-web",
+		"test:web:vscode": "vscode-test --label webUnitTest",
 		"test:web:browser": "pnpm run build:web && npm-run-all -s test:web:browser:*",
 		"test:web:browser:tsc": "tsc --noEmit --project test-tsconfigs/tsconfig.web.json",
 		"test:web:browser:esbuild": "node ./scripts/esbuild.mjs --mode web --test --web-browser-test",
@@ -817,7 +819,7 @@
 		"test:desktop": "npm run build:desktop && npm-run-all -s test:desktop:*",
 		"test:desktop:tsc": "tsc --noEmit --project test-tsconfigs/tsconfig.app.json",
 		"test:desktop:esbuild": "node ./scripts/esbuild.mjs --mode desktop --test",
-		"test:desktop:vscode": "vscode-test --coverage --label desktopUnitTest --coverage-output ./coverage-desktop"
+		"test:desktop:vscode": "vscode-test --label desktopUnitTest"
 	},
 	"devDependencies": {
 		"@eslint/js": "^9.39.2",

@@ -22,6 +22,9 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+test-results/logs/*.log
+test-results/logs/*.exitcode
+test-results/reports/failures-summary.md
 
 # environment variables
 .env

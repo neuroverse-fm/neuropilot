@@ -1,0 +1,497 @@
+
+> neuropilot-base@2.4.0 test D:\workspace\github\original-neuropilot\neuropilot
+> npm-run-all -s test:web test:desktop --continue-on-error
+
+
+> neuropilot-base@2.4.0 test:web D:\workspace\github\original-neuropilot\neuropilot
+> pnpm run build:web && npm-run-all -s test:web:tsc test:web:esbuild test:web:browser
+
+
+> neuropilot-base@2.4.0 build:web D:\workspace\github\original-neuropilot\neuropilot
+> npm-run-all -s build:web:*
+
+
+> neuropilot-base@2.4.0 build:web:tsc D:\workspace\github\original-neuropilot\neuropilot
+> tsc --noEmit --project tsconfig.web.json
+
+
+> neuropilot-base@2.4.0 build:web:esbuild D:\workspace\github\original-neuropilot\neuropilot
+> node ./scripts/esbuild.mjs --mode web
+
+🏗️  Build mode: 🛠️ Development
+🗑️  Output directory ./out/web/extension.js already exists, removing dir...
+🌐 Running web build...
+(node:33868) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///D:/workspace/github/original-neuropilot/neuropilot/esbuild-configs/web.esbuild.js is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to D:\workspace\github\original-neuropilot\neuropilot\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:33868) [DEP0180] DeprecationWarning: fs.Stats constructor is deprecated.
+[watch] build started
+[watch] build finished
+🧰  Web build completed successfully!
+
+> neuropilot-base@2.4.0 test:web:tsc D:\workspace\github\original-neuropilot\neuropilot
+> tsc --noEmit --project test-tsconfigs/tsconfig.web.json
+
+
+> neuropilot-base@2.4.0 test:web:esbuild D:\workspace\github\original-neuropilot\neuropilot
+> node ./scripts/esbuild.mjs --mode web --test
+
+🏗️  Build mode: 🛠️ Development
+🗑️  Output directory ./out/web/test/index.js already exists, removing dir...
+🌐 Running web test build...
+(node:28364) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///D:/workspace/github/original-neuropilot/neuropilot/esbuild-configs/web.esbuild.js is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to D:\workspace\github\original-neuropilot\neuropilot\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:28364) [DEP0180] DeprecationWarning: fs.Stats constructor is deprecated.
+[watch] build started
+[watch] build finished
+🧪  Web tests compiled successfully!
+
+> neuropilot-base@2.4.0 test:web:browser D:\workspace\github\original-neuropilot\neuropilot
+> pnpm run build:web && npm-run-all -s test:web:browser:*
+
+
+> neuropilot-base@2.4.0 build:web D:\workspace\github\original-neuropilot\neuropilot
+> npm-run-all -s build:web:*
+
+
+> neuropilot-base@2.4.0 build:web:tsc D:\workspace\github\original-neuropilot\neuropilot
+> tsc --noEmit --project tsconfig.web.json
+
+
+> neuropilot-base@2.4.0 build:web:esbuild D:\workspace\github\original-neuropilot\neuropilot
+> node ./scripts/esbuild.mjs --mode web
+
+🏗️  Build mode: 🛠️ Development
+🗑️  Output directory ./out/web/extension.js already exists, removing dir...
+🌐 Running web build...
+(node:33264) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///D:/workspace/github/original-neuropilot/neuropilot/esbuild-configs/web.esbuild.js is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to D:\workspace\github\original-neuropilot\neuropilot\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:33264) [DEP0180] DeprecationWarning: fs.Stats constructor is deprecated.
+[watch] build started
+[watch] build finished
+🧰  Web build completed successfully!
+
+> neuropilot-base@2.4.0 test:web:browser:tsc D:\workspace\github\original-neuropilot\neuropilot
+> tsc --noEmit --project test-tsconfigs/tsconfig.web.json
+
+
+> neuropilot-base@2.4.0 test:web:browser:esbuild D:\workspace\github\original-neuropilot\neuropilot
+> node ./scripts/esbuild.mjs --mode web --test --web-browser-test
+
+🏗️  Build mode: 🛠️ Development
+🗑️  Output directory ./out/web/test/browser.js already exists, removing dir...
+🌐 Running web test build...
+(node:32104) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///D:/workspace/github/original-neuropilot/neuropilot/esbuild-configs/web.esbuild.js is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to D:\workspace\github\original-neuropilot\neuropilot\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:32104) [DEP0180] DeprecationWarning: fs.Stats constructor is deprecated.
+[watch] build started
+[watch] build finished
+🧪  Web tests compiled successfully!
+
+> neuropilot-base@2.4.0 test:web:browser:vscode D:\workspace\github\original-neuropilot\neuropilot
+> vscode-test-web --headless --extensionDevelopmentPath=. --extensionTestsPath=out/web/test/browser.js test-playground
+
+@vscode/test-web: 0.0.79
+Serving dev extensions from D:\workspace\github\original-neuropilot\neuropilot
+Serving local content D:\workspace\github\original-neuropilot\neuropilot\test-playground at /static/mount
+Listening on http://localhost:3000
+Opening browser on http://localhost:3000...
+Using ESM loader: true
+Ignoring the error while validating workspace folder vscode-test-web://mount/ - ENOPRO: No file system provider found for resource 'vscode-test-web://mount/'
+Found additional builtin location extensions in env [ 'http://localhost:3000/static/extensions/fs' ]
+Updating additional builtin extensions cache
+[0mGET /static/devextensions/package.nls.json [33m404[0m 1.045 ms - 9[0m
+Request to 'http://localhost:3000/static/devextensions/package.nls.json' failed with status code 404
+Loading development extension at \static\devextensions
+vscode-test-web-support fs provider registers for vscode-test-web, initial content from http://localhost:3000/static/mount
+Migrating global extension storage from vsc-neuropilot.neuropilot-base to VSC-NeuroPilot.neuropilot-base...
+Migrated global extension storage from vsc-neuropilot.neuropilot-base to VSC-NeuroPilot.neuropilot-base
+Migrating workspace extension storage from vsc-neuropilot.neuropilot-base to VSC-NeuroPilot.neuropilot-base...
+Migrated workspace extension storage from vsc-neuropilot.neuropilot-base to VSC-NeuroPilot.neuropilot-base
+Settings Sync: Account status changed from uninitialized to unavailable
+[0m[0m
+[0m  Web Extension Tests[0m
+  [32m  ✅[0m[90m Sanity Check[0m
+  [32m  ✅[0m[90m Extension activates[0m[33m (51ms)[0m
+  [32m  ✅[0m[90m Workspace folder is correct[0m
+[0m  File Actions[0m
+  [32m  ✅[0m[90m validatePath[0m
+  [32m  ✅[0m[90m validateIsAFile[0m
+  [32m  ✅[0m[90m neuroSafeRenameValidation[0m
+  [32m  ✅[0m[90m neuroSafeDeleteValidation[0m
+  [32m  ✅[0m[90m handleGetWorkspaceFiles[0m
+  [32m  ✅[0m[90m handleGetWorkspaceFiles (recursive)[0m
+  [32m  ✅[0m[90m handleOpenFile[0m[31m (532ms)[0m
+  [32m  ✅[0m[90m handleCreateFile[0m
+  [32m  ✅[0m[90m handleCreateFolder[0m
+  [32m  ✅[0m[90m handleRenameFileOrFolder: Rename closed file[0m
+  [32m  ✅[0m[90m handleRenameFileOrFolder: Rename open file[0m[31m (273ms)[0m
+  [32m  ✅[0m[90m handleRenameFileOrFolder: Rename folder with open file[0m[31m (149ms)[0m
+  [32m  ✅[0m[90m handleDeleteFileOrFolder: Delete open file[0m
+  [32m  ✅[0m[90m handleDeleteFileOrFolder: Delete folder[0m[31m (116ms)[0m
+[0m  Utils Tests[0m
+  [32m  ✅[0m[90m logOutput: Log single lines[0m
+  [32m  ✅[0m[90m logOutput: Log multiple lines[0m
+[0m  Test Utils[0m
+  [32m  ✅[0m[90m assertProperties[0m
+Error: Trying to add a disposable to a DisposableStore that has already been disposed of. The added object will be leaked!
+	at r.add (http://localhost:3000/static/build/out/vs/workbench/api/worker/extensionHostWorkerMain.js:401:1796)
+	at Up.doCreateOutputChannel (http://localhost:3000/static/build/out/vs/workbench/api/worker/extensionHostWorkerMain.js:500:2718)
+Error: Trying to add a disposable to a DisposableStore that has already been disposed of. The added object will be leaked!
+	at r.add (http://localhost:3000/static/build/out/vs/workbench/api/worker/extensionHostWorkerMain.js:401:1796)
+	at http://localhost:3000/static/build/out/vs/workbench/api/worker/extensionHostWorkerMain.js:500:1953
+Error: Trying to add a disposable to a DisposableStore that has already been disposed of. The added object will be leaked!
+	at r.add (http://localhost:3000/static/build/out/vs/workbench/api/worker/extensionHostWorkerMain.js:401:1796)
+	at http://localhost:3000/static/build/out/vs/workbench/api/worker/extensionHostWorkerMain.js:500:3582
+  [32m  ✅[0m[90m checkWithTimeout: Check passes within timeout[0m[31m (501ms)[0m
+  [32m  ✅[0m[90m checkWithTimeout: Check times out[0m
+  [32m  ✅[0m[90m checkNoErrorWithTimeout: Check passes within timeout[0m[31m (506ms)[0m
+  [32m  ✅[0m[90m checkNoErrorWithTimeout: Check passes within timeout[0m
+[0m  File creation utils[0m
+  [32m  ✅[0m[90m createTestFile[0m
+  [32m  ✅[0m[90m createTestDirectory[0m
+[0m  rewrite_all Action (unit)[0m
+  [32m  ✅[0m[90m generates a prompt and reflects single line count[0m
+  [32m  ✅[0m[90m generates a prompt and reflects multi-line count[0m
+  [32m  ✅[0m[90m generates a prompt even for empty content (count 0 or 1 acceptable)[0m
+[92m [0m[32m 29 passing[0m[90m (2s)[0m
+
+> neuropilot-base@2.4.0 test:web:browser:open D:\workspace\github\original-neuropilot\neuropilot
+> npm-run-all -s test:web:browser:open:chromium --continue-on-error
+
+
+> neuropilot-base@2.4.0 test:web:browser:open:chromium D:\workspace\github\original-neuropilot\neuropilot
+> vscode-test-web --headless --browser=chromium --extensionDevelopmentPath=. --extensionTestsPath=out/web/test/browser.js test-playground
+
+@vscode/test-web: 0.0.79
+Serving dev extensions from D:\workspace\github\original-neuropilot\neuropilot
+Serving local content D:\workspace\github\original-neuropilot\neuropilot\test-playground at /static/mount
+Listening on http://localhost:3000
+Opening browser on http://localhost:3000...
+Using ESM loader: true
+Ignoring the error while validating workspace folder vscode-test-web://mount/ - ENOPRO: No file system provider found for resource 'vscode-test-web://mount/'
+Found additional builtin location extensions in env [ 'http://localhost:3000/static/extensions/fs' ]
+Updating additional builtin extensions cache
+[0mGET /static/devextensions/package.nls.json [33m404[0m 1.069 ms - 9[0m
+Request to 'http://localhost:3000/static/devextensions/package.nls.json' failed with status code 404
+Loading development extension at \static\devextensions
+vscode-test-web-support fs provider registers for vscode-test-web, initial content from http://localhost:3000/static/mount
+Migrating global extension storage from vsc-neuropilot.neuropilot-base to VSC-NeuroPilot.neuropilot-base...
+Migrated global extension storage from vsc-neuropilot.neuropilot-base to VSC-NeuroPilot.neuropilot-base
+Migrating workspace extension storage from vsc-neuropilot.neuropilot-base to VSC-NeuroPilot.neuropilot-base...
+Migrated workspace extension storage from vsc-neuropilot.neuropilot-base to VSC-NeuroPilot.neuropilot-base
+Settings Sync: Account status changed from uninitialized to unavailable
+[0m[0m
+[0m  Web Extension Tests[0m
+  [32m  ✅[0m[90m Sanity Check[0m
+  [32m  ✅[0m[90m Extension activates[0m
+  [32m  ✅[0m[90m Workspace folder is correct[0m
+[0m  File Actions[0m
+  [32m  ✅[0m[90m validatePath[0m
+  [32m  ✅[0m[90m validateIsAFile[0m[33m (39ms)[0m
+  [32m  ✅[0m[90m neuroSafeRenameValidation[0m
+  [32m  ✅[0m[90m neuroSafeDeleteValidation[0m
+  [32m  ✅[0m[90m handleGetWorkspaceFiles[0m
+  [32m  ✅[0m[90m handleGetWorkspaceFiles (recursive)[0m
+[NeuroClient] WebSocket is not open. Ready state: 0
+  [32m  ✅[0m[90m handleOpenFile[0m[31m (540ms)[0m
+  [32m  ✅[0m[90m handleCreateFile[0m
+  [32m  ✅[0m[90m handleCreateFolder[0m
+  [32m  ✅[0m[90m handleRenameFileOrFolder: Rename closed file[0m
+[NeuroClient] WebSocket is not open. Ready state: 0
+[NeuroClient] WebSocket is not open. Ready state: 0
+  [32m  ✅[0m[90m handleRenameFileOrFolder: Rename open file[0m[31m (273ms)[0m
+[NeuroClient] WebSocket is not open. Ready state: 0
+[NeuroClient] WebSocket is not open. Ready state: 0
+  [32m  ✅[0m[90m handleRenameFileOrFolder: Rename folder with open file[0m[31m (146ms)[0m
+  [32m  ✅[0m[90m handleDeleteFileOrFolder: Delete open file[0m
+[NeuroClient] WebSocket is not open. Ready state: 0
+  [32m  ✅[0m[90m handleDeleteFileOrFolder: Delete folder[0m[31m (112ms)[0m
+[0m  Utils Tests[0m
+  [32m  ✅[0m[90m logOutput: Log single lines[0m
+  [32m  ✅[0m[90m logOutput: Log multiple lines[0m
+[0m  Test Utils[0m
+  [32m  ✅[0m[90m assertProperties[0m
+Error: Trying to add a disposable to a DisposableStore that has already been disposed of. The added object will be leaked!
+	at r.add (http://localhost:3000/static/build/out/vs/workbench/api/worker/extensionHostWorkerMain.js:401:1796)
+	at Up.doCreateOutputChannel (http://localhost:3000/static/build/out/vs/workbench/api/worker/extensionHostWorkerMain.js:500:2718)
+Error: Trying to add a disposable to a DisposableStore that has already been disposed of. The added object will be leaked!
+	at r.add (http://localhost:3000/static/build/out/vs/workbench/api/worker/extensionHostWorkerMain.js:401:1796)
+	at http://localhost:3000/static/build/out/vs/workbench/api/worker/extensionHostWorkerMain.js:500:1953
+Error: Trying to add a disposable to a DisposableStore that has already been disposed of. The added object will be leaked!
+	at r.add (http://localhost:3000/static/build/out/vs/workbench/api/worker/extensionHostWorkerMain.js:401:1796)
+	at http://localhost:3000/static/build/out/vs/workbench/api/worker/extensionHostWorkerMain.js:500:3582
+[NeuroClient] WebSocket is not open. Ready state: 0
+  [32m  ✅[0m[90m checkWithTimeout: Check passes within timeout[0m[31m (502ms)[0m
+  [32m  ✅[0m[90m checkWithTimeout: Check times out[0m
+[NeuroClient] WebSocket connection closed: { isTrusted: true }
+  [32m  ✅[0m[90m checkNoErrorWithTimeout: Check passes within timeout[0m[31m (515ms)[0m
+  [32m  ✅[0m[90m checkNoErrorWithTimeout: Check passes within timeout[0m
+[0m  File creation utils[0m
+  [32m  ✅[0m[90m createTestFile[0m
+  [32m  ✅[0m[90m createTestDirectory[0m
+[0m  rewrite_all Action (unit)[0m
+  [32m  ✅[0m[90m generates a prompt and reflects single line count[0m
+  [32m  ✅[0m[90m generates a prompt and reflects multi-line count[0m
+  [32m  ✅[0m[90m generates a prompt even for empty content (count 0 or 1 acceptable)[0m
+[92m [0m[32m 29 passing[0m[90m (2s)[0m
+
+> neuropilot-base@2.4.0 test:desktop D:\workspace\github\original-neuropilot\neuropilot
+> npm run build:desktop && npm-run-all -s test:desktop:*
+
+npm warn Unknown env config "verify-deps-before-run". This will stop working in the next major version of npm.
+npm warn Unknown env config "_jsr-registry". This will stop working in the next major version of npm.
+
+> neuropilot-base@2.4.0 build:desktop
+> npm-run-all -s build:desktop:*
+
+npm warn Unknown env config "verify-deps-before-run". This will stop working in the next major version of npm.
+npm warn Unknown env config "_jsr-registry". This will stop working in the next major version of npm.
+
+> neuropilot-base@2.4.0 build:desktop:tsc
+> tsc --noEmit --project tsconfig.app.json
+
+npm warn Unknown env config "verify-deps-before-run". This will stop working in the next major version of npm.
+npm warn Unknown env config "_jsr-registry". This will stop working in the next major version of npm.
+
+> neuropilot-base@2.4.0 build:desktop:esbuild
+> node ./scripts/esbuild.mjs --mode desktop
+
+🏗️  Build mode: 🛠️ Development
+🗑️  Output directory ./out/desktop/extension.js already exists, removing dir...
+🖥️  Running desktop build...
+(node:34520) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///D:/workspace/github/original-neuropilot/neuropilot/esbuild-configs/web.esbuild.js is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to D:\workspace\github\original-neuropilot\neuropilot\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[watch] build started
+[watch] build finished
+🧰  Desktop build completed successfully!
+
+> neuropilot-base@2.4.0 test:desktop:tsc D:\workspace\github\original-neuropilot\neuropilot
+> tsc --noEmit --project test-tsconfigs/tsconfig.app.json
+
+
+> neuropilot-base@2.4.0 test:desktop:esbuild D:\workspace\github\original-neuropilot\neuropilot
+> node ./scripts/esbuild.mjs --mode desktop --test
+
+🏗️  Build mode: 🛠️ Development
+🗑️  Output directory ./out/desktop/test.js already exists, removing dir...
+🖥️  Running desktop test build...
+(node:19024) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///D:/workspace/github/original-neuropilot/neuropilot/esbuild-configs/web.esbuild.js is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to D:\workspace\github\original-neuropilot\neuropilot\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[watch] build started
+[watch] build finished
+🧪  Desktop tests compiled successfully!
+
+> neuropilot-base@2.4.0 test:desktop:vscode D:\workspace\github\original-neuropilot\neuropilot
+> vscode-test --label desktopUnitTest
+
+- Resolving version...
+√ Validated version: 1.109.2
+√ Found existing install in D:\workspace\github\original-neuropilot\neuropilot\.vscode-test\vscode-win32-x64-archive-1.109.2
+(node:36916) [DEP0190] DeprecationWarning: Passing args to a child process with shell option true can lead to security vulnerabilities, as the arguments are not escaped, only concatenated.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+
+[main 2026-02-12T16:00:01.683Z] update#setState disabled
+[main 2026-02-12T16:00:01.684Z] update#ctor - updates are disabled by the environment
+Loading development extension at d:\workspace\github\original-neuropilot\neuropilot
+Started local extension host with pid 34136.
+MCP Registry configured: https://api.mcp.github.com
+Settings Sync: Account status changed from uninitialized to unavailable
+
+  Integration: Desktop extension smoke
+    √ Sanity Check
+    √ Extension exists
+    √ Workspace folder is correct
+  File Actions
+    √ validatePath
+    √ validateIsAFile
+    √ neuroSafeRenameValidation
+    √ neuroSafeDeleteValidation
+    √ handleGetWorkspaceFiles (42ms)
+    √ handleGetWorkspaceFiles (recursive)
+    √ handleOpenFile (913ms)
+    √ handleCreateFile
+    √ handleCreateFolder
+    √ handleRenameFileOrFolder: Rename closed file
+    √ handleRenameFileOrFolder: Rename open file (409ms)
+    √ handleRenameFileOrFolder: Rename folder with open file (198ms)
+    √ handleDeleteFileOrFolder: Delete open file (91ms)
+    √ handleDeleteFileOrFolder: Delete folder (443ms)
+  Utils Tests
+    √ logOutput: Log single lines
+    √ logOutput: Log multiple lines
+  Ignore Files Utils Integration
+    √ fastIsItIgnored respects patterns loaded from ignore files
+    √ fastIsFileIgnored and visibility helpers filter ignored entries
+    √ findIgnoredFile locates ignored entries recursively
+  Integration: Editing actions
+    √ place_cursor (absolute)
+    √ get_cursor returns current position and context
+    √ place_cursor (relative) moves from current position and can be restored
+    √ insert_text inserts at absolute position
+    √ insert_text defaults to current cursor when no position provided
+    √ insert_text supports relative position
+    √ insert_lines appends lines
+    √ insert_lines inserts beyond EOF by padding newlines
+    √ replace_text single match replaces
+    √ replace_text supports regex substitution and allInFile
+    √ replace_text respects lineRange
+    √ delete_text single match deletes
+    √ delete_text deletes multiple matches and can use lineRange (220ms)
+    √ find_text single match returns description string
+    √ find_text multiple matches with highlight returns count and lines
+    √ undo sends context after reverting last change (113ms)
+    √ save persists document
+    √ rewrite_all replaces all content
+    √ rewrite_all moves cursor to start of file
+    √ rewrite_all handles empty content
+    √ rewrite_all handles large content
+Illegal value for lineNumber: Error: Illegal value for lineNumber
+    at Lfe.G (vscode-file://vscode-app/d:/workspace/github/original-neuropilot/neuropilot/.vscode-test/vscode-win32-x64-archive-1.109.2/591199df40/resources/app/out/vs/workbench/workbench.desktop.main.js:289:24687)
+    at Lfe.tokenizeIfCheap (vscode-file://vscode-app/d:/workspace/github/original-neuropilot/neuropilot/.vscode-test/vscode-win32-x64-archive-1.109.2/591199df40/resources/app/out/vs/workbench/workbench.desktop.main.js:289:25189)
+    at Rgn.q (vscode-file://vscode-app/d:/workspace/github/original-neuropilot/neuropilot/.vscode-test/vscode-win32-x64-archive-1.109.2/591199df40/resources/app/out/vs/workbench/workbench.desktop.main.js:3007:49440)
+    at Rgn.updateCursorPosition (vscode-file://vscode-app/d:/workspace/github/original-neuropilot/neuropilot/.vscode-test/vscode-win32-x64-archive-1.109.2/591199df40/resources/app/out/vs/workbench/workbench.desktop.main.js:3007:48551)
+    at vscode-file://vscode-app/d:/workspace/github/original-neuropilot/neuropilot/.vscode-test/vscode-win32-x64-archive-1.109.2/591199df40/resources/app/out/vs/workbench/workbench.desktop.main.js:3007:48392
+    at Fhe.value (vscode-file://vscode-app/d:/workspace/github/original-neuropilot/neuropilot/.vscode-test/vscode-win32-x64-archive-1.109.2/591199df40/resources/app/out/vs/workbench/workbench.desktop.main.js:289:29544)
+    at L.C (vscode-file://vscode-app/d:/workspace/github/original-neuropilot/neuropilot/.vscode-test/vscode-win32-x64-archive-1.109.2/591199df40/resources/app/out/vs/workbench/workbench.desktop.main.js:29:2349)
+    at L.D (vscode-file://vscode-app/d:/workspace/github/original-neuropilot/neuropilot/.vscode-test/vscode-win32-x64-archive-1.109.2/591199df40/resources/app/out/vs/workbench/workbench.desktop.main.js:29:2419)
+    at L.fire (vscode-file://vscode-app/d:/workspace/github/original-neuropilot/neuropilot/.vscode-test/vscode-win32-x64-archive-1.109.2/591199df40/resources/app/out/vs/workbench/workbench.desktop.main.js:29:2637)
+    at uls.endDeferredEmit (vscode-file://vscode-app/d:/workspace/github/original-neuropilot/neuropilot/.vscode-test/vscode-win32-x64-archive-1.109.2/591199df40/resources/app/out/vs/workbench/workbench.desktop.main.js:299:19009)
+    at xg.pushEditOperations (vscode-file://vscode-app/d:/workspace/github/original-neuropilot/neuropilot/.vscode-test/vscode-win32-x64-archive-1.109.2/591199df40/resources/app/out/vs/workbench/workbench.desktop.main.js:297:509)
+    at Q9t.executeEdits (vscode-file://vscode-app/d:/workspace/github/original-neuropilot/neuropilot/.vscode-test/vscode-win32-x64-archive-1.109.2/591199df40/resources/app/out/vs/workbench/workbench.desktop.main.js:300:452)
+    at vscode-file://vscode-app/d:/workspace/github/original-neuropilot/neuropilot/.vscode-test/vscode-win32-x64-archive-1.109.2/591199df40/resources/app/out/vs/workbench/workbench.desktop.main.js:301:2680
+    at vscode-file://vscode-app/d:/workspace/github/original-neuropilot/neuropilot/.vscode-test/vscode-win32-x64-archive-1.109.2/591199df40/resources/app/out/vs/workbench/workbench.desktop.main.js:301:3920
+    at Object.batchChanges (vscode-file://vscode-app/d:/workspace/github/original-neuropilot/neuropilot/.vscode-test/vscode-win32-x64-archive-1.109.2/591199df40/resources/app/out/vs/workbench/workbench.desktop.main.js:303:15801)
+    at dcs.X (vscode-file://vscode-app/d:/workspace/github/original-neuropilot/neuropilot/.vscode-test/vscode-win32-x64-archive-1.109.2/591199df40/resources/app/out/vs/workbench/workbench.desktop.main.js:301:3854)
+    at dcs.W (vscode-file://vscode-app/d:/workspace/github/original-neuropilot/neuropilot/.vscode-test/vscode-win32-x64-archive-1.109.2/591199df40/resources/app/out/vs/workbench/workbench.desktop.main.js:301:2636)
+    at dcs.executeEdits (vscode-file://vscode-app/d:/workspace/github/original-neuropilot/neuropilot/.vscode-test/vscode-win32-x64-archive-1.109.2/591199df40/resources/app/out/vs/workbench/workbench.desktop.main.js:301:2668)
+    at cl.executeEdits (vscode-file://vscode-app/d:/workspace/github/original-neuropilot/neuropilot/.vscode-test/vscode-win32-x64-archive-1.109.2/591199df40/resources/app/out/vs/workbench/workbench.desktop.main.js:303:9442)
+    at vgn.apply (vscode-file://vscode-app/d:/workspace/github/original-neuropilot/neuropilot/.vscode-test/vscode-win32-x64-archive-1.109.2/591199df40/resources/app/out/vs/workbench/workbench.desktop.main.js:3007:14513)
+    at pCt.apply (vscode-file://vscode-app/d:/workspace/github/original-neuropilot/neuropilot/.vscode-test/vscode-win32-x64-archive-1.109.2/591199df40/resources/app/out/vs/workbench/workbench.desktop.main.js:3007:16289)
+    at async vCt.o (vscode-file://vscode-app/d:/workspace/github/original-neuropilot/neuropilot/.vscode-test/vscode-win32-x64-archive-1.109.2/591199df40/resources/app/out/vs/workbench/workbench.desktop.main.js:3007:18964)
+    at async vCt.perform (vscode-file://vscode-app/d:/workspace/github/original-neuropilot/neuropilot/.vscode-test/vscode-win32-x64-archive-1.109.2/591199df40/resources/app/out/vs/workbench/workbench.desktop.main.js:3007:18494)
+    at async wCt.apply (vscode-file://vscode-app/d:/workspace/github/original-neuropilot/neuropilot/.vscode-test/vscode-win32-x64-archive-1.109.2/591199df40/resources/app/out/vs/workbench/workbench.desktop.main.js:3007:20379)
+    √ rewrite_lines replaces a range; delete_lines removes a range
+    √ rewrite_lines cursor position depends on trailing newline
+    √ delete_lines from first line moves cursor to start of file
+    √ highlight_lines returns description string
+  Integration: read_changelog action
+    √ with explicit fromVersion includes that version to latest, oldest→latest
+    √ default with no memento starts at 2.3.0
+    √ default when saved is latest sends latest again
+    √ default when saved older sends only newer entries
+  delete_lines Action
+    √ generates a prompt and includes start and end for a normal range
+    √ generates a prompt and includes the single line when start=end
+    √ generates a prompt even for reversed ranges (format-only responsibility)
+  delete_text Action
+    √ generates a prompt and includes escaped find when useRegex is true
+    √ generates a prompt and includes raw find when useRegex is false
+  file Actions
+    √ get_workspace_files has a non-empty prompt
+    √ get_workspace_files correctly includes the folder in prompt
+    √ get_workspace_files correctly states if Neuro asked for recursive
+    √ get_workspace_files correctly omits recursive if Neuro didn't ask
+    √ open_file prompt formats path
+    √ read_file prompt formats path
+    √ create_file prompt formats path
+    √ create_folder prompt formats path
+    √ rename_file_or_folder prompt formats paths
+    √ delete_file_or_folder prompt formats path
+  find_text Action
+    √ generates a prompt and includes escaped find when useRegex is true
+    √ generates a prompt and includes raw find when useRegex is false
+  get_cursor Action
+    √ returns a non-empty fixed prompt
+  git Actions
+    √ init_git_repo has non-empty fixed prompt
+    √ add_file_to_git formats array of files
+    √ make_git_commit formats message
+    √ merge_to_current_branch formats ref
+    √ git_status has non-empty fixed prompt
+    √ remove_file_from_git formats array
+    √ delete_git_branch formats name
+    √ switch_git_branch formats name
+    √ new_git_branch formats name
+    √ diff_files only filePath
+    √ diff_files with ref1 only
+    √ diff_files between refs and with type
+    √ git_log without limit
+    √ git_log with limit
+    √ git_blame formats file
+    √ tag_head formats name and upstream
+    √ delete_tag formats name
+    √ set_git_config formats key/value
+    √ get_git_config without key
+    √ get_git_config with key
+    √ fetch_git_commits remote+branch
+    √ fetch_git_commits remote only
+    √ fetch_git_commits branch only
+    √ pull_git_commits fixed prompt
+    √ push_git_commits remote+branch
+    √ push_git_commits remote only forced
+    √ push_git_commits no remote/branch forced
+    √ add_git_remote formats remote and URL
+    √ remove_git_remote formats remote
+    √ rename_git_remote formats old/new names
+    √ abort_merge fixed prompt
+  highlight_lines Action
+    √ generates a prompt and includes start and end
+  insert_lines Action
+    √ generates a prompt and reflects line count without insertUnder
+    √ generates a prompt including insertUnder when provided
+  insert_text Action
+    √ generates a prompt and reflects single line count
+    √ generates a prompt and reflects multi-line count
+  lint Actions
+    √ get_file_lint_problems formats file
+    √ get_folder_lint_problems formats folder
+    √ get_workspace_lint_problems fixed prompt
+  place_cursor Action
+    √ generates a prompt for absolute position including line and column
+    √ generates a prompt for relative position including deltas
+  replace_text Action
+    √ generates a prompt and includes escaped find when useRegex is true
+    √ generates a prompt and includes raw find and replacement when useRegex is false
+  rewrite_all Action (unit)
+    √ generates a prompt and reflects single line count
+    √ generates a prompt and reflects multi-line count
+    √ generates a prompt even for empty content (count 0 or 1 acceptable)
+  rewrite_lines Action
+    √ generates a prompt and reflects single-line content count
+    √ generates a prompt and reflects multi-line content count
+    √ generates a prompt for reversed ranges (format-only)
+  tasks Actions
+    √ terminate_task fixed prompt
+  rce Actions
+    √ cancel_request has empty prompt
+  terminal Actions
+    √ execute_in_terminal prompt formats command and shell
+    √ kill_terminal_process prompt formats shell
+    √ get_currently_running_shells uses fixed prompt
+  undo/save Actions
+    √ undo has non-empty fixed prompt
+    √ save has non-empty fixed prompt
+  Test Utils
+    √ assertProperties
+    √ checkWithTimeout: Check passes within timeout (551ms)
+    √ checkWithTimeout: Check times out
+    √ checkNoErrorWithTimeout: Check passes within timeout (533ms)
+    √ checkNoErrorWithTimeout: Check passes within timeout
+  File creation utils
+    √ createTestFile
+    √ createTestDirectory
+  132 passing (5s)
+[main 2026-02-12T16:00:08.341Z] Extension host with pid 34136 exited with code: 0, signal: unknown.
+Exit code:   0
