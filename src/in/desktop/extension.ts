@@ -26,7 +26,6 @@ import { addUnsupervisedActions, registerUnsupervisedHandlers } from './unsuperv
 import { registerSendSelectionToNeuro } from '@/editing';
 import { loadIgnoreFiles } from '@/utils/ignore_files';
 import { reregisterAllActions } from '../../rce';
-import type { RCEContext } from '~/src/context/rce';
 
 export function activate(context: vscode.ExtensionContext) {
     loadIgnoreFiles(
@@ -93,7 +92,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 export function deactivate() {
     emergencyTerminalShutdown();
-    handleTerminateTask({} as RCEContext);
+    handleTerminateTask();
     commonDeactivate();
 }
 
