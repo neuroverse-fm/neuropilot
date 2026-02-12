@@ -514,7 +514,7 @@ export async function RCEActionHandler(actionData: ActionData) {
                         }
                     }
                 }
-                if (context.action.validators.async) vscode.window.showInformationMessage(`Action "${actionData.name}" uses asynchronous validators, which have not been implemented yet.`); // implementation needs this to be moved to be *after* setup of cancel events (and action result obv).
+                if (context.action.validators.async) logOutput('INFO', `Action "${actionData.name}" uses asynchronous validators, which have not been implemented yet.`); // implementation needs this to be moved to be *after* setup of cancel events (and action result obv).
             }
 
             if (ACTIONS.enableCancelEvents && context.action.cancelEvents) {
