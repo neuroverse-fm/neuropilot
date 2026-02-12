@@ -459,14 +459,16 @@ export async function RCEActionHandler(actionData: ActionData) {
             const context = new RCEContext(actionData);
 
             const effectivePermission = getPermissionLevel(context.action.name);
-            if (context.action.ephemeralStorage) {
-                context.storage = {};
-            }
             if (effectivePermission === PermissionLevel.OFF) {
                 NEURO.client?.sendActionResult(actionData.id, true, 'Action failed: You don\'t have permission to execute this action.');
                 context.updateStatus('denied', 'Permission denied');
                 context.done(false);
                 return;
+            }
+
+            if (context.action.contextSetupHook) {
+                context.lifecycle.setupHooks = false;
+                Promise.allSettled(context.action.contextSetupHook).then(() => context.lifecycle.setupHooks = true);
             }
 
             // Validate schema

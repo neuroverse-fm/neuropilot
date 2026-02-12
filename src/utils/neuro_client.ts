@@ -97,21 +97,12 @@ export interface RCEAction<T = any> extends Action {
     /** A condition that must be true for the action to be registered. If not provided, the action is always registered. **This function must never throw.** */
     registerCondition?: () => boolean;
     /** 
-     * Whether or not the action needs ephemeral context storage.
-     * This causes RCE to provide an object for storage that will be passed through to every stage.
+     * Setup handlers that will be invoked to help setup the context file.
+     * These functions should not throw.
      * 
-     * This storage object is part of a disposable object that will be effectively destroyed when the RCEAction lifecycle is complete.
-     * Do not store this object as it is worthless after the lifecycle ends.
-     * 
-     * RCE executes the methods of {@link RCEAction} in the following order:
-     * 1. Validators (sync)
-     * 2. Cancel events setup
-     * 3. Prompt Generator
-     * 4. Preview effects
-     *  - Some arbitrary time in between here, event listeners for cancel events may also be fired, and the predicate will receive the storage as well.
-     * 5. Handler
+     * These functions will be parallelised, so you should only have them interact with one key per function.
      */
-    ephemeralStorage?: boolean;
+    contextSetupHook?: ((context: RCEContext) => Thenable<void>)[];
 }
 
 type RCEHandler = (context: RCEContext) => RCEHandlerReturns;

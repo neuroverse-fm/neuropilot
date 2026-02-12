@@ -2,8 +2,8 @@ import type { JSONSchema7Object } from 'json-schema';
 import type { ActionValidationResult, RCEAction } from '@/utils/neuro_client';
 import type { ActionData } from 'neuro-game-sdk';
 import { Disposable, Progress } from 'vscode';
-import { ActionStatus, updateActionStatus } from '../events/actions';
-import { getAction } from '../rce';
+import { ActionStatus, updateActionStatus } from '@events/actions';
+import { getAction } from '@/rce';
 
 export type RCEStorage = Record<string | number | symbol, unknown>;
 
@@ -13,6 +13,7 @@ export interface RCELifecycleMetadata {
     validatorResults?: {
         sync?: ActionValidationResult[];
     };
+    setupHooks?: boolean
 }
 
 export type SimplifiedStatusUpdateHandler = (status: ActionStatus, message?: string) => void;
@@ -27,6 +28,16 @@ export interface RCERequestState {
     timeout?: NodeJS.Timeout | null;
 }
 
+/**
+ * RCE executes the methods of {@link RCEAction} (and therefore passes the context object) in the following order:
+ * 1. Setup hooks
+ * 2. Validators (sync)
+ * 3. Cancel events setup
+ * 4. Prompt Generator
+ * 5. Preview effects
+ * ?? Some arbitrary time in between here, event listeners for cancel events may also be fired, and the predicate will receive the context object as well.
+ * 6. Handler
+ */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export class RCEContext<T extends JSONSchema7Object | undefined = any, K = any> extends Disposable {
     name: string;
@@ -41,7 +52,13 @@ export class RCEContext<T extends JSONSchema7Object | undefined = any, K = any> 
     readonly lifecycle: RCELifecycleMetadata = {};
     /** Request-specific data (copilot mode only) */
     request?: RCERequestState;
-    /** Ephemeral storage */
+    /**
+     * Ephemeral storage.
+     * Can be used to store data that needs to be accessed across different lifecycle stages of
+     * the action (validation, preview, handler), so that it doesn't need to be regenerated in 
+     * each stage.
+     * This data does not persist across different executions.
+     */
     public storage?: RCEStorage;
     private _updateStatus: SimplifiedStatusUpdateHandler = (status: ActionStatus, message?: string) => updateActionStatus(this.data, status, message);
     /**
@@ -85,6 +102,7 @@ export class RCEContext<T extends JSONSchema7Object | undefined = any, K = any> 
         this.action = getAction(data.name)!;
         this.name = data.name;
         this.success = null;
+        this.storage = {};
         this.forced = forced;
     }
 
