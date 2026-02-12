@@ -1144,8 +1144,6 @@ export function handleUndo(context: RCEContext): RCEHandlerReturns {
             // We don't keep track of the virtual cursor position in the undo stack, so we reset it to the real cursor position
             const cursorContext = getPositionContext(document, vscode.window.activeTextEditor!.selection.active);
             setVirtualCursor(vscode.window.activeTextEditor!.selection.active);
-            updateStatus('success', 'Undid last action');
-            NEURO.client?.sendContext(`Undid last action in document\n\n${formatContext(cursorContext)}`);
             return actionHandlerSuccess(`Undid last action in document\n\n${formatContext(cursorContext)}`, 'Undid last action');
         },
         (erm) => {
