@@ -501,19 +501,17 @@ export async function RCEActionHandler(actionData: ActionData) {
                     if (!context.lifecycle.validatorResults.sync) {
                         context.lifecycle.validatorResults.sync = [];
                     }
-                    if (context.action.validators.sync) {
-                        context.updateStatus('pending', 'Running validators...');
-                        for (const validate of context.action.validators.sync) {
-                            const actionResult = await validate(context);
-                            context.lifecycle.validatorResults.sync.push(actionResult);
-                            NEURO.client?.sendActionResult(actionData.id, !(actionResult.retry ?? false), actionResult.message);
-                            context.updateStatus(
-                                'failure',
-                                actionResult.historyNote ? `Validator failed: ${actionResult.historyNote}` : 'Validator failed' + (actionResult.retry ? '\nRequesting retry' : ''),
-                            );
-                            context.done(false);
-                            return;
-                        }
+                    context.updateStatus('pending', 'Running validators...');
+                    for (const validate of context.action.validators.sync) {
+                        const actionResult = await validate(context);
+                        context.lifecycle.validatorResults.sync.push(actionResult);
+                        NEURO.client?.sendActionResult(actionData.id, !(actionResult.retry ?? false), actionResult.message);
+                        context.updateStatus(
+                            'failure',
+                            actionResult.historyNote ? `Validator failed: ${actionResult.historyNote}` : 'Validator failed' + (actionResult.retry ? '\nRequesting retry' : ''),
+                        );
+                        context.done(false);
+                        return;
                     }
                 }
                 if (context.action.validators.async) logOutput('INFO', `Action "${actionData.name}" uses asynchronous validators, which have not been implemented yet.`); // implementation needs this to be moved to be *after* setup of cancel events (and action result obv).
