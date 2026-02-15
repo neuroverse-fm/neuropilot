@@ -5,7 +5,7 @@ import assert from 'node:assert';
 import { CATEGORY_EDITING, editingActions } from '~/src/editing';
 import { changelogActions } from '~/src/changelog';
 import { REQUEST_COOKIE_ACTION } from '@/functions/cookies';
-import { CATEGORY_GIT, gitActions } from '~/src/git';
+import { CATEGORY_GIT, CATEGORY_GIT_CONFIG, CATEGORY_GIT_REMOTES, gitActions } from '~/src/git';
 import { chatAction } from '~/src/chat';
 import { completionAction } from '~/src/completions';
 import { CATEGORY_MISC } from '~/src/rce';
@@ -46,7 +46,7 @@ suite('Validate action schemas', async () => {
         const actions = Object.keys(gitActions) as (keyof typeof gitActions)[];
         for (const a of actions) {
             assert.strictEqual(a, gitActions[a].name);
-            assert.strictEqual(CATEGORY_GIT, gitActions[a].category);
+            assert.ok([CATEGORY_GIT, CATEGORY_GIT_CONFIG, CATEGORY_GIT_REMOTES].includes(gitActions[a].category));
             if ('schema' in gitActions[a] && gitActions[a].schema) {
                 assert.ok(validate(gitActions[a].schema, metaschema).valid);
             }

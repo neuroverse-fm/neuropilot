@@ -12,6 +12,8 @@ import { addActions, registerAction, reregisterAllActions, unregisterAction } fr
 import { RCEContext } from '@context/rce';
 
 export const CATEGORY_GIT = 'Git';
+export const CATEGORY_GIT_REMOTES = 'Git Remotes';
+export const CATEGORY_GIT_CONFIG = 'Git Config';
 
 // Get the Git extension
 let git: API | null = null;
@@ -470,7 +472,7 @@ export const gitActions = {
     set_git_config: {
         name: 'set_git_config',
         description: 'Set a Git configuration value',
-        category: 'Git Config',
+        category: CATEGORY_GIT_CONFIG,
         schema: {
             type: 'object',
             properties: {
@@ -491,7 +493,7 @@ export const gitActions = {
     get_git_config: {
         name: 'get_git_config',
         description: 'Get a Git configuration value',
-        category: 'Git Config',
+        category: CATEGORY_GIT_CONFIG,
         schema: {
             type: 'object',
             properties: {
@@ -512,7 +514,7 @@ export const gitActions = {
     fetch_git_commits: {
         name: 'fetch_git_commits',
         description: 'Fetch commits from the remote repository',
-        category: 'Git Remotes',
+        category: CATEGORY_GIT_REMOTES,
         schema: {
             type: 'object',
             properties: {
@@ -540,7 +542,7 @@ export const gitActions = {
     pull_git_commits: {
         name: 'pull_git_commits',
         description: 'Pull commits from the remote repository',
-        category: 'Git Remotes',
+        category: CATEGORY_GIT_REMOTES,
         handler: handlePullGitCommits,
         cancelEvents: commonCancelEvents,
         promptGenerator: 'pull commits.',
@@ -552,7 +554,7 @@ export const gitActions = {
     push_git_commits: {
         name: 'push_git_commits',
         description: 'Push commits to the remote repository',
-        category: 'Git Remotes',
+        category: CATEGORY_GIT_REMOTES,
         schema: {
             type: 'object',
             properties: {
@@ -584,7 +586,7 @@ export const gitActions = {
     add_git_remote: {
         name: 'add_git_remote',
         description: 'Add a new remote to the Git repository',
-        category: 'Git Remotes',
+        category: CATEGORY_GIT_REMOTES,
         schema: {
             type: 'object',
             properties: {
@@ -605,7 +607,7 @@ export const gitActions = {
     remove_git_remote: {
         name: 'remove_git_remote',
         description: 'Remove a remote from the Git repository',
-        category: 'Git Remotes',
+        category: CATEGORY_GIT_REMOTES,
         schema: {
             type: 'object',
             properties: {
@@ -625,7 +627,7 @@ export const gitActions = {
     rename_git_remote: {
         name: 'rename_git_remote',
         description: 'Rename a remote in the Git repository',
-        category: 'Git Remotes',
+        category: CATEGORY_GIT_REMOTES,
         schema: {
             type: 'object',
             properties: {
