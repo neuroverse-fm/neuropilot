@@ -97,10 +97,10 @@ export interface RCEAction<T = any> extends Action {
     /** A condition that must be true for the action to be registered. If not provided, the action is always registered. **This function must never throw.** */
     registerCondition?: () => boolean;
     /** 
-     * Setup handlers that will be invoked to help setup the context file.
+     * Setup handlers that will be invoked to help setup the {@link RCEContext.storage} object.
      * These functions should not throw.
      * 
-     * These functions will be parallelised, so you should only have them interact with one key per function.
+     * These functions will be parallelised, so the same key should not be accessed from multiple functions.
      */
     contextSetupHook?: ((context: RCEContext) => Thenable<void>)[];
 }
