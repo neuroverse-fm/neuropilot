@@ -33,6 +33,7 @@ export const completionAction = (maxCount: number) => ({
 } satisfies Action);
 
 export function requestCompletion(beforeContext: string, afterContext: string, fileName: string, language: string, maxCount: number) {
+    // TODO: Refactor
     // If completions are disabled, notify and return early.
     if (CONFIG.completionTrigger === 'off') {
         if (!NEURO.warnOnCompletionsOff) {
@@ -62,6 +63,7 @@ export function requestCompletion(beforeContext: string, afterContext: string, f
 
     logOutput('INFO', `Requesting completion for ${fileName}`);
 
+    // TODO: Refactor
     NEURO.currentActionForce = {
         query: 'Write code that fits between afterContext and beforeContext',
         actionNames: ['complete_code'],
@@ -90,6 +92,7 @@ export function requestCompletion(beforeContext: string, afterContext: string, f
 }
 
 export function cancelCompletionRequest() {
+    // TODO: Refactor
     NEURO.cancelled = true;
     NEURO.currentActionForce = null;
     if (!NEURO.client) return;
@@ -97,6 +100,7 @@ export function cancelCompletionRequest() {
 }
 
 export function registerCompletionResultHandler() {
+    // TODO: Refactor
     NEURO.client?.onAction((actionData) => {
         assert(NEURO.client instanceof NeuroClient);
 

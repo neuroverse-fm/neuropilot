@@ -6,7 +6,7 @@ import { ActionsViewProvider } from '@views/actions';
 import { ImagesViewProvider } from '@views/image';
 import type { ExecuteViewProvider } from '@views/execute';
 import type { ActionData } from 'neuro-game-sdk';
-import type { ActionForceState } from './utils/neuro_client';
+import type { ActionForceParams } from './utils/neuro_client';
 
 export interface NeuroTask {
     id: string;
@@ -37,7 +37,7 @@ interface Neuro {
      * Whether this extension is currently waiting on a response, agnostic of whether the last request was canceled.
      * This is used to prevent multiple `actions/force` requests from being sent at the same time.
      */
-    currentActionForce: ActionForceState | null;
+    currentActionForce: ActionForceParams | null;
     /**
      * Whether the last request was canceled.
      * This is used to tell Neuro that the request was canceled.

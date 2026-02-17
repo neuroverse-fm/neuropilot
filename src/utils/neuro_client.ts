@@ -4,25 +4,31 @@
 
 import { Action, ActionForcePriorityEnum } from 'neuro-game-sdk';
 import { ACTIONS, Permission, PermissionLevel } from '@/config';
-import { logOutput, turtleSafari } from '@/utils/misc';
+import { logOutput, OutputTag, turtleSafari } from '@/utils/misc';
 import { PromptGenerator } from '@/rce';
 import { RCECancelEvent } from '@events/utils';
 import type { RCEContext } from '@context/rce';
-import { NEURO } from '@/constants';
+
+import type { NeuroClient } from 'neuro-game-sdk';
 
 //#region Action force utils
 
-export interface ActionForceState {
+/**
+ * The parameters for forcing actions.
+ * @see {@link NeuroClient.forceActions} for field documentation.
+ */
+export interface ActionForceParams {
     state?: string;
     query: string;
     ephemeral_context?: boolean;
     actionNames: string[];
     priority?: ActionForcePriorityEnum;
-}
-
-export function createActionForce(force: ActionForceState) {
-    NEURO.client?.forceActions(force.query, force.actionNames, force.state, force.ephemeral_context, force.priority);
-    NEURO.currentActionForce = force;
+    /**
+     * If specified, allow execution of actions.
+     * Note that at the moment, action forces will not be retried the permission is {@link PermissionLevel.COPILOT}
+     * or if the chosen action's handler is async.
+     */
+    overridePermissions?: PermissionLevel.COPILOT | PermissionLevel.AUTOPILOT;
 }
 
 //#endregion
@@ -223,7 +229,7 @@ export function actionValidationFailure(message: string, historyNote?: string): 
  * If omitted, will just return "Action failed.".
  * @returns A context message with the specified message.
  */
-export function contextFailure(message?: string, tag = 'WARNING'): string {
+export function contextFailure(message?: string, tag: OutputTag = 'WARNING'): string {
     const result = message !== undefined ? `Action failed: ${message}` : 'Action failed.';
     logOutput(tag, result);
     return result;

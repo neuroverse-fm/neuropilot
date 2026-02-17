@@ -1169,7 +1169,7 @@ export function handleSave(): RCEHandlerReturns {
                 NEURO.saving = false;
                 return actionHandlerSuccess('Document saved successfully.', 'Document saved');
             } else {
-                logOutput('WARN', 'Document save returned false.');
+                logOutput('WARNING', 'Document save returned false.');
                 NEURO.saving = false;
                 return actionHandlerFailure('Document did not save.', 'Document did not save');
             }

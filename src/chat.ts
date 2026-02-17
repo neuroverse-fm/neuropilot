@@ -2,10 +2,12 @@ import * as vscode from 'vscode';
 
 import { NEURO } from '@/constants';
 import { filterFileContents, logOutput, simpleFileName } from '@/utils/misc';
-import { CONFIG, CONNECTION } from '@/config';
+import { CONFIG, CONNECTION, PermissionLevel } from '@/config';
 import assert from 'node:assert';
 import { JSONSchema7 } from 'json-schema';
-import { Action } from 'neuro-game-sdk';
+import { actionHandlerFailure, actionHandlerSuccess, actionValidationAccept, actionValidationFailure, RCEAction, RCEHandlerReturns } from './utils/neuro_client';
+import { RCEContext } from './context/rce';
+import { addActions, unregisterAction } from './rce';
 
 interface Participant {
     id: string;
@@ -42,36 +44,55 @@ interface NeuroChatContext {
 let lastChatResponse = '';
 
 export function registerChatResponseHandler() {
-    NEURO.client?.onAction((actionData) => {
-        if (actionData.name === 'chat') {
-            NEURO.actionHandled = true;
-
-            const answer = actionData.params?.answer;
-            if (answer === undefined) {
-                NEURO.client?.sendActionResult(actionData.id, false, 'Missing required parameter "answer"');
-                return;
-            }
-
-            NEURO.client?.unregisterActions(['chat']);
-
-            if (NEURO.cancelled) {
-                NEURO.client?.sendActionResult(actionData.id, true, 'Request was cancelled');
-                NEURO.currentActionForce = null;
-                return;
-            }
-            if (!NEURO.currentActionForce) {
-                NEURO.client?.sendActionResult(actionData.id, true, 'Not currently waiting for a chat response');
-                return;
-            }
-
-            NEURO.currentActionForce = null;
-
-            NEURO.client?.sendActionResult(actionData.id, true);
-            lastChatResponse = answer;
-            logOutput('INFO', 'Received chat response:\n' + answer);
-        }
-    });
+    addActions([chatAction]);
 }
+
+function handleChat(context: RCEContext): RCEHandlerReturns {
+    const answer = context.data.params!.answer;
+
+    NEURO.client?.unregisterActions(['chat']);
+
+    if (NEURO.cancelled) {
+        return actionHandlerFailure('Request was cancelled');
+    }
+
+    lastChatResponse = answer;
+    logOutput('INFO', 'Received chat response:\n' + answer);
+    return actionHandlerSuccess();
+}
+
+export const chatAction: RCEAction = {
+    name: 'chat',
+    description:
+        `Provide an answer to ${CONNECTION.userName}'s request.` +
+        ' Use markdown to format your response.' +
+        ' You may additionally include code blocks by using triple backticks.' +
+        ' Be sure to use the correct language identifier after the first set of backticks.' +
+        ' If you decide to include a code block, make sure to explain what it is doing.',
+    schema: {
+        type: 'object',
+        properties: {
+            answer: { type: 'string' },
+        },
+        required: ['answer'],
+        additionalProperties: false,
+    } satisfies JSONSchema7,
+    handler: handleChat,
+    validators: {
+        sync: [
+            () => NEURO.currentActionForce
+                ? actionValidationAccept()
+                : actionValidationFailure('Not currently waiting for a chat response'),
+            () => NEURO.cancelled
+                ? actionValidationFailure('Request was cancelled')
+                : actionValidationAccept(),
+        ],
+    },
+    promptGenerator: 'provide an answer to the user\'s request.',
+    category: 'Chat',
+    autoRegister: false,
+    defaultPermission: PermissionLevel.OFF, // Used with overridePermissions in forceActions
+} as const;
 
 export function registerChatParticipant() {
     const handler: vscode.ChatRequestHandler = async (
@@ -175,24 +196,6 @@ export function registerChatParticipant() {
     }
 }
 
-export const chatAction: Action = {
-    name: 'chat',
-    description:
-        `Provide an answer to ${CONNECTION.userName}'s request.` +
-        ' Use markdown to format your response.' +
-        ' You may additionally include code blocks by using triple backticks.' +
-        ' Be sure to use the correct language identifier after the first set of backticks.' +
-        ' If you decide to include a code block, make sure to explain what it is doing.',
-    schema: {
-        type: 'object',
-        properties: {
-            answer: { type: 'string' },
-        },
-        required: ['answer'],
-        additionalProperties: false,
-    } satisfies JSONSchema7,
-};
-
 async function requestChatResponse(
     prompt: string,
     state: string,
@@ -200,6 +203,7 @@ async function requestChatResponse(
 ): Promise<string> {
     logOutput('INFO', 'Requesting chat response from Neuro');
 
+    // TODO: Refactor
     NEURO.currentActionForce = {
         query: prompt,
         state,
@@ -245,7 +249,8 @@ async function requestChatResponse(
 
 export function cancelChatRequest() {
     NEURO.cancelled = true;
-    NEURO.currentActionForce = null;
     if (!NEURO.client) return;
-    NEURO.client.unregisterActions(['chat']);
+    // NEURO.client.unregisterActions(['chat']);
+    // TODO: I think someone mentioned that this aborts the action force on the server
+    unregisterAction(chatAction.name);
 }
