@@ -70,22 +70,13 @@ export class RCEContext<T extends JSONSchema7Object | undefined = any, K = any> 
 
     constructor(data: ActionData<T>, forced = false) {
         super(() => {
-            // Dispose lifecycle resources while references are still intact.
+            // Clear timers and cancel events
+            this.clearPreHandlerResources();
+
+            // Dispose preview
             this.lifecycle.preview?.dispose();
-            for (const d of this.lifecycle.events ?? []) {
-                d.dispose();
-            }
 
-            // Clear any active timers associated with the request before resolving it.
-            if (this.request?.interval) {
-                clearInterval(this.request.interval);
-                this.request.interval = null;
-            }
-            if (this.request?.timeout) {
-                clearTimeout(this.request.timeout);
-                this.request.timeout = null;
-            }
-
+            // Resolve and clear request
             this.request?.resolve();
             this.request = undefined;
 
@@ -116,4 +107,29 @@ export class RCEContext<T extends JSONSchema7Object | undefined = any, K = any> 
         this.success = success;
         this.dispose();
     };
+
+    /**
+     * Clears request timers and cancel events before handler execution.
+     * This prevents timers/events from triggering during async handler execution.
+     * Should be called immediately before invoking the handler.
+     */
+    clearPreHandlerResources(): void {
+        // Clear timers
+        if (this.request?.interval) {
+            clearInterval(this.request.interval);
+            this.request.interval = null;
+        }
+        if (this.request?.timeout) {
+            clearTimeout(this.request.timeout);
+            this.request.timeout = null;
+        }
+
+        // Dispose cancel events
+        if (this.lifecycle.events) {
+            for (const event of this.lifecycle.events) {
+                event.dispose();
+            }
+            this.lifecycle.events = undefined;
+        }
+    }
 }
