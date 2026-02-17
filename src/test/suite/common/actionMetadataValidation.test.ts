@@ -11,7 +11,7 @@ import { completionAction } from '~/src/completions';
 import { CATEGORY_MISC } from '~/src/rce';
 import { lintActions } from '~/src/lint_problems';
 
-suite('Validate action schemas', async () => {
+suite('Validate action metadata', async () => {
     const metaschema = await (await fetch('https://json-schema.org/draft-07/schema#')).json() as JSONSchema7;
 
     test('File Actions', () => {
