@@ -22,7 +22,7 @@ export interface ActionForceState {
 
 export function createActionForce(force: ActionForceState) {
     NEURO.client?.forceActions(force.query, force.actionNames, force.state, force.ephemeral_context, force.priority);
-    NEURO.waiting = force;
+    NEURO.currentActionForce = force;
 }
 
 //#endregion

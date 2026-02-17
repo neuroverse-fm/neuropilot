@@ -37,7 +37,7 @@ interface Neuro {
      * Whether this extension is currently waiting on a response, agnostic of whether the last request was canceled.
      * This is used to prevent multiple `actions/force` requests from being sent at the same time.
      */
-    waiting: ActionForceState | null;
+    currentActionForce: ActionForceState | null;
     /**
      * Whether the last request was canceled.
      * This is used to tell Neuro that the request was canceled.
@@ -98,7 +98,7 @@ export const NEURO: Neuro = {
     url: 'ws://localhost:8000',
     gameName: 'Visual Studio Code',
     connected: false,
-    waiting: null,
+    currentActionForce: null,
     cancelled: false,
     outputChannel: null,
     tasks: [],

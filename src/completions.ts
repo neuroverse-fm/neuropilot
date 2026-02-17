@@ -55,14 +55,24 @@ export function requestCompletion(beforeContext: string, afterContext: string, f
     }
 
     // You can't request a completion while already waiting
-    if (NEURO.waiting) {
+    if (NEURO.currentActionForce) {
         logOutput('WARNING', 'Attempted to request completion while waiting for response');
         return;
     }
 
     logOutput('INFO', `Requesting completion for ${fileName}`);
 
-    NEURO.waiting = true;
+    NEURO.currentActionForce = {
+        query: 'Write code that fits between afterContext and beforeContext',
+        actionNames: ['complete_code'],
+        state: JSON.stringify({
+            file: fileName,
+            language: language,
+            beforeContext: beforeContext,
+            afterContext: afterContext,
+        }),
+        ephemeral_context: false,
+    };
     NEURO.cancelled = false;
 
     assert(NEURO.client);
@@ -72,21 +82,16 @@ export function requestCompletion(beforeContext: string, afterContext: string, f
     ]);
 
     NEURO.client.forceActions(
-        'Write code that fits between afterContext and beforeContext',
-        ['complete_code'],
-        JSON.stringify({
-            file: fileName,
-            language: language,
-            beforeContext: beforeContext,
-            afterContext: afterContext,
-        }),
-        false,
+        NEURO.currentActionForce.query,
+        NEURO.currentActionForce.actionNames,
+        NEURO.currentActionForce.state,
+        NEURO.currentActionForce.ephemeral_context,
     );
 }
 
 export function cancelCompletionRequest() {
     NEURO.cancelled = true;
-    NEURO.waiting = false;
+    NEURO.currentActionForce = null;
     if (!NEURO.client) return;
     NEURO.client.unregisterActions(['complete_code']);
 }
@@ -109,15 +114,15 @@ export function registerCompletionResultHandler() {
 
             if (NEURO.cancelled) {
                 NEURO.client.sendActionResult(actionData.id, true, 'Request was cancelled');
-                NEURO.waiting = false;
+                NEURO.currentActionForce = null;
                 return;
             }
-            if (!NEURO.waiting) {
+            if (!NEURO.currentActionForce) {
                 NEURO.client.sendActionResult(actionData.id, true, 'Not currently waiting for suggestions');
                 return;
             }
 
-            NEURO.waiting = false;
+            NEURO.currentActionForce = null;
 
             NEURO.client.sendActionResult(actionData.id, true);
 
@@ -154,7 +159,7 @@ export const completionsProvider: vscode.InlineCompletionItemProvider = {
         const timeout = new Promise<void>((_, reject) => setTimeout(() => reject('Request timed out'), timeoutMs));
         const completion = new Promise<void>((resolve) => {
             const interval = setInterval(() => {
-                if (!NEURO.waiting) {
+                if (!NEURO.currentActionForce) {
                     clearInterval(interval);
                     resolve();
                 }

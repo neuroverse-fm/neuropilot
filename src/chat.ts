@@ -56,19 +56,18 @@ export function registerChatResponseHandler() {
 
             if (NEURO.cancelled) {
                 NEURO.client?.sendActionResult(actionData.id, true, 'Request was cancelled');
-                NEURO.waiting = false;
+                NEURO.currentActionForce = null;
                 return;
             }
-            if (!NEURO.waiting) {
+            if (!NEURO.currentActionForce) {
                 NEURO.client?.sendActionResult(actionData.id, true, 'Not currently waiting for a chat response');
                 return;
             }
 
-            NEURO.waiting = false;
+            NEURO.currentActionForce = null;
 
             NEURO.client?.sendActionResult(actionData.id, true);
             lastChatResponse = answer;
-            NEURO.waiting = false;
             logOutput('INFO', 'Received chat response:\n' + answer);
         }
     });
@@ -99,7 +98,7 @@ export function registerChatParticipant() {
             });
             return { metadata: { command: '' } };
         }
-        if (NEURO.waiting) {
+        if (NEURO.currentActionForce) {
             stream.markdown(`Already waiting for a response from ${currentAPI}.`);
             stream.button({
                 command: 'neuropilot.reconnect',
@@ -201,7 +200,12 @@ async function requestChatResponse(
 ): Promise<string> {
     logOutput('INFO', 'Requesting chat response from Neuro');
 
-    NEURO.waiting = true;
+    NEURO.currentActionForce = {
+        query: prompt,
+        state,
+        actionNames: ['chat'],
+        ephemeral_context: false,
+    };
     NEURO.cancelled = false;
 
     NEURO.client?.registerActions([
@@ -219,7 +223,7 @@ async function requestChatResponse(
     const timeout = new Promise<string>((_, reject) => setTimeout(() => reject('Request timed out'), timeoutMs));
     const response = new Promise<string>((resolve) => {
         const interval = setInterval(() => {
-            if (!NEURO.waiting) {
+            if (!NEURO.currentActionForce) {
                 clearInterval(interval);
                 resolve(lastChatResponse);
             }
@@ -241,7 +245,7 @@ async function requestChatResponse(
 
 export function cancelChatRequest() {
     NEURO.cancelled = true;
-    NEURO.waiting = false;
+    NEURO.currentActionForce = null;
     if (!NEURO.client) return;
     NEURO.client.unregisterActions(['chat']);
 }

@@ -116,7 +116,7 @@ export function initializeCommonState(context: vscode.ExtensionContext) {
     NEURO.url = CONNECTION.websocketUrl;
     NEURO.gameName = CONNECTION.gameName;
     NEURO.connected = false;
-    NEURO.waiting = false;
+    NEURO.currentActionForce = null;
     NEURO.cancelled = false;
     NEURO.outputChannel = vscode.window.createOutputChannel('NeuroPilot');
     NEURO.currentController = CONNECTION.nameOfAPI;
