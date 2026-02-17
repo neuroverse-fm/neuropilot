@@ -2,12 +2,30 @@
  * Helper functions and types for interacting with the Neuro Game SDK.
  */
 
-import { Action } from 'neuro-game-sdk';
+import { Action, ActionForcePriorityEnum } from 'neuro-game-sdk';
 import { ACTIONS, Permission, PermissionLevel } from '@/config';
 import { logOutput, turtleSafari } from '@/utils/misc';
 import { PromptGenerator } from '@/rce';
 import { RCECancelEvent } from '@events/utils';
 import type { RCEContext } from '@context/rce';
+import { NEURO } from '@/constants';
+
+//#region Action force utils
+
+export interface ActionForceState {
+    state?: string;
+    query: string;
+    ephemeral_context?: boolean;
+    actionNames: string[];
+    priority?: ActionForcePriorityEnum;
+}
+
+export function createActionForce(force: ActionForceState) {
+    NEURO.client?.forceActions(force.query, force.actionNames, force.state, force.ephemeral_context, force.priority);
+    NEURO.waiting = force;
+}
+
+//#endregion
 
 //#region Action metadata & helpers
 

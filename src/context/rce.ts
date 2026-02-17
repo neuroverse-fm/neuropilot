@@ -13,7 +13,7 @@ export interface RCELifecycleMetadata {
     validatorResults?: {
         sync?: ActionValidationResult[];
     };
-    setupHooks?: boolean
+    setupHooks?: boolean;
 }
 
 export type SimplifiedStatusUpdateHandler = (status: ActionStatus, message?: string) => void;
