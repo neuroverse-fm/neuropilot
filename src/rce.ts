@@ -433,13 +433,17 @@ export function canForceActions(): boolean {
 /**
  * Wrapper function for {@link NeuroClient.forceActions} that uses the RCE system to register and unregister the required actions.
  * Actions must be registered with the RCE system via {@link addActions} before they can be forced with this function.
- * @param params The parameters for forcing actions.
+ * @param params The parameters for forcing actions. A (possibly modified) copy of this object will be stored in {@link NEURO.currentActionForce} for the duration of the force.
  * @param overridePermissions If specified, allow execution of the actions once with the given permission level.
  * @see {@link NeuroClient.forceActions} for the other parameters' documentation.
  */
 export function tryForceActions(params: ActionForceParams): boolean {
     if (!canForceActions())
         return false;
+    if (params.actionNames.length === 0) {
+        logOutput('WARNING', 'Tried to force an empty array of actions.');
+        return false;
+    }
 
     // Verify that all actions are registered with RCE
     if (!params.actionNames.every(name => ACTIONS_ARRAY.some(a => a.name === name))) {
@@ -447,14 +451,26 @@ export function tryForceActions(params: ActionForceParams): boolean {
         return false;
     }
 
-    NEURO.currentActionForce = params;
+    // Create a copy to prevent external mutation
+    const paramsCopy = { ...params, actionNames: [...params.actionNames] };
+
+    // If overridePermissions is not set, only registered actions can be forced
+    if (!paramsCopy.overridePermissions) {
+        paramsCopy.actionNames = paramsCopy.actionNames.filter(name => REGISTERED_ACTIONS.has(name));
+    }
+
+    // Cannot force if no actions are left in the array after filtering
+    if (paramsCopy.actionNames.length === 0)
+        return false;
+
+    NEURO.currentActionForce = paramsCopy;
 
     // Register actions with overridden permissions if specified
     if (params.overridePermissions) {
         reregisterAllActions(true);
     }
 
-    NEURO.client?.forceActions(params.query, params.actionNames, params.state, params.ephemeral_context, params.priority);
+    NEURO.client?.forceActions(paramsCopy.query, paramsCopy.actionNames, paramsCopy.state, paramsCopy.ephemeral_context, paramsCopy.priority);
 
     return true;
 }

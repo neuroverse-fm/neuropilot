@@ -7,7 +7,7 @@ import assert from 'node:assert';
 import { JSONSchema7 } from 'json-schema';
 import { actionHandlerFailure, actionHandlerSuccess, actionValidationAccept, actionValidationFailure, RCEAction, RCEHandlerReturns } from './utils/neuro_client';
 import { RCEContext } from './context/rce';
-import { addActions, unregisterAction } from './rce';
+import { addActions, tryForceActions, unregisterAction } from './rce';
 
 interface Participant {
     id: string;
@@ -43,14 +43,12 @@ interface NeuroChatContext {
 
 let lastChatResponse = '';
 
-export function registerChatResponseHandler() {
-    addActions([chatAction]);
+export function addChatAction() {
+    addActions([chatAction], false);
 }
 
 function handleChat(context: RCEContext): RCEHandlerReturns {
     const answer = context.data.params!.answer;
-
-    NEURO.client?.unregisterActions(['chat']);
 
     if (NEURO.cancelled) {
         return actionHandlerFailure('Request was cancelled');
@@ -80,7 +78,7 @@ export const chatAction: RCEAction = {
     handler: handleChat,
     validators: {
         sync: [
-            () => NEURO.currentActionForce
+            () => NEURO.currentActionForce // This is done before the action force is cleared
                 ? actionValidationAccept()
                 : actionValidationFailure('Not currently waiting for a chat response'),
             () => NEURO.cancelled
@@ -91,6 +89,7 @@ export const chatAction: RCEAction = {
     promptGenerator: 'provide an answer to the user\'s request.',
     category: 'Chat',
     autoRegister: false,
+    hidden: true,
     defaultPermission: PermissionLevel.OFF, // Used with overridePermissions in forceActions
 } as const;
 
@@ -121,11 +120,11 @@ export function registerChatParticipant() {
         }
         if (NEURO.currentActionForce) {
             stream.markdown(`Already waiting for a response from ${currentAPI}.`);
-            stream.button({
-                command: 'neuropilot.reconnect',
-                title: 'Reconnect',
-                tooltip: 'Attempt to reconnect to Neuro API',
-            });
+            // stream.button({
+            //     command: 'neuropilot.reconnect',
+            //     title: 'Reconnect',
+            //     tooltip: 'Attempt to reconnect to Neuro API',
+            // });
 
             return { metadata: { command: '' } };
         }
@@ -136,23 +135,21 @@ export function registerChatParticipant() {
         const references: NeuroChatContext[] = [];
         for (const ref of request.references) {
             if (ref.value instanceof vscode.Location) {
-                await vscode.workspace.openTextDocument(ref.value.uri).then((document) => {
-                    assert(ref.value instanceof vscode.Location);
-                    const text = filterFileContents(document.getText(ref.value.range));
-                    references.push({
-                        fileName: simpleFileName(ref.value.uri.fsPath),
-                        range: ref.value.range,
-                        text: text,
-                    });
+                const document = await vscode.workspace.openTextDocument(ref.value.uri);
+                assert(ref.value instanceof vscode.Location);
+                const text = filterFileContents(document.getText(ref.value.range));
+                references.push({
+                    fileName: simpleFileName(ref.value.uri.fsPath),
+                    range: ref.value.range,
+                    text: text,
                 });
             } else if (ref.value instanceof vscode.Uri) {
-                await vscode.workspace.openTextDocument(ref.value).then((document) => {
-                    assert(ref.value instanceof vscode.Uri);
-                    const text = filterFileContents(document.getText());
-                    references.push({
-                        fileName: simpleFileName(ref.value.fsPath),
-                        text,
-                    });
+                const document = await vscode.workspace.openTextDocument(ref.value);
+                assert(ref.value instanceof vscode.Uri);
+                const text = filterFileContents(document.getText());
+                references.push({
+                    fileName: simpleFileName(ref.value.fsPath),
+                    text,
                 });
             } else if (typeof ref.value === 'string') {
                 references.push({
@@ -203,20 +200,19 @@ async function requestChatResponse(
 ): Promise<string> {
     logOutput('INFO', 'Requesting chat response from Neuro');
 
-    // TODO: Refactor
-    NEURO.currentActionForce = {
-        query: prompt,
-        state,
-        actionNames: ['chat'],
-        ephemeral_context: false,
-    };
     NEURO.cancelled = false;
 
-    NEURO.client?.registerActions([
-        chatAction,
-    ]);
-
-    NEURO.client?.forceActions(prompt, ['chat'], state, false);
+    const status = tryForceActions({
+        query: prompt,
+        state,
+        actionNames: [chatAction.name],
+        ephemeral_context: false,
+        overridePermissions: PermissionLevel.AUTOPILOT,
+    });
+    if (!status) {
+        logOutput('ERROR', 'Failed to force chat action');
+        return 'Failed to request response from Neuro.';
+    }
 
     token.onCancellationRequested(() => {
         logOutput('INFO', 'Cancelled request');
@@ -250,7 +246,6 @@ async function requestChatResponse(
 export function cancelChatRequest() {
     NEURO.cancelled = true;
     if (!NEURO.client) return;
-    // NEURO.client.unregisterActions(['chat']);
     // TODO: I think someone mentioned that this aborts the action force on the server
     unregisterAction(chatAction.name);
 }

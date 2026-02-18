@@ -39,7 +39,7 @@ interface Neuro {
      */
     currentActionForce: ActionForceParams | null;
     /**
-     * Whether the last request was canceled.
+     * Whether the last chat or completion request was canceled.
      * This is used to tell Neuro that the request was canceled.
      */
     cancelled: boolean;

@@ -118,6 +118,11 @@ export interface RCEAction<T = any> extends Action {
     category: string | null;
     /** Whether to automatically register the action with Neuro upon addition. Defaults to true. */
     autoRegister?: boolean;
+    /**
+     * Whether the action should be hidden in the action permissions view.
+     * For actions that are exclusively used in action forces.
+     */
+    hidden?: boolean;
     /** A condition that must be true for the action to be registered. If not provided, the action is always registered. **This function must never throw.** */
     registerCondition?: () => boolean;
     /** 

@@ -9,6 +9,7 @@ import { addLintActions } from '@/lint_problems';
 import { RCEActionHandler } from '@/rce';
 import { addChangelogActions } from '@/changelog';
 import { addRequestCookieAction } from '@/functions/cookies';
+import { addChatAction } from '@/chat';
 
 export function addUnsupervisedActions() {
     addFileActions();
@@ -19,6 +20,7 @@ export function addUnsupervisedActions() {
     addLintActions();
     addChangelogActions();
     addRequestCookieAction();
+    addChatAction();
 }
 
 /**
