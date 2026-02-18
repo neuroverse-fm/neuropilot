@@ -7,7 +7,7 @@ import assert from 'node:assert';
 import { JSONSchema7 } from 'json-schema';
 import { actionHandlerFailure, actionHandlerSuccess, actionValidationAccept, actionValidationFailure, RCEAction, RCEHandlerReturns } from './utils/neuro_client';
 import { RCEContext } from './context/rce';
-import { addActions, tryForceActions, unregisterAction } from './rce';
+import { addActions, registerAction, tryForceActions, unregisterAction } from './rce';
 
 interface Participant {
     id: string;
@@ -202,6 +202,7 @@ async function requestChatResponse(
 
     NEURO.cancelled = false;
 
+    registerAction(chatAction.name);
     const status = tryForceActions({
         query: prompt,
         state,

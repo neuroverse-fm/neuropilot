@@ -7,7 +7,7 @@ import { changelogActions } from '~/src/changelog';
 import { REQUEST_COOKIE_ACTION } from '@/functions/cookies';
 import { CATEGORY_GIT, CATEGORY_GIT_CONFIG, CATEGORY_GIT_REMOTES, gitActions } from '~/src/git';
 import { chatAction } from '~/src/chat';
-import { completionAction } from '~/src/completions';
+import { completeCodeAction } from '~/src/completions';
 import { CATEGORY_MISC } from '~/src/rce';
 import { lintActions } from '~/src/lint_problems';
 
@@ -78,7 +78,7 @@ suite('Validate action metadata', async () => {
     test('Copilot Chat integrations', () => {
         const actionsToTest = {
             chat: chatAction,
-            complete_code: completionAction(0), // maxCount does not matter here
+            complete_code: completeCodeAction,
         };
         const actions = Object.keys(actionsToTest) as (keyof typeof actionsToTest)[];
         for (const a of actions) {

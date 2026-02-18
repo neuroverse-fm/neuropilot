@@ -10,6 +10,7 @@ import { RCEActionHandler } from '@/rce';
 import { addChangelogActions } from '@/changelog';
 import { addRequestCookieAction } from '@/functions/cookies';
 import { addChatAction } from '@/chat';
+import { addCompleteCodeAction } from '@/completions';
 
 export function addUnsupervisedActions() {
     addFileActions();
@@ -21,6 +22,7 @@ export function addUnsupervisedActions() {
     addChangelogActions();
     addRequestCookieAction();
     addChatAction();
+    addCompleteCodeAction();
 }
 
 /**
