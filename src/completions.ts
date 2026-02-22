@@ -14,14 +14,6 @@ let lastSuggestions: string[] = [];
 // export const completionAction = (maxCount: number) => ({
 export const completeCodeAction: RCEAction = {
     name: 'complete_code',
-    // description: maxCount == 1
-    //     ? 'Suggest code to write.' +
-    //     ' You may make one suggestion.' +
-    //     ' Your suggestion can be a single line or a multi-line code snippet.'
-
-    //     : 'Suggest code to write.' +
-    //     ` You may make up to ${maxCount} suggestions, but only one will be used.` +
-    //     ' Your suggestions can be single lines or multi-line code snippets.',
     description: 'Suggest code to write.' +
         ' Only one suggestion you provide will be chosen.' +
         ' Your suggestions can be single lines or multi-line code snippets.',
@@ -31,7 +23,6 @@ export const completeCodeAction: RCEAction = {
             suggestions: {
                 type: 'array',
                 items: { type: 'string' },
-                // maxItems: maxCount,
                 maxItems: 3,
             },
         },
@@ -110,12 +101,14 @@ export function requestCompletion(cursorContext: NeuroPositionContext, fileName:
 
     registerAction(completeCodeAction.name);
     const status = tryForceActions({
-        query: 'Suggest code to be inserted at the cursor position based on the provided context.',
+        query: 'Suggest code to be inserted at the cursor position based on the provided context. Your suggestions can be single lines or multi-line code snippets.',
         actionNames: [completeCodeAction.name],
-        state: formatContext(cursorContext)
-            + '\n\nIf you decide to provide multiple suggestions, put the suggestion you\'re most confident in first.'
-            + ' Only one of your suggestions will be used.'
-            + `\n\n**IMPORTANT**: Do not provide more than ${maxCount} suggestions.`,
+        state: formatContext(cursorContext) + (maxCount === 1
+            ? '\n\nIMPORTANT: Provide only one suggestion.'
+            : '\n\nIf you decide to provide multiple suggestions, put the suggestion you\'re most confident in first.'
+                + ' Only one of your suggestions will be used.'
+                + `\n\n**IMPORTANT**: Do not provide more than ${maxCount} suggestions.`
+        ),
         ephemeral_context: false,
         priority: ActionForcePriorityEnum.HIGH, // Process immediately, shorten utterance (Completions should be fast, but are not critical)
         overridePermissions: PermissionLevel.AUTOPILOT,
