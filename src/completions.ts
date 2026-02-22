@@ -3,7 +3,7 @@ import { NEURO } from '@/constants';
 import { logOutput, simpleFileName, getPositionContext, formatContext, NeuroPositionContext } from '@/utils/misc';
 import { CONFIG, PermissionLevel } from '@/config';
 import { JSONSchema7 } from 'json-schema';
-import { actionHandlerFailure, actionHandlerSuccess, actionValidationAccept, actionValidationFailure, RCEAction, RCEHandlerReturns } from '@/utils/neuro_client';
+import { actionHandlerFailure, actionHandlerSuccess, actionValidationAccept, actionValidationFailure, actionValidationRetry, RCEAction, RCEHandlerReturns } from '@/utils/neuro_client';
 import { RCEContext } from '@context/rce';
 import { addActions, canForceActions, registerAction, tryForceActions, unregisterAction } from '@/rce';
 import { ActionForcePriorityEnum } from 'neuro-game-sdk';
@@ -48,6 +48,12 @@ export const completeCodeAction: RCEAction = {
             () => NEURO.cancelled
                 ? actionValidationFailure('Request was cancelled')
                 : actionValidationAccept(),
+            (context) => {
+                const maxCount = CONFIG.maxCompletions || 3;
+                if (context.data.params!.suggestions.length > maxCount)
+                    return actionValidationRetry(`Too many suggestions. Maximum is ${maxCount}.`);
+                return actionValidationAccept();
+            },
         ],
     },
     promptGenerator: null, // Only ever run in Autopilot mode
