@@ -7,7 +7,7 @@ import assert from 'node:assert';
 import { JSONSchema7 } from 'json-schema';
 import { actionHandlerFailure, actionHandlerSuccess, actionValidationAccept, actionValidationFailure, RCEAction, RCEHandlerReturns } from './utils/neuro_client';
 import { RCEContext } from './context/rce';
-import { addActions, registerAction, tryForceActions, unregisterAction } from './rce';
+import { abortActionForce, addActions, registerAction, tryForceActions } from '@/rce';
 
 interface Participant {
     id: string;
@@ -86,7 +86,7 @@ export const chatAction: RCEAction = {
                 : actionValidationAccept(),
         ],
     },
-    promptGenerator: 'provide an answer to the user\'s request.',
+    promptGenerator: null, // Only ever run in Autopilot mode
     category: 'Chat',
     autoRegister: false,
     hidden: true,
@@ -247,6 +247,7 @@ async function requestChatResponse(
 export function cancelChatRequest() {
     NEURO.cancelled = true;
     if (!NEURO.client) return;
-    // TODO: I think someone mentioned that this aborts the action force on the server
-    unregisterAction(chatAction.name);
+    if (NEURO.currentActionForce?.actionNames.length === 1 && NEURO.currentActionForce.actionNames[0] === chatAction.name) {
+        abortActionForce();
+    }
 }

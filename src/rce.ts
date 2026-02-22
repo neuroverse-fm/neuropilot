@@ -381,8 +381,15 @@ export function reregisterAllActions(conservative: boolean): void {
     // Apply action force permission override
     if (NEURO.currentActionForce?.overridePermissions !== undefined) {
         logOutput('INFO', `Reregistering actions with override permission level ${NEURO.currentActionForce.overridePermissions} due to active action force.`);
-        for (const actionName of NEURO.currentActionForce.actionNames) {
-            permissions[actionName] = NEURO.currentActionForce.overridePermissions;
+        if (typeof NEURO.currentActionForce.overridePermissions === 'object') {
+            for (const actionName in NEURO.currentActionForce.overridePermissions) {
+                permissions[actionName] = NEURO.currentActionForce.overridePermissions[actionName];
+            }
+        }
+        else {
+            for (const actionName of NEURO.currentActionForce.actionNames) {
+                permissions[actionName] = NEURO.currentActionForce.overridePermissions;
+            }
         }
     }
 
@@ -480,6 +487,20 @@ function clearActionForce(): void {
     if (!NEURO.currentActionForce) return;
     NEURO.currentActionForce = null;
     reregisterAllActions(true);
+}
+
+/**
+ * Aborts the current action force by unregistering its actions,
+ * and then re-registering all actions with their original permissions.
+ * There is a slight delay between the unregistration and reregistration to
+ * ensure they arrive in the correct order.
+ * @see {@link https://github.com/VedalAI/neuro-sdk/issues/14}
+ */
+export async function abortActionForce(): Promise<void> {
+    NEURO.client?.unregisterActions(NEURO.currentActionForce?.actionNames ?? []);
+    NEURO.currentActionForce = null; // Not using clearActionForce here since we want to delay re-registration.
+    await new Promise(resolve => setTimeout(resolve, 250)); // Wait for 250ms
+    reregisterAllActions(false);
 }
 
 /**
@@ -675,7 +696,7 @@ export async function RCEActionHandler(actionData: ActionData) {
                     ? NEURO.currentController
                     : 'The Neuro API server') +
                     ' wants to ' +
-                    (typeof context.action.promptGenerator === 'string' ? context.action.promptGenerator : context.action.promptGenerator(context)).trim();
+                    (typeof context.action.promptGenerator === 'string' ? context.action.promptGenerator : context.action.promptGenerator?.(context) ?? `execute ${context.action.name}.`).trim();
 
                 context.request = {
                     prompt,

@@ -58,7 +58,7 @@ export class ActionsViewProvider extends BaseWebviewViewProvider<ActionsViewMess
             .map(info => ({
                 id: info.action.name,
                 label: info.action.displayName ?? toTitleCase(info.action.name),
-                category: info.action.category ?? 'No Category Specified', // TODO: Handle null category better?
+                category: info.action.category ?? 'Unknown',
                 description: info.action.description,
                 permissionLevel:
                     (this._currentContext === 'user' ? info.configuredGlobalPermission : info.configuredWorkspacePermission)

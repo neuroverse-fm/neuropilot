@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { NEURO } from '@/constants';
-import { logOutput, simpleFileName, getPositionContext } from '@/utils/misc';
+import { logOutput, simpleFileName, getPositionContext, formatContext, NeuroPositionContext } from '@/utils/misc';
 import { CONFIG, PermissionLevel } from '@/config';
 import { JSONSchema7 } from 'json-schema';
 import { actionHandlerFailure, actionHandlerSuccess, actionValidationAccept, actionValidationFailure, RCEAction, RCEHandlerReturns } from '@/utils/neuro_client';
@@ -50,7 +50,7 @@ export const completeCodeAction: RCEAction = {
                 : actionValidationAccept(),
         ],
     },
-    promptGenerator: 'suggest code.',
+    promptGenerator: null, // Only ever run in Autopilot mode
     defaultPermission: PermissionLevel.OFF, // Used with overridePermissions in forceActions
     autoRegister: false,
     hidden: true,
@@ -72,7 +72,7 @@ export function addCompleteCodeAction() {
 }
 
 // TODO: Figure out maxCount properly
-export function requestCompletion(beforeContext: string, afterContext: string, fileName: string, language: string, maxCount: number) {
+export function requestCompletion(cursorContext: NeuroPositionContext, fileName: string, language: string, maxCount: number) {
     // If completions are disabled, notify and return early.
     if (CONFIG.completionTrigger === 'off') {
         if (!NEURO.warnOnCompletionsOff) {
@@ -96,7 +96,7 @@ export function requestCompletion(beforeContext: string, afterContext: string, f
 
     // You can't request a completion while already waiting
     if (!canForceActions()) {
-        logOutput('WARNING', 'Attempted to request completion while waiting for response');
+        logOutput('WARNING', 'Already forcing an action from Neuro, aborting force attempt.');
         return;
     }
 
@@ -104,17 +104,14 @@ export function requestCompletion(beforeContext: string, afterContext: string, f
 
     registerAction(completeCodeAction.name);
     const status = tryForceActions({
-        query: 'Write code that fits between afterContext and beforeContext',
+        query: 'Suggest code to be inserted at the cursor position based on the provided context.',
         actionNames: [completeCodeAction.name],
-        state: JSON.stringify({
-            file: fileName,
-            language: language,
-            beforeContext: beforeContext,
-            afterContext: afterContext,
-            maxCompletions: maxCount,
-        }),
+        state: formatContext(cursorContext)
+            + '\n\nIf you decide to provide multiple suggestions, put the suggestion you\'re most confident in first.'
+            + ' Only one of your suggestions will be used.'
+            + `\n\n**IMPORTANT**: Do not provide more than ${maxCount} suggestions.`,
         ephemeral_context: false,
-        priority: ActionForcePriorityEnum.HIGH, // Completions should be fast, but are not critical
+        priority: ActionForcePriorityEnum.HIGH, // Process immediately, shorten utterance (Completions should be fast, but are not critical)
         overridePermissions: PermissionLevel.AUTOPILOT,
     });
     if (!status) {
@@ -146,7 +143,7 @@ export const completionsProvider: vscode.InlineCompletionItemProvider = {
         const fileName = simpleFileName(document.fileName);
         const maxCount = CONFIG.maxCompletions || 3;
 
-        requestCompletion(cursorContext.contextBefore, cursorContext.contextAfter, fileName, document.languageId, maxCount);
+        requestCompletion(cursorContext, fileName, document.languageId, maxCount);
 
         token.onCancellationRequested(() => {
             logOutput('INFO', 'Cancelled request');

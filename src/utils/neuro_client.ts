@@ -24,11 +24,14 @@ export interface ActionForceParams {
     actionNames: string[];
     priority?: ActionForcePriorityEnum;
     /**
-     * If specified, allow execution of actions.
-     * Note that at the moment, action forces will not be retried the permission is {@link PermissionLevel.COPILOT}
+     * If specified, execute all actions with the specified permission level instead of the current one.
+     * If an object is provided, the keys are action names and the values are the permission levels to use for those actions.
+     * If an action is not included in the object, it will not have its permission overridden.
+     * 
+     * Note that at the moment, action forces will not be retried if the permission is {@link PermissionLevel.COPILOT}
      * or if the chosen action's handler is async.
      */
-    overridePermissions?: PermissionLevel.COPILOT | PermissionLevel.AUTOPILOT;
+    overridePermissions?: PermissionLevel.COPILOT | PermissionLevel.AUTOPILOT | Record<string, PermissionLevel.AUTOPILOT | PermissionLevel.COPILOT>;
 }
 
 //#endregion
@@ -105,10 +108,12 @@ export interface RCEAction<T = any> extends Action {
      * The function to generate a prompt for the action request (Copilot Mode). 
      * The prompt should fit the phrasing scheme "Neuro wants to [prompt]".
      * 
+     * Only set this to `null` if the action is never intended to be used in Copilot mode.
+     * 
      * It is this way due to a potential new addition in Neuro API "v2". (not officially proposed)
      * More info (comment): https://github.com/VedalAI/neuro-game-sdk/discussions/58#discussioncomment-12938623
      */
-    promptGenerator: PromptGenerator;
+    promptGenerator: PromptGenerator | null;
     /** Default permission for actions when no permission is configured in user or workspace settings. Defaults to {@link PermissionLevel.OFF}. */
     defaultPermission?: PermissionLevel;
     /**
