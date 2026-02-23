@@ -1,11 +1,11 @@
 import * as vscode from 'vscode';
 import { NEURO } from '@/constants';
 import { logOutput, simpleFileName, getPositionContext, formatContext, NeuroPositionContext } from '@/utils/misc';
-import { CONFIG, PermissionLevel } from '@/config';
+import { CONFIG, CONNECTION, PermissionLevel } from '@/config';
 import { JSONSchema7 } from 'json-schema';
 import { actionHandlerFailure, actionHandlerSuccess, actionValidationAccept, actionValidationFailure, actionValidationRetry, RCEAction, RCEHandlerReturns } from '@/utils/neuro_client';
 import { RCEContext } from '@context/rce';
-import { addActions, canForceActions, registerAction, tryForceActions, unregisterAction } from '@/rce';
+import { abortActionForce, addActions, canForceActions, tryForceActions } from '@/rce';
 import { ActionForcePriorityEnum } from 'neuro-game-sdk';
 
 let lastSuggestions: string[] = [];
@@ -100,7 +100,6 @@ export function requestCompletion(cursorContext: NeuroPositionContext, fileName:
 
     logOutput('INFO', `Requesting completion for ${fileName}`);
 
-    registerAction(completeCodeAction.name);
     const status = tryForceActions({
         query: 'Suggest code to be inserted at the cursor position based on the provided context.'
             + (maxCount === 1
@@ -128,7 +127,8 @@ export function requestCompletion(cursorContext: NeuroPositionContext, fileName:
 
 export function cancelCompletionRequest() {
     requestCancelled = true;
-    unregisterAction(completeCodeAction.name);
+    abortActionForce();
+    NEURO.client?.sendContext(`${CONNECTION.userName} cancelled the completion request.`);
 }
 
 export const completionsProvider: vscode.InlineCompletionItemProvider = {
