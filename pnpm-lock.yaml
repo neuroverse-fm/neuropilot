@@ -24,8 +24,8 @@ importers:
         specifier: ^1.5.0
         version: 1.5.0
       neuro-game-sdk:
-        specifier: ^1.0.9
-        version: 1.0.9(ws@8.18.3)
+        specifier: ^1.0.10
+        version: 1.0.10(ws@8.18.3)
       preact:
         specifier: ^10.28.3
         version: 10.28.3
@@ -2326,8 +2326,8 @@ packages:
     resolution: {integrity: sha512-+EUsqGPLsM+j/zdChZjsnX51g4XrHFOIXwfnCVPGlQk/k5giakcKsuxCObBRu6DSm9opw/O6slWbJdghQM4bBg==}
     engines: {node: '>= 0.6'}
 
-  neuro-game-sdk@1.0.9:
-    resolution: {integrity: sha512-hqViST/0D0EOAKeRMUQqQtbIuXfbEP3XctgowpNpiuqiq0+XAf165xS4zIs9EknsJV5069ap0CDIAxwP1zzSHg==}
+  neuro-game-sdk@1.0.10:
+    resolution: {integrity: sha512-JmrG0W8+mIBQOdv5FFzyuQk0BKp7CDDxmwLIvfhcewSNd2UyKBNAoBAKK166RSsePjeIu/EfqyQc9k59lEGPFg==}
 
   nice-try@1.0.5:
     resolution: {integrity: sha512-1nh45deeb5olNY7eX82BkPO7SSxR5SSYJiPTrTdFUVYwAl8CKMA5N9PjTYkHiRjisVcxcQ1HXdLhx2qxxJzLNQ==}
@@ -5707,7 +5707,7 @@ snapshots:
 
   negotiator@0.6.3: {}
 
-  neuro-game-sdk@1.0.9(ws@8.18.3):
+  neuro-game-sdk@1.0.10(ws@8.18.3):
     dependencies:
       '@types/json-schema': 7.0.15
       '@types/ws': 8.18.1
