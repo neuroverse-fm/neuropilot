@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { ActionData } from 'neuro-game-sdk';
 
 import { NEURO } from '@/constants';
 import { DiffRangeType, escapeRegExp, getDiffRanges, getFence, getPositionContext, getProperty, getVirtualCursor, showDiffRanges, isPathNeuroSafe, logOutput, setVirtualCursor, simpleFileName, substituteMatch, clearDecorations, formatContext, filterFileContents, positionFromIndex, indexFromPosition, NeuroPositionContext } from '@/utils/misc';
@@ -7,7 +8,6 @@ import { CONFIG, CONNECTION } from '@/config';
 import { createCursorPositionChangedEvent } from '@events/cursor';
 import { RCECancelEvent } from '@events/utils';
 import { addActions, registerAction, unregisterAction } from '@/rce';
-import { ActionStatus } from '@events/actions';
 import { createPreviewCursor, createPreviewHighlight } from '@previews/edits';
 import { RCEContext } from '@/context/rce';
 
@@ -273,7 +273,7 @@ export const editingActions = {
             description: undefined,
         },
         handler: handlePlaceCursor,
-        preview: (actionData: ActionData) => previewCursorMovement(actionData.params, 'move her cursor to this position.'),
+        preview: (context) => previewCursorMovement(context.data.params, 'move her cursor to this position.'),
         validators: {
             sync: [checkCurrentFile, createPositionValidator()],
         },
@@ -313,8 +313,8 @@ export const editingActions = {
             additionalProperties: false,
         },
         handler: handleInsertText,
-        preview: (actionData) => {
-            const positionParam = actionData.params.position;
+        preview: (context) => {
+            const positionParam = context.data.params.position;
             if (!positionParam) return { dispose: () => { } };
             else return previewCursorMovement(positionParam, 'insert text at this position.');
         },
@@ -371,9 +371,9 @@ export const editingActions = {
             required: ['text'],
         },
         handler: handleInsertLines,
-        preview: (actionData) => {
-            const length = (actionData.params.text as string).split('\n').length;
-            let line: number | undefined = actionData.params.insertUnder;
+        preview: (context) => {
+            const length = (context.data.params.text as string).split('\n').length;
+            let line: number | undefined = context.data.params.insertUnder;
             if (!line) {
                 line = getVirtualCursor()!.line;
             } else {
@@ -429,7 +429,7 @@ export const editingActions = {
             required: ['find', 'replaceWith', 'match'],
         },
         handler: handleReplaceText,
-        preview: (actionData) => previewFindFunctions(actionData, 'replace'),
+        preview: (context) => previewFindFunctions(context.data, 'replace'),
         cancelEvents: [cancelOnDidChangeActiveTextEditor],
         validators: {
             sync: [checkCurrentFile, createStringValidator(['find', 'replaceWith']), createLineRangeValidator('lineRange')],
@@ -488,7 +488,7 @@ export const editingActions = {
             additionalProperties: false,
         },
         handler: handleDeleteText,
-        preview: (actionData) => previewFindFunctions(actionData, 'delete'),
+        preview: (context) => previewFindFunctions(context.data, 'delete'),
         cancelEvents: [cancelOnDidChangeActiveTextEditor],
         validators: {
             sync: [checkCurrentFile, createStringValidator(['find']), createLineRangeValidator('lineRange')],
@@ -553,7 +553,7 @@ export const editingActions = {
             additionalProperties: false,
         },
         handler: handleFindText,
-        preview: (actionData) => previewFindFunctions(actionData, 'find'),
+        preview: (context) => previewFindFunctions(context.data, 'find'),
         cancelEvents: [cancelOnDidChangeActiveTextEditor],
         validators: {
             sync: [checkCurrentFile, createStringValidator(['find']), createLineRangeValidator('lineRange')],
@@ -686,7 +686,7 @@ export const editingActions = {
             additionalProperties: false,
         },
         handler: handleRewriteLines,
-        preview: (actionData) => previewLineHighlights(actionData.params, 'rewrite these lines.'),
+        preview: (context) => previewLineHighlights(context.data.params, 'rewrite these lines.'),
         cancelEvents: commonCancelEvents,
         validators: {
             sync: [checkCurrentFile, createLineRangeValidator(), createStringValidator(['content'])],
@@ -705,7 +705,7 @@ export const editingActions = {
         category: CATEGORY_EDITING,
         schema: LINE_RANGE_SCHEMA,
         handler: handleDeleteLines,
-        preview: (actionData) => previewLineHighlights(actionData.params, 'delete these lines.'),
+        preview: (context) => previewLineHighlights(context.data.params, 'delete these lines.'),
         cancelEvents: commonCancelEvents,
         validators: {
             sync: [checkCurrentFile, createLineRangeValidator()],
