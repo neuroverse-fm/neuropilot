@@ -102,14 +102,18 @@ export function requestCompletion(cursorContext: NeuroPositionContext, fileName:
 
     registerAction(completeCodeAction.name);
     const status = tryForceActions({
-        query: 'Suggest code to be inserted at the cursor position based on the provided context. Your suggestions can be single lines or multi-line code snippets.',
-        actionNames: [completeCodeAction.name],
-        state: formatContext(cursorContext) + (maxCount === 1
-            ? '\n\nIMPORTANT: Provide only one suggestion.'
-            : '\n\nIf you decide to provide multiple suggestions, put the suggestion you\'re most confident in first.'
+        query: 'Suggest code to be inserted at the cursor position based on the provided context.'
+            + (maxCount === 1
+                ? ' Your suggestion can be a single line or a multi-line code snippet.'
+                + '**IMPORTANT**: Provide only one suggestion.'
+
+                : ' Your suggestions can be single lines or multi-line code snippets.'
+                + ' If you decide to provide multiple suggestions, put the suggestion you\'re most confident in first.'
                 + ' Only one of your suggestions will be used.'
-                + `\n\n**IMPORTANT**: Do not provide more than ${maxCount} suggestions.`
-        ),
+                + `**IMPORTANT**: Do not provide more than ${maxCount} suggestions.`
+            ),
+        actionNames: [completeCodeAction.name],
+        state: formatContext(cursorContext),
         ephemeral_context: false,
         priority: ActionForcePriorityEnum.HIGH, // Process immediately, shorten utterance (Completions should be fast, but are not critical)
         overridePermissions: PermissionLevel.AUTOPILOT,
