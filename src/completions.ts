@@ -9,6 +9,7 @@ import { addActions, canForceActions, registerAction, tryForceActions, unregiste
 import { ActionForcePriorityEnum } from 'neuro-game-sdk';
 
 let lastSuggestions: string[] = [];
+let requestCancelled = false;
 
 // TODO: Figure out how to do this with maxCount
 // export const completionAction = (maxCount: number) => ({
@@ -36,7 +37,7 @@ export const completeCodeAction: RCEAction = {
             () => NEURO.currentActionForce // This is done before the action force is cleared
                 ? actionValidationAccept()
                 : actionValidationFailure('Not currently waiting for code suggestions'),
-            () => NEURO.cancelled
+            () => requestCancelled
                 ? actionValidationFailure('Request was cancelled')
                 : actionValidationAccept(),
             (context) => {
@@ -54,7 +55,7 @@ export const completeCodeAction: RCEAction = {
 } as const;
 
 function handleCompleteCode(context: RCEContext): RCEHandlerReturns {
-    if (NEURO.cancelled)
+    if (requestCancelled)
         return actionHandlerFailure('Request was cancelled');
     if (!NEURO.currentActionForce)
         return actionHandlerFailure('Not currently waiting for suggestions');
@@ -118,11 +119,11 @@ export function requestCompletion(cursorContext: NeuroPositionContext, fileName:
         vscode.window.showErrorMessage('Failed to request completion from Neuro.');
         return;
     }
-    NEURO.cancelled = false;
+    requestCancelled = false;
 }
 
 export function cancelCompletionRequest() {
-    NEURO.cancelled = true;
+    requestCancelled = true;
     unregisterAction(completeCodeAction.name);
 }
 
@@ -165,7 +166,7 @@ export const completionsProvider: vscode.InlineCompletionItemProvider = {
         } catch (erm) {
             if (typeof erm === 'string') {
                 logOutput('ERROR', erm);
-                NEURO.cancelled = true;
+                requestCancelled = true;
                 vscode.window.showErrorMessage(erm);
             }
             else {

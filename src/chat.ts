@@ -9,6 +9,8 @@ import { actionHandlerFailure, actionHandlerSuccess, actionValidationAccept, act
 import { RCEContext } from './context/rce';
 import { abortActionForce, addActions, registerAction, tryForceActions } from '@/rce';
 
+let requestCancelled = false;
+
 interface Participant {
     id: string;
     relativeIconPath: string;
@@ -50,7 +52,7 @@ export function addChatAction() {
 function handleChat(context: RCEContext): RCEHandlerReturns {
     const answer = context.data.params!.answer;
 
-    if (NEURO.cancelled) {
+    if (requestCancelled) {
         return actionHandlerFailure('Request was cancelled');
     }
 
@@ -81,7 +83,7 @@ export const chatAction: RCEAction = {
             () => NEURO.currentActionForce // This is done before the action force is cleared
                 ? actionValidationAccept()
                 : actionValidationFailure('Not currently waiting for a chat response'),
-            () => NEURO.cancelled
+            () => requestCancelled
                 ? actionValidationFailure('Request was cancelled')
                 : actionValidationAccept(),
         ],
@@ -200,7 +202,7 @@ async function requestChatResponse(
 ): Promise<string> {
     logOutput('INFO', 'Requesting chat response from Neuro');
 
-    NEURO.cancelled = false;
+    requestCancelled = false;
 
     registerAction(chatAction.name);
     const status = tryForceActions({
@@ -236,7 +238,7 @@ async function requestChatResponse(
     } catch (erm) {
         if (typeof erm === 'string') {
             logOutput('ERROR', erm);
-            NEURO.cancelled = true;
+            requestCancelled = true;
             return erm;
         } else {
             throw erm;
@@ -245,7 +247,7 @@ async function requestChatResponse(
 }
 
 export function cancelChatRequest() {
-    NEURO.cancelled = true;
+    requestCancelled = true;
     if (!NEURO.client) return;
     if (NEURO.currentActionForce?.actionNames.length === 1 && NEURO.currentActionForce.actionNames[0] === chatAction.name) {
         abortActionForce();

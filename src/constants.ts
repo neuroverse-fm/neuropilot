@@ -34,15 +34,10 @@ interface Neuro {
     /** Whether the client successfully connected to the API. */
     connected: boolean;
     /**
-     * Whether this extension is currently waiting on a response, agnostic of whether the last request was canceled.
-     * This is used to prevent multiple `actions/force` requests from being sent at the same time.
+     * The current action force, or `null` if no action force is active.
+     * Managed by the RCE system, do not modify directly.
      */
     currentActionForce: ActionForceParams | null;
-    /**
-     * Whether the last chat or completion request was canceled.
-     * This is used to tell Neuro that the request was canceled.
-     */
-    cancelled: boolean;
     /** The extension's output channel (logging) */
     outputChannel: vscode.OutputChannel | null;
     /** The array of tasks that Neuro can execute. */
@@ -99,7 +94,6 @@ export const NEURO: Neuro = {
     gameName: 'Visual Studio Code',
     connected: false,
     currentActionForce: null,
-    cancelled: false,
     outputChannel: null,
     tasks: [],
     currentTaskExecution: null,

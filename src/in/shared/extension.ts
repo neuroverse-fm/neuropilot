@@ -116,7 +116,6 @@ export function initializeCommonState(context: vscode.ExtensionContext) {
     NEURO.gameName = CONNECTION.gameName;
     NEURO.connected = false;
     NEURO.currentActionForce = null;
-    NEURO.cancelled = false;
     NEURO.outputChannel = vscode.window.createOutputChannel('NeuroPilot');
     NEURO.currentController = CONNECTION.nameOfAPI;
     NEURO.context.subscriptions.push(NEURO.outputChannel);

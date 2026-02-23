@@ -70,7 +70,6 @@ export function createClient() {
 
     NEURO.connected = false;
     NEURO.currentActionForce = null;
-    NEURO.cancelled = false;
 
     // Reset auto-reconnect flag for new connection
     shouldAutoReconnect = true;
