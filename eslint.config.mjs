@@ -59,6 +59,7 @@ export default tseslint.config(
         rules: {
             'curly': 'off',
             'no-control-regex': 'off',
+            'no-useless-assignment': 'warn',
             '@stylistic/semi': ['error', 'always'],
             '@stylistic/indent': ['warn', 4, {
                 'flatTernaryExpressions': true,
