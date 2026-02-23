@@ -1,12 +1,12 @@
 import * as assert from 'assert';
 import { lintActions } from '@/lint_problems';
-import { ActionData } from 'neuro-game-sdk';
+import type { RCEContext } from '@/context/rce';
 
 // Tests for lint action prompt generators using real logic with loose checks
 suite('lint Actions', () => {
     test('get_file_lint_problems formats file', () => {
         // === Arrange & Act ===
-        const prompt = lintActions.get_file_lint_problems.promptGenerator({ params: { file: 'src/a.ts' } } as ActionData);
+        const prompt = lintActions.get_file_lint_problems.promptGenerator({ data: { params: { file: 'src/a.ts' } } } as RCEContext);
 
         // === Assert ===
         assert.ok(typeof prompt === 'string' && prompt.length > 0);
@@ -15,7 +15,7 @@ suite('lint Actions', () => {
 
     test('get_folder_lint_problems formats folder', () => {
         // === Arrange & Act ===
-        const prompt = lintActions.get_folder_lint_problems.promptGenerator({ params: { folder: 'src' } } as ActionData);
+        const prompt = lintActions.get_folder_lint_problems.promptGenerator({ data: { params: { folder: 'src' } } } as RCEContext);
 
         // === Assert ===
         assert.ok(typeof prompt === 'string' && prompt.length > 0);

@@ -1,12 +1,12 @@
 import * as vscode from 'vscode';
 import { NeuroClient } from 'neuro-game-sdk';
 import { TerminalSession } from './pseudoterminal';
-import { RceRequest } from '@/rce';
 import type { GitExtension } from '@typing/git.d';
 import { ActionsViewProvider } from '@views/actions';
 import { ImagesViewProvider } from '@views/image';
 import type { ExecuteViewProvider } from '@views/execute';
 import type { ActionData } from 'neuro-game-sdk';
+import type { ActionForceParams } from './utils/neuro_client';
 
 export interface NeuroTask {
     id: string;
@@ -34,15 +34,10 @@ interface Neuro {
     /** Whether the client successfully connected to the API. */
     connected: boolean;
     /**
-     * Whether this extension is currently waiting on a response, agnostic of whether the last request was canceled.
-     * This is used to prevent multiple `actions/force` requests from being sent at the same time.
+     * The current action force, or `null` if no action force is active.
+     * Managed by the RCE system, do not modify directly.
      */
-    waiting: boolean;
-    /**
-     * Whether the last request was canceled.
-     * This is used to tell Neuro that the request was canceled.
-     */
-    cancelled: boolean;
+    currentActionForce: ActionForceParams | null;
     /** The extension's output channel (logging) */
     outputChannel: vscode.OutputChannel | null;
     /** The array of tasks that Neuro can execute. */
@@ -59,8 +54,6 @@ interface Neuro {
     previousDiagnosticsMap: Map<string, vscode.Diagnostic[]>;
     /** Whether or not Neuro is manually saving. */
     saving: boolean;
-    /** Stores the current RCE request prompt & callback. */
-    rceRequest: RceRequest | null;
     /** Stores the state of the status bar item. */
     statusBarItem: vscode.StatusBarItem | null;
     /** Whether or not to warn when requesting completions while the relevant permission is disabled. */
@@ -100,8 +93,7 @@ export const NEURO: Neuro = {
     url: 'ws://localhost:8000',
     gameName: 'Visual Studio Code',
     connected: false,
-    waiting: false,
-    cancelled: false,
+    currentActionForce: null,
     outputChannel: null,
     tasks: [],
     currentTaskExecution: null,
@@ -110,7 +102,6 @@ export const NEURO: Neuro = {
     terminalRegistry: new Map(),
     previousDiagnosticsMap: new Map(),
     saving: false,
-    rceRequest: null,
     statusBarItem: null,
     warnOnCompletionsOff: true,
     cursorOffsets: new Map(),

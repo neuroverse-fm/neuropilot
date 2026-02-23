@@ -9,11 +9,14 @@
 		"sourceMap": true,
 		"strict": true,
 		"paths": {
-			"~/*": [
-				"./*"
+			"@context/*": [
+				"./src/context/*"
 			],
-			"@/*": [
-				"./src/*"
+			"@entry/*": [
+				"./src/in/*"
+			],
+			"@events/*": [
+				"./src/events/*"
 			],
 			"@shared/*": [
 				"./src/shared/*"
@@ -24,12 +27,15 @@
 			"@test/*": [
 				"./src/test/*"
 			],
-			"@events/*": [
-				"./src/events/*"
-			],
 			"@views/*": [
 				"./src/views/*"
-			]
+			],
+			"@/*": [
+				"./src/*"
+			],
+			"~/*": [
+				"./*"
+			],
 		}
 	},
 	"exclude": [

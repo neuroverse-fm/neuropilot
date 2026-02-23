@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { PermissionLevel, setPermissions } from '@/config';
 import { BaseWebviewViewProvider } from './base';
 import { getExtendedActionsInfo } from '@/rce';
-import { toTitleCase } from '@/utils';
+import { toTitleCase } from '@/utils/misc';
 
 export type SettingsContext = 'user' | 'workspace';
 
@@ -49,30 +49,34 @@ export class ActionsViewProvider extends BaseWebviewViewProvider<ActionsViewMess
         super('actions/main.js', ['actions/style.css']);
     }
 
+    protected onViewReady() { }
+
     public refreshActions() {
         const actionsInfo = getExtendedActionsInfo();
-        const actionNodes = actionsInfo.map(info => ({
-            id: info.action.name,
-            label: info.action.displayName ?? toTitleCase(info.action.name),
-            category: info.action.category ?? 'No Category Specified', // TODO: Handle null category better?
-            description: info.action.description,
-            permissionLevel:
-                (this._currentContext === 'user' ? info.configuredGlobalPermission : info.configuredWorkspacePermission)
-                ?? info.configuredGlobalPermission
-                ?? info.action.defaultPermission
-                ?? PermissionLevel.OFF,
-            modifiedInCurrentContext:
-                this._currentContext === 'workspace' && info.configuredWorkspacePermission !== undefined
-                || this._currentContext === 'user' && info.configuredGlobalPermission !== undefined,
-            modifiedExternally:
-                // We are in workspace context and the permission is modified in global settings but not in workspace settings
-                this._currentContext === 'workspace' && info.configuredWorkspacePermission === undefined && info.configuredGlobalPermission !== undefined
-                // OR we are in user context and the permission is modified in workspace settings
-                || this._currentContext === 'user' && info.configuredWorkspacePermission !== undefined
-                // OR the permission is not modified in either context and the default permission is different from OFF
-                || info.configuredWorkspacePermission === undefined && info.configuredGlobalPermission === undefined && (info.action.defaultPermission ?? PermissionLevel.OFF) !== PermissionLevel.OFF,
-            isRegistered: info.isRegistered,
-        } satisfies ActionNode));
+        const actionNodes = actionsInfo
+            .filter(info => !(info.action.hidden ?? false))
+            .map(info => ({
+                id: info.action.name,
+                label: info.action.displayName ?? toTitleCase(info.action.name),
+                category: info.action.category ?? 'Unknown',
+                description: info.action.description,
+                permissionLevel:
+                    (this._currentContext === 'user' ? info.configuredGlobalPermission : info.configuredWorkspacePermission)
+                    ?? info.configuredGlobalPermission
+                    ?? info.action.defaultPermission
+                    ?? PermissionLevel.OFF,
+                modifiedInCurrentContext:
+                    this._currentContext === 'workspace' && info.configuredWorkspacePermission !== undefined
+                    || this._currentContext === 'user' && info.configuredGlobalPermission !== undefined,
+                modifiedExternally:
+                    // We are in workspace context and the permission is modified in global settings but not in workspace settings
+                    this._currentContext === 'workspace' && info.configuredWorkspacePermission === undefined && info.configuredGlobalPermission !== undefined
+                    // OR we are in user context and the permission is modified in workspace settings
+                    || this._currentContext === 'user' && info.configuredWorkspacePermission !== undefined
+                    // OR the permission is not modified in either context and the default permission is different from OFF
+                    || info.configuredWorkspacePermission === undefined && info.configuredGlobalPermission === undefined && (info.action.defaultPermission ?? PermissionLevel.OFF) !== PermissionLevel.OFF,
+                isRegistered: info.isRegistered,
+            } satisfies ActionNode));
         // TODO: Fix flickering by specifying if actions have been added/removed
         // Nevermind, it doesn't flicker anymore??
         this._view?.webview.postMessage({

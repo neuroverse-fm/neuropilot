@@ -1,14 +1,14 @@
 import * as assert from 'assert';
 import { editingActions } from '@/editing';
-import { ActionData } from 'neuro-game-sdk';
+import type { RCEContext } from '@/context/rce';
 
 // Tests for the replace_text action prompt generator using real logic
 suite('replace_text Action', () => {
     test('generates a prompt and includes escaped find when useRegex is true', () => {
         // === Arrange & Act ===
         const prompt = editingActions.replace_text.promptGenerator({
-            params: { find: 'a+b', replaceWith: 'x', useRegex: true },
-        } as ActionData);
+            data: { params: { find: 'a+b', replaceWith: 'x', useRegex: true } },
+        } as RCEContext);
 
         // === Assert ===
         assert.ok(typeof prompt === 'string' && prompt.length > 0);
@@ -19,8 +19,8 @@ suite('replace_text Action', () => {
     test('generates a prompt and includes raw find and replacement when useRegex is false', () => {
         // === Arrange & Act ===
         const prompt = editingActions.replace_text.promptGenerator({
-            params: { find: 'hello', replaceWith: 'world', useRegex: false },
-        } as ActionData);
+            data: { params: { find: 'hello', replaceWith: 'world', useRegex: false } },
+        } as RCEContext);
 
         // === Assert ===
         assert.ok(typeof prompt === 'string' && prompt.length > 0);

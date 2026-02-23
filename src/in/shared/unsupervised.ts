@@ -5,14 +5,18 @@ import { ActionData } from 'neuro-game-sdk';
 import { addLintActions } from '@/lint_problems';
 import { RCEActionHandler } from '@/rce';
 import { addChangelogActions } from '@/changelog';
-import { addRequestCookieAction } from '@/context';
+import { addRequestCookieAction } from '../../functions/cookies';
+import { addChatAction } from '@/chat';
+import { addCompleteCodeAction } from '@/completions';
 
-export function addUnsupervisedActions() {
+export function addCommonUnsupervisedActions() {
     addFileActions();
     addEditingActions();
     addLintActions();
     addChangelogActions();
     addRequestCookieAction();
+    addChatAction();
+    addCompleteCodeAction();
 }
 
 /**

@@ -8,7 +8,7 @@ import { esbuildProblemMatcherPlugin } from './plugins.js';
  */
 export async function desktop(prodFlag, watchFlag) {
     const ctx = await context({
-        entryPoints: ['src/desktop/extension.ts'],
+        entryPoints: ['src/in/desktop/extension.ts'],
         bundle: true,
         format: 'cjs',
         minify: prodFlag,

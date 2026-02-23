@@ -1,10 +1,10 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
-import * as utils from '../../utils';
+import * as utils from '@/utils/misc';
 import { NEURO } from '../../constants';
 import { anyString, capture, reset, spy, verify } from 'ts-mockito';
 
-suite('Utils Tests', async function() {
+suite('Utils Tests', async function () {
     let channel: vscode.OutputChannel | null = null;
 
     suiteSetup(() => {
@@ -17,7 +17,7 @@ suite('Utils Tests', async function() {
         NEURO.outputChannel = null;
         channel = null;
     });
-    test('logOutput: Log single lines', async function() {
+    test('logOutput: Log single lines', async function () {
         // === Arrange ===
         const outputChannelSpy = spy(NEURO.outputChannel);
 
@@ -38,7 +38,7 @@ suite('Utils Tests', async function() {
         reset(outputChannelSpy);
     });
 
-    test('logOutput: Log multiple lines', async function() {
+    test('logOutput: Log multiple lines', async function () {
         // === Arrange ===
         const outputChannelSpy = spy(NEURO.outputChannel);
 

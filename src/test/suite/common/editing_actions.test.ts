@@ -1,8 +1,10 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
-import { anything, capture, instance, mock, reset, verify } from 'ts-mockito';
+import { instance, mock, reset } from 'ts-mockito';
 import { NEURO } from '@/constants';
 import { ActionData } from 'neuro-game-sdk';
+import type { RCEContext } from '@/context/rce';
+import type { ActionHandlerResult } from '@/utils/neuro_client';
 import {
     handlePlaceCursor,
     handleGetCursor,
@@ -19,6 +21,8 @@ import {
     handleHighlightLines,
 } from '@/editing';
 import { createTestFile, checkNoErrorWithTimeout, setupDocument, returnMockFunction } from '@test/test_utils';
+
+const makeContext = (data: ActionData) => ({ data, updateStatus: returnMockFunction() } as unknown as RCEContext);
 
 import { NeuroClient } from 'neuro-game-sdk';
 
@@ -73,44 +77,44 @@ suite('Integration: Editing actions', () => {
         const actionData: ActionData = { id: 't', name: 'place_cursor', params: { line: 4, column: 3, type: 'absolute' } };
 
         // === Act ===
-        const result = handlePlaceCursor(actionData, returnMockFunction());
+        const result = handlePlaceCursor(makeContext(actionData)) as ActionHandlerResult;
 
         // === Assert ===
-        assert.ok(result && result.includes('(4:3)'));
+        assert.ok(result?.message?.includes('(4:3)'));
     });
 
     test('get_cursor returns current position and context', () => {
         // === Act ===        
-        const result = handleGetCursor({ id: 't', name: 'get_cursor' }, returnMockFunction());
+        const result = handleGetCursor() as ActionHandlerResult;
 
         // === Assert ===
-        assert.ok(result && result.includes('2:1'));
+        assert.ok(result?.message?.includes('2:1'));
     });
 
     test('place_cursor (relative) moves from current position and can be restored', () => {
         // Move relative by +1 line, +1 column from (2:1) -> (3:2)
         // === Act ===
-        const moved = handlePlaceCursor({ id: 't', name: 'place_cursor', params: { line: 1, column: 1, type: 'relative' } }, returnMockFunction());
+        const moved = handlePlaceCursor(makeContext({ id: 't', name: 'place_cursor', params: { line: 1, column: 1, type: 'relative' } } as ActionData)) as ActionHandlerResult;
 
         // === Assert ===
-        assert.ok(moved && moved.includes('(3:2)'));
+        assert.ok(moved?.message?.includes('(3:2)'));
 
         // === Act & Assert ===
-        const restored = handlePlaceCursor({ id: 't', name: 'place_cursor', params: { line: 2, column: 1, type: 'absolute' } }, returnMockFunction());
-        assert.ok(restored && restored.includes('(2:1)'));
+        const restored = handlePlaceCursor(makeContext({ id: 't', name: 'place_cursor', params: { line: 2, column: 1, type: 'absolute' } } as ActionData)) as ActionHandlerResult;
+        assert.ok(restored?.message?.includes('(2:1)'));
     });
 
-    test('insert_text inserts at absolute position and sends context', async () => {
+    test('insert_text inserts at absolute position', async () => {
         // === Arrange ===
         const actionData: ActionData = { id: 't', name: 'insert_text', params: { text: 'X', position: { line: 2, column: 2, type: 'absolute' } } };
 
         // === Act ===
-        handleInsertText(actionData, returnMockFunction());
+        await handleInsertText(makeContext(actionData));
 
         // === Assert ===
-        await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); }, 3000, 100);
-        const [ctx] = capture(mockedClient.sendContext).last();
-        assert.ok(typeof ctx === 'string');
+        const text = (await vscode.workspace.openTextDocument(docUri)).getText();
+        const line2 = text.split('\n')[1] ?? '';
+        assert.ok(line2.includes('X'));
     });
 
     test('insert_text defaults to current cursor when no position provided', async () => {
@@ -118,10 +122,9 @@ suite('Integration: Editing actions', () => {
         reset(mockedClient);
 
         // === Act ===
-        handleInsertText({ id: 't', name: 'insert_text', params: { text: 'Q' } }, returnMockFunction());
+        await handleInsertText(makeContext({ id: 't', name: 'insert_text', params: { text: 'Q' } } as ActionData));
 
         // === Assert ===
-        await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); }, 3000, 100);
         const text = (await vscode.workspace.openTextDocument(docUri)).getText();
         // Line 2 should now start with 'Q'
         const line2 = text.split('\n')[1] ?? '';
@@ -135,24 +138,22 @@ suite('Integration: Editing actions', () => {
         const ad: ActionData = { id: 't', name: 'insert_text', params: { text: '-', position: { line: 1, column: 2, type: 'relative' } } };
 
         // === Act ===
-        handleInsertText(ad, returnMockFunction());
+        await handleInsertText(makeContext(ad));
 
         // === Assert ===
-        await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); }, 3000, 100);
         const text = (await vscode.workspace.openTextDocument(docUri)).getText();
         // Should have inserted after moving to line 2, column 3 (0-based 1,2)
         assert.ok(text.includes('Bb-b'));
     });
 
-    test('insert_lines appends lines and sends context', async () => {
+    test('insert_lines appends lines', async () => {
         // === Arrange ===
         const actionData: ActionData = { id: 't', name: 'insert_lines', params: { text: 'Echo\nFoxtrot', insertUnder: 4 } };
 
         // === Act ===
-        handleInsertLines(actionData, returnMockFunction());
+        await handleInsertLines(makeContext(actionData));
 
         // === Assert ===
-        await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); }, 3000, 100);
         const text = (await vscode.workspace.openTextDocument(docUri)).getText();
         assert.ok(text.includes('Echo'));
         assert.ok(text.includes('Foxtrot'));
@@ -164,25 +165,23 @@ suite('Integration: Editing actions', () => {
         await setupDocument('A\nB');
 
         // === Act ===
-        handleInsertLines({ id: 't', name: 'insert_lines', params: { text: 'C', insertUnder: 6 } }, returnMockFunction());
+        await handleInsertLines(makeContext({ id: 't', name: 'insert_lines', params: { text: 'C', insertUnder: 6 } } as ActionData));
 
         // === Assert ===
-        await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); }, 3000, 100);
         const doc = await vscode.workspace.openTextDocument(docUri);
         const lines = doc.getText().split('\n');
         assert.ok(lines.length >= 6);
         assert.strictEqual(lines[lines.length - 1], 'C');
     });
 
-    test('replace_text single match replaces and sends context', async function () {
+    test('replace_text single match replaces', async function () {
         // === Arrange ===
         const actionData: ActionData = { id: 't', name: 'replace_text', params: { find: 'Alpha', replaceWith: 'A', match: 'firstInFile', useRegex: false } };
 
         // === Act ===
-        handleReplaceText(actionData, returnMockFunction());
+        await handleReplaceText(makeContext(actionData));
 
         // === Assert ===
-        await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); }, 5000, 100);
         const text = (await vscode.workspace.openTextDocument(docUri)).getText();
         assert.ok(text.startsWith('A\n'));
     });
@@ -193,10 +192,9 @@ suite('Integration: Editing actions', () => {
         const actionData: ActionData = { id: 't', name: 'replace_text', params: { find: '(foo)(\\d)', replaceWith: '$1X', match: 'allInFile', useRegex: true } };
 
         // === Act ===
-        handleReplaceText(actionData, returnMockFunction());
+        await handleReplaceText(makeContext(actionData));
 
         // === Assert ===
-        await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); }, 5000, 100);
         const text = (await vscode.workspace.openTextDocument(docUri)).getText();
         assert.strictEqual(text, ['fooX', 'fooX', 'bar3'].join('\n'));
     });
@@ -206,23 +204,21 @@ suite('Integration: Editing actions', () => {
         await setupDocument('a\na\na');
 
         // === Act ===
-        handleReplaceText({ id: 't', name: 'replace_text', params: { find: 'a', replaceWith: 'b', match: 'allInFile', useRegex: false, lineRange: { startLine: 2, endLine: 3 } } }, returnMockFunction());
+        await handleReplaceText(makeContext({ id: 't', name: 'replace_text', params: { find: 'a', replaceWith: 'b', match: 'allInFile', useRegex: false, lineRange: { startLine: 2, endLine: 3 } } } as ActionData));
 
         // === Assert ===
-        await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); }, 5000, 100);
         const text = (await vscode.workspace.openTextDocument(docUri)).getText();
         assert.strictEqual(text, ['a', 'b', 'b'].join('\n'));
     });
 
-    test('delete_text single match deletes and sends context', async function () {
+    test('delete_text single match deletes', async function () {
         // === Arrange ===
         const actionData: ActionData = { id: 't', name: 'delete_text', params: { find: 'Delta', match: 'firstInFile', useRegex: false } };
 
         // === Act ===
-        handleDeleteText(actionData, returnMockFunction());
+        await handleDeleteText(makeContext(actionData));
 
         // === Assert ===
-        await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); }, 5000, 100);
         const text = (await vscode.workspace.openTextDocument(docUri)).getText();
         assert.ok(!text.includes('Delta'));
     });
@@ -233,7 +229,7 @@ suite('Integration: Editing actions', () => {
         await setupDocument('x 1 x 2 x');
 
         // === Act ===
-        handleDeleteText({ id: 't', name: 'delete_text', params: { find: 'x', match: 'allInFile', useRegex: false } }, returnMockFunction());
+        await handleDeleteText(makeContext({ id: 't', name: 'delete_text', params: { find: 'x', match: 'allInFile', useRegex: false } } as ActionData));
 
         // === Assert ===
         // Poll document until content reflects deletions
@@ -249,7 +245,7 @@ suite('Integration: Editing actions', () => {
         await setupDocument('p\nq\np\nq');
 
         // === Act ===
-        handleDeleteText({ id: 't', name: 'delete_text', params: { find: 'p', match: 'allInFile', useRegex: false, lineRange: { startLine: 2, endLine: 3 } } }, returnMockFunction());
+        await handleDeleteText(makeContext({ id: 't', name: 'delete_text', params: { find: 'p', match: 'allInFile', useRegex: false, lineRange: { startLine: 2, endLine: 3 } } } as ActionData));
         const expected = ['p', 'q', '', 'q'].join('\n');
 
         // === Assert ===
@@ -273,8 +269,8 @@ suite('Integration: Editing actions', () => {
         await setupDocument('Echo\nZulu');
         const actionData: ActionData = { id: 't', name: 'find_text', params: { find: 'Echo', match: 'firstInFile', useRegex: false, highlight: false } };
         // === Act & Assert ===
-        const result = handleFindText(actionData, returnMockFunction());
-        assert.ok(typeof result === 'string' && result.includes('Echo'));
+        const result = handleFindText(makeContext(actionData)) as ActionHandlerResult;
+        assert.ok(result?.message?.includes('Echo'));
     });
 
     test('find_text multiple matches with highlight returns count and lines', async () => {
@@ -282,8 +278,8 @@ suite('Integration: Editing actions', () => {
         await setupDocument('z\nz\nz');
 
         // === Act & Assert ===
-        const result = handleFindText({ id: 't', name: 'find_text', params: { find: 'z', match: 'allInFile', useRegex: false, highlight: true } }, returnMockFunction());
-        assert.ok(typeof result === 'string' && result.includes('z'));
+        const result = handleFindText(makeContext({ id: 't', name: 'find_text', params: { find: 'z', match: 'allInFile', useRegex: false, highlight: true } } as ActionData)) as ActionHandlerResult;
+        assert.ok(result?.message?.includes('z'));
     });
 
     test('undo sends context after reverting last change', async () => {
@@ -295,7 +291,7 @@ suite('Integration: Editing actions', () => {
         await vscode.workspace.applyEdit(edit);
 
         // === Act ===
-        handleUndo({ id: 't', name: 'undo' }, returnMockFunction());
+        await handleUndo();
 
         // === Assert ===
         // Poll until content equals baseline
@@ -305,7 +301,7 @@ suite('Integration: Editing actions', () => {
         }, 5000, 100);
     });
 
-    test('save sends context', async () => {
+    test('save persists document', async () => {
         // === Arrange ===
         await vscode.workspace.openTextDocument(docUri);
         const edit = new vscode.WorkspaceEdit();
@@ -313,21 +309,21 @@ suite('Integration: Editing actions', () => {
         await vscode.workspace.applyEdit(edit);
 
         // === Act ===
-        handleSave({ id: 't', name: 'save' }, returnMockFunction());
+        await handleSave();
 
         // === Assert ===
-        await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything(), anything())).once(); }, 5000, 100);
+        const document = await vscode.workspace.openTextDocument(docUri);
+        assert.strictEqual(document.isDirty, false);
     });
 
-    test('rewrite_all replaces all content and sends context', async () => {
+    test('rewrite_all replaces all content', async () => {
         // === Arrange ===
         const newContent = ['One', 'Two', 'Three'].join('\n');
 
         // === Act ===
-        handleRewriteAll({ id: 't', name: 'rewrite_all', params: { content: newContent } }, returnMockFunction());
+        await handleRewriteAll(makeContext({ id: 't', name: 'rewrite_all', params: { content: newContent } } as ActionData));
 
         // === Assert ===
-        await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); }, 3000, 100);
         const text = (await vscode.workspace.openTextDocument(docUri)).getText();
         assert.strictEqual(text, newContent);
     });
@@ -337,12 +333,11 @@ suite('Integration: Editing actions', () => {
         const newContent = ['X1', 'X2'].join('\n');
 
         // === Act ===
-        handleRewriteAll({ id: 't', name: 'rewrite_all', params: { content: newContent } }, returnMockFunction());
+        await handleRewriteAll(makeContext({ id: 't', name: 'rewrite_all', params: { content: newContent } } as ActionData));
 
         // === Assert ===
-        await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); }, 3000, 100);
-        const cursorInfo = handleGetCursor({ id: 't', name: 'get_cursor' }, returnMockFunction())!;
-        assert.ok(cursorInfo.includes('1:1'));
+        const cursorInfo = handleGetCursor()! as ActionHandlerResult;
+        assert.ok(cursorInfo?.message?.includes('1:1'));
     });
 
     test('rewrite_all handles empty content', async () => {
@@ -350,10 +345,9 @@ suite('Integration: Editing actions', () => {
         const newContent = '';
 
         // === Act ===
-        handleRewriteAll({ id: 't', name: 'rewrite_all', params: { content: newContent } }, returnMockFunction());
+        await handleRewriteAll(makeContext({ id: 't', name: 'rewrite_all', params: { content: newContent } } as ActionData));
 
         // === Assert ===
-        await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); }, 3000, 100);
         const text = (await vscode.workspace.openTextDocument(docUri)).getText();
         assert.strictEqual(text, newContent);
     });
@@ -363,24 +357,22 @@ suite('Integration: Editing actions', () => {
         const newContent = Array.from({ length: 500 }, (_, i) => `L ${i + 1}`).join('\n');
 
         // === Act ===
-        handleRewriteAll({ id: 't', name: 'rewrite_all', params: { content: newContent } }, returnMockFunction());
+        await handleRewriteAll(makeContext({ id: 't', name: 'rewrite_all', params: { content: newContent } } as ActionData));
 
         // === Assert ===
-        await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); }, 5000, 100);
         const text = (await vscode.workspace.openTextDocument(docUri)).getText();
         assert.strictEqual(text, newContent);
         assert.strictEqual(text.split('\n').length, 500);
     });
 
-    test('rewrite_lines replaces a range and sends context; delete_lines removes a range and sends context', async () => {
+    test('rewrite_lines replaces a range; delete_lines removes a range', async () => {
         // === Arrange ===
         await setupDocument('L1\nL2\nL3\nL4\nL5');
 
         // === Act ===
-        handleRewriteLines({ id: 't', name: 'rewrite_lines', params: { startLine: 2, endLine: 3, content: 'X\nY' } }, returnMockFunction());
+        await handleRewriteLines(makeContext({ id: 't', name: 'rewrite_lines', params: { startLine: 2, endLine: 3, content: 'X\nY' } } as ActionData));
 
         // === Assert ===
-        await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); }, 3000, 100);
         let text = (await vscode.workspace.openTextDocument(docUri)).getText();
         assert.ok(text.includes('L1'));
         assert.ok(text.includes('X'));
@@ -389,10 +381,9 @@ suite('Integration: Editing actions', () => {
         reset(mockedClient);
 
         // === Act ===
-        handleDeleteLines({ id: 't', name: 'delete_lines', params: { startLine: 4, endLine: 4 } }, returnMockFunction());
+        await handleDeleteLines(makeContext({ id: 't', name: 'delete_lines', params: { startLine: 4, endLine: 4 } } as ActionData));
 
         // === Assert ===
-        await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); }, 3000, 100);
         text = (await vscode.workspace.openTextDocument(docUri)).getText();
         assert.ok(!text.includes('L4'));
     });
@@ -400,24 +391,22 @@ suite('Integration: Editing actions', () => {
     test('rewrite_lines cursor position depends on trailing newline', async () => {
         // With trailing newline: logicalLines = 1, cursor ends on line 2
         // === Act ===
-        handleRewriteLines({ id: 't', name: 'rewrite_lines', params: { startLine: 2, endLine: 3, content: 'X\n' } }, returnMockFunction());
+        await handleRewriteLines(makeContext({ id: 't', name: 'rewrite_lines', params: { startLine: 2, endLine: 3, content: 'X\n' } } as ActionData));
 
         // === Assert ===
-        await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); }, 3000, 100);
-        let info = handleGetCursor({ id: 't', name: 'get_cursor' }, returnMockFunction())!;
-        assert.ok(info.includes('2:'));
+        let info = handleGetCursor()! as ActionHandlerResult;
+        assert.ok(info?.message?.includes('2:'));
 
         // Without trailing newline: logicalLines = 2, cursor ends on line 3
         // === Arrange ===
         reset(mockedClient);
 
         // === Act ===
-        handleRewriteLines({ id: 't', name: 'rewrite_lines', params: { startLine: 2, endLine: 3, content: 'Y\nZ' } }, returnMockFunction());
+        await handleRewriteLines(makeContext({ id: 't', name: 'rewrite_lines', params: { startLine: 2, endLine: 3, content: 'Y\nZ' } } as ActionData));
 
         // === Assert ===
-        await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); }, 3000, 100);
-        info = handleGetCursor({ id: 't', name: 'get_cursor' }, returnMockFunction())!;
-        assert.ok(info.includes('3:'));
+        info = handleGetCursor()! as ActionHandlerResult;
+        assert.ok(info?.message?.includes('3:'));
     });
 
     test('delete_lines from first line moves cursor to start of file', async () => {
@@ -425,12 +414,11 @@ suite('Integration: Editing actions', () => {
         await setupDocument('A\nB\nC', { cursorPosition: new vscode.Position(2, 0) }); // Cursor at (3:1)
 
         // === Act ===
-        handleDeleteLines({ id: 't', name: 'delete_lines', params: { startLine: 1, endLine: 2 } }, returnMockFunction());
+        await handleDeleteLines(makeContext({ id: 't', name: 'delete_lines', params: { startLine: 1, endLine: 2 } } as ActionData));
 
         // === Assert ===
-        await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); }, 3000, 100);
-        const info = handleGetCursor({ id: 't', name: 'get_cursor' }, returnMockFunction())!;
-        assert.ok(info.includes('1:1'));
+        const info = handleGetCursor()! as ActionHandlerResult;
+        assert.ok(info?.message?.includes('1:1'));
     });
 
     test('highlight_lines returns description string', async function () {
@@ -438,8 +426,8 @@ suite('Integration: Editing actions', () => {
         // Ensure at least two lines exist for the highlight range
         await setupDocument('H1\nH2');
         // === Act & Assert ===
-        const result = handleHighlightLines({ id: 't', name: 'highlight_lines', params: { startLine: 1, endLine: 2 } }, returnMockFunction());
-        assert.ok(typeof result === 'string' && result.includes('1-2'));
+        const result = handleHighlightLines(makeContext({ id: 't', name: 'highlight_lines', params: { startLine: 1, endLine: 2 } } as ActionData)) as ActionHandlerResult;
+        assert.ok(result?.message?.includes('1-2'));
     });
 });
 

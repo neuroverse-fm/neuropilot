@@ -5,13 +5,16 @@
 
 import * as vscode from 'vscode';
 import { ActionData } from 'neuro-game-sdk';
-import { RCEAction, stripToAction, RCEHandler } from '@/neuro_client_helper';
+import { ActionForceParams, actionHandlerFailure, ActionHandlerResult, actionHandlerSuccess, RCEAction, stripToAction } from '@/utils/neuro_client';
 import { NEURO } from '@/constants';
-import { logOutput, notifyOnCaughtException } from '@/utils';
+import { isThenable, logOutput, notifyOnCaughtException } from '@/utils/misc';
 import { ACTIONS, CONFIG, CONNECTION, getAllPermissions, getPermissionLevel, PermissionLevel, stringToPermissionLevel } from '@/config';
 import { validate } from 'jsonschema';
 import type { RCECancelEvent } from '@events/utils';
-import { ActionStatus, fireOnActionStart, updateActionStatus } from '@events/actions';
+import { fireOnActionStart, updateActionStatus } from '@events/actions';
+import { RCEContext } from '@/context/rce';
+
+import type { NeuroClient } from 'neuro-game-sdk';
 
 export const CATEGORY_MISC = 'Miscellaneous';
 
@@ -19,53 +22,18 @@ const ACTIONS_ARRAY: RCEAction[] = [];
 const REGISTERED_ACTIONS: Set<string> = /* @__PURE__ */ new Set<string>();
 
 /**
- * A prompt parameter can either be a string or a function that converts ActionData into a prompt string.
+ * A prompt parameter can either be a string or a function that converts an RCEContext into a prompt string.
  */
-export type PromptGenerator = string | ((actionData: ActionData) => string);
+export type PromptGenerator = string | ((context: RCEContext) => string);
 
-/**
- * RCE request object
- */
-export interface RceRequest {
-    /**
-     * The prompt that describes the request.
-     */
-    prompt: string;
-    /**
-     * The callback function to be executed when the request is accepted.
-     */
-    callback: RCEHandler;
-    /**
-     * Resolve the request, closing all attached notifications and clearing timers.
-     */
-    resolve: () => void;
-    /**
-     * Attach a `window.showProgress` notification to the request, allowing it to be dismissed on request resolution.
-     * @param progress The progress object from `window.withProgress` to report the prompt and time passed to.
-     * @returns A promise that resolves when the request is resolved.
-     */
-    attachNotification: (progress: vscode.Progress<{ message?: string; increment?: number }>) => Promise<void>;
-    /**
-     * Whether the notification has been revealed already.
-     */
-    notificationVisible: boolean;
-    /**
-     * Disposable events
-     */
-    cancelEvents?: vscode.Disposable[];
-    /**
-     * The function to call for preview effects.
-     */
-    preview?: (actionData: ActionData) => vscode.Disposable;
-    /**
-     * Preview effect disposable.
-     * @todo redesign how this works later.
-     */
-    previewDisposable?: vscode.Disposable;
-    /**
-     * The action data associated with this request.
-     */
-    actionData: ActionData;
+let activeRequestContext: RCEContext | null = null;
+
+function getActiveRequestContext(): RCEContext | null {
+    return activeRequestContext;
+}
+
+function setActiveRequestContext(context: RCEContext | null): void {
+    activeRequestContext = context;
 }
 
 export interface ExtendedActionInfo {
@@ -89,16 +57,16 @@ export const cancelRequestAction: RCEAction = {
 /**
  * Handles cancellation requests from Neuro.
  */
-export function handleCancelRequest(actionData: ActionData): string | undefined {
-    if (!NEURO.rceRequest) {
-        updateActionStatus(actionData, 'failure', 'No active request.');
-        return 'No active request to cancel.';
+export function handleCancelRequest(_context: RCEContext): ActionHandlerResult {
+    const activeContext = getActiveRequestContext();
+    if (!activeContext?.request) {
+        return actionHandlerFailure('No active request to cancel.', 'No active request.');
     }
-    const data = NEURO.rceRequest!.actionData;
-    clearRceRequest();
+    const data = activeContext.data;
+    clearRceRequest(activeContext);
+    activeContext.done(false);
     updateActionStatus(data, 'cancelled', 'Cancelled on Neuro\'s request');
-    updateActionStatus(actionData, 'success', `Cancelled action "${data.name}"`);
-    return 'Request cancelled.';
+    return actionHandlerSuccess('Request cancelled.', `Cancelled action "${data.name}"`);
 }
 
 /**
@@ -107,31 +75,30 @@ export function handleCancelRequest(actionData: ActionData): string | undefined 
  * Only runs if there is an RCE callback in NEURO.
  */
 export function emergencyDenyRequests(): void {
-    if (!NEURO.rceRequest) {
+    const activeContext = getActiveRequestContext();
+    if (!activeContext?.request) {
         return;
     }
-    const data = NEURO.rceRequest.actionData;
+    const data = activeContext.data;
     updateActionStatus(data, 'cancelled', 'Emergency shutdown activated');
-    clearRceRequest();
-    logOutput('INFO', `Cancelled ${NEURO.rceRequest.callback} due to emergency shutdown.`);
+    clearRceRequest(activeContext);
+    activeContext.done(false);
+    logOutput('INFO', `Cancelled ${activeContext.action.name} due to emergency shutdown.`);
     NEURO.client?.sendContext('Your last request was denied.');
     vscode.window.showInformationMessage(`The last request from ${NEURO.currentController} has been denied automatically.`);
 }
 
-export function clearRceRequest(): void {
-    if (!NEURO.rceRequest) return;
-    NEURO.rceRequest.resolve();
-    if (NEURO.rceRequest.cancelEvents) {
-        for (const disposable of NEURO.rceRequest.cancelEvents) {
-            try { disposable.dispose(); } catch (erm: unknown) { logOutput('ERROR', `Failed to dispose a cancellation event: ${erm}. This could contribute to a memory leak.`); }
-        }
+export function clearRceRequest(context: RCEContext | null = getActiveRequestContext()): void {
+    if (!context?.request) return;
+    context.request.resolve();
+    context.request = undefined;
+    if (getActiveRequestContext() === context) {
+        setActiveRequestContext(null);
+        NEURO.client?.unregisterActions([cancelRequestAction.name]);
+        NEURO.statusBarItem!.tooltip = 'No active request';
+        NEURO.statusBarItem!.color = new vscode.ThemeColor('statusBarItem.foreground');
+        NEURO.statusBarItem!.backgroundColor = new vscode.ThemeColor('statusBarItem.background');
     }
-    NEURO.rceRequest.previewDisposable?.dispose();
-    NEURO.rceRequest = null;
-    NEURO.client?.unregisterActions([cancelRequestAction.name]);
-    NEURO.statusBarItem!.tooltip = 'No active request';
-    NEURO.statusBarItem!.color = new vscode.ThemeColor('statusBarItem.foreground');
-    NEURO.statusBarItem!.backgroundColor = new vscode.ThemeColor('statusBarItem.background');
 }
 
 /**
@@ -143,28 +110,18 @@ export function clearRceRequest(): void {
  * @param preview Optional preview effects function.
  */
 export function createRceRequest(
-    prompt: string,
-    callback: RCEHandler,
-    actionData: ActionData,
-    cancelEvents?: vscode.Disposable[],
-    preview?: (actionData: ActionData) => vscode.Disposable,
+    context: RCEContext,
 ): void {
-    NEURO.rceRequest = {
-        prompt,
-        callback,
-        notificationVisible: false,
-
-        // these immediately get replaced synchronously, this is just so we don't have them be nullable in the type
-        resolve: () => { },
-        attachNotification: async () => { },
-        cancelEvents,
-        actionData,
-        preview,
-    };
+    setActiveRequestContext(context);
 
     const promise = new Promise<void>((resolve) => {
         // we can't add any buttons to progress, so we have to add the accept link
-        const message = `${NEURO.rceRequest!.prompt} [Accept](command:neuropilot.acceptRceRequest)`;
+        if (!context.request) {
+            context.updateStatus('failure', 'Internal failure: Request not initialized before createRceRequest');
+            return;
+        }
+        const request = context.request;
+        const message = `${request.prompt} [Accept](command:neuropilot.acceptRceRequest)`;
 
         // this is null initially but will be assigned when a notification gets spawned
         let progress: vscode.Progress<{ message?: string; increment?: number }> | null = null;
@@ -191,14 +148,19 @@ export function createRceRequest(
 
             // actually handle the timeout
             timeout = setTimeout(() => {
-                clearRceRequest();
+                clearRceRequest(context);
                 NEURO.client?.sendContext('Request expired.');
-                updateActionStatus(actionData, 'timeout', `Timed out waiting for approval from ${CONNECTION.userName}`);
+                context.updateStatus('timeout', `Timed out waiting for approval from ${CONNECTION.userName}`);
+                context.done(false);
             }, timeoutDuration);
         }
+        request.interval = interval;
+        request.timeout = timeout;
 
         // this will be called on request resolution
-        NEURO.rceRequest!.resolve = () => {
+        request.resolve = () => {
+            if (request.resolved) return;
+            request.resolved = true;
             if (interval)
                 clearInterval(interval);
             if (timeout)
@@ -207,7 +169,7 @@ export function createRceRequest(
             resolve();
         };
 
-        NEURO.rceRequest!.attachNotification = async (p) => {
+        request.attachNotification = async (p) => {
             // set internal progress to the one from the notification
             progress = p;
             // we need to set the prompt and report time passed if there's a timeout
@@ -223,15 +185,19 @@ export function createRceRequest(
  * Reveals the RCE notification for the current request if it is not already visible.
  */
 export function revealRceNotification(): void {
-    if (!NEURO.rceRequest)
+    const activeContext = getActiveRequestContext();
+    const request = activeContext?.request;
+    if (!request)
         return;
 
     // don't show the notification if it's already open
-    if (NEURO.rceRequest.notificationVisible)
+    if (request.notificationVisible)
         return;
 
-    NEURO.rceRequest.notificationVisible = true;
-    NEURO.rceRequest.previewDisposable = NEURO.rceRequest.preview?.(NEURO.rceRequest.actionData);
+    request.notificationVisible = true;
+    if (activeContext.action.preview) {
+        activeContext.lifecycle.preview = activeContext.action.preview(activeContext);
+    }
 
     // weirdly enough, a "notification" isn't actually a thing in vscode.
     // it's either a message, or in this case, progress report that takes shape of a notification
@@ -247,7 +213,7 @@ export function revealRceNotification(): void {
                 denyRceRequest();
             });
 
-            return NEURO.rceRequest!.attachNotification(progress);
+            return request.attachNotification(progress);
         },
     );
 }
@@ -256,30 +222,51 @@ export function revealRceNotification(): void {
  * Accepts the current RCE request and executes the callback function.
  * If there is no request to accept, an error message is shown to the user.
  */
-export function acceptRceRequest(): void {
-    if (!NEURO.rceRequest) {
+export async function acceptRceRequest(): Promise<void> {
+    const activeContext = getActiveRequestContext();
+    if (!activeContext?.request) {
         vscode.window.showErrorMessage(`No active request from ${NEURO.currentController} to accept.`);
         return;
     }
 
     NEURO.client?.sendContext(`${CONNECTION.userName} has accepted your request.`);
 
-    const actionData = NEURO.rceRequest.actionData;
-    updateActionStatus(actionData, 'pending', 'Executing...');
+    const actionData = activeContext.data;
+    activeContext.updateStatus('pending', 'Executing...');
+
+    // Clear timers and cancel events before handler execution to prevent them from triggering mid-execution
+    activeContext.clearPreHandlerResources();
 
     try {
-        const result = NEURO.rceRequest.callback(actionData, (status, message) => updateActionStatus(actionData, status, message));
-        if (result) NEURO.client?.sendContext(result);
+        const result = await activeContext.action.handler(activeContext);
+        switch (result.success) {
+            case 'retry': {
+                activeContext.updateStatus('failure', result.historyNote);
+                NEURO.client?.sendContext(result.message ? 'Action failed: ' + result.message : '\nPlease retry the action.');
+                activeContext.done(false);
+                break;
+            }
+            default: {
+                if (result.historyNote) activeContext.updateStatus(result.success, result.historyNote);
+                const messageString = result.success === 'failure' ? result.message ? 'Action failed: ' + result.message : 'Action failed.' : result.message ?? 'Action successful.'; // this needs to be more reasonable to read
+                NEURO.client?.sendContext(messageString);
+                break;
+            }
+        }
+        activeContext.done(result.success === 'success' ? true : false);
+        return;
     } catch (erm: unknown) {
         const actionName = actionData.name;
         notifyOnCaughtException(actionName, erm);
+        clearActionForce();
         NEURO.client?.sendActionResult(actionData.id, true, `An error occurred while executing the action "${actionName}". You can retry if you like, but it may be better to ask ${CONNECTION.userName} to check what's up.`);
 
         // Track execution failure
-        updateActionStatus(actionData, 'failure', 'Uncaught exception while executing action');
+        activeContext.updateStatus('failure', 'Uncaught exception while executing action');
+        activeContext.done(false);
     }
 
-    clearRceRequest();
+    clearRceRequest(activeContext);
 }
 
 /**
@@ -287,7 +274,8 @@ export function acceptRceRequest(): void {
  * If there is no request to deny, an error message is shown to the user.
  */
 export function denyRceRequest(): void {
-    if (!NEURO.rceRequest) {
+    const activeContext = getActiveRequestContext();
+    if (!activeContext?.request) {
         vscode.window.showErrorMessage(`No active request from ${NEURO.currentController} to deny.`);
         return;
     }
@@ -296,12 +284,13 @@ export function denyRceRequest(): void {
 
     // Track denial
     updateActionStatus(
-        NEURO.rceRequest.actionData,
+        activeContext.data,
         'denied',
         `Denied by ${CONNECTION.userName}`,
     );
 
-    clearRceRequest();
+    clearRceRequest(activeContext);
+    activeContext.done(false);
 }
 
 /**
@@ -313,7 +302,7 @@ export function addActions(actions: RCEAction[], register = true): void {
     const actionsToAdd = actions.filter(a => !ACTIONS_ARRAY.some(existing => existing.name === a.name));
     const actionsNotToAdd = actions.filter(a => !actionsToAdd.includes(a));
     if (actionsNotToAdd.length > 0) {
-        logOutput('WARN', `Tried to add actions that are already registered: ${actionsNotToAdd.map(a => a.name).join(', ')}`);
+        logOutput('WARNING', `Tried to add actions that are already registered: ${actionsNotToAdd.map(a => a.name).join(', ')}`);
     }
     ACTIONS_ARRAY.push(...actionsToAdd);
     if (register && NEURO.connected) {
@@ -349,7 +338,7 @@ export function removeActions(actionNames: string[]): void {
 
 /**
  * Registers an action with Neuro.
- * The action to register must already be added to the registry via {@link addAction} or {@link addActions}.
+ * The action to register must already be added to the registry via {@link addActions}.
  * Will only register the action if it is not already registered.
  * @param actionName The name of the action to register.
  */
@@ -388,6 +377,10 @@ export function reregisterAllActions(conservative: boolean): void {
     if (!NEURO.connected) return;
 
     const permissions = getAllPermissions();
+
+    // Apply action force permission override
+    applyActionForcePermissionOverride(permissions);
+
     const actionsToUnregister = conservative
         ? ACTIONS_ARRAY
             .filter(a => REGISTERED_ACTIONS.has(a.name) && !shouldBeRegistered(a))
@@ -403,7 +396,7 @@ export function reregisterAllActions(conservative: boolean): void {
     const actionsToRegister = ACTIONS_ARRAY
         // Skip actions that are already registered
         .filter(a => !REGISTERED_ACTIONS.has(a.name))
-        .filter(shouldBeRegistered)
+        .filter(x => shouldBeRegistered(x, permissions))
         .map(stripToAction);
 
     actionsToRegister.forEach(a => REGISTERED_ACTIONS.add(a.name));
@@ -414,18 +407,133 @@ export function reregisterAllActions(conservative: boolean): void {
 
     NEURO.viewProviders.actions?.refreshActions();
     return;
+}
 
-    function shouldBeRegistered(action: RCEAction): boolean {
-        // Non-auto-registered actions should stay unregistered
-        if (action.autoRegister === false && !REGISTERED_ACTIONS.has(action.name))
-            return false;
-        // Check the register condition
-        if (action.registerCondition && !action.registerCondition())
-            return false;
-        // Check permissions
-        const effectivePermission = permissions[action.name] ?? action.defaultPermission ?? PermissionLevel.OFF;
-        return effectivePermission !== PermissionLevel.OFF;
+/**
+ * Applies the current action force's permission override to a given permissions object.
+ * **This modifies the permissions object in-place**.
+ * @param permissions The permissions to apply the action force override to.
+ * @param params The action force parameters to apply. If not provided, will use {@link NEURO.currentActionForce}.
+ * @returns A reference to the permissions object.
+ */
+function applyActionForcePermissionOverride(permissions: Record<string, PermissionLevel>, params?: ActionForceParams): Record<string, PermissionLevel> {
+    const realParams = params ?? NEURO.currentActionForce;
+    if (realParams?.overridePermissions !== undefined) {
+        // logOutput('INFO', `Reregistering actions with override permission level ${realParams.overridePermissions} due to active action force.`);
+        if (typeof realParams.overridePermissions === 'object') {
+            for (const actionName in realParams.overridePermissions) {
+                permissions[actionName] = realParams.overridePermissions[actionName];
+            }
+        }
+        else {
+            for (const actionName of realParams.actionNames) {
+                permissions[actionName] = realParams.overridePermissions;
+            }
+        }
     }
+    return permissions;
+}
+
+/**
+ * Check whether an action should be registered with Neuro.
+ * @param action The action to check.
+ * @param permissions The permissions to check against. If not provided, will use the current permissions via {@link getAllPermissions}.
+ * @returns `true` if the action should be registered, `false` if not.
+ */
+function shouldBeRegistered(action: RCEAction, permissions?: Record<string, PermissionLevel>): boolean {
+    if (!permissions) {
+        permissions = getAllPermissions();
+        applyActionForcePermissionOverride(permissions);
+    }
+    // Non-auto-registered actions should stay unregistered
+    if (action.autoRegister === false && !REGISTERED_ACTIONS.has(action.name))
+        return false;
+    // Check the register condition
+    if (action.registerCondition && !action.registerCondition())
+        return false;
+    // Check permissions
+    const effectivePermission = permissions[action.name] ?? action.defaultPermission ?? PermissionLevel.OFF;
+    return effectivePermission !== PermissionLevel.OFF;
+}
+
+export function canForceActions(): boolean {
+    return NEURO.connected && NEURO.currentActionForce === null;
+}
+
+/**
+ * Wrapper function for {@link NeuroClient.forceActions} that uses the RCE system to register and unregister the required actions.
+ * Actions must be registered with the RCE system via {@link addActions} before they can be forced with this function.
+ * @param params The parameters for forcing actions. A (possibly modified) copy of this object will be stored in {@link NEURO.currentActionForce} for the duration of the force.
+ * @param strict If true, will fail if any of the specified actions are not / will not be registered with RCE (e.g. due to {@link RCEAction.registerCondition registerCondition} or {@link RCEAction.autoRegister autoRegister}: false).
+ * If false, will filter out those actions and proceed if there is at least one action remaining.
+ * @see {@link NeuroClient.forceActions} for the other parameters' documentation.
+ */
+export function tryForceActions(params: ActionForceParams, strict = false): boolean {
+    if (!canForceActions())
+        return false;
+    if (params.actionNames.length === 0) {
+        logOutput('WARNING', 'Tried to force an empty array of actions. Aborting action force.');
+        return false;
+    }
+
+    // Verify that all actions are registered with RCE
+    if (!params.actionNames.every(name => ACTIONS_ARRAY.some(a => a.name === name))) {
+        logOutput('WARNING', 'One or more actions in the action force are not registered with RCE. Aborting action force.');
+        return false;
+    }
+
+    // Create a copy to prevent external mutation
+    // Leaving the array reference intact since it's set later in the function anyway
+    const paramsCopy = { ...params };
+
+    // Filter out actions that will not be registered by reregisterAllActions
+    const permissions = getAllPermissions();
+    applyActionForcePermissionOverride(permissions, params);
+    paramsCopy.actionNames = paramsCopy.actionNames
+        .filter(name => shouldBeRegistered(getAction(name)!, permissions));
+
+    // Abort if no actions are left after filtering
+    if (paramsCopy.actionNames.length === 0) {
+        logOutput('WARNING', 'No actions left to force after filtering for registration conditions and permissions. Aborting action force.');
+        return false;
+    }
+    // If strict mode is enabled, abort any actions were filtered out
+    else if (strict && paramsCopy.actionNames.length !== params.actionNames.length) {
+        logOutput('WARNING', 'Some actions were filtered out while strict mode is enabled. Aborting action force.');
+        return false;
+    }
+
+    NEURO.currentActionForce = paramsCopy;
+
+    // Register actions with overridden permissions if specified
+    if (params.overridePermissions) {
+        reregisterAllActions(true);
+    }
+
+    NEURO.client?.forceActions(paramsCopy.query, paramsCopy.actionNames, paramsCopy.state, paramsCopy.ephemeral_context, paramsCopy.priority);
+
+    return true;
+}
+
+/** Clears the current action force, if any. */
+function clearActionForce(): void {
+    if (!NEURO.currentActionForce) return;
+    NEURO.currentActionForce = null;
+    reregisterAllActions(true);
+}
+
+/**
+ * Aborts the current action force by unregistering its actions,
+ * and then re-registering all actions with their original permissions.
+ * There is a slight delay between the unregistration and reregistration to
+ * ensure they arrive in the correct order.
+ * @see {@link https://github.com/VedalAI/neuro-sdk/issues/14}
+ */
+export async function abortActionForce(): Promise<void> {
+    NEURO.client?.unregisterActions(NEURO.currentActionForce?.actionNames ?? []);
+    NEURO.currentActionForce = null; // Not using clearActionForce here since we want to delay re-registration.
+    await new Promise(resolve => setTimeout(resolve, 250)); // Wait for 250ms
+    reregisterAllActions(true);
 }
 
 /**
@@ -466,7 +574,6 @@ export function getExtendedActionsInfo(): ExtendedActionInfo[] {
  * @param checkTasks Whether or not to check for tasks.
  */
 export async function RCEActionHandler(actionData: ActionData) {
-    const statusUpdateHandler = (status: ActionStatus, message: string) => updateActionStatus(actionData, status, message);
     try {
         if (REGISTERED_ACTIONS.has(actionData.name)) {
             NEURO.actionHandled = true;
@@ -474,19 +581,26 @@ export async function RCEActionHandler(actionData: ActionData) {
             // Start tracking execution immediately
             fireOnActionStart(actionData, 'Validating action...');
 
-            const action = getAction(actionData.name)!;
+            const context = new RCEContext(actionData);
 
-            const effectivePermission = getPermissionLevel(action.name);
+            const effectivePermission = getPermissionLevel(context.action.name);
             if (effectivePermission === PermissionLevel.OFF) {
+                clearActionForce();
                 NEURO.client?.sendActionResult(actionData.id, true, 'Action failed: You don\'t have permission to execute this action.');
-                statusUpdateHandler('denied', 'Permission denied');
+                context.updateStatus('denied', 'Permission denied');
+                context.done(false);
                 return;
             }
 
+            if (context.action.contextSetupHook) {
+                context.lifecycle.setupHooks = false;
+                Promise.allSettled(context.action.contextSetupHook).then(() => context.lifecycle.setupHooks = true);
+            }
+
             // Validate schema
-            if (action.schema) {
-                statusUpdateHandler('pending', 'Validating schema...');
-                const schema = ACTIONS.experimentalSchemas ? action.schema ?? action.schemaFallback : action.schema;
+            if (context.action.schema) {
+                context.updateStatus('pending', 'Validating schema...');
+                const schema = ACTIONS.experimentalSchemas ? context.action.schema ?? context.action.schemaFallback : context.action.schema;
                 const schemaValidationResult = validate(actionData.params, schema, { required: true });
                 if (!schemaValidationResult.valid) {
                     const messagesArray: string[] = [];
@@ -497,34 +611,45 @@ export async function RCEActionHandler(actionData: ActionData) {
                     if (messagesArray.length === 0) messagesArray.push('Unknown schema validation error.');
                     const schemaFailures = `- ${messagesArray.join('\n- ')}`;
                     const message = 'Action failed, your inputs did not pass schema validation due to these problems:\n\n' + schemaFailures + '\n\nPlease pay attention to the schema and the above errors if you choose to retry.';
+                    // Don't clear action force here since it should be retried
                     NEURO.client?.sendActionResult(actionData.id, false, message);
-                    statusUpdateHandler('schema', `${messagesArray.length} schema validation rules failed`);
+                    context.updateStatus('schema', `${messagesArray.length} schema validation rules failed`);
+                    context.done(false);
                     return;
                 }
             }
 
             // Validate custom
-            if (action.validators) {
-                if (action.validators.sync) {
-                    statusUpdateHandler('pending', 'Running validators...');
-                    for (const validate of action.validators.sync) {
-                        const actionResult = await validate(actionData);
+            if (context.action.validators) {
+                if (context.action.validators.sync) {
+                    if (!context.lifecycle.validatorResults) {
+                        context.lifecycle.validatorResults = {};
+                    }
+                    if (!context.lifecycle.validatorResults.sync) {
+                        context.lifecycle.validatorResults.sync = [];
+                    }
+                    context.updateStatus('pending', 'Running validators...');
+                    for (const validate of context.action.validators.sync) {
+                        const actionResult = await validate(context);
                         if (!actionResult.success) {
+                            context.lifecycle.validatorResults.sync.push(actionResult);
+                            if (!(actionResult.retry ?? false))
+                                clearActionForce();
                             NEURO.client?.sendActionResult(actionData.id, !(actionResult.retry ?? false), actionResult.message);
-                            statusUpdateHandler(
+                            context.updateStatus(
                                 'failure',
-                                actionResult.historyNote ? `Validator failed: ${actionResult.historyNote}` : 'Validator failed' + actionResult.retry ? '\nRequesting retry' : '',
+                                actionResult.historyNote ? `Validator failed: ${actionResult.historyNote}` : 'Validator failed' + (actionResult.retry ? '\nRequesting retry' : ''),
                             );
+                            context.done(false);
                             return;
                         }
                     }
                 }
-                if (action.validators.async) vscode.window.showInformationMessage(`Action "${actionData.name}" uses asynchronous validators, which have not been implemented yet.`); // implementation needs this to be moved to be *after* setup of cancel events (and action result obv).
+                if (context.action.validators.async) logOutput('INFO', `Action "${actionData.name}" uses asynchronous validators, which have not been implemented yet.`); // implementation needs this to be moved to be *after* setup of cancel events (and action result obv).
             }
 
-            const eventArray: vscode.Disposable[] = [];
-
-            if (ACTIONS.enableCancelEvents && action.cancelEvents) {
+            if (ACTIONS.enableCancelEvents && context.action.cancelEvents) {
+                context.lifecycle.events = [];
                 const eventListener = (eventObject: RCECancelEvent, eventData: unknown) => {
                     let createdReason: string;
                     let createdLogReason: string;
@@ -544,46 +669,78 @@ export async function RCEActionHandler(actionData: ActionData) {
                     } else {
                         createdLogReason = createdReason;
                     }
-                    logOutput('WARN', `${CONNECTION.nameOfAPI}'${CONNECTION.nameOfAPI.endsWith('s') ? '' : 's'} action ${action.name} was cancelled because ${createdLogReason}`);
+                    logOutput('WARNING', `${CONNECTION.nameOfAPI}'${CONNECTION.nameOfAPI.endsWith('s') ? '' : 's'} action ${context.action.name} was cancelled because ${createdLogReason}`);
                     NEURO.client?.sendContext(`Your request was cancelled because ${createdReason}`);
-                    statusUpdateHandler('cancelled', `Cancelled because ${createdLogReason}`);
-                    clearRceRequest();
+                    context.updateStatus('cancelled', `Cancelled because ${createdLogReason}`);
+                    clearRceRequest(context);
+                    context.done(false);
                 };
-                for (const eventObject of action.cancelEvents) {
-                    const eventDetails = eventObject(actionData);
+                for (const eventObject of context.action.cancelEvents) {
+                    const eventDetails = eventObject(context);
                     if (eventDetails) {
-                        eventArray.push(eventDetails.event((eventData) => eventListener(eventDetails, eventData)), eventDetails.disposable);
+                        const subscription = eventDetails.event((eventData) => eventListener(eventDetails, eventData));
+                        context.lifecycle.events.push(vscode.Disposable.from(subscription, eventDetails.disposable));
                     }
                 }
             }
 
             if (effectivePermission === PermissionLevel.AUTOPILOT) {
-                statusUpdateHandler('pending', 'Executing handler...');
-                for (const d of eventArray) d.dispose();
-                const result = action.handler(actionData, statusUpdateHandler);
-                NEURO.client?.sendActionResult(actionData.id, true, result ?? undefined);
+                context.updateStatus('pending', 'Executing handler...');
+                // Clear timers and cancel events before handler execution to prevent them from triggering mid-execution
+                context.clearPreHandlerResources();
+                const result = context.action.handler(context);
+                if (isThenable(result)) {
+                    clearActionForce();
+                    NEURO.client?.sendActionResult(actionData.id, true);
+                    clearActionForce();
+                    const resolvedResult = await result;
+                    if (resolvedResult.historyNote) {
+                        const actionFailedStarter = resolvedResult.message ? 'Action failed: ' + resolvedResult.message : 'Action failed.';
+                        if (resolvedResult.success === 'retry') {
+                            context.updateStatus('failure', actionFailedStarter + '\nRequesting retry.');
+                            NEURO.client?.sendContext(actionFailedStarter + '\nPlease retry the action.');
+                            // TODO: Add handling for forces
+                        } else {
+                            context.updateStatus(resolvedResult.success, actionFailedStarter);
+                            NEURO.client?.sendContext(actionFailedStarter);
+                        }
+                    }
+                    context.done(resolvedResult.success === 'success' ? true : false);
+                } else {
+                    const resolvedResult = result as ActionHandlerResult;
+                    if (resolvedResult.success !== 'retry')
+                        clearActionForce();
+                    NEURO.client?.sendActionResult(actionData.id, resolvedResult.success !== 'retry', resolvedResult.message); // TODO: Actually make work
+                    context.done(resolvedResult.success === 'success' ? true : false);
+                }
             }
             else { // effectivePermission === PermissionLevel.COPILOT
-                if (NEURO.rceRequest) {
+                if (getActiveRequestContext()?.request) {
+                    clearActionForce();
                     NEURO.client?.sendActionResult(actionData.id, true, 'Action failed: Already waiting for permission to run another action.');
-                    statusUpdateHandler('failure', 'Another action pending approval');
+                    context.updateStatus('failure', 'Another action pending approval');
+                    context.done(false);
                     return;
                 }
 
-                statusUpdateHandler('pending', `Waiting for approval from ${CONNECTION.userName}`);
+                context.updateStatus('pending', `Waiting for approval from ${CONNECTION.userName}`);
 
                 const prompt = (NEURO.currentController
                     ? NEURO.currentController
                     : 'The Neuro API server') +
                     ' wants to ' +
-                    (typeof action.promptGenerator === 'string' ? action.promptGenerator : action.promptGenerator(actionData)).trim();
+                    (typeof context.action.promptGenerator === 'string' ? context.action.promptGenerator : context.action.promptGenerator?.(context) ?? `execute ${context.action.name}.`).trim();
+
+                context.request = {
+                    prompt,
+                    notificationVisible: false,
+                    resolved: false,
+                    resolve: () => { },
+                    attachNotification: async () => { },
+                };
 
                 createRceRequest(
-                    prompt,
-                    action.handler,
-                    actionData,
-                    eventArray,
-                    action.preview,
+                    context,
                 );
 
                 NEURO.statusBarItem!.tooltip = new vscode.MarkdownString(prompt);
@@ -596,12 +753,15 @@ export async function RCEActionHandler(actionData: ActionData) {
                     revealRceNotification();
 
                 // End of added code.
+                clearActionForce();
                 NEURO.client?.sendActionResult(actionData.id, true, 'Requested permission to run action.');
             }
         } else if (actionData.name === 'cancel_request') {
             NEURO.actionHandled = true;
             fireOnActionStart(actionData, 'Executing...');
-            cancelRequestAction.handler(actionData, statusUpdateHandler);
+            const cancelContext = new RCEContext(actionData);
+            cancelRequestAction.handler(cancelContext);
+            cancelContext.done(true);
         }
     } catch (erm: unknown) {
         const actionName = actionData.name;
@@ -609,7 +769,7 @@ export async function RCEActionHandler(actionData: ActionData) {
         NEURO.client?.sendActionResult(actionData.id, true, `An error occurred while executing the action "${actionName}". You can retry if you like, but it may be better to ask Vedal to check what's up.`);
 
         // Track execution error
-        statusUpdateHandler('exception', 'Uncaught exception while executing action');
+        updateActionStatus(actionData, 'exception', 'Uncaught exception while executing action');
         return;
     }
 }

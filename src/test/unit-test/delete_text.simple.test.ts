@@ -1,14 +1,14 @@
 import * as assert from 'assert';
 import { editingActions } from '@/editing';
-import { ActionData } from 'neuro-game-sdk';
+import type { RCEContext } from '@/context/rce';
 
 // Tests for the delete_text action prompt generator using real logic
 suite('delete_text Action', () => {
     test('generates a prompt and includes escaped find when useRegex is true', () => {
         // === Arrange & Act ===
         const prompt = editingActions.delete_text.promptGenerator({
-            params: { find: 'a+b', useRegex: true },
-        } as ActionData);
+            data: { params: { find: 'a+b', useRegex: true } },
+        } as RCEContext);
 
         // === Assert ===
         assert.ok(typeof prompt === 'string' && prompt.length > 0);
@@ -18,8 +18,8 @@ suite('delete_text Action', () => {
     test('generates a prompt and includes raw find when useRegex is false', () => {
         // === Arrange ===
         const prompt = editingActions.delete_text.promptGenerator({
-            params: { find: 'hello', useRegex: false },
-        } as ActionData);
+            data: { params: { find: 'hello', useRegex: false } },
+        } as RCEContext);
 
         // === Act ===
 

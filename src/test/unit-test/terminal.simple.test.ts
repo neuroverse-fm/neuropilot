@@ -1,12 +1,12 @@
 import * as assert from 'assert';
 import { terminalActions } from '@/pseudoterminal';
-import { ActionData } from 'neuro-game-sdk';
+import type { RCEContext } from '@/context/rce';
 
 // Tests for terminal-related prompt generators using real logic with loose checks
 suite('terminal Actions', () => {
     test('execute_in_terminal prompt formats command and shell', () => {
         // === Arrange & Act ===
-        const prompt = terminalActions.execute_in_terminal.promptGenerator({ params: { command: 'echo hi', shell: 'bash' } } as ActionData);
+        const prompt = terminalActions.execute_in_terminal.promptGenerator({ data: { params: { command: 'echo hi', shell: 'bash' } } } as RCEContext);
 
         // === Assert ===
         assert.ok(typeof prompt === 'string' && prompt.length > 0);
@@ -16,7 +16,7 @@ suite('terminal Actions', () => {
 
     test('kill_terminal_process prompt formats shell', () => {
         // === Arrange & Act ===
-        const prompt = terminalActions.kill_terminal_process.promptGenerator({ params: { shell: 'pwsh' } } as ActionData);
+        const prompt = terminalActions.kill_terminal_process.promptGenerator({ data: { params: { shell: 'pwsh' } } } as RCEContext);
 
         // === Assert ===
         assert.ok(typeof prompt === 'string' && prompt.length > 0);

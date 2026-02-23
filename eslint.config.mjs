@@ -10,6 +10,7 @@ import tseslint from 'typescript-eslint';
 import stylistic from '@stylistic/eslint-plugin';
 import eslintPluginUnicorn from 'eslint-plugin-unicorn';
 import globals from 'globals';
+import jsdoc from 'eslint-plugin-jsdoc';
 
 export default tseslint.config(
     {
@@ -55,6 +56,7 @@ export default tseslint.config(
         plugins: {
             '@stylistic': stylistic,
             'unicorn': eslintPluginUnicorn,
+            'jsdoc': jsdoc,
         },
         rules: {
             'curly': 'off',
@@ -89,6 +91,14 @@ export default tseslint.config(
                 'error',
                 {
                     'name': 'erm',
+                },
+            ],
+            'jsdoc/no-undefined-types': [
+                'warn',
+                {
+                    'definedTypes': [
+                        'Thenable',
+                    ],
                 },
             ],
         },
