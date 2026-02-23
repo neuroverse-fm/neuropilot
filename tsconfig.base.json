@@ -9,12 +9,6 @@
 		"sourceMap": true,
 		"strict": true,
 		"paths": {
-			"~/*": [
-				"./*"
-			],
-			"@/*": [
-				"./src/*"
-			],
 			"@context/*": [
 				"./src/context/*"
 			],
@@ -35,7 +29,13 @@
 			],
 			"@views/*": [
 				"./src/views/*"
-			]
+			],
+			"@/*": [
+				"./src/*"
+			],
+			"~/*": [
+				"./*"
+			],
 		}
 	},
 	"exclude": [

@@ -51,8 +51,15 @@ if (Permission level?) then (AUTOPILOT)
     :Dispose cancel events;
     if (Action handler is?) then (sync)
         :Run action handler;
-        #Khaki:Send action result; <<output>>
+        if (Failed and should retry?) then (yes)
+            #Salmon:Send action result
+            (success = false); <<output>>
+        else (no)
+            :Clear action force;
+            #PaleGreen:Send action result; <<output>>
+        endif
     else (async)
+        :Clear action force;
         #PaleGreen:Send action result; <<output>>
         :Run action handler;
     endif
@@ -61,11 +68,14 @@ else (COPILOT)
         stop
     endif
     :Show prompt;
+    :Clear action force;
     #PaleGreen:Send action result; <<output>>
     fork
         :<:clock2:>\nWait for timeout;
         stop
     fork again
+        :<:clock2:>\nWait for request to be revealed;
+        :Run preview effects;
         :<:clock2:>\nWait for user input;
     fork again
         :<:clock2:>\nWait for cancellation event;

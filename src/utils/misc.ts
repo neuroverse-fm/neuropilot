@@ -24,7 +24,9 @@ let cachedExcludeKey = '';
 let cachedIncludeRegExp: RegExp = REGEXP_ALWAYS;
 let cachedExcludeRegExp: RegExp = REGEXP_NEVER;
 
-export function logOutput(tag: string, message: string) {
+export type OutputTag = 'DEBUG' | 'INFO' | 'WARNING' | 'ERROR';
+
+export function logOutput(tag: OutputTag, message: string) {
     if (!NEURO.outputChannel) {
         const testFlag = (globalThis as typeof globalThis & { NEUROPILOT_TEST?: boolean }).NEUROPILOT_TEST;
         if (testFlag === true || globalThis?.process?.env?.NEUROPILOT_TEST === 'true') {
@@ -67,8 +69,7 @@ export function createClient() {
     }
 
     NEURO.connected = false;
-    NEURO.waiting = false;
-    NEURO.cancelled = false;
+    NEURO.currentActionForce = null;
 
     // Reset auto-reconnect flag for new connection
     shouldAutoReconnect = true;
@@ -112,7 +113,7 @@ function attemptConnection(currentAttempt: number, maxAttempts: number, interval
                         attemptConnection(currentAttempt + 1, maxAttempts, interval);
                     }, interval);
                 } else {
-                    logOutput('WARN', `Failed to reconnect after ${maxAttempts} attempts`);
+                    logOutput('WARNING', `Failed to reconnect after ${maxAttempts} attempts`);
                     showAPIMessage('failed', `Failed to reconnect to the Neuro API after ${maxAttempts} attempt(s).`);
                 }
             } else {
@@ -152,7 +153,7 @@ function attemptConnection(currentAttempt: number, maxAttempts: number, interval
                 attemptConnection(currentAttempt + 1, maxAttempts, interval);
             }, interval);
         } else {
-            logOutput('WARN', `Failed to connect after ${maxAttempts} attempts`);
+            logOutput('WARNING', `Failed to connect after ${maxAttempts} attempts`);
             showAPIMessage('failed', `Failed to connect to the Neuro API after ${maxAttempts} attempt(s).`);
         }
     };
@@ -209,9 +210,9 @@ export interface NeuroPositionContext {
     contextBefore: string;
     /** The context after the range, or an empty string if the cursor is not defined. */
     contextAfter: string;
-    /** The zero-based line where {@link contextBefore} starts. */
+    /** The zero-based line where {@link NeuroPositionContext.contextBefore contextBefore} starts. */
     startLine: number;
-    /** The zero-based line where {@link contextAfter} ends. */
+    /** The zero-based line where {@link NeuroPositionContext.contextAfter contextBefore} ends. */
     endLine: number;
     /** The number of total lines in the file. */
     totalLines: number;
@@ -224,7 +225,7 @@ interface NeuroPositionContextOptions {
     cursorPosition?: vscode.Position;
     /** The start of the range around which to get the context. Defaults to the start of the document if not provided. */
     position?: vscode.Position;
-    /** The end of the range around which to get the context. If not provided, defaults to {@link position}, or the end of the document if {@link position} is not provided. */
+    /** The end of the range around which to get the context. If not provided, defaults to {@link NeuroPositionContextOptions.position position}, or the end of the document if {@link NeuroPositionContextOptions.position position} is not provided. */
     position2?: vscode.Position;
 }
 

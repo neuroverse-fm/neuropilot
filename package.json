@@ -841,6 +841,7 @@
 		"esbuild": "^0.27.3",
 		"esbuild-plugin-polyfill-node": "^0.3.0",
 		"eslint": "^9.39.2",
+		"eslint-plugin-jsdoc": "^62.5.5",
 		"eslint-plugin-unicorn": "^62.0.0",
 		"glob": "^13.0.1",
 		"globals": "^17.3.0",
@@ -861,7 +862,7 @@
 		"glob-to-regexp": "^0.4.1",
 		"ignore": "^7.0.5",
 		"jsonschema": "^1.5.0",
-		"neuro-game-sdk": "^1.0.9",
+		"neuro-game-sdk": "^1.0.10",
 		"preact": "^10.28.3"
 	}
 }

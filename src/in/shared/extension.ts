@@ -1,9 +1,8 @@
 import * as vscode from 'vscode';
 import { NEURO, EXTENSIONS } from '@/constants';
 import { logOutput, createClient, onClientConnected, setVirtualCursor, showAPIMessage, disconnectClient, reconnectClient, getWorkspaceUri, getFence, simpleFileName } from '@/utils/misc';
-import { completionsProvider, registerCompletionResultHandler } from '@/completions';
+import { completionsProvider } from '@/completions';
 import { giveCookie } from '@/functions/cookies';
-import { registerChatResponseHandler } from '@/chat';
 import { ACCESS, ACTIONS, checkDeprecatedSettings, CONFIG, CONNECTION, PermissionLevel, setPermissions } from '@/config';
 import { explainWithNeuro, fixWithNeuro, NeuroCodeActionsProvider, sendDiagnosticsDiff } from '@/lint_problems';
 import { editorChangeHandler, fileSaveListener, moveNeuroCursorHere, toggleSaveAction, workspaceEditHandler } from '@/editing';
@@ -116,8 +115,7 @@ export function initializeCommonState(context: vscode.ExtensionContext) {
     NEURO.url = CONNECTION.websocketUrl;
     NEURO.gameName = CONNECTION.gameName;
     NEURO.connected = false;
-    NEURO.waiting = false;
-    NEURO.cancelled = false;
+    NEURO.currentActionForce = null;
     NEURO.outputChannel = vscode.window.createOutputChannel('NeuroPilot');
     NEURO.currentController = CONNECTION.nameOfAPI;
     NEURO.context.subscriptions.push(NEURO.outputChannel);
@@ -145,8 +143,6 @@ export function setupCommonProviders() {
 
 export function setupClientConnectedHandlers(...extraHandlers: (() => void)[]) {
     onClientConnected(registerPreActionHandler);
-    onClientConnected(registerCompletionResultHandler);
-    onClientConnected(registerChatResponseHandler);
     for (const handlers of extraHandlers) {
         onClientConnected(handlers);
     }

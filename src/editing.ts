@@ -636,7 +636,7 @@ export const editingActions = {
         description: 'Replace insert_turtle_here\'s current selection with the provided text.'
             + ' If insert_turtle_here has no selection, this will insert the text at insert_turtle_here\'s current cursor position.'
             + ' After replacing/inserting, your cursor will be placed at the end of the inserted text.'
-            + ' If "requireSelectionUnchanged" is true, the action will be automatically canceled if insert_turtle_here\'s selection changes or has changed since it was last obtained.',
+            + ' If "requireSelectionUnchanged" is true, the action will be automatically cancelled if insert_turtle_here\'s selection changes or has changed since it was last obtained.',
         category: CATEGORY_EDITING,
         schema: {
             type: 'object',
@@ -1169,7 +1169,7 @@ export function handleSave(): RCEHandlerReturns {
                 NEURO.saving = false;
                 return actionHandlerSuccess('Document saved successfully.', 'Document saved');
             } else {
-                logOutput('WARN', 'Document save returned false.');
+                logOutput('WARNING', 'Document save returned false.');
                 NEURO.saving = false;
                 return actionHandlerFailure('Document did not save.', 'Document did not save');
             }

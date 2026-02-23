@@ -504,6 +504,15 @@ export function getPermissionLevel(actionName: string): PermissionLevel {
     if (NEURO.killSwitch || NEURO.tempDisabledActions.includes(actionName)) {
         return PermissionLevel.OFF;
     }
+    if (NEURO.currentActionForce?.overridePermissions !== undefined) {
+        if (typeof NEURO.currentActionForce.overridePermissions === 'object' && actionName in NEURO.currentActionForce.overridePermissions) {
+            return NEURO.currentActionForce.overridePermissions[actionName];
+        }
+        else {
+            // Can't be anything other than PermissionLevel, as the object case is handled above
+            return NEURO.currentActionForce.overridePermissions as PermissionLevel;
+        }
+    }
     const permissions = getAllPermissions();
     const permission = permissions[actionName];
 

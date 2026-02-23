@@ -86,7 +86,7 @@ export function giveCookie(isRequested = false, defaultFlavor = 'Chocolate Chip'
         title: `Give ${NEURO.currentController} a cookie`,
     }).then((flavor) => {
         if (!flavor) {
-            logOutput('INFO', 'No flavor given, canceling cookie');
+            logOutput('INFO', 'No flavor given, cancelling cookie');
             if (isRequested) {
                 // Funny quotes if cookie was requested but no flavor given
                 const quotes = [

@@ -4,25 +4,35 @@
 
 import { Action, ActionForcePriorityEnum } from 'neuro-game-sdk';
 import { ACTIONS, Permission, PermissionLevel } from '@/config';
-import { logOutput, turtleSafari } from '@/utils/misc';
+import { logOutput, OutputTag, turtleSafari } from '@/utils/misc';
 import { PromptGenerator } from '@/rce';
 import { RCECancelEvent } from '@events/utils';
 import type { RCEContext } from '@context/rce';
-import { NEURO } from '@/constants';
+
+import type { NeuroClient } from 'neuro-game-sdk';
+import type { reregisterAllActions } from '@/rce';
 
 //#region Action force utils
 
-export interface ActionForceState {
+/**
+ * The parameters for forcing actions.
+ * @see {@link NeuroClient.forceActions} for field documentation.
+ */
+export interface ActionForceParams {
     state?: string;
     query: string;
     ephemeral_context?: boolean;
     actionNames: string[];
     priority?: ActionForcePriorityEnum;
-}
-
-export function createActionForce(force: ActionForceState) {
-    NEURO.client?.forceActions(force.query, force.actionNames, force.state, force.ephemeral_context, force.priority);
-    NEURO.waiting = force;
+    /**
+     * If specified, execute all actions with the specified permission level instead of the current one.
+     * If an object is provided, the keys are action names and the values are the permission levels to use for those actions.
+     * If an action is not included in the object, it will not have its permission overridden.
+     * 
+     * Note that at the moment, action forces will not be retried if the permission is {@link PermissionLevel.COPILOT}
+     * or if the chosen action's handler is async.
+     */
+    overridePermissions?: PermissionLevel.COPILOT | PermissionLevel.AUTOPILOT | Record<string, PermissionLevel.AUTOPILOT | PermissionLevel.COPILOT>;
 }
 
 //#endregion
@@ -99,10 +109,12 @@ export interface RCEAction<T = any> extends Action {
      * The function to generate a prompt for the action request (Copilot Mode). 
      * The prompt should fit the phrasing scheme "Neuro wants to [prompt]".
      * 
+     * Only set this to `null` if the action is never intended to be used in Copilot mode.
+     * 
      * It is this way due to a potential new addition in Neuro API "v2". (not officially proposed)
      * More info (comment): https://github.com/VedalAI/neuro-game-sdk/discussions/58#discussioncomment-12938623
      */
-    promptGenerator: PromptGenerator;
+    promptGenerator: PromptGenerator | null;
     /** Default permission for actions when no permission is configured in user or workspace settings. Defaults to {@link PermissionLevel.OFF}. */
     defaultPermission?: PermissionLevel;
     /**
@@ -110,8 +122,18 @@ export interface RCEAction<T = any> extends Action {
      * You can use null if the action is never added to the registry.
      */
     category: string | null;
-    /** Whether to automatically register the action with Neuro upon addition. Defaults to true. */
+    /**
+     * Whether to automatically register the action with Neuro if all conditions are met.
+     * Defaults to true.
+     * Note that this will not watch the conditions, so if the conditions change, the action will not be immediately registered or unregistered.
+     * You must call {@link reregisterAllActions} to update the registration.
+     */
     autoRegister?: boolean;
+    /**
+     * Whether the action should be hidden in the action permissions view.
+     * For actions that are exclusively used in action forces.
+     */
+    hidden?: boolean;
     /** A condition that must be true for the action to be registered. If not provided, the action is always registered. **This function must never throw.** */
     registerCondition?: () => boolean;
     /** 
@@ -223,7 +245,7 @@ export function actionValidationFailure(message: string, historyNote?: string): 
  * If omitted, will just return "Action failed.".
  * @returns A context message with the specified message.
  */
-export function contextFailure(message?: string, tag = 'WARNING'): string {
+export function contextFailure(message?: string, tag: OutputTag = 'WARNING'): string {
     const result = message !== undefined ? `Action failed: ${message}` : 'Action failed.';
     logOutput(tag, result);
     return result;

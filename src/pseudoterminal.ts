@@ -387,7 +387,7 @@ export function emergencyTerminalShutdown() {
     if (failedShutdownCount == 0) {
         logOutput('INFO', 'Emergency shutdown complete. All terminals have been terminated.');
     } else {
-        logOutput('WARN', `Failed to terminate ${failedShutdownCount} shells, including: ${failedShutdownTerminals}.`);
+        logOutput('WARNING', `Failed to terminate ${failedShutdownCount} shells, including: ${failedShutdownTerminals}.`);
         vscode.window.showWarningMessage(`Failed to terminate ${failedShutdownCount} terminal(s), which include these terminals: ${failedShutdownTerminals.join(', ')}.\nPlease check on them.`);
     }
 }
