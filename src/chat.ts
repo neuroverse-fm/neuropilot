@@ -90,7 +90,6 @@ export const chatAction: RCEAction = {
     },
     promptGenerator: null, // Only ever run in Autopilot mode
     category: 'Chat',
-    autoRegister: false,
     hidden: true,
     defaultPermission: PermissionLevel.OFF, // Used with overridePermissions in forceActions
 } as const;

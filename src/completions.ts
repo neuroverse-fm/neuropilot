@@ -50,7 +50,6 @@ export const completeCodeAction: RCEAction = {
     },
     promptGenerator: null, // Only ever run in Autopilot mode
     defaultPermission: PermissionLevel.OFF, // Used with overridePermissions in forceActions
-    autoRegister: false,
     hidden: true,
 } as const;
 

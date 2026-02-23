@@ -379,19 +379,7 @@ export function reregisterAllActions(conservative: boolean): void {
     const permissions = getAllPermissions();
 
     // Apply action force permission override
-    if (NEURO.currentActionForce?.overridePermissions !== undefined) {
-        logOutput('INFO', `Reregistering actions with override permission level ${NEURO.currentActionForce.overridePermissions} due to active action force.`);
-        if (typeof NEURO.currentActionForce.overridePermissions === 'object') {
-            for (const actionName in NEURO.currentActionForce.overridePermissions) {
-                permissions[actionName] = NEURO.currentActionForce.overridePermissions[actionName];
-            }
-        }
-        else {
-            for (const actionName of NEURO.currentActionForce.actionNames) {
-                permissions[actionName] = NEURO.currentActionForce.overridePermissions;
-            }
-        }
-    }
+    applyActionForcePermissionOverride(permissions);
 
     const actionsToUnregister = conservative
         ? ACTIONS_ARRAY
@@ -408,7 +396,7 @@ export function reregisterAllActions(conservative: boolean): void {
     const actionsToRegister = ACTIONS_ARRAY
         // Skip actions that are already registered
         .filter(a => !REGISTERED_ACTIONS.has(a.name))
-        .filter(shouldBeRegistered)
+        .filter(x => shouldBeRegistered(x, permissions))
         .map(stripToAction);
 
     actionsToRegister.forEach(a => REGISTERED_ACTIONS.add(a.name));
@@ -419,18 +407,53 @@ export function reregisterAllActions(conservative: boolean): void {
 
     NEURO.viewProviders.actions?.refreshActions();
     return;
+}
 
-    function shouldBeRegistered(action: RCEAction): boolean {
-        // Non-auto-registered actions should stay unregistered
-        if (action.autoRegister === false && !REGISTERED_ACTIONS.has(action.name))
-            return false;
-        // Check the register condition
-        if (action.registerCondition && !action.registerCondition())
-            return false;
-        // Check permissions
-        const effectivePermission = permissions[action.name] ?? action.defaultPermission ?? PermissionLevel.OFF;
-        return effectivePermission !== PermissionLevel.OFF;
+/**
+ * Applies the current action force's permission override to a given permissions object.
+ * **This modifies the permissions object in-place**.
+ * @param permissions The permissions to apply the action force override to.
+ * @param params The action force parameters to apply. If not provided, will use {@link NEURO.currentActionForce}.
+ * @returns A reference to the permissions object.
+ */
+function applyActionForcePermissionOverride(permissions: Record<string, PermissionLevel>, params?: ActionForceParams): Record<string, PermissionLevel> {
+    const realParams = params ?? NEURO.currentActionForce;
+    if (realParams?.overridePermissions !== undefined) {
+        // logOutput('INFO', `Reregistering actions with override permission level ${realParams.overridePermissions} due to active action force.`);
+        if (typeof realParams.overridePermissions === 'object') {
+            for (const actionName in realParams.overridePermissions) {
+                permissions[actionName] = realParams.overridePermissions[actionName];
+            }
+        }
+        else {
+            for (const actionName of realParams.actionNames) {
+                permissions[actionName] = realParams.overridePermissions;
+            }
+        }
     }
+    return permissions;
+}
+
+/**
+ * Check whether an action should be registered with Neuro.
+ * @param action The action to check.
+ * @param permissions The permissions to check against. If not provided, will use the current permissions via {@link getAllPermissions}.
+ * @returns `true` if the action should be registered, `false` if not.
+ */
+function shouldBeRegistered(action: RCEAction, permissions?: Record<string, PermissionLevel>): boolean {
+    if (!permissions) {
+        permissions = getAllPermissions();
+        applyActionForcePermissionOverride(permissions);
+    }
+    // Non-auto-registered actions should stay unregistered
+    if (action.autoRegister === false && !REGISTERED_ACTIONS.has(action.name))
+        return false;
+    // Check the register condition
+    if (action.registerCondition && !action.registerCondition())
+        return false;
+    // Check permissions
+    const effectivePermission = permissions[action.name] ?? action.defaultPermission ?? PermissionLevel.OFF;
+    return effectivePermission !== PermissionLevel.OFF;
 }
 
 export function canForceActions(): boolean {
@@ -441,34 +464,44 @@ export function canForceActions(): boolean {
  * Wrapper function for {@link NeuroClient.forceActions} that uses the RCE system to register and unregister the required actions.
  * Actions must be registered with the RCE system via {@link addActions} before they can be forced with this function.
  * @param params The parameters for forcing actions. A (possibly modified) copy of this object will be stored in {@link NEURO.currentActionForce} for the duration of the force.
- * @param overridePermissions If specified, allow execution of the actions once with the given permission level.
+ * @param strict If true, will fail if any of the specified actions are not / will not be registered with RCE (e.g. due to {@link RCEAction.registerCondition registerCondition} or {@link RCEAction.autoRegister autoRegister}: false).
+ * If false, will filter out those actions and proceed if there is at least one action remaining.
  * @see {@link NeuroClient.forceActions} for the other parameters' documentation.
  */
-export function tryForceActions(params: ActionForceParams): boolean {
+export function tryForceActions(params: ActionForceParams, strict = false): boolean {
     if (!canForceActions())
         return false;
     if (params.actionNames.length === 0) {
-        logOutput('WARNING', 'Tried to force an empty array of actions.');
+        logOutput('WARNING', 'Tried to force an empty array of actions. Aborting action force.');
         return false;
     }
 
     // Verify that all actions are registered with RCE
     if (!params.actionNames.every(name => ACTIONS_ARRAY.some(a => a.name === name))) {
-        logOutput('WARNING', 'One or more actions in the action force are not registered with RCE.');
+        logOutput('WARNING', 'One or more actions in the action force are not registered with RCE. Aborting action force.');
         return false;
     }
 
     // Create a copy to prevent external mutation
-    const paramsCopy = { ...params, actionNames: [...params.actionNames] };
+    // Leaving the array reference intact since it's set later in the function anyway
+    const paramsCopy = { ...params };
 
-    // If overridePermissions is not set, only registered actions can be forced
-    if (!paramsCopy.overridePermissions) {
-        paramsCopy.actionNames = paramsCopy.actionNames.filter(name => REGISTERED_ACTIONS.has(name));
-    }
+    // Filter out actions that will not be registered by reregisterAllActions
+    const permissions = getAllPermissions();
+    applyActionForcePermissionOverride(permissions, params);
+    paramsCopy.actionNames = paramsCopy.actionNames
+        .filter(name => shouldBeRegistered(getAction(name)!, permissions));
 
-    // Cannot force if no actions are left in the array after filtering
-    if (paramsCopy.actionNames.length === 0)
+    // Abort if no actions are left after filtering
+    if (paramsCopy.actionNames.length === 0) {
+        logOutput('WARNING', 'No actions left to force after filtering for registration conditions and permissions. Aborting action force.');
         return false;
+    }
+    // If strict mode is enabled, abort any actions were filtered out
+    else if (strict && paramsCopy.actionNames.length !== params.actionNames.length) {
+        logOutput('WARNING', 'Some actions were filtered out while strict mode is enabled. Aborting action force.');
+        return false;
+    }
 
     NEURO.currentActionForce = paramsCopy;
 
@@ -500,7 +533,7 @@ export async function abortActionForce(): Promise<void> {
     NEURO.client?.unregisterActions(NEURO.currentActionForce?.actionNames ?? []);
     NEURO.currentActionForce = null; // Not using clearActionForce here since we want to delay re-registration.
     await new Promise(resolve => setTimeout(resolve, 250)); // Wait for 250ms
-    reregisterAllActions(false);
+    reregisterAllActions(true);
 }
 
 /**

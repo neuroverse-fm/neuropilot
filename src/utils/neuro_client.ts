@@ -10,6 +10,7 @@ import { RCECancelEvent } from '@events/utils';
 import type { RCEContext } from '@context/rce';
 
 import type { NeuroClient } from 'neuro-game-sdk';
+import type { reregisterAllActions } from '@/rce';
 
 //#region Action force utils
 
@@ -121,7 +122,12 @@ export interface RCEAction<T = any> extends Action {
      * You can use null if the action is never added to the registry.
      */
     category: string | null;
-    /** Whether to automatically register the action with Neuro upon addition. Defaults to true. */
+    /**
+     * Whether to automatically register the action with Neuro if all conditions are met.
+     * Defaults to true.
+     * Note that this will not watch the conditions, so if the conditions change, the action will not be immediately registered or unregistered.
+     * You must call {@link reregisterAllActions} to update the registration.
+     */
     autoRegister?: boolean;
     /**
      * Whether the action should be hidden in the action permissions view.
