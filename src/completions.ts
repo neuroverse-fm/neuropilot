@@ -1,22 +1,22 @@
-import { Action, NeuroClient } from 'neuro-game-sdk';
 import * as vscode from 'vscode';
 import { NEURO } from '@/constants';
-import { logOutput, simpleFileName, getPositionContext } from '@/utils';
-import assert from 'node:assert';
-import { CONFIG } from '@/config';
+import { logOutput, simpleFileName, getPositionContext, formatContext, NeuroPositionContext } from '@/utils/misc';
+import { CONFIG, CONNECTION, PermissionLevel } from '@/config';
 import { JSONSchema7 } from 'json-schema';
+import { actionHandlerFailure, actionHandlerSuccess, actionValidationAccept, actionValidationFailure, actionValidationRetry, RCEAction, RCEHandlerReturns } from '@/utils/neuro_client';
+import { RCEContext } from '@context/rce';
+import { abortActionForce, addActions, canForceActions, tryForceActions } from '@/rce';
+import { ActionForcePriorityEnum } from 'neuro-game-sdk';
 
 let lastSuggestions: string[] = [];
+let requestCancelled = false;
 
-export const completionAction = (maxCount: number) => ({
+// TODO: Figure out how to do this with maxCount
+// export const completionAction = (maxCount: number) => ({
+export const completeCodeAction: RCEAction = {
     name: 'complete_code',
-    description: maxCount == 1
-        ? 'Suggest code to write.' +
-        ' You may make one suggestion.' +
-        ' Your suggestion can be a single line or a multi-line code snippet.'
-
-        : 'Suggest code to write.' +
-        ` You may make up to ${maxCount} suggestions, but only one will be used.` +
+    description: 'Suggest code to write.' +
+        ' Only one suggestion you provide will be chosen.' +
         ' Your suggestions can be single lines or multi-line code snippets.',
     schema: {
         type: 'object',
@@ -24,15 +24,52 @@ export const completionAction = (maxCount: number) => ({
             suggestions: {
                 type: 'array',
                 items: { type: 'string' },
-                maxItems: maxCount,
+                maxItems: 3,
             },
         },
         required: ['suggestions'],
         additionalProperties: false,
     } satisfies JSONSchema7,
-} satisfies Action);
+    category: 'Completions',
+    handler: handleCompleteCode,
+    validators: {
+        sync: [
+            () => NEURO.currentActionForce // This is done before the action force is cleared
+                ? actionValidationAccept()
+                : actionValidationFailure('Not currently waiting for code suggestions'),
+            () => requestCancelled
+                ? actionValidationFailure('Request was cancelled')
+                : actionValidationAccept(),
+            (context) => {
+                const maxCount = CONFIG.maxCompletions || 3;
+                if (context.data.params!.suggestions.length > maxCount)
+                    return actionValidationRetry(`Too many suggestions. Maximum is ${maxCount}.`);
+                return actionValidationAccept();
+            },
+        ],
+    },
+    promptGenerator: null, // Only ever run in Autopilot mode
+    defaultPermission: PermissionLevel.OFF, // Used with overridePermissions in forceActions
+    hidden: true,
+} as const;
 
-export function requestCompletion(beforeContext: string, afterContext: string, fileName: string, language: string, maxCount: number) {
+function handleCompleteCode(context: RCEContext): RCEHandlerReturns {
+    if (requestCancelled)
+        return actionHandlerFailure('Request was cancelled');
+    if (!NEURO.currentActionForce)
+        return actionHandlerFailure('Not currently waiting for suggestions');
+
+    lastSuggestions = context.data.params.suggestions;
+    logOutput('INFO', 'Received suggestions:\n' + JSON.stringify(lastSuggestions));
+    return actionHandlerSuccess();
+}
+
+export function addCompleteCodeAction() {
+    addActions([completeCodeAction], false);
+}
+
+// TODO: Figure out maxCount properly
+export function requestCompletion(cursorContext: NeuroPositionContext, fileName: string, language: string, maxCount: number) {
     // If completions are disabled, notify and return early.
     if (CONFIG.completionTrigger === 'off') {
         if (!NEURO.warnOnCompletionsOff) {
@@ -55,77 +92,43 @@ export function requestCompletion(beforeContext: string, afterContext: string, f
     }
 
     // You can't request a completion while already waiting
-    if (NEURO.waiting) {
-        logOutput('WARNING', 'Attempted to request completion while waiting for response');
+    if (!canForceActions()) {
+        logOutput('WARNING', 'Already forcing an action from Neuro, aborting force attempt.');
         return;
     }
 
     logOutput('INFO', `Requesting completion for ${fileName}`);
 
-    NEURO.waiting = true;
-    NEURO.cancelled = false;
+    const status = tryForceActions({
+        query: 'Suggest code to be inserted at the cursor position based on the provided context.'
+            + (maxCount === 1
+                ? ' Your suggestion can be a single line or a multi-line code snippet.'
+                + '**IMPORTANT**: Provide only one suggestion.'
 
-    assert(NEURO.client);
-
-    NEURO.client.registerActions([
-        completionAction(maxCount),
-    ]);
-
-    NEURO.client.forceActions(
-        'Write code that fits between afterContext and beforeContext',
-        ['complete_code'],
-        JSON.stringify({
-            file: fileName,
-            language: language,
-            beforeContext: beforeContext,
-            afterContext: afterContext,
-        }),
-        false,
-    );
+                : ' Your suggestions can be single lines or multi-line code snippets.'
+                + ' If you decide to provide multiple suggestions, put the suggestion you\'re most confident in first.'
+                + ' Only one of your suggestions will be used.'
+                + `**IMPORTANT**: Do not provide more than ${maxCount} suggestions.`
+            ),
+        actionNames: [completeCodeAction.name],
+        state: formatContext(cursorContext),
+        ephemeral_context: false,
+        priority: ActionForcePriorityEnum.HIGH, // Process immediately, shorten utterance (Completions should be fast, but are not critical)
+        overridePermissions: PermissionLevel.AUTOPILOT,
+    });
+    if (!status) {
+        logOutput('ERROR', 'Failed to force completion action');
+        vscode.window.showErrorMessage('Failed to request completion from Neuro.');
+        return;
+    }
+    requestCancelled = false;
 }
 
 export function cancelCompletionRequest() {
-    NEURO.cancelled = true;
-    NEURO.waiting = false;
-    if (!NEURO.client) return;
-    NEURO.client.unregisterActions(['complete_code']);
+    requestCancelled = true;
+    abortActionForce();
+    NEURO.client?.sendContext(`${CONNECTION.userName} cancelled the completion request.`);
 }
-
-export function registerCompletionResultHandler() {
-    NEURO.client?.onAction((actionData) => {
-        assert(NEURO.client instanceof NeuroClient);
-
-        if (actionData.name === 'complete_code') {
-            NEURO.actionHandled = true;
-
-            const suggestions = actionData.params?.suggestions;
-
-            if (suggestions === undefined) {
-                NEURO.client.sendActionResult(actionData.id, false, 'Missing required parameter "suggestions"');
-                return;
-            }
-
-            NEURO.client.unregisterActions(['complete_code']);
-
-            if (NEURO.cancelled) {
-                NEURO.client.sendActionResult(actionData.id, true, 'Request was cancelled');
-                NEURO.waiting = false;
-                return;
-            }
-            if (!NEURO.waiting) {
-                NEURO.client.sendActionResult(actionData.id, true, 'Not currently waiting for suggestions');
-                return;
-            }
-
-            NEURO.waiting = false;
-
-            NEURO.client.sendActionResult(actionData.id, true);
-
-            lastSuggestions = suggestions;
-            logOutput('INFO', 'Received suggestions:\n' + JSON.stringify(suggestions));
-        }
-    });
-};
 
 export const completionsProvider: vscode.InlineCompletionItemProvider = {
     async provideInlineCompletionItems(document, position, context, token) {
@@ -143,18 +146,18 @@ export const completionsProvider: vscode.InlineCompletionItemProvider = {
         const fileName = simpleFileName(document.fileName);
         const maxCount = CONFIG.maxCompletions || 3;
 
-        requestCompletion(cursorContext.contextBefore, cursorContext.contextAfter, fileName, document.languageId, maxCount);
+        requestCompletion(cursorContext, fileName, document.languageId, maxCount);
 
         token.onCancellationRequested(() => {
             logOutput('INFO', 'Cancelled request');
             cancelCompletionRequest();
         });
 
-        const timeoutMs = CONFIG.timeout || 10000;
+        const timeoutMs = CONFIG.timeout ?? 10000;
         const timeout = new Promise<void>((_, reject) => setTimeout(() => reject('Request timed out'), timeoutMs));
         const completion = new Promise<void>((resolve) => {
             const interval = setInterval(() => {
-                if (!NEURO.waiting) {
+                if (!NEURO.currentActionForce) {
                     clearInterval(interval);
                     resolve();
                 }
@@ -166,7 +169,7 @@ export const completionsProvider: vscode.InlineCompletionItemProvider = {
         } catch (erm) {
             if (typeof erm === 'string') {
                 logOutput('ERROR', erm);
-                NEURO.cancelled = true;
+                requestCancelled = true;
                 vscode.window.showErrorMessage(erm);
             }
             else {

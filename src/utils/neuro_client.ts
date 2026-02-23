@@ -2,30 +2,42 @@
  * Helper functions and types for interacting with the Neuro Game SDK.
  */
 
-import { Action, ActionData } from 'neuro-game-sdk';
+import { Action, ActionForcePriorityEnum } from 'neuro-game-sdk';
 import { ACTIONS, Permission, PermissionLevel } from '@/config';
-import { logOutput, turtleSafari } from '@/utils';
+import { logOutput, OutputTag, turtleSafari } from '@/utils/misc';
 import { PromptGenerator } from '@/rce';
 import { RCECancelEvent } from '@events/utils';
-import { ActionStatus } from './events/actions';
+import type { RCEContext } from '@context/rce';
 
-/** The result of attempting to execute an action client-side. */
-export interface ActionValidationResult {
+import type { NeuroClient } from 'neuro-game-sdk';
+import type { reregisterAllActions } from '@/rce';
+
+//#region Action force utils
+
+/**
+ * The parameters for forcing actions.
+ * @see {@link NeuroClient.forceActions} for field documentation.
+ */
+export interface ActionForceParams {
+    state?: string;
+    query: string;
+    ephemeral_context?: boolean;
+    actionNames: string[];
+    priority?: ActionForcePriorityEnum;
     /**
-     * If `false`, the action handler is not executed.
-     * Warning: This is *not* the success parameter of the action result.
+     * If specified, execute all actions with the specified permission level instead of the current one.
+     * If an object is provided, the keys are action names and the values are the permission levels to use for those actions.
+     * If an action is not included in the object, it will not have its permission overridden.
+     * 
+     * Note that at the moment, action forces will not be retried if the permission is {@link PermissionLevel.COPILOT}
+     * or if the chosen action's handler is async.
      */
-    success: boolean;
-    /**
-     * The message to send Neuro.
-     * If success is `true`, this is optional, otherwise it should be an error message.
-     */
-    message?: string;
-    /** If `true`, Neuro should retry the action if it was forced. */
-    retry?: boolean;
-    /** The reason to show on action panel. */
-    historyNote?: string;
+    overridePermissions?: PermissionLevel.COPILOT | PermissionLevel.AUTOPILOT | Record<string, PermissionLevel.AUTOPILOT | PermissionLevel.COPILOT>;
 }
+
+//#endregion
+
+//#region Action metadata & helpers
 
 /**
  * ActionHandler to use with constants for records of actions and their corresponding handlers.
@@ -57,14 +69,14 @@ export interface RCEAction<T = any> extends Action {
          * 
          * If you supply validators that ensure certain items are not nullable, you may be able to assert that they are a non-nullable value for {@link RCEAction.promptGenerator generating the Copilot-mode prompt} and/or {@link RCEAction.preview preview effects}.
          */
-        sync?: ((actionData: ActionData) => ActionValidationResult | Promise<ActionValidationResult>)[],
+        sync?: ((context: RCEContext) => ActionValidationResult | Promise<ActionValidationResult>)[],
         /**
          * Asynchronous validators that will be ran in parallel to each other.
          * These will be executed after an action result, so it's perfect for long-running validators.
          * 
          * Async validators will time out (and consequently fail) after 1 second (1000ms). It is planned that this value will be adjustable in the future.
          */
-        async?: ((actionData: ActionData) => Promise<ActionValidationResult>)[];
+        async?: ((context: RCEContext) => Promise<ActionValidationResult>)[];
     }
     /**
      * Cancellation events attached to the action that will be automatically set up.
@@ -74,7 +86,7 @@ export interface RCEAction<T = any> extends Action {
      * Following VS Code's pattern, Disposables will not be awaited if async.
      * Returns from calling the `dispose()` function will not be used anywhere.
      */
-    cancelEvents?: ((actionData: ActionData) => RCECancelEvent<T> | null)[];
+    cancelEvents?: ((context: RCEContext) => RCECancelEvent<T> | null)[];
     /**
      * A function that is used to preview the action's effects.
      * This function will be called while awaiting user approval, if the action is set to Copilot permission.
@@ -85,7 +97,7 @@ export interface RCEAction<T = any> extends Action {
      */
     // The type must be `any`, using `never` causes it to return type errors. 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    preview?: (actionData: ActionData) => { dispose: () => any };
+    preview?: (context: RCEContext) => { dispose: () => any };
     /** 
      * The function to handle the action.
      * This function must be synchronous.
@@ -97,10 +109,12 @@ export interface RCEAction<T = any> extends Action {
      * The function to generate a prompt for the action request (Copilot Mode). 
      * The prompt should fit the phrasing scheme "Neuro wants to [prompt]".
      * 
+     * Only set this to `null` if the action is never intended to be used in Copilot mode.
+     * 
      * It is this way due to a potential new addition in Neuro API "v2". (not officially proposed)
      * More info (comment): https://github.com/VedalAI/neuro-game-sdk/discussions/58#discussioncomment-12938623
      */
-    promptGenerator: PromptGenerator;
+    promptGenerator: PromptGenerator | null;
     /** Default permission for actions when no permission is configured in user or workspace settings. Defaults to {@link PermissionLevel.OFF}. */
     defaultPermission?: PermissionLevel;
     /**
@@ -108,13 +122,31 @@ export interface RCEAction<T = any> extends Action {
      * You can use null if the action is never added to the registry.
      */
     category: string | null;
-    /** Whether to automatically register the action with Neuro upon addition. Defaults to true. */
+    /**
+     * Whether to automatically register the action with Neuro if all conditions are met.
+     * Defaults to true.
+     * Note that this will not watch the conditions, so if the conditions change, the action will not be immediately registered or unregistered.
+     * You must call {@link reregisterAllActions} to update the registration.
+     */
     autoRegister?: boolean;
+    /**
+     * Whether the action should be hidden in the action permissions view.
+     * For actions that are exclusively used in action forces.
+     */
+    hidden?: boolean;
     /** A condition that must be true for the action to be registered. If not provided, the action is always registered. **This function must never throw.** */
     registerCondition?: () => boolean;
+    /** 
+     * Setup handlers that will be invoked to help setup the {@link RCEContext.storage} object.
+     * These functions should not throw.
+     * 
+     * These functions will be parallelised, so the same key should not be accessed from multiple functions.
+     */
+    contextSetupHook?: ((context: RCEContext) => Thenable<void>)[];
 }
 
-export type RCEHandler = (actionData: ActionData, statusUpdate: (status: ActionStatus, message: string) => void) => string | undefined | void;
+type RCEHandler = (context: RCEContext) => RCEHandlerReturns;
+export type RCEHandlerReturns = ActionHandlerResult | Thenable<ActionHandlerResult>;
 
 /**
  * Strips an action to the form expected by the API.
@@ -145,6 +177,28 @@ export function stripToActions(actions: RCEAction[]): Action[] {
     return actions.map(stripToAction);
 }
 
+//#endregion
+
+//#region Action validation helpers
+
+/** The result of attempting to execute an action client-side. */
+export interface ActionValidationResult {
+    /**
+     * If `false`, the action handler is not executed.
+     * Warning: This is *not* the success parameter of the action result.
+     */
+    success: boolean;
+    /**
+     * The message to send Neuro.
+     * If success is `true`, this is optional, otherwise it should be an error message.
+     */
+    message?: string;
+    /** If `true`, Neuro should retry the action if it was forced. */
+    retry?: boolean;
+    /** The reason to show on action panel. */
+    historyNote?: string;
+}
+
 /**
  * Create a successful action result.
  * This should be used if all parameters have been parsed correctly.
@@ -168,7 +222,6 @@ export function actionValidationAccept(message?: string, historyNote?: string): 
  * @param message The message to send to Neuro.
  * This should explain, if possible, why the action failed.
  * If omitted, will just send "Action failed.".
- * @param retry It's highly recommended you use {@link actionValidationRetry} instead.
  * @param historyNote A note for the history panel. Will be changed to be required soon.
  * @returns A successful action result with the specified message.
  */
@@ -192,7 +245,7 @@ export function actionValidationFailure(message: string, historyNote?: string): 
  * If omitted, will just return "Action failed.".
  * @returns A context message with the specified message.
  */
-export function contextFailure(message?: string, tag = 'WARNING'): string {
+export function contextFailure(message?: string, tag: OutputTag = 'WARNING'): string {
     const result = message !== undefined ? `Action failed: ${message}` : 'Action failed.';
     logOutput(tag, result);
     return result;
@@ -213,6 +266,66 @@ export function actionValidationRetry(message: string, historyNote?: string): Ac
         historyNote,
     };
 }
+
+//#endregion
+
+//#region Action handler helpers
+
+export interface ActionHandlerResult {
+    success: ActionHandlerSuccess;
+    message?: string;
+    historyNote?: string;
+}
+
+type ActionHandlerSuccess = 'success' | 'failure' | 'retry';
+
+/**
+ * Function to return an object that indicates handler success.
+ * @param message The message that will be sent to Neuro
+ * @param historyNote If supplied, an action status update with its status set to success will be fired with the note. Otherwise, assumes that you've already done that yourself.
+ * @returns {ActionHandlerResult} An object with a successful handler result
+ */
+export function actionHandlerSuccess(message?: string, historyNote?: string): ActionHandlerResult {
+    return {
+        success: 'success',
+        message,
+        historyNote,
+    };
+}
+
+/**
+ * Function to return an object that indicates handler failure.
+ * @param message The message that will be sent to Neuro
+ * @param historyNote If supplied, an action status update with its status set to failure will be fired with the note. Otherwise, assumes that you've already done that yourself.
+ * @returns {ActionHandlerResult} An object with a failed handler result
+ */
+export function actionHandlerFailure(message: string, historyNote?: string): ActionHandlerResult {
+    logOutput('WARNING', 'Action failed: ' + message);
+    return {
+        success: 'failure',
+        message,
+        historyNote,
+    };
+}
+
+/**
+ * Function to return an object that indicates handler failure and to retry.
+ * @param message The message that will be sent to Neuro
+ * @param historyNote If supplied, an action status update with its status set to failure will be fired with the note. Otherwise, assumes that you've already done that yourself.
+ * @returns {ActionHandlerResult} An object with a failed handler result
+ */
+export function actionHandlerRetry(message: string, historyNote?: string): ActionHandlerResult {
+    logOutput('WARNING', 'Action failed: ' + message + '\nRequesting retry.');
+    return {
+        success: 'retry',
+        message,
+        historyNote,
+    };
+}
+
+//#endregion
+
+//#region Old validation result functions
 
 /**
  * Create an action result that tells Neuro that a required parameter is missing.
@@ -274,3 +387,5 @@ export function actionResultEnumFailure<T>(parameterName: string, validValues: T
         message: `Action failed: "${parameterName}" must be one of ${JSON.stringify(validValues)}, but got ${JSON.stringify(value)}.`,
     };
 }
+
+//#endregion

@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { RCECancelEvent } from './utils';
-import { getWorkspaceUri } from '@/utils';
+import { getWorkspaceUri } from '@/utils/misc';
 
 /**
  * Wrapper event to check if a specific file no longer has any linting issues.

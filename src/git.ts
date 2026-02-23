@@ -3,16 +3,17 @@ import { EXTENSIONS, NEURO, PROMISE_REJECTION_STRING } from '@/constants';
 import type { Change, CommitOptions, Commit, Repository, API, GitExtension } from '@typing/git.d';
 import { ForcePushMode } from '@typing/git.d';
 import { StatusStrings, RefTypeStrings } from '@typing/git_status';
-import { logOutput, simpleFileName, isPathNeuroSafe, normalizePath, getWorkspacePath } from '@/utils';
-import { ActionValidationResult, actionValidationAccept, actionValidationFailure, RCEAction, contextFailure, actionValidationRetry } from '@/neuro_client_helper';
-import { ActionData } from 'neuro-game-sdk';
+import { logOutput, simpleFileName, isPathNeuroSafe, normalizePath, getWorkspacePath } from '@/utils/misc';
+import { ActionValidationResult, actionValidationAccept, actionValidationFailure, RCEAction, actionValidationRetry, RCEHandlerReturns, actionHandlerSuccess, actionHandlerFailure, actionHandlerRetry } from '@/utils/neuro_client';
 import assert from 'node:assert';
 import { RCECancelEvent } from '@events/utils';
 import { JSONSchema7Definition } from 'json-schema';
 import { addActions, registerAction, reregisterAllActions, unregisterAction } from './rce';
-import { ActionStatus } from '@events/actions';
+import { RCEContext } from '@context/rce';
 
 export const CATEGORY_GIT = 'Git';
+export const CATEGORY_GIT_REMOTES = 'Git Remotes';
+export const CATEGORY_GIT_CONFIG = 'Git Config';
 
 // Get the Git extension
 let git: API | null = null;
@@ -32,7 +33,7 @@ export function getGitExtension() {
     }
 }
 
-function gitValidator(_actionData: ActionData): ActionValidationResult {
+function gitValidator(): ActionValidationResult {
     if (!git)
         return actionValidationFailure('Git extension not available.', 'Git extension not activated');
     if (!repo)
@@ -56,7 +57,8 @@ async function neuroSafeValidationHelper(filePath: string): Promise<ActionValida
     }
 }
 
-async function filePathGitValidator(actionData: ActionData): Promise<ActionValidationResult> {
+async function filePathGitValidator(context: RCEContext): Promise<ActionValidationResult> {
+    const actionData = context.data;
     if (actionData.params.filePath === '') {
         return actionValidationRetry('No file path specified.');
     };
@@ -76,7 +78,8 @@ async function filePathGitValidator(actionData: ActionData): Promise<ActionValid
     return actionValidationAccept();
 }
 
-function gitDiffValidator(actionData: ActionData): ActionValidationResult {
+function gitDiffValidator(context: RCEContext): ActionValidationResult {
+    const actionData = context.data;
     const diffType: string = actionData.params?.diffType ?? 'diffWithHEAD';
     const FAIL_NOTE = `Inputs did not match what was necessary to make a ${diffType}-type diff`;
     switch (diffType) {
@@ -121,7 +124,7 @@ function gitDiffValidator(actionData: ActionData): ActionValidationResult {
             return actionValidationFailure('Unknown diff type.', 'Unknown/unhandled diff type specified');
     }
 }
-const commonCancelEvents: ((actionData: ActionData) => RCECancelEvent | null)[] = [
+const commonCancelEvents: ((context: RCEContext) => RCECancelEvent | null)[] = [
     () => new RCECancelEvent({
         reason: 'the Git extension was disabled.',
         events: [
@@ -139,7 +142,7 @@ export const gitActions = {
         promptGenerator: 'initialize a Git repository in the workspace.',
         cancelEvents: commonCancelEvents,
         validators: {
-            sync: [(_actionData: ActionData) => {
+            sync: [() => {
                 if (!git) return actionValidationFailure('Git extension not available.', 'Git extension not activated');
                 return actionValidationAccept();
             }],
@@ -165,7 +168,7 @@ export const gitActions = {
         },
         handler: handleAddFileToGit,
         cancelEvents: commonCancelEvents,
-        promptGenerator: (actionData: ActionData) => `add the file "${actionData.params.filePath}" to the staging area.`,
+        promptGenerator: (context: RCEContext) => `add the file "${context.data.params.filePath}" to the staging area.`,
         validators: {
             sync: [gitValidator, filePathGitValidator],
         },
@@ -190,7 +193,7 @@ export const gitActions = {
         },
         handler: handleMakeGitCommit,
         cancelEvents: commonCancelEvents,
-        promptGenerator: (actionData: ActionData) => `commit changes with the message "${actionData.params.message}".`,
+        promptGenerator: (context: RCEContext) => `commit changes with the message "${context.data.params.message}".`,
         validators: {
             sync: [gitValidator],
         },
@@ -210,7 +213,7 @@ export const gitActions = {
         },
         handler: handleGitMerge,
         cancelEvents: commonCancelEvents,
-        promptGenerator: (actionData: ActionData) => `merge "${actionData.params.ref_to_merge}" into the current branch.`,
+        promptGenerator: (context: RCEContext) => `merge "${context.data.params.ref_to_merge}" into the current branch.`,
         validators: {
             sync: [gitValidator],
         },
@@ -248,7 +251,7 @@ export const gitActions = {
         },
         handler: handleRemoveFileFromGit,
         cancelEvents: commonCancelEvents,
-        promptGenerator: (actionData: ActionData) => `remove the file "${actionData.params.filePath}" from the staging area.`,
+        promptGenerator: (context: RCEContext) => `remove the file "${context.data.params.filePath}" from the staging area.`,
         validators: {
             sync: [gitValidator, filePathGitValidator],
         },
@@ -269,7 +272,7 @@ export const gitActions = {
         },
         handler: handleDeleteGitBranch,
         cancelEvents: commonCancelEvents,
-        promptGenerator: (actionData: ActionData) => `delete the branch "${actionData.params.branchName}".`,
+        promptGenerator: (context: RCEContext) => `delete the branch "${context.data.params.branchName}".`,
         validators: {
             sync: [gitValidator],
         },
@@ -289,7 +292,7 @@ export const gitActions = {
         },
         handler: handleSwitchGitBranch,
         cancelEvents: commonCancelEvents,
-        promptGenerator: (actionData: ActionData) => `switch to the branch "${actionData.params.branchName}".`,
+        promptGenerator: (context: RCEContext) => `switch to the branch "${context.data.params.branchName}".`,
         validators: {
             sync: [gitValidator],
         },
@@ -309,7 +312,7 @@ export const gitActions = {
         },
         handler: handleNewGitBranch,
         cancelEvents: commonCancelEvents,
-        promptGenerator: (actionData: ActionData) => `create a new branch "${actionData.params.branchName}".`,
+        promptGenerator: (context: RCEContext) => `create a new branch "${context.data.params.branchName}".`,
         validators: {
             sync: [gitValidator],
         },
@@ -366,7 +369,7 @@ export const gitActions = {
         },
         handler: handleDiffFiles,
         cancelEvents: commonCancelEvents,
-        promptGenerator: (actionData: ActionData) => `obtain ${actionData.params?.filePath ? `"${actionData.params.filePath}"'s` : 'a'} Git diff${actionData.params?.ref1 && actionData.params?.ref2 ? ` between ${actionData.params.ref1} and ${actionData.params.ref2}` : actionData.params?.ref1 ? ` at ref ${actionData.params.ref1}` : ''}${actionData.params?.diffType ? ` (of type "${actionData.params.diffType}")` : ''}.`,
+        promptGenerator: (context: RCEContext) => `obtain ${context.data.params?.filePath ? `"${context.data.params.filePath}"'s` : 'a'} Git diff${context.data.params?.ref1 && context.data.params?.ref2 ? ` between ${context.data.params.ref1} and ${context.data.params.ref2}` : context.data.params?.ref1 ? ` at ref ${context.data.params.ref1}` : ''}${context.data.params?.diffType ? ` (of type "${context.data.params.diffType}")` : ''}.`,
         validators: {
             sync: [gitValidator, filePathGitValidator, gitDiffValidator],
         },
@@ -389,7 +392,7 @@ export const gitActions = {
         },
         handler: handleGitLog,
         cancelEvents: commonCancelEvents,
-        promptGenerator: (actionData: ActionData) => `get the ${actionData.params?.log_limit ? `${actionData.params.log_limit} most recent commits in the ` : ''}Git log.`,
+        promptGenerator: (context: RCEContext) => `get the ${context.data.params?.log_limit ? `${context.data.params.log_limit} most recent commits in the ` : ''}Git log.`,
         validators: {
             sync: [gitValidator],
         },
@@ -409,7 +412,7 @@ export const gitActions = {
         },
         handler: handleGitBlame,
         cancelEvents: commonCancelEvents,
-        promptGenerator: (actionData: ActionData) => `get the Git blame for the file "${actionData.params.filePath}".`,
+        promptGenerator: (context: RCEContext) => `get the Git blame for the file "${context.data.params.filePath}".`,
         validators: {
             sync: [gitValidator, filePathGitValidator],
         },
@@ -432,11 +435,11 @@ export const gitActions = {
         },
         handler: handleTagHEAD,
         cancelEvents: commonCancelEvents,
-        promptGenerator: (actionData: ActionData) => `tag the current commit with the name "${actionData.params.name}" and associate it with the "${actionData.params.upstream}" remote.`,
+        promptGenerator: (context: RCEContext) => `tag the current commit with the name "${context.data.params.name}" and associate it with the "${context.data.params.upstream}" remote.`,
         validators: {
-            sync: [gitValidator, (actionData: ActionData) => {
+            sync: [gitValidator, (context: RCEContext) => {
                 const tagPattern = /^(?![/.@])(?!.*[/.@]$)(?!.*[/.@]{2,})(?:[a-z]+(?:[/.@][a-z]+)*)$/;
-                if (!tagPattern.test(actionData.params.name)) {
+                if (!tagPattern.test(context.data.params.name)) {
                     return actionValidationFailure('The Git tag does not conform to Git\'s tag naming rules.');
                 }
                 return actionValidationAccept();
@@ -458,7 +461,7 @@ export const gitActions = {
         },
         handler: handleDeleteTag,
         cancelEvents: commonCancelEvents,
-        promptGenerator: (actionData: ActionData) => `delete the tag "${actionData.params.name}".`,
+        promptGenerator: (context: RCEContext) => `delete the tag "${context.data.params.name}".`,
         validators: {
             sync: [gitValidator],
         },
@@ -469,7 +472,7 @@ export const gitActions = {
     set_git_config: {
         name: 'set_git_config',
         description: 'Set a Git configuration value',
-        category: 'Git Config',
+        category: CATEGORY_GIT_CONFIG,
         schema: {
             type: 'object',
             properties: {
@@ -481,7 +484,7 @@ export const gitActions = {
         },
         handler: handleSetGitConfig,
         cancelEvents: commonCancelEvents,
-        promptGenerator: (actionData: ActionData) => `set the Git config key "${actionData.params.key}" to "${actionData.params.value}".`,
+        promptGenerator: (context: RCEContext) => `set the Git config key "${context.data.params.key}" to "${context.data.params.value}".`,
         validators: {
             sync: [gitValidator],
         },
@@ -490,7 +493,7 @@ export const gitActions = {
     get_git_config: {
         name: 'get_git_config',
         description: 'Get a Git configuration value',
-        category: 'Git Config',
+        category: CATEGORY_GIT_CONFIG,
         schema: {
             type: 'object',
             properties: {
@@ -500,7 +503,7 @@ export const gitActions = {
         },
         handler: handleGetGitConfig,
         cancelEvents: commonCancelEvents,
-        promptGenerator: (actionData: ActionData) => actionData.params?.key ? `get the Git config key "${actionData.params.key}".` : 'get the Git config.',
+        promptGenerator: (context: RCEContext) => context.data.params?.key ? `get the Git config key "${context.data.params.key}".` : 'get the Git config.',
         validators: {
             sync: [gitValidator],
         },
@@ -511,7 +514,7 @@ export const gitActions = {
     fetch_git_commits: {
         name: 'fetch_git_commits',
         description: 'Fetch commits from the remote repository',
-        category: 'Git Remotes',
+        category: CATEGORY_GIT_REMOTES,
         schema: {
             type: 'object',
             properties: {
@@ -522,13 +525,13 @@ export const gitActions = {
         },
         handler: handleFetchGitCommits,
         cancelEvents: commonCancelEvents,
-        promptGenerator: (actionData: ActionData) => {
-            if (actionData.params.remoteName && actionData.params.branchName)
-                return `fetch commits ${actionData.params.remoteName}/${actionData.params.branchName}.`;
-            else if (actionData.params.remoteName)
-                return `fetch commits from ${actionData.params.remoteName}.`;
-            else if (actionData.params.branchName)
-                return `fetch commits from ${actionData.params.branchName}.`;
+        promptGenerator: (context: RCEContext) => {
+            if (context.data.params.remoteName && context.data.params.branchName)
+                return `fetch commits ${context.data.params.remoteName}/${context.data.params.branchName}.`;
+            else if (context.data.params.remoteName)
+                return `fetch commits from ${context.data.params.remoteName}.`;
+            else if (context.data.params.branchName)
+                return `fetch commits from ${context.data.params.branchName}.`;
             return 'fetch commits.';
         },
         validators: {
@@ -539,7 +542,7 @@ export const gitActions = {
     pull_git_commits: {
         name: 'pull_git_commits',
         description: 'Pull commits from the remote repository',
-        category: 'Git Remotes',
+        category: CATEGORY_GIT_REMOTES,
         handler: handlePullGitCommits,
         cancelEvents: commonCancelEvents,
         promptGenerator: 'pull commits.',
@@ -551,7 +554,7 @@ export const gitActions = {
     push_git_commits: {
         name: 'push_git_commits',
         description: 'Push commits to the remote repository',
-        category: 'Git Remotes',
+        category: CATEGORY_GIT_REMOTES,
         schema: {
             type: 'object',
             properties: {
@@ -563,14 +566,14 @@ export const gitActions = {
         },
         handler: handlePushGitCommits,
         cancelEvents: commonCancelEvents,
-        promptGenerator: (actionData: ActionData) => {
-            const force = actionData.params.forcePush ? 'force ' : '';
-            if (actionData.params.remoteName && actionData.params.branchName)
-                return `${force}push commits to ${actionData.params.remoteName}/${actionData.params.branchName}.`;
-            else if (actionData.params.remoteName)
-                return `${force}push commits to ${actionData.params.remoteName}.`;
-            else if (actionData.params.branchName)
-                return `${force}push commits to ${actionData.params.branchName}.`;
+        promptGenerator: (context: RCEContext) => {
+            const force = context.data.params.forcePush ? 'force ' : '';
+            if (context.data.params.remoteName && context.data.params.branchName)
+                return `${force}push commits to ${context.data.params.remoteName}/${context.data.params.branchName}.`;
+            else if (context.data.params.remoteName)
+                return `${force}push commits to ${context.data.params.remoteName}.`;
+            else if (context.data.params.branchName)
+                return `${force}push commits to ${context.data.params.branchName}.`;
             return `${force}push commits.`;
         },
         validators: {
@@ -583,7 +586,7 @@ export const gitActions = {
     add_git_remote: {
         name: 'add_git_remote',
         description: 'Add a new remote to the Git repository',
-        category: 'Git Remotes',
+        category: CATEGORY_GIT_REMOTES,
         schema: {
             type: 'object',
             properties: {
@@ -595,7 +598,7 @@ export const gitActions = {
         },
         handler: handleAddGitRemote,
         cancelEvents: commonCancelEvents,
-        promptGenerator: (actionData: ActionData) => `add a new remote "${actionData.params.remoteName}" with URL "${actionData.params.remoteURL}".`,
+        promptGenerator: (context: RCEContext) => `add a new remote "${context.data.params.remoteName}" with URL "${context.data.params.remoteURL}".`,
         validators: {
             sync: [gitValidator],
         },
@@ -604,7 +607,7 @@ export const gitActions = {
     remove_git_remote: {
         name: 'remove_git_remote',
         description: 'Remove a remote from the Git repository',
-        category: 'Git Remotes',
+        category: CATEGORY_GIT_REMOTES,
         schema: {
             type: 'object',
             properties: {
@@ -615,7 +618,7 @@ export const gitActions = {
         },
         handler: handleRemoveGitRemote,
         cancelEvents: commonCancelEvents,
-        promptGenerator: (actionData: ActionData) => `remove the remote "${actionData.params.remoteName}".`,
+        promptGenerator: (context: RCEContext) => `remove the remote "${context.data.params.remoteName}".`,
         validators: {
             sync: [gitValidator],
         },
@@ -624,7 +627,7 @@ export const gitActions = {
     rename_git_remote: {
         name: 'rename_git_remote',
         description: 'Rename a remote in the Git repository',
-        category: 'Git Remotes',
+        category: CATEGORY_GIT_REMOTES,
         schema: {
             type: 'object',
             properties: {
@@ -636,7 +639,7 @@ export const gitActions = {
         },
         handler: handleRenameGitRemote,
         cancelEvents: commonCancelEvents,
-        promptGenerator: (actionData: ActionData) => `rename the remote "${actionData.params.oldRemoteName}" to "${actionData.params.newRemoteName}".`,
+        promptGenerator: (context: RCEContext) => `rename the remote "${context.data.params.oldRemoteName}" to "${context.data.params.newRemoteName}".`,
         validators: {
             sync: [gitValidator],
         },
@@ -716,122 +719,100 @@ export function addGitActions() {
  * Requires neuropilot.permission.gitConfig to be enabled.
  */
 
-export function handleNewGitRepo(actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
+export function handleNewGitRepo(): RCEHandlerReturns {
     const workspaceFolders = vscode.workspace.workspaceFolders;
     if (!workspaceFolders || workspaceFolders.length === 0) {
-        updateStatus('failure', 'Not in a workspace');
-        return contextFailure('No workspace folder is open.');
+        return actionHandlerFailure('No workspace folder is open.', 'Not in a workspace');
     }
 
     const folderPath = workspaceFolders[0].uri.fsPath;
 
-    git!.init(vscode.Uri.file(folderPath)).then(() => {
+    return git!.init(vscode.Uri.file(folderPath)).then(() => {
         repo = git!.repositories[0]; // Update the repo reference to the new repository, just in case
         reregisterAllActions(true);
-        NEURO.client?.sendContext('Initialized a new Git repository in the workspace folder. You should now be able to use git commands.');
-        updateStatus('success', 'Repo initialized');
+        return actionHandlerSuccess('Initialized a new Git repository in the workspace folder. You should now be able to use git commands.', 'Repo initialized');
     }, (erm: string) => {
-        NEURO.client?.sendContext('Failed to initialize Git repository');
         logOutput('ERROR', `Failed to initialize Git repository: ${erm}`);
-        updateStatus('failure', PROMISE_REJECTION_STRING);
+        return actionHandlerFailure('Failed to initialize Git repository', PROMISE_REJECTION_STRING);
     });
 }
 
-export function handleGetGitConfig(actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
+export function handleGetGitConfig(context: RCEContext): RCEHandlerReturns {
+    const { data: actionData } = context;
     assert(repo);
     const configKey: string | undefined = actionData.params.key;
 
     if (!configKey) {
-        repo.getConfigs().then((configs: { key: string; value: string; }[]) => {
-            NEURO.client?.sendContext(`Git config:\n${configs.map((config) =>
-                `- ${config.key}: ${config.value}`,
-            ).join('\n')}`);
-            updateStatus('success', `Sent ${configs.length} repo Git config(s)`);
-            return;
+        return repo.getConfigs().then((configs: { key: string; value: string; }[]) => {
+            return actionHandlerSuccess(`Git config:\n${configs.map((config) => `- ${config.key}: ${config.value}`).join('\n')}`, `Sent ${configs.length} repo Git config(s)`);
         });
     }
     else {
-        repo.getConfig(configKey).then((configValue: string) => {
-            NEURO.client?.sendContext(`Git config key "${configKey}": ${configValue}`);
-            updateStatus('success', `Sent repo config value for key "${configKey}"`);
+        return repo.getConfig(configKey).then((configValue: string) => {
+            return actionHandlerSuccess(`Git config key "${configKey}": ${configValue}`, `Sent repo config value for key "${configKey}"`);
         }, (erm: string) => {
-            NEURO.client?.sendContext(`Failed to get Git config key "${configKey}"`);
             logOutput('ERROR', `Failed to get Git config key "${configKey}": ${erm}`);
-            updateStatus('failure', PROMISE_REJECTION_STRING);
+            return actionHandlerFailure(`Failed to get Git config key "${configKey}"`, PROMISE_REJECTION_STRING);
         });
     }
-
-    return;
 }
 
-export function handleSetGitConfig(actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
+export function handleSetGitConfig(context: RCEContext): RCEHandlerReturns {
+    const { data: actionData } = context;
     assert(repo);
     const configKey: string = actionData.params.key;
     const configValue: string = actionData.params.value;
 
-    repo.setConfig(configKey, configValue).then(() => {
-        NEURO.client?.sendContext(`Set Git config key "${configKey}" to: ${configValue}`);
-        updateStatus('success', `Wrote new repo config value of "${configKey}"`);
+    return repo.setConfig(configKey, configValue).then(() => {
+        return actionHandlerSuccess(`Set Git config key "${configKey}" to: ${configValue}`, `Wrote new repo config value of "${configKey}"`);
     }, (erm: string) => {
-        NEURO.client?.sendContext(`Failed to set Git config key "${configKey}"`);
         logOutput('ERROR', `Failed to set Git config key "${configKey}": ${erm}`);
-        updateStatus('failure', PROMISE_REJECTION_STRING);
+        return actionHandlerFailure(`Failed to set Git config key "${configKey}"`, PROMISE_REJECTION_STRING);
     });
-
-    return;
 }
 
 /*
  * Actions with Git branches
  */
 
-export function handleNewGitBranch(actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
+export function handleNewGitBranch(context: RCEContext): RCEHandlerReturns {
+    const { data: actionData } = context;
     assert(repo);
     const branchName: string = actionData.params.branchName;
 
-    repo.createBranch(branchName, true).then(() => {
-        NEURO.client?.sendContext(`Created and switched to new branch ${branchName}.`);
-        updateStatus('success', `Branch "${branchName}" created`);
+    return repo.createBranch(branchName, true).then(() => {
+        return actionHandlerSuccess(`Created and switched to new branch ${branchName}.`, `Branch "${branchName}" created`);
     }, (erm: string) => {
-        NEURO.client?.sendContext(`Failed to create branch ${branchName}`);
         logOutput('ERROR', `Failed to create branch: ${erm}`);
-        updateStatus('failure', PROMISE_REJECTION_STRING);
+        return actionHandlerFailure(`Failed to create branch ${branchName}`, PROMISE_REJECTION_STRING);
     });
-
-    return;
 }
 
-export function handleSwitchGitBranch(actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
+export function handleSwitchGitBranch(context: RCEContext): RCEHandlerReturns {
+    const { data: actionData } = context;
     assert(repo);
     const branchName: string = actionData.params.branchName;
 
-    repo.checkout(branchName).then(() => {
-        NEURO.client?.sendContext(`Switched to branch ${branchName}.`);
-        updateStatus('success', `Branch "${branchName}" checked out`);
+    return repo.checkout(branchName).then(() => {
+        return actionHandlerSuccess(`Switched to branch ${branchName}.`, `Branch "${branchName}" checked out`);
     }, (erm: string) => {
-        NEURO.client?.sendContext(`Failed to switch to branch ${branchName}`);
         logOutput('ERROR', `Failed to switch branch: ${erm}`);
-        updateStatus('failure', PROMISE_REJECTION_STRING);
+        return actionHandlerFailure(`Failed to switch to branch ${branchName}`, PROMISE_REJECTION_STRING);
     });
-
-    return;
 }
 
-export function handleDeleteGitBranch(actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
+export function handleDeleteGitBranch(context: RCEContext): RCEHandlerReturns {
+    const { data: actionData } = context;
     assert(repo);
     const branchName: string = actionData.params.branchName;
     const forceDelete: boolean = actionData.params.force ?? false;
 
-    repo.deleteBranch(branchName, forceDelete).then(() => {
-        NEURO.client?.sendContext(`Deleted branch ${branchName}.`);
-        updateStatus('success', `Branch "${branchName}"${forceDelete ? ' forcibly' : ''} deleted`);
+    return repo.deleteBranch(branchName, forceDelete).then(() => {
+        return actionHandlerSuccess(`Deleted branch ${branchName}.`, `Branch "${branchName}"${forceDelete ? ' forcibly' : ''} deleted`);
     }, (erm: string) => {
-        NEURO.client?.sendContext(`Failed to delete branch "${branchName}".${forceDelete === false ? '\nEnsure the branch is merged before deleting, or force delete it to discard changes.' : ''}`);
         logOutput('ERROR', `Failed to delete branch: ${erm}`);
-        updateStatus('failure', PROMISE_REJECTION_STRING);
+        return actionHandlerFailure(`Failed to delete branch "${branchName}".${forceDelete === false ? '\nEnsure the branch is merged before deleting, or force delete it to discard changes.' : ''}`, PROMISE_REJECTION_STRING);
     });
-
-    return;
 }
 
 /*
@@ -845,10 +826,10 @@ interface StateStringProps {
     status: string
 }
 
-export function handleGitStatus(actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
+export function handleGitStatus(): RCEHandlerReturns {
     assert(repo);
 
-    repo.status().then(() => {
+    return repo.status().then(() => {
         function translateChange(change: Change) {
             const isRename = change.renameUri !== undefined;
             return {
@@ -859,7 +840,7 @@ export function handleGitStatus(actionData: ActionData, updateStatus: (status: A
             };
         }
         // Can't stringify the repo state directly (because of getters I assume)
-        if (!repo) return;
+        if (!repo) return actionHandlerFailure('Repo unavailable', 'Repo unavailable');
         const state = {
             indexChanges: repo.state.indexChanges.map((change: Change) => translateChange(change)),
             workingTreeChanges: repo.state.workingTreeChanges.map((change: Change) => translateChange(change)),
@@ -915,15 +896,11 @@ export function handleGitStatus(actionData: ActionData, updateStatus: (status: A
 
         const stateStringArray: string[] = [mergeStateString, HEADStateString];
 
-        NEURO.client?.sendContext(`Git status:\n\n${stateStringArray.join('\n')}`);
-        updateStatus('success', `${repo.state.indexChanges.length + repo.state.workingTreeChanges.length + repo.state.mergeChanges.length} changes + more info sent`);
+        return actionHandlerSuccess(`Git status:\n\n${stateStringArray.join('\n')}`, `${repo.state.indexChanges.length + repo.state.workingTreeChanges.length + repo.state.mergeChanges.length} changes + more info sent`);
     }, (erm: string) => {
-        NEURO.client?.sendContext('Failed to get Git repository status');
         logOutput('ERROR', `Failed to get Git status: ${erm}`);
-        updateStatus('failure', PROMISE_REJECTION_STRING);
+        return actionHandlerFailure('Failed to get Git repository status', PROMISE_REJECTION_STRING);
     });
-
-    return;
 }
 
 // Helper to convert a provided file path (or wildcard) to an absolute path using the workspace folder (or repo root if not available)
@@ -934,7 +911,8 @@ function getAbsoluteFilePath(filePath = '.'): string {
     return normalizePath(workspaceFolder + '/' + filePath);
 }
 
-export function handleAddFileToGit(actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
+export function handleAddFileToGit(context: RCEContext): RCEHandlerReturns {
+    const { data: actionData } = context;
     assert(repo);
     const filePath: string[] = actionData.params.filePath;
     const absolutePaths: string[] = [];
@@ -943,18 +921,16 @@ export function handleAddFileToGit(actionData: ActionData, updateStatus: (status
         absolutePaths.push(getAbsoluteFilePath(path));
     }
 
-    repo.add(absolutePaths).then(() => {
-        NEURO.client?.sendContext(`Added files "${filePath.join(', ')}" to staging area.`);
-        updateStatus('success', `Added ${filePath.length} files to staging`);
+    return repo.add(absolutePaths).then(() => {
+        return actionHandlerSuccess(`Added files "${filePath.join(', ')}" to staging area.`, `Added ${filePath.length} files to staging`);
     }, (erm: string) => {
-        NEURO.client?.sendContext('Adding files to staging area failed');
         logOutput('ERROR', `Failed to git add: ${erm}\nTried to add ${absolutePaths}`);
-        updateStatus('failure', PROMISE_REJECTION_STRING);
+        return actionHandlerFailure('Adding files to staging area failed', PROMISE_REJECTION_STRING);
     });
-    return;
 }
 
-export function handleRemoveFileFromGit(actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
+export function handleRemoveFileFromGit(context: RCEContext): RCEHandlerReturns {
+    const { data: actionData } = context;
     assert(repo);
     const filePath: string[] = actionData.params.filePath;
     const absolutePaths: string[] = [];
@@ -963,18 +939,16 @@ export function handleRemoveFileFromGit(actionData: ActionData, updateStatus: (s
         absolutePaths.push(getAbsoluteFilePath(path));
     }
 
-    repo.revert(absolutePaths).then(() => {
-        NEURO.client?.sendContext(`Removed "${filePath.join(', ')}" from the index.`);
-        updateStatus('success', `${absolutePaths.length} files removed from staging`);
+    return repo.revert(absolutePaths).then(() => {
+        return actionHandlerSuccess(`Removed "${filePath.join(', ')}" from the index.`, `${absolutePaths.length} files removed from staging`);
     }, (erm: string) => {
-        NEURO.client?.sendContext('Removing files from the index failed');
         logOutput('ERROR', `Git remove failed: ${erm}\nTried to remove ${absolutePaths}`);
-        updateStatus('failure', PROMISE_REJECTION_STRING);
+        return actionHandlerFailure('Removing files from the index failed', PROMISE_REJECTION_STRING);
     });
-    return;
 }
 
-export function handleMakeGitCommit(actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
+export function handleMakeGitCommit(context: RCEContext): RCEHandlerReturns {
+    const { data: actionData } = context;
     assert(repo);
     const message = `${NEURO.currentController} committed: ${actionData.params?.message}`;
     const commitOptions: string[] | undefined = actionData.params?.options;
@@ -1005,63 +979,51 @@ export function handleMakeGitCommit(actionData: ActionData, updateStatus: (statu
             }
         });
         if (invalidCommitOptionCheck === true) {
-            updateStatus('failure', `${invalidCommitOptions.length} invalid commit options`);
-            return contextFailure(`Invalid commit options: ${invalidCommitOptions.join(', ')}`);
+            return actionHandlerFailure(`Invalid commit options: ${invalidCommitOptions.join(', ')}`, `${invalidCommitOptions.length} invalid commit options provided`);
         }
     }
 
     repo.inputBox.value = message;
-    repo.commit(message, ExtraCommitOptions).then(() => {
-        NEURO.client?.sendContext(`Committed with message: "${message}"\nCommit options used: ${commitOptions ? commitOptions : 'None'}`);
-        updateStatus('success', `${ExtraCommitOptions?.amend ? 'Amended c' : 'C'}ommit applied${ExtraCommitOptions?.signoff ? ' with signoff' : ''}`);
+    return repo.commit(message, ExtraCommitOptions).then(() => {
+        return actionHandlerSuccess(`Committed with message: "${message}"\nCommit options used: ${commitOptions ? commitOptions : 'None'}`, `${ExtraCommitOptions?.amend ? 'Amended c' : 'C'}ommit applied${ExtraCommitOptions?.signoff ? ' with signoff' : ''}`);
     }, (erm: string) => {
-        NEURO.client?.sendContext('Failed to record commit');
         logOutput('ERROR', `Failed to commit: ${erm}`);
-        updateStatus('failure', PROMISE_REJECTION_STRING);
+        return actionHandlerFailure('Failed to record commit', PROMISE_REJECTION_STRING);
     });
-
-    return;
 }
 
-export function handleGitMerge(actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
+export function handleGitMerge(context: RCEContext): RCEHandlerReturns {
+    const { data: actionData } = context;
     assert(repo);
     const refToMerge = actionData.params.ref_to_merge;
 
-    repo.merge(refToMerge).then(() => {
-        NEURO.client?.sendContext(`Cleanly merged ${refToMerge} into the current branch.`);
-        updateStatus('success', `Cleanly merged ${refToMerge}`);
+    return repo.merge(refToMerge).then(() => {
+        return actionHandlerSuccess(`Cleanly merged ${refToMerge} into the current branch.`, `Cleanly merged ${refToMerge}`);
     }, (erm: string) => {
         if (repo?.state.mergeChanges.some(() => true)) {
             registerAction(gitActions.abort_merge.name);
-            NEURO.client?.sendContext(`Encountered merge conflicts while merging ref "${refToMerge}", fix and execute the merge action again once resolved`);
-            updateStatus('success', `Merged ${refToMerge} - conflict resolution required`);
+            return actionHandlerSuccess(`Encountered merge conflicts while merging ref "${refToMerge}", fix and execute the merge action again once resolved`, `Merged ${refToMerge} - conflict resolution required`);
         } else {
-            NEURO.client?.sendContext(`Couldn't merge ${refToMerge}.`);
             logOutput('ERROR', `Encountered an error when merging ${refToMerge}: ${erm}`);
-            updateStatus('failure', PROMISE_REJECTION_STRING);
+            return actionHandlerFailure(`Couldn't merge ${refToMerge}.`, PROMISE_REJECTION_STRING);
         }
     });
-
-    return;
 }
 
-export function handleAbortMerge(actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
+export function handleAbortMerge(): RCEHandlerReturns {
     assert(repo);
 
-    repo.mergeAbort().then(() => {
+    return repo.mergeAbort().then(() => {
         unregisterAction(gitActions.abort_merge.name);
-        NEURO.client?.sendContext('Merge aborted.');
-        updateStatus('success', 'Aborted merging');
+        return actionHandlerSuccess('Merge aborted.', 'Aborted merging');
     }, (erm: string) => {
-        NEURO.client?.sendContext("Couldn't abort merging!");
         logOutput('ERROR', `Failed to abort merge: ${erm}`);
-        updateStatus('failure', PROMISE_REJECTION_STRING);
+        return actionHandlerFailure("Couldn't abort merging!", PROMISE_REJECTION_STRING);
     });
-
-    return;
 }
 
-export function handleDiffFiles(actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
+export function handleDiffFiles(context: RCEContext): RCEHandlerReturns {
+    const { data: actionData } = context;
     assert(repo);
 
     const ref1: string | undefined = actionData.params.ref1;
@@ -1073,112 +1035,89 @@ export function handleDiffFiles(actionData: ActionData, updateStatus: (status: A
 
     switch (diffType) {
         case 'diffWithHEAD':
-            repo.diffWithHEAD(diffThisFile)
+            return repo.diffWithHEAD(diffThisFile)
                 .then((diff: string) => {
-                    NEURO.client?.sendContext(`Diff with HEAD for ${filePath || 'workspace root'}:\n${diff}`);
-                    updateStatus('success', 'Sent diff with HEAD');
+                    return actionHandlerSuccess(`Diff with HEAD for ${filePath || 'workspace root'}:\n${diff}`, 'Sent diff with HEAD');
                 })
                 .catch((erm: string) => {
-                    NEURO.client?.sendContext(`Failed to get diff with HEAD for ${filePath || 'workspace root'}.`);
                     logOutput('ERROR', `Failed to get diff with HEAD for ${filePath || 'workspace root'}: ${erm}`);
-                    updateStatus('failure', PROMISE_REJECTION_STRING);
+                    return actionHandlerFailure(`Failed to get diff with HEAD for ${filePath || 'workspace root'}.`, PROMISE_REJECTION_STRING);
                 });
-            break;
 
         case 'diffWith':
             if (ref1) {
-                repo.diffWith(ref1, diffThisFile)
+                return repo.diffWith(ref1, diffThisFile)
                     .then((diff: string) => {
-                        NEURO.client?.sendContext(`Diff with ref "${ref1}" for ${filePath || 'workspace root'}:\n${diff}`);
-                        updateStatus('success', `Sent diff with ref "${ref1}"`);
+                        return actionHandlerSuccess(`Diff with ref "${ref1}" for ${filePath || 'workspace root'}:\n${diff}`, `Sent diff with ref "${ref1}"`);
                     })
                     .catch((erm: string) => {
-                        NEURO.client?.sendContext(`Failed to get diff with ref "${ref1}" for ${filePath || 'workspace root'}.`);
                         logOutput('ERROR', `Failed to get diff with ref "${ref1}" for ${filePath || 'workspace root'}: ${erm}`);
-                        updateStatus('failure', PROMISE_REJECTION_STRING);
+                        return actionHandlerFailure(`Failed to get diff with ref "${ref1}" for ${filePath || 'workspace root'}.`, PROMISE_REJECTION_STRING);
                     });
             } else {
-                NEURO.client?.sendContext('Ref1 is required for diffWith.');
-                updateStatus('failure', 'Missing ref1 parameter');
+                return actionHandlerRetry('Ref1 is required for diffWith.', 'Missing ref1 parameter');
             }
-            break;
 
         case 'diffIndexWithHEAD':
-            repo.diffIndexWithHEAD(diffThisFile)
+            return repo.diffIndexWithHEAD(diffThisFile)
                 .then((diff: string) => {
-                    NEURO.client?.sendContext(`Diff index with HEAD for ${filePath || 'workspace root'}:\n${diff}`);
-                    updateStatus('success', 'Sent diff index with HEAD');
+                    return actionHandlerSuccess(`Diff index with HEAD for ${filePath || 'workspace root'}:\n${diff}`, 'Sent diff index with HEAD');
                 })
                 .catch((erm: string) => {
-                    NEURO.client?.sendContext(`Failed to get diff index with HEAD for ${filePath || 'workspace root'}.`);
                     logOutput('ERROR', `Failed to get diff index with HEAD for ${filePath || 'workspace root'}: ${erm}`);
-                    updateStatus('failure', PROMISE_REJECTION_STRING);
+                    return actionHandlerFailure(`Failed to get diff index with HEAD for ${filePath || 'workspace root'}.`, PROMISE_REJECTION_STRING);
                 });
-            break;
 
         case 'diffIndexWith':
             if (ref1) {
-                repo.diffIndexWith(ref1, diffThisFile)
+                return repo.diffIndexWith(ref1, diffThisFile)
                     .then((diff: string) => {
-                        NEURO.client?.sendContext(`Diff index with ref "${ref1}" for ${filePath || 'workspace root'}:\n${diff}`);
-                        updateStatus('success', `Sent diff index with ref "${ref1}"`);
+                        return actionHandlerSuccess(`Diff index with ref "${ref1}" for ${filePath || 'workspace root'}:\n${diff}`, `Sent diff index with ref "${ref1}"`);
                     })
                     .catch((erm: string) => {
-                        NEURO.client?.sendContext(`Failed to get diff index with ref "${ref1}" for ${filePath || 'workspace root'}.`);
                         logOutput('ERROR', `Failed to get diff index with ref "${ref1}" for ${filePath || 'workspace root'}: ${erm}`);
-                        updateStatus('failure', PROMISE_REJECTION_STRING);
+                        return actionHandlerFailure(`Failed to get diff index with ref "${ref1}" for ${filePath || 'workspace root'}.`, PROMISE_REJECTION_STRING);
                     });
             } else {
-                NEURO.client?.sendContext('Ref1 is required for diffIndexWith.');
-                updateStatus('failure', 'Missing ref1 parameter');
+                return actionHandlerRetry('Ref1 is required for diffIndexWith.', 'Missing ref1 parameter');
             }
-            break;
 
         case 'diffBetween':
             if (ref1 && ref2) {
-                repo.diffBetween(ref1, ref2, diffThisFile)
+                return repo.diffBetween(ref1, ref2, diffThisFile)
                     .then((diff: string) => {
-                        NEURO.client?.sendContext(`Diff between refs "${ref1}" and "${ref2}" for ${filePath || 'workspace root'}:\n${diff}`);
-                        updateStatus('success', `Sent diff between "${ref1}" and "${ref2}"`);
+                        return actionHandlerSuccess(`Diff between refs "${ref1}" and "${ref2}" for ${filePath || 'workspace root'}:\n${diff}`, `Sent diff between "${ref1}" and "${ref2}"`);
                     })
                     .catch((erm: string) => {
-                        NEURO.client?.sendContext(`Failed to get diff between refs "${ref1}" and "${ref2}" for ${filePath || 'workspace root'}.`);
                         logOutput('ERROR', `Failed to get diff between refs "${ref1}" and "${ref2}" for ${filePath || 'workspace root'}: ${erm}`);
-                        updateStatus('failure', PROMISE_REJECTION_STRING);
+                        return actionHandlerFailure(`Failed to get diff between refs "${ref1}" and "${ref2}" for ${filePath || 'workspace root'}.`, PROMISE_REJECTION_STRING);
                     });
             } else {
-                NEURO.client?.sendContext('Both ref1 and ref2 are required for diffBetween.');
-                updateStatus('failure', 'Missing ref1 or ref2 parameter');
+                return actionHandlerRetry('Both ref1 and ref2 are required for diffBetween.', 'Missing ref1 or ref2 parameter');
             }
-            break;
 
         case 'fullDiff':
-            repo.diffWithHEAD(diffThisFile)
+            return repo.diffWithHEAD(diffThisFile)
                 .then((diff: string) => {
-                    NEURO.client?.sendContext(`Full diff for workspace root:\n${diff}`);
-                    updateStatus('success', 'Sent full diff');
+                    return actionHandlerSuccess(`Full diff for workspace root:\n${diff}`, 'Sent full diff');
                 })
                 .catch((erm: string) => {
-                    NEURO.client?.sendContext('Failed to get full diff for workspace root.');
                     logOutput('ERROR', `Failed to get full diff for workspace root: ${erm}`);
-                    updateStatus('failure', PROMISE_REJECTION_STRING);
+                    return actionHandlerFailure('Failed to get full diff for workspace root.', PROMISE_REJECTION_STRING);
                 });
-            break;
 
         default:
-            NEURO.client?.sendContext(`Invalid diffType "${diffType}".`);
-            updateStatus('failure', `Invalid diffType "${diffType}"`);
+            return actionHandlerFailure(`Invalid diffType "${diffType}".`, `Invalid diffType "${diffType}"`);
     }
-
-    return;
 }
 
-export function handleGitLog(actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
+export function handleGitLog(context: RCEContext): RCEHandlerReturns {
+    const { data: actionData } = context;
     assert(repo);
 
     const logLimit: number | undefined = actionData.params?.log_limit;
 
-    repo.log().then((commits: Commit[]) => {
+    return repo.log().then((commits: Commit[]) => {
         // If log_limit is defined, restrict number of commits to that value.
         if (logLimit) {
             commits = commits.slice(0, logLimit);
@@ -1188,37 +1127,29 @@ export function handleGitLog(actionData: ActionData, updateStatus: (status: Acti
             `Commit: ${commit.hash}\nMessage: ${commit.message}\nAuthor: ${commit.authorName}\nDate: ${commit.authorDate}\n`,
         ).join('\n');
 
-        NEURO.client?.sendContext(`Commit log:\n${commitLog}`);
-        updateStatus('success', `Sent ${commits.length} commit${commits.length !== 1 ? 's' : ''}`);
+        return actionHandlerSuccess(`Commit log:\n${commitLog}`, `Sent ${commits.length} commit${commits.length !== 1 ? 's' : ''}`);
     }, (erm: string) => {
-        NEURO.client?.sendContext('Failed to get git log.');
         logOutput('ERROR', `Failed to get git log: ${erm}`);
-        updateStatus('failure', PROMISE_REJECTION_STRING);
+        return actionHandlerFailure('Failed to get git log.', PROMISE_REJECTION_STRING);
     });
-
-    return;
 }
 
-export function handleGitBlame(actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
+export function handleGitBlame(context: RCEContext): RCEHandlerReturns {
+    const { data: actionData } = context;
     assert(repo);
     const filePath: string = actionData.params.filePath;
     const absolutePath: string = getAbsoluteFilePath(filePath);
 
     if (!isPathNeuroSafe(absolutePath)) {
-        NEURO.client?.sendContext('The provided file path is not allowed.');
-        return;
+        return actionHandlerFailure('The provided file path is not allowed.', 'Access to targeted file disallowed');
     }
 
-    repo.blame(absolutePath).then((blame: string) => {
-        NEURO.client?.sendContext(`Blame attribution for ${filePath}:\n${blame}`);
-        updateStatus('success', `Sent blame for ${filePath}`);
+    return repo.blame(absolutePath).then((blame: string) => {
+        return actionHandlerSuccess(`Blame attribution for ${filePath}:\n${blame}`, `Sent blame for ${filePath}`);
     }, (erm: string) => {
-        NEURO.client?.sendContext('Failed to get blame attribution.');
         logOutput('ERROR', `Error getting blame attribs for ${filePath}: ${erm}`);
-        updateStatus('failure', PROMISE_REJECTION_STRING);
+        return actionHandlerFailure('Failed to get blame attribution.', PROMISE_REJECTION_STRING);
     });
-
-    return;
 }
 
 /**
@@ -1226,37 +1157,31 @@ export function handleGitBlame(actionData: ActionData, updateStatus: (status: Ac
  * Requires neuropilot.permission.gitTags to be enabled.
  */
 
-export function handleTagHEAD(actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
+export function handleTagHEAD(context: RCEContext): RCEHandlerReturns {
+    const { data: actionData } = context;
     assert(repo);
     const name: string = actionData.params.name;
     const upstream: string = actionData.params.upstream ?? 'HEAD';
 
-    repo.tag(name, upstream).then(() => {
-        NEURO.client?.sendContext(`Tag ${name} created for ${upstream}.`);
-        updateStatus('success', `Tag "${name}" created`);
+    return repo.tag(name, upstream).then(() => {
+        return actionHandlerSuccess(`Tag ${name} created for ${upstream}.`, `Tag "${name}" created`);
     }, (erm: string) => {
-        NEURO.client?.sendContext('There was an error during tagging.');
         logOutput('ERROR', `Error trying to tag: ${erm}`);
-        updateStatus('failure', PROMISE_REJECTION_STRING);
+        return actionHandlerFailure('There was an error during tagging.', PROMISE_REJECTION_STRING);
     });
-
-    return;
 }
 
-export function handleDeleteTag(actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
+export function handleDeleteTag(context: RCEContext): RCEHandlerReturns {
+    const { data: actionData } = context;
     assert(repo);
     const name: string = actionData.params.name;
 
-    repo.deleteTag(name).then(() => {
-        NEURO.client?.sendContext(`Deleted tag ${name}`);
-        updateStatus('success', `Tag "${name}" deleted`);
+    return repo.deleteTag(name).then(() => {
+        return actionHandlerSuccess(`Deleted tag ${name}`, `Tag "${name}" deleted`);
     }, (erm: string) => {
-        NEURO.client?.sendContext(`Couldn't delete tag "${name}"`);
         logOutput('ERROR', `Failed to delete tag ${name}: ${erm}`);
-        updateStatus('failure', PROMISE_REJECTION_STRING);
+        return actionHandlerFailure(`Couldn't delete tag "${name}"`, PROMISE_REJECTION_STRING);
     });
-
-    return;
 }
 
 /*
@@ -1264,39 +1189,33 @@ export function handleDeleteTag(actionData: ActionData, updateStatus: (status: A
  * Requires neuropilot.permission.gitRemotes to be enabled.
  */
 
-export function handleFetchGitCommits(actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
+export function handleFetchGitCommits(context: RCEContext): RCEHandlerReturns {
+    const { data: actionData } = context;
     assert(repo);
     const remoteName: string = actionData.params.remoteName;
     const branchName: string = actionData.params.branchName;
 
-    repo.fetch(remoteName, branchName).then(() => {
-        NEURO.client?.sendContext(`Fetched commits from ${remoteName ? 'remote ' + remoteName : 'default remote'}${branchName ? `, branch "${branchName}"` : ''}.`);
-        updateStatus('success', `Fetched from ${remoteName || 'default remote'}`);
+    return repo.fetch(remoteName, branchName).then(() => {
+        return actionHandlerSuccess(`Fetched commits from ${remoteName ? 'remote ' + remoteName : 'default remote'}${branchName ? `, branch "${branchName}"` : ''}.`, `Fetched from ${remoteName || 'default remote'}`);
     }, (erm: string) => {
-        NEURO.client?.sendContext(`Failed to fetch commits from remote "${remoteName}"`);
         logOutput('ERROR', `Failed to fetch commits: ${erm}`);
-        updateStatus('failure', PROMISE_REJECTION_STRING);
+        return actionHandlerFailure(`Failed to fetch commits from remote "${remoteName}"`, PROMISE_REJECTION_STRING);
     });
-
-    return;
 }
 
-export function handlePullGitCommits(_actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
+export function handlePullGitCommits(): RCEHandlerReturns {
     assert(repo);
 
-    repo.pull().then(() => {
-        NEURO.client?.sendContext('Pulled commits from remote.');
-        updateStatus('success', 'Pulled commits');
+    return repo.pull().then(() => {
+        return actionHandlerSuccess('Pulled commits from remote.', 'Pulled commits');
     }, (erm: string) => {
-        NEURO.client?.sendContext(`Failed to pull commits from remote: ${erm}`);
         logOutput('ERROR', `Failed to pull commits: ${erm}`);
-        updateStatus('failure', PROMISE_REJECTION_STRING);
+        return actionHandlerFailure(`Failed to pull commits from remote: ${erm}`, PROMISE_REJECTION_STRING);
     });
-
-    return;
 }
 
-export function handlePushGitCommits(actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
+export function handlePushGitCommits(context: RCEContext): RCEHandlerReturns {
+    const { data: actionData } = context;
     assert(repo);
     const remoteName: string | undefined = actionData.params.remoteName;
     const branchName: string | undefined = actionData.params.branchName;
@@ -1304,16 +1223,12 @@ export function handlePushGitCommits(actionData: ActionData, updateStatus: (stat
 
     const forcePushMode: ForcePushMode | undefined = forcePush === true ? ForcePushMode.Force : undefined;
 
-    repo.push(remoteName, branchName, true, forcePushMode).then(() => {
-        NEURO.client?.sendContext(`Pushed commits${remoteName ? ` to remote "${remoteName}"` : ''}${branchName ? `, branch "${branchName}"` : ''}.${forcePush === true ? ' (forced push)' : ''}`);
-        updateStatus('success', `Pushed to ${remoteName || 'remote'}${forcePush ? ' (forced)' : ''}`);
+    return repo.push(remoteName, branchName, true, forcePushMode).then(() => {
+        return actionHandlerSuccess(`Pushed commits${remoteName ? ` to remote "${remoteName}"` : ''}${branchName ? `, branch "${branchName}"` : ''}.${forcePush === true ? ' (forced push)' : ''}`, `Pushed to ${remoteName || 'remote'}${forcePush ? ' (forced)' : ''}`);
     }, (erm: string) => {
-        NEURO.client?.sendContext(`Failed to push commits to remote "${remoteName}": ${erm}`);
         logOutput('ERROR', `Failed to push commits: ${erm}`);
-        updateStatus('failure', PROMISE_REJECTION_STRING);
+        return actionHandlerFailure(`Failed to push commits to remote "${remoteName}": ${erm}`, PROMISE_REJECTION_STRING);
     });
-
-    return;
 }
 
 /*
@@ -1321,53 +1236,44 @@ export function handlePushGitCommits(actionData: ActionData, updateStatus: (stat
  * Requires neuropilot.permission.editRemoteData to be enabled, IN ADDITION to neuropilot.permission.gitRemotes.
  */
 
-export function handleAddGitRemote(actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
+export function handleAddGitRemote(context: RCEContext): RCEHandlerReturns {
+    const { data: actionData } = context;
     assert(repo);
 
     const remoteName: string = actionData.params.remoteName;
     const remoteUrl: string = actionData.params.remoteURL;
 
-    repo.addRemote(remoteName, remoteUrl).then(() => {
-        NEURO.client?.sendContext(`Added remote "${remoteName}" with URL: ${remoteUrl}`);
-        updateStatus('success', `Remote "${remoteName}" added`);
+    return repo.addRemote(remoteName, remoteUrl).then(() => {
+        return actionHandlerSuccess(`Added remote "${remoteName}" with URL: ${remoteUrl}`, `Remote "${remoteName}" added`);
     }, (erm: string) => {
-        NEURO.client?.sendContext(`Failed to add remote "${remoteName}"`);
         logOutput('ERROR', `Failed to add remote: ${erm}`);
-        updateStatus('failure', PROMISE_REJECTION_STRING);
+        return actionHandlerFailure(`Failed to add remote "${remoteName}"`, PROMISE_REJECTION_STRING);
     });
-
-    return;
 }
 
-export function handleRemoveGitRemote(actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
+export function handleRemoveGitRemote(context: RCEContext): RCEHandlerReturns {
+    const { data: actionData } = context;
     assert(repo);
     const remoteName: string = actionData.params.remoteName;
 
-    repo.removeRemote(remoteName).then(() => {
-        NEURO.client?.sendContext(`Removed remote "${remoteName}".`);
-        updateStatus('success', `Remote "${remoteName}" removed`);
+    return repo.removeRemote(remoteName).then(() => {
+        return actionHandlerSuccess(`Removed remote "${remoteName}".`, `Remote "${remoteName}" removed`);
     }, (erm: string) => {
-        NEURO.client?.sendContext(`Failed to remove remote "${remoteName}"`);
         logOutput('ERROR', `Failed to remove remote: ${erm}`);
-        updateStatus('failure', PROMISE_REJECTION_STRING);
+        return actionHandlerFailure(`Failed to remove remote "${remoteName}"`, PROMISE_REJECTION_STRING);
     });
-
-    return;
 }
 
-export function handleRenameGitRemote(actionData: ActionData, updateStatus: (status: ActionStatus, message: string) => void): string | undefined {
+export function handleRenameGitRemote(context: RCEContext): RCEHandlerReturns {
+    const { data: actionData } = context;
     assert(repo);
     const oldRemoteName: string = actionData.params.oldRemoteName;
     const newRemoteName: string = actionData.params.newRemoteName;
 
-    repo.renameRemote(oldRemoteName, newRemoteName).then(() => {
-        NEURO.client?.sendContext(`Renamed remote "${oldRemoteName}" to "${newRemoteName}".`);
-        updateStatus('success', `Remote "${oldRemoteName}" renamed to "${newRemoteName}"`);
+    return repo.renameRemote(oldRemoteName, newRemoteName).then(() => {
+        return actionHandlerSuccess(`Renamed remote "${oldRemoteName}" to "${newRemoteName}".`, `Remote "${oldRemoteName}" renamed to "${newRemoteName}"`);
     }, (erm: string) => {
-        NEURO.client?.sendContext(`Failed to rename remote "${oldRemoteName}" to "${newRemoteName}"`);
         logOutput('ERROR', `Failed to rename remote ${oldRemoteName}: ${erm}`);
-        updateStatus('failure', PROMISE_REJECTION_STRING);
+        return actionHandlerFailure(`Failed to rename remote "${oldRemoteName}" to "${newRemoteName}"`, PROMISE_REJECTION_STRING);
     });
-
-    return;
 }

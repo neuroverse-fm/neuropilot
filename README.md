@@ -111,3 +111,4 @@ The (modified) VS Code stylesheet included in the extension (vscode.css) is from
 ## Contributing to NeuroPilot
 
 Please see [CONTRIBUTING.md](./CONTRIBUTING.md).
+For contributor test workflows (including the cross-platform clean-log flow), see the `Tests` section there.

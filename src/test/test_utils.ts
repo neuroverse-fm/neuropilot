@@ -1,6 +1,6 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
-import { setVirtualCursor } from '../utils';
+import { setVirtualCursor } from '@/utils/misc';
 
 /**
  * Asserts that an object has the same properties as the expected object,

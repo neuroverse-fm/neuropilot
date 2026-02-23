@@ -1,8 +1,8 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
-import { anything, capture, instance, mock, reset, verify } from 'ts-mockito';
+import { instance, mock, reset } from 'ts-mockito';
 import { NEURO } from '@/constants';
-import { readChangelogAndSendToNeuro } from '@/changelog';
+import { readAndStructureChangelog } from '@/changelog';
 import { NeuroClient } from 'neuro-game-sdk';
 
 suite('Integration: read_changelog action', () => {
@@ -73,14 +73,10 @@ suite('Integration: read_changelog action', () => {
 
     test('with explicit fromVersion includes that version to latest, oldest→latest', async () => {
         // === Act ===
-        await readChangelogAndSendToNeuro('2.2.1');
+        const { message: text } = await readAndStructureChangelog('2.2.1');
 
         // === Assert ===
-        await checkSendOnce();
-        const [ctx] = capture(mockedClient.sendContext).last();
-        assert.ok(typeof ctx === 'string');
-        const text = ctx as string;
-        assert.ok(text.includes('Changelog entries from 2.2.1 to 2.3.0:'), 'should show correct range');
+        assert.ok(text?.includes('Changelog entries from 2.2.1 to 2.3.0:'), 'should show correct range');
         const order = [
             '## 2.2.1',
             '## 2.2.2',
@@ -89,7 +85,7 @@ suite('Integration: read_changelog action', () => {
         ];
         let lastIndex = -1;
         for (const marker of order) {
-            const idx = text.indexOf(marker);
+            const idx = text?.indexOf(marker) ?? -1;
             assert.ok(idx !== -1, `missing section ${marker}`);
             assert.ok(idx > lastIndex, `section ${marker} is not in correct order`);
             lastIndex = idx;
@@ -97,48 +93,28 @@ suite('Integration: read_changelog action', () => {
     });
 
     test('default with no memento starts at 2.3.0', async () => {
-        await readChangelogAndSendToNeuro(undefined);
-        await checkSendOnce();
-        const [ctx] = capture(mockedClient.sendContext).last();
-        const text = String(ctx);
-        assert.ok(text.includes('Changelog entries from 2.3.0 to 2.3.0:'), 'default should start at 2.3.0');
+        const { message: text } = await readAndStructureChangelog(undefined);
+        assert.ok(text?.includes('Changelog entries from 2.3.0 to 2.3.0:'), 'default should start at 2.3.0');
     });
 
     test('default when saved is latest sends latest again', async () => {
         // simulate saved latest
         // @ts-expect-error - accessing test memento helper through NEURO.context
         await NEURO.context.globalState.update('lastDeliveredChangelogVersion', '2.3.0');
-        await readChangelogAndSendToNeuro(undefined);
-        await checkSendOnce();
-        const text = String(capture(mockedClient.sendContext).last()[0]);
-        assert.ok(text.includes('Changelog entries from 2.3.0 to 2.3.0:'), 'should send only latest');
+        const { message: text } = await readAndStructureChangelog(undefined);
+        assert.ok(text?.includes('Changelog entries from 2.3.0 to 2.3.0:'), 'should send only latest');
     });
 
     test('default when saved older sends only newer entries', async () => {
         // saved 2.2.2 → should send 2.2.3 and 2.3.0
         // @ts-expect-error - accessing test memento helper through NEURO.context
         await NEURO.context.globalState.update('lastDeliveredChangelogVersion', '2.2.2');
-        await readChangelogAndSendToNeuro(undefined);
-        await checkSendOnce();
-        const text = String(capture(mockedClient.sendContext).last()[0]);
-        const contains = (m: string) => text.includes(m);
+        const { message: text } = await readAndStructureChangelog(undefined);
+        const contains = (m: string) => text?.includes(m);
         assert.ok(contains('Changelog entries from 2.2.3 to 2.3.0:'), 'range should start after saved');
         assert.ok(!contains('## 2.2.2'), 'should not include saved version');
         assert.ok(!contains('## 2.2.1'), 'should not include older than saved');
     });
-
-    async function checkSendOnce(timeoutMs = 5000, intervalMs = 100) {
-        const start = Date.now();
-        while (true) {
-            try {
-                verify(mockedClient.sendContext(anything())).once();
-                return;
-            } catch {
-                if (Date.now() - start > timeoutMs) throw new Error('sendContext not called once within timeout');
-                await new Promise(r => setTimeout(r, intervalMs));
-            }
-        }
-    }
 });
 
 

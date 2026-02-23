@@ -90,3 +90,14 @@ Notes:
 - The browser test workspace is mounted under a virtual scheme; the workspace name may appear as `mount` instead of `test-playground`.
 - File operations in browser mode use the VS Code virtual FS, so ‘trash’ is disabled and deletes are immediate.
 - Headless web runs may log warnings like "Output channel not initialized", "[NeuroClient] WebSocket is not open", or 404s for dev assets. These are expected in the test harness; assertions still validate real side effects (file edits/opens/renames/deletes, document text, active editor) and verify `sendContext` via a mocked client.
+
+Clean summary workflow:
+
+- Preferred command for a clean, low-noise full run with summary:
+  - `pnpm run qa:test:clean`
+- Parse an existing raw log into the summary format:
+  - `pnpm run qa:test:summary -- --log-path test-results/logs/full-YYYYMMDD-HHMMSS.log`
+- Output locations:
+  - Raw logs: `test-results/logs/`
+  - Compact report: `test-results/reports/failures-summary.md`
+- These commands are Node-based and work across Windows, macOS, and Linux for failure-focused output instead of full verbose logs.

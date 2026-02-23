@@ -4,14 +4,14 @@ import { CATEGORY_FILE_ACTIONS, fileActions } from '~/src/file_actions';
 import assert from 'node:assert';
 import { CATEGORY_EDITING, editingActions } from '~/src/editing';
 import { changelogActions } from '~/src/changelog';
-import { REQUEST_COOKIE_ACTION } from '~/src/context';
-import { CATEGORY_GIT, gitActions } from '~/src/git';
+import { REQUEST_COOKIE_ACTION } from '@/functions/cookies';
+import { CATEGORY_GIT, CATEGORY_GIT_CONFIG, CATEGORY_GIT_REMOTES, gitActions } from '~/src/git';
 import { chatAction } from '~/src/chat';
-import { completionAction } from '~/src/completions';
+import { completeCodeAction } from '~/src/completions';
 import { CATEGORY_MISC } from '~/src/rce';
 import { lintActions } from '~/src/lint_problems';
 
-suite('Validate action schemas', async () => {
+suite('Validate action metadata', async () => {
     const metaschema = await (await fetch('https://json-schema.org/draft-07/schema#')).json() as JSONSchema7;
 
     test('File Actions', () => {
@@ -46,7 +46,7 @@ suite('Validate action schemas', async () => {
         const actions = Object.keys(gitActions) as (keyof typeof gitActions)[];
         for (const a of actions) {
             assert.strictEqual(a, gitActions[a].name);
-            assert.strictEqual(CATEGORY_GIT, gitActions[a].category);
+            assert.ok([CATEGORY_GIT, CATEGORY_GIT_CONFIG, CATEGORY_GIT_REMOTES].includes(gitActions[a].category));
             if ('schema' in gitActions[a] && gitActions[a].schema) {
                 assert.ok(validate(gitActions[a].schema, metaschema).valid);
             }
@@ -78,7 +78,7 @@ suite('Validate action schemas', async () => {
     test('Copilot Chat integrations', () => {
         const actionsToTest = {
             chat: chatAction,
-            complete_code: completionAction(0), // maxCount does not matter here
+            complete_code: completeCodeAction,
         };
         const actions = Object.keys(actionsToTest) as (keyof typeof actionsToTest)[];
         for (const a of actions) {
