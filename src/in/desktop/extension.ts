@@ -22,7 +22,8 @@ import {
     startupCreateClient,
 } from '../shared/extension';
 import { registerChatParticipant } from '@/chat';
-import { addUnsupervisedActions, registerUnsupervisedHandlers } from './unsupervised';
+import { addUnsupervisedActions } from './unsupervised';
+import { registerUnsupervisedHandlers } from '@entry/shared/unsupervised';
 import { registerSendSelectionToNeuro } from '@/editing';
 import { loadIgnoreFiles } from '@/utils/ignore_files';
 import { reregisterAllActions } from '../../rce';

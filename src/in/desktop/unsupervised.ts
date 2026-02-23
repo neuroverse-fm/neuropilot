@@ -1,34 +1,13 @@
-import { NEURO } from '@/constants';
 import { addTaskActions } from '@/tasks';
-import { addFileActions } from '@/file_actions';
-import { addGitActions } from '@/git';
-import { addEditingActions } from '@/editing';
-import { ActionData } from 'neuro-game-sdk';
 import { addTerminalActions } from '@/pseudoterminal';
-import { addLintActions } from '@/lint_problems';
-import { RCEActionHandler } from '@/rce';
-import { addChangelogActions } from '@/changelog';
-import { addRequestCookieAction } from '@/functions/cookies';
 import { addChatAction } from '@/chat';
 import { addCompleteCodeAction } from '@/completions';
+import { addCommonUnsupervisedActions } from '@entry/shared/unsupervised';
 
 export function addUnsupervisedActions() {
-    addFileActions();
-    addGitActions();
+    addCommonUnsupervisedActions();
     addTaskActions();
-    addEditingActions();
     addTerminalActions();
-    addLintActions();
-    addChangelogActions();
-    addRequestCookieAction();
     addChatAction();
     addCompleteCodeAction();
-}
-
-/**
- * Register unsupervised handlers for Neuro API actions.
- * The handlers will only handle actions that the user has given permission to use.
- */
-export function registerUnsupervisedHandlers() {
-    NEURO.client?.onAction(async (actionData: ActionData) => await RCEActionHandler(actionData));
 }
