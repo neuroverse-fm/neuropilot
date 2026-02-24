@@ -11,7 +11,7 @@ class PreviewFileDecorationProvider implements vscode.FileDecorationProvider, vs
 
     provideFileDecoration(uri: vscode.Uri): vscode.ProviderResult<vscode.FileDecoration> {
         if (this.marked.has(uri.toString())) {
-            const dec = new vscode.FileDecoration('💜', `(Preview) ${NEURO.currentController} wants to ${this.promptString ?? 'uhhhh, do something with this file?'}`, new vscode.ThemeColor('gitDecoration.modifiedResourceForeground'));
+            const dec = new vscode.FileDecoration('💜', `(Preview) ${NEURO.currentController} wants to ${this.promptString ?? 'uhhhh, do something with this file?'}`, new vscode.ThemeColor('neuropilot.preview'));
             dec.propagate = false;
             return dec;
         }

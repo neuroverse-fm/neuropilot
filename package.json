@@ -755,7 +755,17 @@
 					"visibility": "collapsed"
 				}
 			]
-		}
+		},
+		"colors": [
+			{
+				"id": "neuropilot.preview",
+				"description": "Colour theme for preview effects",
+				"defaults": {
+					"light": "#0066ff",
+					"dark": "#00e1ff"
+				}
+			}
+		]
 	},
 	"capabilities": {
 		"virtualWorkspaces": {
