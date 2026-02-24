@@ -12,7 +12,7 @@ import { actionValidationAccept, actionValidationFailure, ActionValidationResult
 import { CONFIG } from '@/config';
 import { notifyOnTerminalClose } from '@events/shells';
 import { addActions } from '@/rce';
-import { RCEContext } from '@context/rce';
+import { RCEContext } from '@ctx/rce';
 
 export const CATEGORY_TERMINAL = 'Terminal Access';
 

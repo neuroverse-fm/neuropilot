@@ -6,7 +6,7 @@ import { actionValidationAccept, actionValidationFailure, ActionValidationResult
 import assert from 'node:assert';
 import { targetedFileLintingResolvedEvent, targetedFolderLintingResolvedEvent, workspaceLintingResolvedEvent } from '@events/linting';
 import { addActions } from '@/rce';
-import { RCEContext } from '@context/rce';
+import { RCEContext } from '@ctx/rce';
 
 export const CATEGORY_LINTING = 'Linting';
 
@@ -228,7 +228,7 @@ export function handleGetFileLintProblems(context: RCEContext): ActionHandlerRes
 
         const rawDiagnostics = vscode.languages.getDiagnostics(workspaceUri.with({ path: normalizedPath }));
         if (rawDiagnostics.length === 0) {
-            return actionHandlerSuccess(`No linting problems found for file ${relativePath}.`,'No linting issues found');
+            return actionHandlerSuccess(`No linting problems found for file ${relativePath}.`, 'No linting issues found');
         }
 
         const formattedDiagnostics = getFormattedDiagnosticsForFile(relativePath, rawDiagnostics);

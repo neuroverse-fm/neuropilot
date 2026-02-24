@@ -9,7 +9,7 @@ import assert from 'node:assert';
 import { RCECancelEvent } from '@events/utils';
 import { JSONSchema7Definition } from 'json-schema';
 import { addActions, registerAction, reregisterAllActions, unregisterAction } from './rce';
-import { RCEContext } from '@context/rce';
+import { RCEContext } from '@ctx/rce';
 
 export const CATEGORY_GIT = 'Git';
 export const CATEGORY_GIT_REMOTES = 'Git Remotes';

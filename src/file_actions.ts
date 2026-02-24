@@ -7,7 +7,7 @@ import { CONFIG, PermissionLevel, getPermissionLevel } from '@/config';
 import { targetedFileCreatedEvent, targetedFileDeletedEvent } from '@events/files';
 import { RCECancelEvent } from '@events/utils';
 import { addActions } from './rce';
-import { RCEContext } from '@context/rce';
+import { RCEContext } from '@ctx/rce';
 import assert from 'node:assert';
 
 export const CATEGORY_FILE_ACTIONS = 'File Actions';

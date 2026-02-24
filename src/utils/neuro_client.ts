@@ -7,7 +7,7 @@ import { ACTIONS, Permission, PermissionLevel } from '@/config';
 import { logOutput, OutputTag, turtleSafari } from '@/utils/misc';
 import { PromptGenerator } from '@/rce';
 import { RCECancelEvent } from '@events/utils';
-import type { RCEContext } from '@context/rce';
+import type { RCEContext } from '@ctx/rce';
 
 import type { NeuroClient } from 'neuro-game-sdk';
 import type { reregisterAllActions } from '@/rce';

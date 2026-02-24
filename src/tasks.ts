@@ -13,7 +13,7 @@ import { ACTIONS } from '@/config';
 import { notifyOnTaskFinish } from '@events/shells';
 import { addActions, getActions, removeActions } from './rce';
 import { updateActionStatus } from '@events/actions';
-import { RCEContext } from '@context/rce';
+import { RCEContext } from '@ctx/rce';
 
 export const CATEGORY_TASKS = 'Tasks';
 const CATEGORY_REGISTERED_TASKS = 'Registered Tasks';

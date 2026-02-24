@@ -1,8 +1,8 @@
 {
 	"compilerOptions": {
 		"composite": true,
-		"module": "commonjs",
-		"moduleResolution": "Node",
+		"module": "preserve",
+		"moduleResolution": "bundler",
 		"esModuleInterop": true,
 		"target": "es2020",
 		"outDir": "out",
@@ -11,7 +11,7 @@
 		"skipLibCheck": true,
 		"skipDefaultLibCheck": true,
 		"paths": {
-			"@context/*": [
+			"@ctx/*": [
 				"./src/context/*"
 			],
 			"@entry/*": [
@@ -19,9 +19,6 @@
 			],
 			"@events/*": [
 				"./src/events/*"
-			],
-			"@shared/*": [
-				"./src/shared/*"
 			],
 			"@typing/*": [
 				"./src/types/*"
