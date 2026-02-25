@@ -758,8 +758,8 @@
 		},
 		"colors": [
 			{
-				"id": "neuropilot.preview",
-				"description": "Colour theme for preview effects",
+				"id": "neuropilot.filePreviewEffectsColour",
+				"description": "Colour theme for filesystem-based preview effects (e.g. file actions, lint actions, etc)",
 				"defaults": {
 					"light": "#0066ff",
 					"dark": "#00e1ff"
