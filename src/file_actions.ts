@@ -8,6 +8,7 @@ import { targetedFileCreatedEvent, targetedFileDeletedEvent } from '@events/file
 import { RCECancelEvent } from '@events/utils';
 import { addActions } from './rce';
 import { RCEContext } from '@ctx/rce';
+import { filePreviewProvider } from '@/previews/files';
 import assert from 'node:assert';
 
 export const CATEGORY_FILE_ACTIONS = 'File Actions';
@@ -202,6 +203,37 @@ export const fileActions = {
         },
         category: CATEGORY_FILE_ACTIONS,
         handler: handleGetWorkspaceFiles,
+        preview: (context: RCEContext) => {
+            const workspaceUri = getWorkspaceUri();
+            if (!workspaceUri) {
+                return { dispose: () => {} };
+            }
+
+            const folder = context.data.params?.folder;
+            const recursive = context.data.params?.recursive ?? false;
+            const folderUri = folder
+                ? vscode.Uri.joinPath(workspaceUri, folder)
+                : workspaceUri;
+
+            if (!recursive) {
+                // Get all items in the folder and mark them individually
+                vscode.workspace.fs.readDirectory(folderUri).then(
+                    (items) => {
+                        const uris = items.map(([name, _type]) => vscode.Uri.joinPath(folderUri, name));
+                        filePreviewProvider.mark(uris, 'see this file\'s existence', false, true);
+                    },
+                    () => {
+                        // If we can't read the directory, just mark the folder itself
+                        filePreviewProvider.mark([folderUri], 'see this folder\'s existence', false, true);
+                    },
+                );
+            } else {
+                // Mark the folder with children propagation enabled
+                filePreviewProvider.mark([folderUri], 'list this', false, false);
+            }
+
+            return { dispose: () => filePreviewProvider.clearAll() };
+        },
         validators: {
             sync: [async (context: RCEContext) => {
                 const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
@@ -248,6 +280,15 @@ export const fileActions = {
             sync: [neuroSafeValidation, validateIsAFile, binaryFileValidation],
         },
         promptGenerator: (context: RCEContext) => `open the file "${context.data.params?.filePath}".`,
+        preview: (context: RCEContext) => {
+            const workspaceUri = getWorkspaceUri();
+            if (!workspaceUri || !context.data.params?.filePath) {
+                return { dispose: () => {} };
+            }
+            const fileUri = vscode.Uri.joinPath(workspaceUri, context.data.params.filePath);
+            filePreviewProvider.mark([fileUri], 'open this file');
+            return { dispose: () => filePreviewProvider.clearAll() };
+        },
     },
     read_file: {
         name: 'read_file',
@@ -262,6 +303,15 @@ export const fileActions = {
             additionalProperties: false,
         },
         handler: handleReadFile,
+        preview: (context: RCEContext) => {
+            const workspaceUri = getWorkspaceUri();
+            if (!workspaceUri || !context.data.params?.filePath) {
+                return { dispose: () => {} };
+            }
+            const fileUri = vscode.Uri.joinPath(workspaceUri, context.data.params.filePath);
+            filePreviewProvider.mark([fileUri], 'read this file');
+            return { dispose: () => filePreviewProvider.clearAll() };
+        },
         cancelEvents: [
             (context: RCEContext) => {
                 if (!context.data.params?.filePath) {
@@ -340,6 +390,15 @@ export const fileActions = {
             sync: [neuroSafeValidation],
         },
         promptGenerator: (context: RCEContext) => `create the file "${context.data.params?.filePath}".`,
+        preview: (context: RCEContext) => {
+            const workspaceUri = getWorkspaceUri();
+            if (!workspaceUri || !context.data.params?.filePath) {
+                return { dispose: () => {} };
+            }
+            const fileUri = vscode.Uri.joinPath(workspaceUri, context.data.params.filePath);
+            filePreviewProvider.mark([fileUri], 'create this file');
+            return { dispose: () => filePreviewProvider.clearAll() };
+        },
     },
     create_folder: {
         name: 'create_folder',
@@ -361,6 +420,15 @@ export const fileActions = {
             sync: [neuroSafeValidation],
         },
         promptGenerator: (context: RCEContext) => `create the folder "${context.data.params?.folderPath}".`,
+        preview: (context: RCEContext) => {
+            const workspaceUri = getWorkspaceUri();
+            if (!workspaceUri || !context.data.params?.folderPath) {
+                return { dispose: () => {} };
+            }
+            const folderUri = vscode.Uri.joinPath(workspaceUri, context.data.params.folderPath);
+            filePreviewProvider.mark([folderUri], 'create this folder');
+            return { dispose: () => filePreviewProvider.clearAll() };
+        },
     },
     rename_file_or_folder: {
         name: 'rename_file_or_folder',
@@ -384,6 +452,16 @@ export const fileActions = {
             sync: [neuroSafeRenameValidation],
         },
         promptGenerator: (context: RCEContext) => `rename "${context.data.params?.oldPath}" to "${context.data.params?.newPath}".`,
+        preview: (context: RCEContext) => {
+            const workspaceUri = getWorkspaceUri();
+            if (!workspaceUri || !context.data.params?.oldPath || !context.data.params?.newPath) {
+                return { dispose: () => {} };
+            }
+            const oldUri = vscode.Uri.joinPath(workspaceUri, context.data.params.oldPath);
+            const newUri = vscode.Uri.joinPath(workspaceUri, context.data.params.newPath);
+            filePreviewProvider.mark([oldUri, newUri], 'rename this', true);
+            return { dispose: () => filePreviewProvider.clearAll() };
+        },
     },
     delete_file_or_folder: {
         name: 'delete_file_or_folder',
@@ -406,6 +484,15 @@ export const fileActions = {
             sync: [neuroSafeDeleteValidation],
         },
         promptGenerator: (context: RCEContext) => `delete "${context.data.params?.path}".`,
+        preview: (context: RCEContext) => {
+            const workspaceUri = getWorkspaceUri();
+            if (!workspaceUri || !context.data.params?.path) {
+                return { dispose: () => {} };
+            }
+            const pathUri = vscode.Uri.joinPath(workspaceUri, context.data.params.path);
+            filePreviewProvider.mark([pathUri], 'delete this', true);
+            return { dispose: () => filePreviewProvider.clearAll() };
+        },
     },
 } satisfies Record<string, RCEAction>;
 
