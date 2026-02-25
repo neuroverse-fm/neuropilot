@@ -167,7 +167,9 @@ export default tseslint.config(
                 ...globals.node,
                 ...globals.browser,
             },
-            // Do not provide a TypeScript project for JS files to avoid parser errors
+            parserOptions: {
+                tsconfigRootDir: import.meta.dirname,
+            },
         },
     },
 );
