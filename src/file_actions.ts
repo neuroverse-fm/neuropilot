@@ -281,7 +281,12 @@ export const fileActions = {
         validators: {
             sync: [
                 async (context: RCEContext) => {
-                    const actionData = context.data;
+                    // Some sub-validators don't understand an empty filePath and will crash unless passed a modified context
+                    // Copy to avoid mutation (there shouldn't be any recursive properties possible on context.data)
+                    const contextCopy = Object.assign({}, context);     // Shallow copy
+                    const actionData = structuredClone(context.data);   // Deep copy
+                    contextCopy.data = actionData;
+
                     const workspaceUri = getWorkspaceUri();
                     if (!workspaceUri) {
                         return actionValidationFailure('You are not in a workspace.', 'Not in a workspace.');
@@ -302,13 +307,13 @@ export const fileActions = {
                     }
 
                     // Run all validators with the resolved filePath
-                    const neuroSafeResult = await neuroSafeValidation(context);
+                    const neuroSafeResult = await neuroSafeValidation(contextCopy);
                     if (!neuroSafeResult.success) return neuroSafeResult;
 
-                    const binaryResult = await binaryFileValidation(context);
+                    const binaryResult = await binaryFileValidation(contextCopy);
                     if (!binaryResult.success) return binaryResult;
 
-                    const fileResult = await validateIsAFile(context);
+                    const fileResult = await validateIsAFile(contextCopy);
                     if (!fileResult.success) return fileResult;
 
                     return actionValidationAccept();
