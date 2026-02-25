@@ -219,7 +219,9 @@ export const fileActions = {
                 // Get all items in the folder and mark them individually
                 vscode.workspace.fs.readDirectory(folderUri).then(
                     (items) => {
-                        const uris = items.map(([name, _type]) => vscode.Uri.joinPath(folderUri, name));
+                        const uris = items
+                            .map(([name, _type]) => vscode.Uri.joinPath(folderUri, name))
+                            .filter(uri => isPathNeuroSafe(uri.fsPath));
                         filePreviewProvider.mark(uris, 'see this file\'s existence', false, true);
                     },
                     () => {
