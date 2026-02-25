@@ -13,12 +13,13 @@ class PreviewFileDecorationProvider implements vscode.FileDecorationProvider, vs
     private noChildren = false;
 
     async provideFileDecoration(uri: vscode.Uri): Promise<vscode.FileDecoration | undefined> {
+        const symbol = NEURO.currentController === 'Neuro' ? '💜' : NEURO.currentController === 'Evil' ? '💔' : '🖥️';
         const uriString = uri.toString();
 
         // Check if the URI itself is marked (exact string match)
         if (this.marked.has(uriString)) {
             const promptString = this.marked.get(uriString);
-            const dec = new vscode.FileDecoration('💜', `(Preview) ${NEURO.currentController} wants to ${promptString ?? 'uhhhh, do something with this file?'}`, new vscode.ThemeColor('neuropilot.preview'));
+            const dec = new vscode.FileDecoration(symbol, `(Preview) ${NEURO.currentController} wants to ${promptString ?? 'uhhhh, do something with this file?'}`, new vscode.ThemeColor('neuropilot.preview'));
             dec.propagate = true; // Propagate to parent folders
             return dec;
         }
@@ -34,7 +35,7 @@ class PreviewFileDecorationProvider implements vscode.FileDecorationProvider, vs
 
                 // Check if paths are exactly equal (handles URI string differences like trailing slashes)
                 if (uriPath === markedPath) {
-                    const dec = new vscode.FileDecoration('💜', `(Preview) ${NEURO.currentController} wants to ${promptString ?? 'uhhhh, do something with this file?'}`, new vscode.ThemeColor('neuropilot.preview'));
+                    const dec = new vscode.FileDecoration(symbol, `(Preview) ${NEURO.currentController} wants to ${promptString ?? 'uhhhh, do something with this file?'}`, new vscode.ThemeColor('neuropilot.preview'));
                     dec.propagate = true; // Propagate to parent folders
                     return dec;
                 }
@@ -51,7 +52,7 @@ class PreviewFileDecorationProvider implements vscode.FileDecorationProvider, vs
                         const stat = await vscode.workspace.fs.stat(markedUri);
                         const isDirectory = (stat.type & vscode.FileType.Directory) === vscode.FileType.Directory;
                         if (isDirectory) {
-                            const dec = new vscode.FileDecoration('💜', `(Preview) ${NEURO.currentController} wants to ${promptString ?? 'uhhhh, do something with this folder?'}`, new vscode.ThemeColor('neuropilot.preview'));
+                            const dec = new vscode.FileDecoration(symbol, `(Preview) ${NEURO.currentController} wants to ${promptString ?? 'uhhhh, do something with this folder?'}`, new vscode.ThemeColor('neuropilot.preview'));
                             dec.propagate = false; // Don't propagate children up to unmarked parents
                             return dec;
                         }
