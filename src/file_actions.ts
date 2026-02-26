@@ -223,6 +223,8 @@ export const fileActions = {
                             .map(([name, _type]) => vscode.Uri.joinPath(folderUri, name))
                             .filter(uri => isPathNeuroSafe(uri.fsPath));
                         filePreviewProvider.mark(uris, 'see this file\'s existence', false, true);
+                        // Also mark the directory itself
+                        filePreviewProvider.mark([folderUri], 'list this directory', false, true);
                     },
                     () => {
                         // If we can't read the directory, just mark the folder itself
