@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { EXCEPTION_THROWN_STRING, NEURO } from '@/constants';
 import { normalizePath, getWorkspacePath, logOutput, isPathNeuroSafe, getWorkspaceUri } from '@/utils/misc';
 import { CONFIG } from '@/config';
+import { filePreviewProvider } from '@/previews/files';
 import { actionValidationAccept, actionValidationFailure, ActionValidationResult, RCEAction, actionValidationRetry, ActionHandlerResult, actionHandlerSuccess, actionHandlerFailure } from '@/utils/neuro_client';
 import assert from 'node:assert';
 import { targetedFileLintingResolvedEvent, targetedFolderLintingResolvedEvent, workspaceLintingResolvedEvent } from '@events/linting';
@@ -96,6 +97,15 @@ export const lintActions = {
             }],
         },
         promptGenerator: (context: RCEContext) => `get linting diagnostics for "${context.data.params.file}".`,
+        preview: (context: RCEContext) => {
+            const workspaceUri = getWorkspaceUri();
+            if (!workspaceUri || !context.data.params?.file) {
+                return { dispose: () => {} };
+            }
+            const fileUri = vscode.Uri.joinPath(workspaceUri, context.data.params.file);
+            filePreviewProvider.mark([fileUri], 'get linting problems for this file');
+            return { dispose: () => filePreviewProvider.clearAll() };
+        },
     },
     get_folder_lint_problems: {
         name: 'get_folder_lint_problems',
@@ -130,6 +140,15 @@ export const lintActions = {
             }],
         },
         promptGenerator: (context: RCEContext) => `get linting diagnostics for "${context.data.params.folder}".`,
+        preview: (context: RCEContext) => {
+            const workspaceUri = getWorkspaceUri();
+            if (!workspaceUri || !context.data.params?.folder) {
+                return { dispose: () => {} };
+            }
+            const folderUri = vscode.Uri.joinPath(workspaceUri, context.data.params.folder);
+            filePreviewProvider.mark([folderUri], 'get linting problems in this folder');
+            return { dispose: () => filePreviewProvider.clearAll() };
+        },
     },
     get_workspace_lint_problems: {
         name: 'get_workspace_lint_problems',
@@ -158,6 +177,14 @@ export const lintActions = {
             }],
         },
         promptGenerator: () => 'get linting diagnostics for the current workspace.',
+        preview: () => {
+            const workspaceUri = getWorkspaceUri();
+            if (!workspaceUri) {
+                return { dispose: () => {} };
+            }
+            filePreviewProvider.mark([workspaceUri], 'get linting problems in workspace', false, false);
+            return { dispose: () => filePreviewProvider.clearAll() };
+        },
     },
 } satisfies Record<string, RCEAction>;
 
