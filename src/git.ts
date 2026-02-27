@@ -186,7 +186,7 @@ export const gitActions = {
                 return vscode.Uri.joinPath(ws, p);
             });
             filePreviewProvider.mark(fileUris, 'add this file to the Git staging area');
-            return { dispose: filePreviewProvider.clearAll };
+            return { dispose: () => filePreviewProvider.clearAll() };
         },
         cancelEvents: commonCancelEvents,
         promptGenerator: (context: RCEContext) => `add the file "${context.data.params.filePath}" to the staging area.`,
