@@ -274,7 +274,7 @@ export const gitActions = {
                 return vscode.Uri.joinPath(ws, p);
             });
             filePreviewProvider.mark(fileUris, 'remove this file from the Git staging area');
-            return { dispose: filePreviewProvider.clearAll };
+            return { dispose: () => filePreviewProvider.clearAll() };
         },
         cancelEvents: commonCancelEvents,
         promptGenerator: (context: RCEContext) => `remove the file "${context.data.params.filePath}" from the staging area.`,
