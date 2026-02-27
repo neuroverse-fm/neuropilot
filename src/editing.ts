@@ -226,9 +226,11 @@ export function previewLineHighlights(lineRange: { startLine: number, endLine: n
     const editor = vscode.window.activeTextEditor!;
     const lineRangeHighlight = createPreviewHighlight();
 
-    const startPosition = new vscode.Position(lineRange.startLine, 0);
-    const endPosition = new vscode.Position(lineRange.endLine, editor.document.lineAt(lineRange.endLine).text.length);
+    const startLineIndex = lineRange.startLine - 1;
+    const endLineIndex = lineRange.endLine - 1;
 
+    const startPosition = new vscode.Position(startLineIndex, 0);
+    const endPosition = new vscode.Position(endLineIndex, editor.document.lineAt(endLineIndex).text.length);
     editor.setDecorations(lineRangeHighlight, [
         {
             range: new vscode.Range(startPosition, endPosition),
@@ -648,8 +650,8 @@ export const editingActions = {
         preview: () => {
             const editor = vscode.window.activeTextEditor!;
             const fullRange = new vscode.Range(
-                editor.document.positionAt(0),
-                editor.document.positionAt(editor.document.getText().length),
+                new vscode.Position(0, 0),
+                editor.document.lineAt(editor.document.lineCount - 1).range.end,
             );
             const highlight = createPreviewHighlight();
             editor.setDecorations(highlight, [
