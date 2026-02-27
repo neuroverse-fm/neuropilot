@@ -143,13 +143,18 @@ export const gitActions = {
         preview: () => {
             const ws = getWorkspaceUri()!;
             filePreviewProvider.mark([ws], 'initialize a Git repository');
-            return { dispose: filePreviewProvider.clearAll };
+            return { dispose: () => filePreviewProvider.clearAll() };
         },
         promptGenerator: 'initialize a Git repository in the workspace.',
         cancelEvents: commonCancelEvents,
         validators: {
             sync: [() => {
                 if (!git) return actionValidationFailure('Git extension not available.', 'Git extension not activated');
+                return actionValidationAccept();
+            }, () => {
+                const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+                if (workspaceFolder === undefined)
+                    return actionValidationFailure('No open workspace to get files from.');
                 return actionValidationAccept();
             }],
         },
@@ -175,7 +180,7 @@ export const gitActions = {
         handler: handleAddFileToGit,
         preview: (ctx: RCEContext) => {
             const ws = getWorkspaceUri();
-            if (!ws) return { dispose: () => {} };
+            if (!ws) return { dispose: () => { } };
             const filePaths: string[] = ctx.data.params!.filePath;
             const fileUris: vscode.Uri[] = filePaths.map((p) => {
                 return vscode.Uri.joinPath(ws, p);
@@ -268,7 +273,7 @@ export const gitActions = {
         handler: handleRemoveFileFromGit,
         preview: (ctx: RCEContext) => {
             const ws = getWorkspaceUri();
-            if (!ws) return { dispose: () => {} };
+            if (!ws) return { dispose: () => { } };
             const filePaths: string[] = ctx.data.params!.filePath;
             const fileUris: vscode.Uri[] = filePaths.map((p) => {
                 return vscode.Uri.joinPath(ws, p);
@@ -396,7 +401,7 @@ export const gitActions = {
         handler: handleDiffFiles,
         preview: (ctx: RCEContext) => {
             const ws = getWorkspaceUri();
-            if (!ws) return { dispose: () => {} };
+            if (!ws) return { dispose: () => { } };
             const filePath: string = ctx.data.params!.filePath;
             const fileUri: vscode.Uri = vscode.Uri.joinPath(ws, filePath);
             filePreviewProvider.mark([fileUri], 'view the diff for this file');
@@ -447,7 +452,7 @@ export const gitActions = {
         handler: handleGitBlame,
         preview: (ctx: RCEContext) => {
             const ws = getWorkspaceUri();
-            if (!ws) return { dispose: () => {} };
+            if (!ws) return { dispose: () => { } };
             const filePath: string = ctx.data.params!.filePath;
             const fileUri: vscode.Uri = vscode.Uri.joinPath(ws, filePath);
             filePreviewProvider.mark([fileUri], 'view the blame history for this file');
