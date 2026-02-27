@@ -451,7 +451,7 @@ export const gitActions = {
             const filePath: string = ctx.data.params!.filePath;
             const fileUri: vscode.Uri = vscode.Uri.joinPath(ws, filePath);
             filePreviewProvider.mark([fileUri], 'view the blame history for this file');
-            return { dispose: filePreviewProvider.clearAll };
+            return { dispose: () => filePreviewProvider.clearAll() };
         },
         cancelEvents: commonCancelEvents,
         promptGenerator: (context: RCEContext) => `get the Git blame for the file "${context.data.params.filePath}".`,
