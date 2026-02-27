@@ -21,11 +21,12 @@ import {
     showUpdateReminder,
     startupCreateClient,
 } from './shared/extension';
-import { registerChatParticipant } from '@/chat';
+import { addChatAction, registerChatParticipant } from '@/chat';
 import { addCommonUnsupervisedActions, registerUnsupervisedHandlers } from '@entry/shared/unsupervised';
 import { registerSendSelectionToNeuro } from '@/editing';
 import { loadIgnoreFiles } from '@/utils/ignore_files';
 import { reregisterAllActions } from '@/rce';
+import { addCompleteCodeAction } from '@/completions';
 
 export function activate(context: vscode.ExtensionContext) {
     loadIgnoreFiles(
@@ -102,6 +103,8 @@ function reloadDesktopPermissions() {
 
 function addUnsupervisedActions() {
     addCommonUnsupervisedActions();
+    addChatAction();
+    addCompleteCodeAction();
     addTaskActions();
     addTerminalActions();
 }
