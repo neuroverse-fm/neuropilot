@@ -195,7 +195,7 @@ export function revealRceNotification(): void {
         return;
 
     request.notificationVisible = true;
-    if (activeContext.action.preview) {
+    if (!ACTIONS.disablePreviewEffects && activeContext.action.preview) {
         activeContext.lifecycle.preview = activeContext.action.preview(activeContext);
     }
 
