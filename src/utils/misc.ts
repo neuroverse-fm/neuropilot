@@ -1107,7 +1107,7 @@ export function hexToRgba(hex: string): { r: number; g: number; b: number; a: nu
 }
 
 /**
- * RGB(A) to hex converrter
+ * RGB(A) to hex converter
  * @param r Red value
  * @param g Green value
  * @param b Blue value
