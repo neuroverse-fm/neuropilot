@@ -67,6 +67,7 @@ class PreviewFileDecorationProvider implements vscode.FileDecorationProvider, vs
         return undefined;
     }
 
+    // TODO: return a Disposable to make it easy for preview functions (it's literally what this is designed for!)
     // PUBLIC API: mark multiple files/folders at once
     public mark(uris: vscode.Uri[], promptString?: string, absolutelyAllFiles = false, noChildren = false) {
         this.absolutelyAllFiles = absolutelyAllFiles;
