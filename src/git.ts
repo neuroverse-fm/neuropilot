@@ -400,7 +400,7 @@ export const gitActions = {
             const filePath: string = ctx.data.params!.filePath;
             const fileUri: vscode.Uri = vscode.Uri.joinPath(ws, filePath);
             filePreviewProvider.mark([fileUri], 'view the diff for this file');
-            return { dispose: filePreviewProvider.clearAll };
+            return { dispose: () => filePreviewProvider.clearAll() };
         },
         cancelEvents: commonCancelEvents,
         promptGenerator: (context: RCEContext) => `obtain ${context.data.params?.filePath ? `"${context.data.params.filePath}"'s` : 'a'} Git diff${context.data.params?.ref1 && context.data.params?.ref2 ? ` between ${context.data.params.ref1} and ${context.data.params.ref2}` : context.data.params?.ref1 ? ` at ref ${context.data.params.ref1}` : ''}${context.data.params?.diffType ? ` (of type "${context.data.params.diffType}")` : ''}.`,
