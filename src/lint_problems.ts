@@ -100,11 +100,10 @@ export const lintActions = {
         preview: (context: RCEContext) => {
             const workspaceUri = getWorkspaceUri();
             if (!workspaceUri || !context.data.params?.file) {
-                return { dispose: () => {} };
+                return { dispose: () => { } };
             }
             const fileUri = vscode.Uri.joinPath(workspaceUri, context.data.params.file);
-            filePreviewProvider.mark([fileUri], 'get linting problems for this file');
-            return { dispose: () => filePreviewProvider.clearAll() };
+            return filePreviewProvider.mark([fileUri], 'get linting problems for this file');
         },
     },
     get_folder_lint_problems: {
@@ -143,11 +142,10 @@ export const lintActions = {
         preview: (context: RCEContext) => {
             const workspaceUri = getWorkspaceUri();
             if (!workspaceUri || !context.data.params?.folder) {
-                return { dispose: () => {} };
+                return { dispose: () => { } };
             }
             const folderUri = vscode.Uri.joinPath(workspaceUri, context.data.params.folder);
-            filePreviewProvider.mark([folderUri], 'get linting problems in this folder');
-            return { dispose: () => filePreviewProvider.clearAll() };
+            return filePreviewProvider.mark([folderUri], 'get linting problems in this folder', false, false);
         },
     },
     get_workspace_lint_problems: {
@@ -180,10 +178,9 @@ export const lintActions = {
         preview: () => {
             const workspaceUri = getWorkspaceUri();
             if (!workspaceUri) {
-                return { dispose: () => {} };
+                return { dispose: () => { } };
             }
-            filePreviewProvider.mark([workspaceUri], 'get linting problems in workspace', false, false);
-            return { dispose: () => filePreviewProvider.clearAll() };
+            return filePreviewProvider.mark([workspaceUri], 'get linting problems in workspace', false, false);
         },
     },
 } satisfies Record<string, RCEAction>;

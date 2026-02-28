@@ -142,8 +142,7 @@ export const gitActions = {
         handler: handleNewGitRepo,
         preview: () => {
             const ws = getWorkspaceUri()!;
-            filePreviewProvider.mark([ws], 'initialize a Git repository');
-            return { dispose: () => filePreviewProvider.clearAll() };
+            return filePreviewProvider.mark([ws], 'initialize a Git repository');
         },
         promptGenerator: 'initialize a Git repository in the workspace.',
         cancelEvents: commonCancelEvents,
@@ -185,8 +184,7 @@ export const gitActions = {
             const fileUris: vscode.Uri[] = filePaths.map((p) => {
                 return vscode.Uri.joinPath(ws, p);
             });
-            filePreviewProvider.mark(fileUris, 'add this file to the Git staging area');
-            return { dispose: () => filePreviewProvider.clearAll() };
+            return filePreviewProvider.mark(fileUris, 'add this file to the Git staging area');
         },
         cancelEvents: commonCancelEvents,
         promptGenerator: (context: RCEContext) => `add the file "${context.data.params.filePath}" to the staging area.`,
@@ -278,8 +276,7 @@ export const gitActions = {
             const fileUris: vscode.Uri[] = filePaths.map((p) => {
                 return vscode.Uri.joinPath(ws, p);
             });
-            filePreviewProvider.mark(fileUris, 'remove this file from the Git staging area');
-            return { dispose: () => filePreviewProvider.clearAll() };
+            return filePreviewProvider.mark(fileUris, 'remove this file from the Git staging area');
         },
         cancelEvents: commonCancelEvents,
         promptGenerator: (context: RCEContext) => `remove the file "${context.data.params.filePath}" from the staging area.`,
@@ -404,8 +401,7 @@ export const gitActions = {
             if (!ws) return { dispose: () => { } };
             const filePath: string = ctx.data.params!.filePath;
             const fileUri: vscode.Uri = vscode.Uri.joinPath(ws, filePath);
-            filePreviewProvider.mark([fileUri], 'view the diff for this file');
-            return { dispose: () => filePreviewProvider.clearAll() };
+            return filePreviewProvider.mark([fileUri], 'view the diff for this file');
         },
         cancelEvents: commonCancelEvents,
         promptGenerator: (context: RCEContext) => `obtain ${context.data.params?.filePath ? `"${context.data.params.filePath}"'s` : 'a'} Git diff${context.data.params?.ref1 && context.data.params?.ref2 ? ` between ${context.data.params.ref1} and ${context.data.params.ref2}` : context.data.params?.ref1 ? ` at ref ${context.data.params.ref1}` : ''}${context.data.params?.diffType ? ` (of type "${context.data.params.diffType}")` : ''}.`,
@@ -455,8 +451,7 @@ export const gitActions = {
             if (!ws) return { dispose: () => { } };
             const filePath: string = ctx.data.params!.filePath;
             const fileUri: vscode.Uri = vscode.Uri.joinPath(ws, filePath);
-            filePreviewProvider.mark([fileUri], 'view the blame history for this file');
-            return { dispose: () => filePreviewProvider.clearAll() };
+            return filePreviewProvider.mark([fileUri], 'view the blame history for this file');
         },
         cancelEvents: commonCancelEvents,
         promptGenerator: (context: RCEContext) => `get the Git blame for the file "${context.data.params.filePath}".`,

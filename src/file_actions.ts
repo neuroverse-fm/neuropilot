@@ -215,28 +215,40 @@ export const fileActions = {
                 ? vscode.Uri.joinPath(workspaceUri, folder)
                 : workspaceUri;
 
+            let disposed = false;
+            const disposables: vscode.Disposable[] = [];
+
             if (!recursive) {
                 // Get all items in the folder and mark them individually
                 vscode.workspace.fs.readDirectory(folderUri).then(
                     (items) => {
+                        if (disposed) return; // Prevent marking after dispose
                         const uris = items
                             .map(([name, _type]) => vscode.Uri.joinPath(folderUri, name))
                             .filter(uri => isPathNeuroSafe(uri.fsPath));
-                        filePreviewProvider.mark(uris, 'see this file\'s existence', false, true);
+                        disposables.push(filePreviewProvider.mark(uris, 'see this file\'s existence', false, true));
                         // Also mark the directory itself
-                        filePreviewProvider.mark([folderUri], 'list this directory', false, true);
+                        disposables.push(filePreviewProvider.mark([folderUri], 'list this directory', false, true));
                     },
                     () => {
+                        if (disposed) return; // Prevent marking after dispose
                         // If we can't read the directory, just mark the folder itself
-                        filePreviewProvider.mark([folderUri], 'see this folder\'s existence', false, true);
+                        disposables.push(filePreviewProvider.mark([folderUri], 'see this folder\'s existence', false, true));
                     },
                 );
             } else {
                 // Mark the folder with children propagation enabled
-                filePreviewProvider.mark([folderUri], 'list this', false, false);
+                disposables.push(filePreviewProvider.mark([folderUri], 'list this', false, false));
             }
 
-            return { dispose: () => filePreviewProvider.clearAll() };
+            return {
+                dispose: () => {
+                    disposed = true;
+                    for (const d of disposables) {
+                        d.dispose();
+                    }
+                },
+            };
         },
         validators: {
             sync: [async (context: RCEContext) => {
@@ -287,11 +299,10 @@ export const fileActions = {
         preview: (context: RCEContext) => {
             const workspaceUri = getWorkspaceUri();
             if (!workspaceUri || !context.data.params?.filePath) {
-                return { dispose: () => {} };
+                return { dispose: () => { } };
             }
             const fileUri = vscode.Uri.joinPath(workspaceUri, context.data.params.filePath);
-            filePreviewProvider.mark([fileUri], 'open this file');
-            return { dispose: () => filePreviewProvider.clearAll() };
+            return filePreviewProvider.mark([fileUri], 'open this file');
         },
     },
     read_file: {
@@ -310,11 +321,10 @@ export const fileActions = {
         preview: (context: RCEContext) => {
             const workspaceUri = getWorkspaceUri();
             if (!workspaceUri || !context.data.params?.filePath) {
-                return { dispose: () => {} };
+                return { dispose: () => { } };
             }
             const fileUri = vscode.Uri.joinPath(workspaceUri, context.data.params.filePath);
-            filePreviewProvider.mark([fileUri], 'read this file');
-            return { dispose: () => filePreviewProvider.clearAll() };
+            return filePreviewProvider.mark([fileUri], 'read this file');
         },
         cancelEvents: [
             (context: RCEContext) => {
@@ -397,11 +407,10 @@ export const fileActions = {
         preview: (context: RCEContext) => {
             const workspaceUri = getWorkspaceUri();
             if (!workspaceUri || !context.data.params?.filePath) {
-                return { dispose: () => {} };
+                return { dispose: () => { } };
             }
             const fileUri = vscode.Uri.joinPath(workspaceUri, context.data.params.filePath);
-            filePreviewProvider.mark([fileUri], 'create this file');
-            return { dispose: () => filePreviewProvider.clearAll() };
+            return filePreviewProvider.mark([fileUri], 'create this file');
         },
     },
     create_folder: {
@@ -427,11 +436,10 @@ export const fileActions = {
         preview: (context: RCEContext) => {
             const workspaceUri = getWorkspaceUri();
             if (!workspaceUri || !context.data.params?.folderPath) {
-                return { dispose: () => {} };
+                return { dispose: () => { } };
             }
             const folderUri = vscode.Uri.joinPath(workspaceUri, context.data.params.folderPath);
-            filePreviewProvider.mark([folderUri], 'create this folder');
-            return { dispose: () => filePreviewProvider.clearAll() };
+            return filePreviewProvider.mark([folderUri], 'create this folder');
         },
     },
     rename_file_or_folder: {
@@ -459,12 +467,11 @@ export const fileActions = {
         preview: (context: RCEContext) => {
             const workspaceUri = getWorkspaceUri();
             if (!workspaceUri || !context.data.params?.oldPath || !context.data.params?.newPath) {
-                return { dispose: () => {} };
+                return { dispose: () => { } };
             }
             const oldUri = vscode.Uri.joinPath(workspaceUri, context.data.params.oldPath);
             const newUri = vscode.Uri.joinPath(workspaceUri, context.data.params.newPath);
-            filePreviewProvider.mark([oldUri, newUri], 'rename this', true);
-            return { dispose: () => filePreviewProvider.clearAll() };
+            return filePreviewProvider.mark([oldUri, newUri], 'rename this', true);
         },
     },
     delete_file_or_folder: {
@@ -491,11 +498,10 @@ export const fileActions = {
         preview: (context: RCEContext) => {
             const workspaceUri = getWorkspaceUri();
             if (!workspaceUri || !context.data.params?.path) {
-                return { dispose: () => {} };
+                return { dispose: () => { } };
             }
             const pathUri = vscode.Uri.joinPath(workspaceUri, context.data.params.path);
-            filePreviewProvider.mark([pathUri], 'delete this', true);
-            return { dispose: () => filePreviewProvider.clearAll() };
+            return filePreviewProvider.mark([pathUri], 'delete this', true);
         },
     },
 } satisfies Record<string, RCEAction>;
