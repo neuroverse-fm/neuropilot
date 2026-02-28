@@ -8,11 +8,19 @@ Changes between each version before then will not be listed.
 
 ## 2.5.0
 
+### New settings
+
+- `neuropilot.actions.disablePreviewEffects` - Allows disabling preview effects. See below.
+
 ### Additions
 
 - Certain actions can now emit preview effects if Neuro is using an action with its permission set to Copilot.
   - These preview effects will be emitted primarily for editing actions (cursor and highlight effects), as well as file, linting and some git actions (file list effects).
   - Any preview effects with built-in actions are done with blue colours, to differentiate with the other visual effects that this & other extensions have.
+  - Filesystem-based previews can be adjusted using the `workspace.colorCustomizations.neuropilot.filePreviewEffectsColour` setting.
+    - Support for changing other colours used in the extension (e.x. colours for diff added, diff removed, diff modified, highlight) *may* be added later.
+      - *may* means possibly, not guaranteed.
+  - At any time, you may disable preview effects using `neuropilot.actions.disablePreviewEffects`.
 
 ### Fixes
 
