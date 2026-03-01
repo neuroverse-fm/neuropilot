@@ -67,9 +67,8 @@ async function getUriExistence(uri: vscode.Uri): Promise<boolean> {
 async function neuroSafeValidation(actionData: ActionData): Promise<ActionValidationResult> {
     let result: ActionValidationResult = actionValidationAccept();
     const falseList = [
-        'open_file',
-        'read_file',
-    ];
+        'switch_files',
+    ]; // TODO: Change this to be a validator factory function instead
     const shouldExist = falseList.includes(actionData.name);
     if (actionData.params?.filePath) {
         result = await validatePath(actionData.params.filePath, shouldExist, 'file');
