@@ -57,7 +57,7 @@ export const cancelRequestAction: RCEAction = {
 /**
  * Handles cancellation requests from Neuro.
  */
-export function handleCancelRequest(_context: RCEContext): ActionHandlerResult {
+export function handleCancelRequest(): ActionHandlerResult {
     const activeContext = getActiveRequestContext();
     if (!activeContext?.request) {
         return actionHandlerFailure('No active request to cancel.', 'No active request.');
@@ -254,7 +254,6 @@ export async function acceptRceRequest(): Promise<void> {
             }
         }
         activeContext.done(result.success === 'success');
-        return;
     } catch (erm: unknown) {
         const actionName = actionData.name;
         notifyOnCaughtException(actionName, erm);
@@ -586,6 +585,13 @@ function processResult(result: ActionHandlerResult): { status: 'success' | 'fail
     return { status, statusMessage, contextMessage };
 }
 
+type ActionStages = 'initializing'
+        | 'validating schema'
+        | 'running validators'
+        | 'setting up cancel events'
+        | 'executing handler'
+        | 'creating Copilot request';
+
 /**
  * RCE action handler code for unsupervised requests.
  * Intended to be used with something like `NEURO.client?.onAction(async (actionData: ActionData) => await RCEActionHandler(actionData, actionList, true))
@@ -595,13 +601,8 @@ function processResult(result: ActionHandlerResult): { status: 'success' | 'fail
  */
 export async function RCEActionHandler(actionData: ActionData) {
     // TODO: Maybe make something like this a queryable property of context / lifecycle
-    let stage: 'initializing'
-        | 'validating schema'
-        | 'running validators'
-        | 'setting up cancel events'
-        | 'executing handler'
-        | 'creating Copilot request'
-            = 'initializing';
+    let stage: ActionStages = 'initializing';
+    let context: RCEContext | undefined;
     try {
         if (REGISTERED_ACTIONS.has(actionData.name)) {
             NEURO.actionHandled = true;
@@ -609,7 +610,7 @@ export async function RCEActionHandler(actionData: ActionData) {
             // Start tracking execution immediately
             fireOnActionStart(actionData, 'Validating action...');
 
-            const context = new RCEContext(actionData);
+            context = new RCEContext(actionData);
 
             const effectivePermission = getPermissionLevel(context.action.name);
             if (effectivePermission === PermissionLevel.OFF) {
@@ -622,7 +623,7 @@ export async function RCEActionHandler(actionData: ActionData) {
 
             if (context.action.contextSetupHook) {
                 context.lifecycle.setupHooks = false;
-                Promise.allSettled(context.action.contextSetupHook).then(() => context.lifecycle.setupHooks = true);
+                Promise.allSettled(context.action.contextSetupHook).then(() => context!.lifecycle.setupHooks = true);
             }
 
             // Validate schema
@@ -701,11 +702,11 @@ export async function RCEActionHandler(actionData: ActionData) {
                     } else {
                         createdLogReason = createdReason;
                     }
-                    logOutput('WARNING', `${CONNECTION.nameOfAPI}'${CONNECTION.nameOfAPI.endsWith('s') ? '' : 's'} action ${context.action.name} was cancelled because ${createdLogReason}`);
+                    logOutput('WARNING', `${CONNECTION.nameOfAPI}'${CONNECTION.nameOfAPI.endsWith('s') ? '' : 's'} action ${context!.action.name} was cancelled because ${createdLogReason}`);
                     NEURO.client?.sendContext(`Your request was cancelled because ${createdReason}`);
-                    context.updateStatus('cancelled', `Cancelled because ${createdLogReason}`);
-                    clearRceRequest(context);
-                    context.done(false);
+                    context!.updateStatus('cancelled', `Cancelled because ${createdLogReason}`);
+                    clearRceRequest(context!);
+                    context!.done(false);
                 };
                 for (const eventObject of context.action.cancelEvents) {
                     const eventDetails = eventObject(context);
@@ -728,7 +729,7 @@ export async function RCEActionHandler(actionData: ActionData) {
                     clearActionForce();
 
                     const resolvedResult = await result;
-                    const {status, statusMessage, contextMessage} = processResult(resolvedResult);
+                    const { status, statusMessage, contextMessage } = processResult(resolvedResult);
 
                     // TODO: Add handling for forces on retry
                     context.updateStatus(status, statusMessage);
@@ -737,7 +738,7 @@ export async function RCEActionHandler(actionData: ActionData) {
                     context.done(resolvedResult.success === 'success');
                 } else {
                     const resolvedResult = result as ActionHandlerResult;
-                    const {status, statusMessage, contextMessage} = processResult(resolvedResult);
+                    const { status, statusMessage, contextMessage } = processResult(resolvedResult);
 
                     if (resolvedResult.success !== 'retry')
                         clearActionForce();
@@ -803,6 +804,13 @@ export async function RCEActionHandler(actionData: ActionData) {
 
         // Track execution error
         updateActionStatus(actionData, 'exception', `Uncaught exception while ${stage}`);
+
+        // Clean up resources to prevent timeout from firing and cancel events from triggering
+        if (context) {
+            context.clearPreHandlerResources();
+            clearRceRequest(context);
+            context.done(false);
+        }
         return;
     }
 }
