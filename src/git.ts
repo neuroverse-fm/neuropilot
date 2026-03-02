@@ -3,7 +3,7 @@ import { EXTENSIONS, NEURO, PROMISE_REJECTION_STRING } from '@/constants';
 import type { Change, CommitOptions, Commit, Repository, API, GitExtension } from '@typing/git.d';
 import { ForcePushMode } from '@typing/git.d';
 import { StatusStrings, RefTypeStrings } from '@typing/git_status';
-import { logOutput, simpleFileName, isPathNeuroSafe, normalizePath, getWorkspacePath } from '@/utils/misc';
+import { logOutput, simpleFileName, isPathNeuroSafe, normalizePath, getWorkspacePath, getWorkspaceUri } from '@/utils/misc';
 import { ActionValidationResult, actionValidationAccept, actionValidationFailure, RCEAction, actionValidationRetry, RCEHandlerReturns, actionHandlerSuccess, actionHandlerFailure, actionHandlerRetry } from '@/utils/neuro_client';
 import assert from 'node:assert';
 import { RCECancelEvent } from '@events/utils';
@@ -142,11 +142,20 @@ export const gitActions = {
         promptGenerator: 'initialize a Git repository in the workspace.',
         cancelEvents: commonCancelEvents,
         validators: {
-            sync: [() => {
-                if (!git) return actionValidationFailure('Git extension not available.', 'Git extension not activated');
-                return actionValidationAccept();
-            }],
+            sync: [
+                () => {
+                    if (!git) return actionValidationFailure('Git extension not available.', 'Git extension not activated');
+                    return actionValidationAccept();
+                }, () => {
+                    if (getWorkspaceUri()) {
+                        return actionValidationAccept();
+                    } else {
+                        return actionValidationFailure('Not in a workspace.', 'Workspace undefined.');
+                    }
+                },
+            ],
         },
+        registerCondition: () => !!git,
     },
     add_file_to_git: {
         name: 'add_file_to_git',
