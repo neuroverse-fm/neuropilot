@@ -147,16 +147,20 @@ export const gitActions = {
         promptGenerator: 'initialize a Git repository in the workspace.',
         cancelEvents: commonCancelEvents,
         validators: {
-            sync: [() => {
-                if (!git) return actionValidationFailure('Git extension not available.', 'Git extension not activated');
-                return actionValidationAccept();
-            }, () => {
-                const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-                if (workspaceFolder === undefined)
-                    return actionValidationFailure('No open workspace to get files from.');
-                return actionValidationAccept();
-            }],
+            sync: [
+                () => {
+                    if (!git) return actionValidationFailure('Git extension not available.', 'Git extension not activated');
+                    return actionValidationAccept();
+                }, () => {
+                    if (getWorkspaceUri()) {
+                        return actionValidationAccept();
+                    } else {
+                        return actionValidationFailure('No open workspace to get files from.', 'Workspace undefined.');
+                    }
+                },
+            ],
         },
+        registerCondition: () => !!git,
     },
     add_file_to_git: {
         name: 'add_file_to_git',
