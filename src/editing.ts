@@ -384,6 +384,9 @@ export const editingActions = {
             const editor = vscode.window.activeTextEditor!;
             const disposable = createPreviewHighlight();
 
+            if (line >= editor.document.lineCount)
+                line = editor.document.lineCount - 1;
+
             const startPosition = new vscode.Position(line, 0);
             const endPosition = new vscode.Position(line, editor.document.lineAt(line).text.length);
 
