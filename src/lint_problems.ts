@@ -129,7 +129,7 @@ export const lintActions = {
                 assert(workspacePath);
                 const normalizedFolderPath = normalizePath(workspacePath + '/' + relativeFolder);
                 const diagnostics = vscode.languages.getDiagnostics();
-                const folderDiagnostics = diagnostics.filter(async ([diagUri, diags]) => {
+                const folderDiagnostics = diagnostics.filter(([diagUri, diags]) => {
                     return normalizePath(diagUri.fsPath).startsWith(normalizedFolderPath) &&
                         isPathNeuroSafe(diagUri.fsPath) && diags.length > 0;
                 });
@@ -157,12 +157,12 @@ export const lintActions = {
             workspaceLintingResolvedEvent,
         ],
         validators: {
-            sync: [async () => {
+            sync: [() => {
                 const workspace = getWorkspacePath();
                 if (!workspace) {
                     return actionValidationFailure('Unable to get current workspace.');
                 }
-                return await validatePath(workspace, 'workspace');
+                return actionValidationAccept();
             }, () => {
                 const diagnostics = vscode.languages.getDiagnostics();
                 // Filter for diagnostics on safe files with errors.
