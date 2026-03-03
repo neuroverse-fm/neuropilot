@@ -14,12 +14,26 @@ export function resetIgnoreCache(): void {
 }
 
 export function resetIgnoreState(globals?: string[]): void {
-    GlobalIgnore.setGlobals(globals ?? ['node_modules', '*.log', 'dist']);
+    GlobalIgnore.setGlobals(globals ?? ['node_modules/', '*.log', 'dist/']);
     clearIgnoreCache();
 }
 
 function cacheKeyFor(path: string): string {
     return isWindows() ? path.toLowerCase() : path;
+}
+
+/**
+ * Normalize ignore patterns by stripping trailing forward slashes.
+ * The `ignore` library only matches a bare directory name (e.g. `node_modules`)
+ * when the pattern has no trailing slash; `node_modules/` only matches paths
+ * *inside* that directory, not the directory entry itself.
+ * Note: patterns use forward-slash conventions (gitignore style), so only
+ * forward slashes are stripped here.
+ * @param patterns Array of gitignore-style ignore patterns.
+ * @returns The same patterns with trailing forward slashes removed.
+ */
+function normalizePatterns(patterns: string[]): string[] {
+    return patterns.map(p => p.replace(/\/+$/, ''));
 }
 
 function toRelativePath(targetPath: string): string {
@@ -89,7 +103,7 @@ export class ProfessionalIgnorer {
     setGlobals(globals: string[]): void {
         this.globals = globals;
         this.ig = ignore(); // reset instance
-        this.ig.add(globals);
+        this.ig.add(normalizePatterns(globals));
         clearIgnoreCache();
     }
 
@@ -116,7 +130,7 @@ export class ProfessionalIgnorer {
    * @param patterns - Array of ignore patterns
    */
     addPatterns(patterns: string[]): void {
-        this.ig.add(patterns);
+        this.ig.add(normalizePatterns(patterns));
         clearIgnoreCache();
     }
 }
@@ -143,7 +157,7 @@ export async function testIgnoreItemsList() {
 }
 
 // Create and export a single shared instance
-export const GlobalIgnore = new ProfessionalIgnorer(['node_modules', '*.log', 'dist']);
+export const GlobalIgnore = new ProfessionalIgnorer(['node_modules/', '*.log', 'dist/']);
 
 /**
  * Load .gitignore and custom ignore files into the global Ignore instance.
