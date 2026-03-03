@@ -823,10 +823,6 @@ export function handleGetCursor(): RCEHandlerReturns {
     const cursorContext = getPositionContext(document, cursorPosition);
     const relativePath = vscode.workspace.asRelativePath(document.uri);
     logOutput('INFO', `Sending cursor position to ${NEURO.currentController}`);
-
-    let cursorStyle = CONFIG.cursorPositionContextStyle;
-    if (cursorStyle === 'off')
-        cursorStyle = 'lineAndColumn';
     return actionHandlerSuccess(`In file ${relativePath}.\n\n${formatContext(cursorContext)}`, `Retrieved cursor at line ${cursorPosition.line + 1}, column ${cursorPosition.character + 1}`);
 }
 

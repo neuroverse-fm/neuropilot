@@ -12,6 +12,18 @@ Changes between each version before then will not be listed.
 
 - A small amount of action handlers (like `terminate_task`) weren't updating their execution status correctly. Alongside a refactoring of the way handlers can update status, these handlers have also been fixed to actually update the execution status.
 
+## 2.4.3
+
+### Patches
+
+- Fix `get_workspace_lint_problems` not working at all due to broken validator.
+
+## 2.4.2
+
+### Patches
+
+- Fix `switch_files` not working at all due to incorrect validator settings.
+
 ## 2.4.1
 
 ### Meta changes
