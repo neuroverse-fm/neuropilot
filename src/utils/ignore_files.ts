@@ -14,7 +14,7 @@ export function resetIgnoreCache(): void {
 }
 
 export function resetIgnoreState(globals?: string[]): void {
-    GlobalIgnore.setGlobals(globals ?? ['node_modules/', '*.log', 'dist/']);
+    GlobalIgnore.setGlobals(globals ?? ['node_modules', '*.log', 'dist']);
     clearIgnoreCache();
 }
 
@@ -143,7 +143,7 @@ export async function testIgnoreItemsList() {
 }
 
 // Create and export a single shared instance
-export const GlobalIgnore = new ProfessionalIgnorer(['node_modules/', '*.log', 'dist/']);
+export const GlobalIgnore = new ProfessionalIgnorer(['node_modules', '*.log', 'dist']);
 
 /**
  * Load .gitignore and custom ignore files into the global Ignore instance.
