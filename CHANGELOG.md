@@ -6,6 +6,12 @@ Since v2.1.0, we're keeping a changelog of each version's changes in NeuroPilot.
 
 Changes between each version before then will not be listed.
 
+## 2.4.3
+
+### Patches
+
+- Fix `get_workspace_lint_problems` not working at all due to broken validator.
+
 ## 2.4.2
 
 ### Patches
