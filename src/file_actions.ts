@@ -69,9 +69,8 @@ async function neuroSafeValidation(context: RCEContext): Promise<ActionValidatio
     const actionData = context.data;
     let result: ActionValidationResult = actionValidationAccept();
     const falseList = [
-        'open_file',
-        'read_file',
-    ];
+        'switch_files',
+    ]; // TODO: Change this to be a validator factory function instead
     const shouldExist = falseList.includes(actionData.name);
     if (actionData.params?.filePath) {
         result = await validatePath(actionData.params.filePath, shouldExist, 'file');
