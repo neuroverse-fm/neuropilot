@@ -610,6 +610,7 @@ export async function RCEActionHandler(actionData: ActionData) {
 
         // Track execution error
         updateActionStatus(actionData, 'exception', 'Uncaught exception while executing action');
+        clearRceRequest();
         return;
     }
 }
