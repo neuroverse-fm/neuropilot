@@ -815,9 +815,6 @@ export function handleGetCursor(actionData: ActionData): string | undefined {
     const relativePath = vscode.workspace.asRelativePath(document.uri);
     logOutput('INFO', `Sending cursor position to ${NEURO.currentController}`);
 
-    let cursorStyle = CONFIG.cursorPositionContextStyle;
-    if (cursorStyle === 'off')
-        cursorStyle = 'lineAndColumn';
     updateActionStatus(actionData, 'success', `Retrieved cursor at line ${cursorPosition.line + 1}, column ${cursorPosition.character + 1}`);
     return `In file ${relativePath}.\n\n${formatContext(cursorContext)}`;
 }
@@ -1891,6 +1888,8 @@ function countLineDifferences(search: string, replace: string): {
     const linesAdded = replaceLines.length;
 
     // Generate description
+    // wtf eslint
+    // eslint-disable-next-line no-useless-assignment
     let description = '';
 
     if (linesAdded === 0 && linesRemoved === 0) {
