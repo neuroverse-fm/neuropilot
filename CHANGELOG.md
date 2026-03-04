@@ -15,7 +15,8 @@ Have fun drawing, Neuro!
 - RCE request is now properly cleared on thrown exceptions.
 - Fix `read_file` failing now too.
 - The `moveCursor` parameter in `find_text` was not respected by the action handler.
-- Getting a list of terminal shells that are currently active now has an extra newline that was missing before, causing the first entry to be on the same line as the text indicating the list. 
+- Getting a list of terminal shells that are currently active now has an extra newline that was missing before, causing the first entry to be on the same line as the text indicating the list.
+- `get_file_lint_problems` and `get_folder_lint_problems` now fail when the incorrect file type is being targeted.
 
 ## 2.4.3
 
