@@ -64,21 +64,18 @@ async function getUriExistence(uri: vscode.Uri): Promise<boolean> {
     }
 }
 
-async function neuroSafeValidation(actionData: ActionData): Promise<ActionValidationResult> {
-    let result: ActionValidationResult = actionValidationAccept();
-    const falseList = [
-        'switch_files',
-        'read_file',
-    ]; // TODO: Change this to be a validator factory function instead
-    const shouldExist = falseList.includes(actionData.name);
-    if (actionData.params?.filePath) {
-        result = await validatePath(actionData.params.filePath, shouldExist, 'file');
-    }
-    if (!result.success) return result;
-    if (actionData.params?.folderPath) {
-        result = await validatePath(actionData.params.folderPath, shouldExist, 'folder');
-    }
-    return result;
+function neuroSafeValidation(shouldExist = false) {
+    return async (actionData: ActionData): Promise<ActionValidationResult> => {
+        let result: ActionValidationResult = actionValidationAccept();
+        if (actionData.params?.filePath) {
+            result = await validatePath(actionData.params.filePath, shouldExist, 'file');
+        }
+        if (!result.success) return result;
+        if (actionData.params?.folderPath) {
+            result = await validatePath(actionData.params.folderPath, shouldExist, 'folder');
+        }
+        return result;
+    };
 }
 
 async function neuroSafeDeleteValidation(actionData: ActionData): Promise<ActionValidationResult> {
@@ -240,7 +237,7 @@ export const fileActions = {
             (actionData: ActionData) => targetedFileDeletedEvent(actionData.params?.filePath),
         ],
         validators: {
-            sync: [neuroSafeValidation, validateIsAFile, binaryFileValidation],
+            sync: [neuroSafeValidation(true), validateIsAFile, binaryFileValidation],
         },
         promptGenerator: (actionData: ActionData) => `open the file "${actionData.params?.filePath}".`,
     },
@@ -296,7 +293,7 @@ export const fileActions = {
                     }
 
                     // Run all validators with the resolved filePath
-                    const neuroSafeResult = await neuroSafeValidation(actionData);
+                    const neuroSafeResult = await neuroSafeValidation(true)(actionData);
                     if (!neuroSafeResult.success) return neuroSafeResult;
 
                     const binaryResult = await binaryFileValidation(actionData);
@@ -331,7 +328,7 @@ export const fileActions = {
         handler: handleCreateFile,
         cancelEvents: commonFileEvents,
         validators: {
-            sync: [neuroSafeValidation],
+            sync: [neuroSafeValidation()],
         },
         promptGenerator: (actionData: ActionData) => `create the file "${actionData.params?.filePath}".`,
     },
@@ -352,7 +349,7 @@ export const fileActions = {
             (actionData: ActionData) => targetedFileCreatedEvent(actionData.params?.folderPath),
         ],
         validators: {
-            sync: [neuroSafeValidation],
+            sync: [neuroSafeValidation()],
         },
         promptGenerator: (actionData: ActionData) => `create the folder "${actionData.params?.folderPath}".`,
     },
