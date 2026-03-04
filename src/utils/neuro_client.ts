@@ -11,6 +11,7 @@ import type { RCEContext } from '@ctx/rce';
 
 import type { NeuroClient } from 'neuro-game-sdk';
 import type { reregisterAllActions } from '@/rce';
+import type { JSONSchema7Object } from 'json-schema';
 
 //#region Action force utils
 
@@ -45,7 +46,7 @@ export interface ActionForceParams {
  * You may optionally type the interface if you are sure the action will take a specific form.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export interface RCEAction<T = any> extends Action {
+export interface RCEAction<T extends JSONSchema7Object | undefined = any, E = any> extends Action {
     /** 
      * A human-friendly name for the action. If not provided, the action's name converted to Title Case will be used. 
      * @example Edit File
@@ -69,14 +70,14 @@ export interface RCEAction<T = any> extends Action {
          * 
          * If you supply validators that ensure certain items are not nullable, you may be able to assert that they are a non-nullable value for {@link RCEAction.promptGenerator generating the Copilot-mode prompt} and/or {@link RCEAction.preview preview effects}.
          */
-        sync?: ((context: RCEContext) => ActionValidationResult | Promise<ActionValidationResult>)[],
+        sync?: ((context: RCEContext<T, E>) => ActionValidationResult | Promise<ActionValidationResult>)[],
         /**
          * Asynchronous validators that will be ran in parallel to each other.
          * These will be executed after an action result, so it's perfect for long-running validators.
          * 
          * Async validators will time out (and consequently fail) after 1 second (1000ms). It is planned that this value will be adjustable in the future.
          */
-        async?: ((context: RCEContext) => Promise<ActionValidationResult>)[];
+        async?: ((context: RCEContext<T, E>) => Promise<ActionValidationResult>)[];
     }
     /**
      * Cancellation events attached to the action that will be automatically set up.
@@ -86,7 +87,7 @@ export interface RCEAction<T = any> extends Action {
      * Following VS Code's pattern, Disposables will not be awaited if async.
      * Returns from calling the `dispose()` function will not be used anywhere.
      */
-    cancelEvents?: ((context: RCEContext) => RCECancelEvent<T> | null)[];
+    cancelEvents?: ((context: RCEContext<T, E>) => RCECancelEvent<E> | null)[];
     /**
      * A function that is used to preview the action's effects.
      * This function will be called while awaiting user approval, if the action is set to Copilot permission.
@@ -97,14 +98,15 @@ export interface RCEAction<T = any> extends Action {
      */
     // The type must be `any`, using `never` causes it to return type errors. 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    preview?: (context: RCEContext) => { dispose: () => any };
+    preview?: (context: RCEContext<T, E>) => { dispose: () => any };
     /** 
      * The function to handle the action.
      * This function must be synchronous.
      * 
-     * You may return `undefined` or void returning in the event your handler requires an asynchronous action. If this happens, you MUST send Neuro the action's results as context when it comes in.
+     * An action result can be sent as either a synchronous result or asynchronous result, it will automatically be handled by RCE.
+     * (see {@link RCEHandlerReturns})
      */
-    handler: RCEHandler;
+    handler: RCEHandler<T, E>;
     /** 
      * The function to generate a prompt for the action request (Copilot Mode). 
      * The prompt should fit the phrasing scheme "Neuro wants to [prompt]".
@@ -114,7 +116,7 @@ export interface RCEAction<T = any> extends Action {
      * It is this way due to a potential new addition in Neuro API "v2". (not officially proposed)
      * More info (comment): https://github.com/VedalAI/neuro-game-sdk/discussions/58#discussioncomment-12938623
      */
-    promptGenerator: PromptGenerator | null;
+    promptGenerator: PromptGenerator<T, E> | null;
     /** Default permission for actions when no permission is configured in user or workspace settings. Defaults to {@link PermissionLevel.OFF}. */
     defaultPermission?: PermissionLevel;
     /**
@@ -142,10 +144,14 @@ export interface RCEAction<T = any> extends Action {
      * 
      * These functions will be parallelised, so the same key should not be accessed from multiple functions.
      */
-    contextSetupHook?: ((context: RCEContext) => Thenable<void>)[];
+    contextSetupHook?: ((context: RCEContext<T, E>) => Thenable<void>)[];
 }
 
-type RCEHandler = (context: RCEContext) => RCEHandlerReturns;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type RCEHandler<T extends JSONSchema7Object | undefined, E = any> = (context: RCEContext<T, E>) => RCEHandlerReturns;
+/**
+ * The possible values that an RCE handler can return.
+ */
 export type RCEHandlerReturns = ActionHandlerResult | Thenable<ActionHandlerResult>;
 
 /**
