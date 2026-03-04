@@ -347,7 +347,7 @@ export function handleGetCurrentlyRunningShells(actionData: ActionData): string 
     }
     else {
         updateActionStatus(actionData, 'success', `${runningShells.length} Neuro shells running`);
-        return `Currently running shells: ${runningShells.join('\n')}`;
+        return `Currently running shells:\n${runningShells.join('\n')}`;
     };
 }
 
