@@ -13,6 +13,7 @@ Have fun drawing, Neuro!
 ### Fixes
 
 - RCE request is now properly cleared on thrown exceptions.
+- Fix `read_file` failing now too.
 
 ## 2.4.3
 

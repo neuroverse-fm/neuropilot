@@ -68,6 +68,7 @@ async function neuroSafeValidation(actionData: ActionData): Promise<ActionValida
     let result: ActionValidationResult = actionValidationAccept();
     const falseList = [
         'switch_files',
+        'read_file',
     ]; // TODO: Change this to be a validator factory function instead
     const shouldExist = falseList.includes(actionData.name);
     if (actionData.params?.filePath) {
@@ -245,7 +246,7 @@ export const fileActions = {
     },
     read_file: {
         name: 'read_file',
-        description: 'Read a file\'s contents without opening it. ' +
+        description: 'Read a file\'s contents without opening it.' +
             'If filePath is not specified, reads the currently open file. ',
         category: CATEGORY_FILE_ACTIONS,
         schema: {
