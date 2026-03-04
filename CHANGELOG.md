@@ -14,6 +14,7 @@ Have fun drawing, Neuro!
 
 - RCE request is now properly cleared on thrown exceptions.
 - Fix `read_file` failing now too.
+- The `moveCursor` parameter in `find_text` was not respected by the action handler. 
 
 ## 2.4.3
 

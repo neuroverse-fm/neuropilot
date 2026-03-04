@@ -1101,7 +1101,7 @@ export function handleFindText(actionData: ActionData): string | undefined {
         // Single match
         const startPosition = positionFromIndex(documentText, matches[0].index);
         const endPosition = positionFromIndex(documentText, matches[0].index + matches[0][0].length);
-        setVirtualCursor(moveCursor === 'before' ? startPosition : endPosition);
+        if (actionData.params?.moveCursor) setVirtualCursor(moveCursor === 'before' ? startPosition : endPosition);
         if (highlight) {
             const range = new vscode.Range(startPosition, endPosition);
             vscode.window.activeTextEditor!.setDecorations(NEURO.highlightDecorationType!, [{
@@ -1113,7 +1113,7 @@ export function handleFindText(actionData: ActionData): string | undefined {
         const cursorContext = getPositionContext(document, startPosition);
         logOutput('INFO', `Placed cursor at (${endPosition.line + 1}:${endPosition.character + 1})`);
         updateActionStatus(actionData, 'success', 'Found 1 match');
-        return `Found match and placed your cursor at (${endPosition.line + 1}:${endPosition.character + 1})\n\n${formatContext(cursorContext)}`;
+        return `Found match ${actionData.params?.moveCursor ? 'and placed your cursor ' : ''}at (${endPosition.line + 1}:${endPosition.character + 1})\n\n${formatContext(cursorContext)}`;
     }
     else {
         // Multiple matches
