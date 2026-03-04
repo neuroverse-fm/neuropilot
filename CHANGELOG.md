@@ -6,6 +6,14 @@ Since v2.1.0, we're keeping a changelog of each version's changes in NeuroPilot.
 
 Changes between each version before then will not be listed.
 
+## 2.4.4
+
+Have fun drawing, Neuro!
+
+### Fixes
+
+- RCE request is now properly cleared on thrown exceptions.
+
 ## 2.4.3
 
 ### Patches
