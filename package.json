@@ -711,7 +711,7 @@
 			]
 		},
 		"viewsContainers": {
-			"secondarySidebar": [
+			"activitybar": [
 				{
 					"id": "neuropilot",
 					"title": "NeuroPilot",
