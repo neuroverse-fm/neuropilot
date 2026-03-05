@@ -10,6 +10,11 @@ Changes between each version before then will not be listed.
 
 Have fun drawing, Neuro!
 
+### Changes
+
+- Moved the view container (permissions, etc.) to the activity bar (left sidebar).
+- Search actions now use the multiline flag for regular expressions.
+
 ### Fixes
 
 - RCE request is now properly cleared on thrown exceptions.
@@ -17,6 +22,10 @@ Have fun drawing, Neuro!
 - The `moveCursor` parameter in `find_text` was not respected by the action handler.
 - Getting a list of terminal shells that are currently active now has an extra newline that was missing before, causing the first entry to be on the same line as the text indicating the list.
 - `get_file_lint_problems` and `get_folder_lint_problems` now fail when the incorrect file type is being targeted.
+- Fixed invalid regular expressions in editing actions causing an exceptions.
+- Fixed unnecessary escaping of regular expressions in prompts.
+- Fixed being able to specify illegal path characters when creating a file or folder.
+- Fixed being able to specify a file as the parent folder when creating a file or folder.
 
 ## 2.4.3
 

@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { ActionData } from 'neuro-game-sdk';
 
 import { EXCEPTION_THROWN_STRING, NEURO, PROMISE_REJECTION_STRING } from '@/constants';
-import { filterFileContents, formatContext, getFence, getPositionContext, getVirtualCursor, getWorkspacePath, getWorkspaceUri, isBinary, isPathNeuroSafe, logOutput, NeuroPositionContext, normalizePath, notifyOnCaughtException, simpleFileName, stripTailSlashes } from '@/utils';
+import { filterFileContents, formatContext, getFence, getPositionContext, getProperty, getVirtualCursor, getWorkspacePath, getWorkspaceUri, isBinary, isPathNeuroSafe, logOutput, NeuroPositionContext, normalizePath, notifyOnCaughtException, simpleFileName, stripTailSlashes } from '@/utils';
 import { contextFailure, contextNoAccess, RCEAction, actionValidationFailure, actionValidationAccept, ActionValidationResult, actionValidationRetry } from '@/neuro_client_helper';
 import { CONFIG, PermissionLevel, getPermissionLevel } from '@/config';
 import { targetedFileCreatedEvent, targetedFileDeletedEvent } from '@events/files';
@@ -175,6 +175,61 @@ async function validateIsAFile(actionData: ActionData): Promise<ActionValidation
     return actionValidationAccept();
 }
 
+/**
+ * Creates a validation function that ensures the path provided is not trying to treat a file as a folder.
+ * @param key The key in params that contains the path to validate.
+ */
+function validateNotTreatingFileAsFolder(key: string) {
+    return async (actionData: ActionData): Promise<ActionValidationResult> => {
+        const path = getProperty(actionData.params, key) as string | undefined;
+
+        if (path === undefined) {
+            // If it is undefined it is not required
+            return actionValidationAccept();
+        }
+
+        const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+        if (!workspaceFolder)
+            return actionValidationFailure('You are not in an open workspace.', ACTION_FAIL_NOTES.noWorkspace);
+        const normalizedPath = normalizePath(path).replace(/^\/|\/$/g, '');
+        const segments = normalizedPath.split('/').filter(Boolean);
+        if (segments.length === 0)
+            return actionValidationRetry('No path specified.', ACTION_FAIL_NOTES.noFilePath);
+        for (const segment of segments.slice(0, -1)) {
+            const fullPath = vscode.Uri.joinPath(workspaceFolder.uri, ...segments.slice(0, segments.indexOf(segment) + 1));
+            try {
+                const stat = await vscode.workspace.fs.stat(fullPath);
+                const isDirectory = (stat.type & vscode.FileType.Directory) === vscode.FileType.Directory;
+                if (!isDirectory) {
+                    return actionValidationFailure(
+                        `${segments.slice(0, segments.indexOf(segment) + 1).join('/')} is not a directory.`,
+                        segments.slice(0, segments.indexOf(segment) + 1).join('/') + ' is a file, but was specified as a directory.',
+                    );
+                }
+            } catch {
+                break; // If it doesn't exist, it can't be a file, so we can stop checking
+            }
+        }
+        return actionValidationAccept();
+    };
+}
+
+function validateIllegalCharacters(key: string, illegalChars: string[]) {
+    return (actionData: ActionData): ActionValidationResult => {
+        const prop = getProperty(actionData.params, key) as string | undefined;
+        if (prop === undefined) {
+            return actionValidationAccept();
+        }
+        if (illegalChars.some((char) => prop.includes(char))) {
+            return actionValidationFailure(
+                `${key} contains illegal characters: ${illegalChars.filter((char) => prop.includes(char)).join(' ')}`,
+                'Illegal characters in property.',
+            );
+        }
+        return actionValidationAccept();
+    };
+}
+
 const commonFileEvents: ((actionData: ActionData) => RCECancelEvent | null)[] = [
     (actionData: ActionData) => targetedFileCreatedEvent(actionData.params?.filePath),
     (actionData: ActionData) => targetedFileDeletedEvent(actionData.params?.filePath),
@@ -328,7 +383,11 @@ export const fileActions = {
         handler: handleCreateFile,
         cancelEvents: commonFileEvents,
         validators: {
-            sync: [neuroSafeValidation()],
+            sync: [
+                neuroSafeValidation(),
+                validateNotTreatingFileAsFolder('filePath'),
+                validateIllegalCharacters('filePath', '<>:"|?*'.split('')),
+            ],
         },
         promptGenerator: (actionData: ActionData) => `create the file "${actionData.params?.filePath}".`,
     },
@@ -349,7 +408,11 @@ export const fileActions = {
             (actionData: ActionData) => targetedFileCreatedEvent(actionData.params?.folderPath),
         ],
         validators: {
-            sync: [neuroSafeValidation()],
+            sync: [
+                neuroSafeValidation(),
+                validateNotTreatingFileAsFolder('folderPath'),
+                validateIllegalCharacters('folderPath', '<>:"|?*'.split('')),
+            ],
         },
         promptGenerator: (actionData: ActionData) => `create the folder "${actionData.params?.folderPath}".`,
     },
@@ -372,7 +435,11 @@ export const fileActions = {
             (actionData: ActionData) => targetedFileDeletedEvent(actionData.params?.oldPath),
         ],
         validators: {
-            sync: [neuroSafeRenameValidation],
+            sync: [
+                neuroSafeRenameValidation,
+                validateNotTreatingFileAsFolder('newPath'),
+                validateIllegalCharacters('newPath', '<>:"|?*'.split('')),
+            ],
         },
         promptGenerator: (actionData: ActionData) => `rename "${actionData.params?.oldPath}" to "${actionData.params?.newPath}".`,
     },
