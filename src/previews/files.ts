@@ -108,12 +108,25 @@ class PreviewFileDecorationProvider implements vscode.FileDecorationProvider, vs
 
     // PUBLIC API: unmark a file
     public unmark(uris: vscode.Uri[]) {
+        let needsFullRefresh = false;
         for (const uri of uris) {
             const uriString = uri.toString();
+            const entry = this.marked.get(uriString);
+
+            // If this entry allowed children or is a known directory, we need to refresh all decorations
+            if (entry && !entry.noChildren) {
+                needsFullRefresh = true;
+            }
+            if (this.directories.has(uriString)) {
+                this.directories.delete(uriString);
+                needsFullRefresh = true;
+            }
+
             this.marked.delete(uriString);
-            this.directories.delete(uriString);
         }
-        this._em.fire(uris);
+        // If any entry could have had children, refresh all decorations to clear them
+        // Otherwise just refresh the specific URIs
+        this._em.fire(needsFullRefresh ? undefined : uris);
     }
 
     // PUBLIC API: clear all marked files
