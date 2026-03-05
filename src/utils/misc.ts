@@ -1093,6 +1093,11 @@ export function hexToRgba(hex: string): { r: number; g: number; b: number; a: nu
         throw new Error(`Invalid hex color: ${hex}`);
     }
 
+    // Validate that all characters are valid hexadecimal digits
+    if (!/^[0-9a-fA-F]+$/.test(h)) {
+        throw new Error(`Invalid hex color: ${hex}`);
+    }
+
     // Expand shorthand forms (#RGB, #RGBA)
     if (h.length === 3 || h.length === 4) {
         h = h.split('').map(c => c + c).join('');
@@ -1102,6 +1107,11 @@ export function hexToRgba(hex: string): { r: number; g: number; b: number; a: nu
     const g = parseInt(h.slice(2, 4), 16);
     const b = parseInt(h.slice(4, 6), 16);
     const a = h.length === 8 ? parseInt(h.slice(6, 8), 16) / 255 : 1;
+
+    // Safety check for NaN values (shouldn't happen after validation)
+    if (Number.isNaN(r) || Number.isNaN(g) || Number.isNaN(b) || Number.isNaN(a)) {
+        throw new Error(`Invalid hex color: ${hex}`);
+    }
 
     return { r, g, b, a };
 }
