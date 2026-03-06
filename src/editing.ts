@@ -431,7 +431,7 @@ export const editingActions = {
         },
         promptGenerator: (actionData: ActionData) => {
             let text = 'delete ';
-            const target = actionData.params.useRegex ? actionData.params.find : actionData.params.find;
+            const target = actionData.params.find;
             switch (actionData.params.match as MatchOptions) {
                 case 'allInFile':
                     text += 'all matches ';
@@ -494,7 +494,7 @@ export const editingActions = {
         },
         promptGenerator: (actionData: ActionData) => {
             let text = 'find ';
-            const target = actionData.params.useRegex ? actionData.params.find : actionData.params.find;
+            const target = actionData.params.find;
             if (actionData.params.highlight) text += 'and highlight ';
             switch (actionData.params.match as MatchOptions) {
                 case 'allInFile':
