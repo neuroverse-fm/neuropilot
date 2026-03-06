@@ -1923,9 +1923,7 @@ function countLineDifferences(search: string, replace: string): {
     const linesAdded = replaceLines.length;
 
     // Generate description
-    // wtf eslint
-    // eslint-disable-next-line no-useless-assignment
-    let description = '';
+    let description: string;
 
     if (linesAdded === 0 && linesRemoved === 0) {
         description = 'no changes';
