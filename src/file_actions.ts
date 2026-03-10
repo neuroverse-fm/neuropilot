@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 
 import { EXCEPTION_THROWN_STRING, NEURO, PROMISE_REJECTION_STRING } from '@/constants';
-import { filterFileContents, formatContext, getFence, getPositionContext, getVirtualCursor, getWorkspacePath, getWorkspaceUri, isBinary, isPathNeuroSafe, logOutput, NeuroPositionContext, normalizePath, notifyOnCaughtException, simpleFileName, stripTailSlashes } from '@/utils/misc';
+import { filterFileContents, formatContext, getFence, getPositionContext, getProperty, getVirtualCursor, getWorkspacePath, getWorkspaceUri, isBinary, isPathNeuroSafe, logOutput, NeuroPositionContext, normalizePath, notifyOnCaughtException, simpleFileName, stripTailSlashes } from '@/utils/misc';
 import { RCEAction, actionValidationFailure, actionValidationAccept, ActionValidationResult, actionValidationRetry, RCEHandlerReturns, actionHandlerSuccess, actionHandlerFailure } from '@/utils/neuro_client';
 import { CONFIG, PermissionLevel, getPermissionLevel } from '@/config';
 import { targetedFileCreatedEvent, targetedFileDeletedEvent } from '@events/files';
@@ -64,21 +64,18 @@ async function getUriExistence(uri: vscode.Uri): Promise<boolean> {
     }
 }
 
-async function neuroSafeValidation(context: RCEContext): Promise<ActionValidationResult> {
-    const actionData = context.data;
-    let result: ActionValidationResult = actionValidationAccept();
-    const falseList = [
-        'switch_files',
-    ]; // TODO: Change this to be a validator factory function instead
-    const shouldExist = falseList.includes(actionData.name);
-    if (actionData.params?.filePath) {
-        result = await validatePath(actionData.params.filePath, shouldExist, 'file');
-    }
-    if (!result.success) return result;
-    if (actionData.params?.folderPath) {
-        result = await validatePath(actionData.params.folderPath, shouldExist, 'folder');
-    }
-    return result;
+function neuroSafeValidation(shouldExist = false) {
+    return async ({ data: actionData}: RCEContext): Promise<ActionValidationResult> => {
+        let result: ActionValidationResult = actionValidationAccept();
+        if (actionData.params?.filePath) {
+            result = await validatePath(actionData.params.filePath, shouldExist, 'file');
+        }
+        if (!result.success) return result;
+        if (actionData.params?.folderPath) {
+            result = await validatePath(actionData.params.folderPath, shouldExist, 'folder');
+        }
+        return result;
+    };
 }
 
 async function neuroSafeDeleteValidation(context: RCEContext): Promise<ActionValidationResult> {
@@ -182,6 +179,61 @@ async function validateIsAFile(context: RCEContext): Promise<ActionValidationRes
     return actionValidationAccept();
 }
 
+/**
+ * Creates a validation function that ensures the path provided is not trying to treat a file as a folder.
+ * @param key The key in params that contains the path to validate.
+ */
+function validateNotTreatingFileAsFolder(key: string) {
+    return async ({ data: actionData }: RCEContext): Promise<ActionValidationResult> => {
+        const path = getProperty(actionData.params, key) as string | undefined;
+
+        if (path === undefined) {
+            // If it is undefined it is not required
+            return actionValidationAccept();
+        }
+
+        const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+        if (!workspaceFolder)
+            return actionValidationFailure('You are not in an open workspace.', ACTION_FAIL_NOTES.noWorkspace);
+        const normalizedPath = normalizePath(path).replace(/^\/|\/$/g, '');
+        const segments = normalizedPath.split('/').filter(Boolean);
+        if (segments.length === 0)
+            return actionValidationRetry('No path specified.', ACTION_FAIL_NOTES.noFilePath);
+        for (const segment of segments.slice(0, -1)) {
+            const fullPath = vscode.Uri.joinPath(workspaceFolder.uri, ...segments.slice(0, segments.indexOf(segment) + 1));
+            try {
+                const stat = await vscode.workspace.fs.stat(fullPath);
+                const isDirectory = (stat.type & vscode.FileType.Directory) === vscode.FileType.Directory;
+                if (!isDirectory) {
+                    return actionValidationFailure(
+                        `${segments.slice(0, segments.indexOf(segment) + 1).join('/')} is not a directory.`,
+                        segments.slice(0, segments.indexOf(segment) + 1).join('/') + ' is a file, but was specified as a directory.',
+                    );
+                }
+            } catch {
+                break; // If it doesn't exist, it can't be a file, so we can stop checking
+            }
+        }
+        return actionValidationAccept();
+    };
+}
+
+function validateIllegalCharacters(key: string, illegalChars: string[]) {
+    return ({ data: actionData }: RCEContext): ActionValidationResult => {
+        const prop = getProperty(actionData.params, key) as string | undefined;
+        if (prop === undefined) {
+            return actionValidationAccept();
+        }
+        if (illegalChars.some((char) => prop.includes(char))) {
+            return actionValidationFailure(
+                `${key} contains illegal characters: ${illegalChars.filter((char) => prop.includes(char)).join(' ')}`,
+                'Illegal characters in property.',
+            );
+        }
+        return actionValidationAccept();
+    };
+}
+
 const commonFileEvents: ((context: RCEContext) => RCECancelEvent | null)[] = [
     (context: RCEContext) => targetedFileCreatedEvent(context.data.params?.filePath),
     (context: RCEContext) => targetedFileDeletedEvent(context.data.params?.filePath),
@@ -244,13 +296,13 @@ export const fileActions = {
             (context: RCEContext) => targetedFileDeletedEvent(context.data.params?.filePath),
         ],
         validators: {
-            sync: [neuroSafeValidation, validateIsAFile, binaryFileValidation],
+            sync: [neuroSafeValidation(true), validateIsAFile, binaryFileValidation],
         },
         promptGenerator: (context: RCEContext) => `open the file "${context.data.params?.filePath}".`,
     },
     read_file: {
         name: 'read_file',
-        description: 'Read a file\'s contents without opening it. ' +
+        description: 'Read a file\'s contents without opening it.' +
             'If filePath is not specified, reads the currently open file. ',
         category: CATEGORY_FILE_ACTIONS,
         schema: {
@@ -306,7 +358,7 @@ export const fileActions = {
                     }
 
                     // Run all validators with the resolved filePath
-                    const neuroSafeResult = await neuroSafeValidation(contextCopy);
+                    const neuroSafeResult = await neuroSafeValidation(true)(context);
                     if (!neuroSafeResult.success) return neuroSafeResult;
 
                     const binaryResult = await binaryFileValidation(contextCopy);
@@ -341,7 +393,11 @@ export const fileActions = {
         handler: handleCreateFile,
         cancelEvents: commonFileEvents,
         validators: {
-            sync: [neuroSafeValidation],
+            sync: [
+                neuroSafeValidation(),
+                validateNotTreatingFileAsFolder('filePath'),
+                validateIllegalCharacters('filePath', '<>:"|?*'.split('')),
+            ],
         },
         promptGenerator: (context: RCEContext) => `create the file "${context.data.params?.filePath}".`,
     },
@@ -362,7 +418,11 @@ export const fileActions = {
             (context: RCEContext) => targetedFileCreatedEvent(context.data.params?.folderPath),
         ],
         validators: {
-            sync: [neuroSafeValidation],
+            sync: [
+                neuroSafeValidation(),
+                validateNotTreatingFileAsFolder('folderPath'),
+                validateIllegalCharacters('folderPath', '<>:"|?*'.split('')),
+            ],
         },
         promptGenerator: (context: RCEContext) => `create the folder "${context.data.params?.folderPath}".`,
     },
@@ -385,7 +445,11 @@ export const fileActions = {
             (context: RCEContext) => targetedFileDeletedEvent(context.data.params?.oldPath),
         ],
         validators: {
-            sync: [neuroSafeRenameValidation],
+            sync: [
+                neuroSafeRenameValidation,
+                validateNotTreatingFileAsFolder('newPath'),
+                validateIllegalCharacters('newPath', '<>:"|?*'.split('')),
+            ],
         },
         promptGenerator: (context: RCEContext) => `rename "${context.data.params?.oldPath}" to "${context.data.params?.newPath}".`,
     },

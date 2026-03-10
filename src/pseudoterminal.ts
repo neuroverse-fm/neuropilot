@@ -345,7 +345,7 @@ export function handleGetCurrentlyRunningShells(): ActionHandlerResult {
         return actionHandlerFailure('No running shells found.', 'No shells open');
     }
     else {
-        return actionHandlerSuccess(`Currently running shells: ${runningShells.join('\n')}`, `${runningShells.length} Neuro shells running`);
+        return actionHandlerSuccess(`Currently running shells:\n${runningShells.join('\n')}`, `${runningShells.length} Neuro shells running`);
     };
 }
 

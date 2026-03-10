@@ -180,6 +180,41 @@ function createLineRangeValidator(path = '') {
     };
 }
 
+/**
+ * Creates a regex validator for the specified key and useKey.
+ * @param key The key in the action parameters that contains the regex pattern to validate.
+ * @param useKey The key in the action parameters that indicates whether the pattern is a regex or not. If the value at this key is false, the validator will skip validating the regex pattern and accept it as valid.
+ * @returns A function that validates the regex pattern in the action data.
+ */
+function validateRegex(key: string, useKey?: string) {
+    return ({ data: actionData }: RCEContext): ActionValidationResult => {
+        const find = getProperty(actionData.params, key) as string | undefined;
+        const useRegex = useKey
+            ? getProperty(actionData.params, useKey) ?? false
+            : true;
+
+        if (find === undefined) {
+            // If it is undefined it is not required
+            return actionValidationAccept();
+        }
+        if (typeof find !== 'string') {
+            // The schema should already catch this, if it doesn't then it's a bug
+            throw new Error(`Expected a string at params.${key}`);
+        }
+        if (!useRegex) return actionValidationAccept();
+        try {
+            // Try to construct a RegExp, if it doesn't throw an error then the regex is valid
+            new RegExp(find);
+            return actionValidationAccept();
+        } catch (erm) {
+            return actionValidationRetry(
+                `The provided regex pattern in "${key}" is invalid: ${erm instanceof Error ? erm.message : String(erm)}`,
+                'Invalid regex pattern provided.',
+            );
+        }
+    };
+}
+
 const cancelOnDidChangeTextDocument = () => new RCECancelEvent({
     reason: 'the active document was changed.',
     events: [
@@ -342,12 +377,12 @@ export const editingActions = {
         handler: handleReplaceText,
         cancelEvents: [cancelOnDidChangeActiveTextEditor],
         validators: {
-            sync: [checkCurrentFile, createStringValidator(['find', 'replaceWith']), createLineRangeValidator('lineRange')],
+            sync: [checkCurrentFile, createStringValidator(['find', 'replaceWith']), createLineRangeValidator('lineRange'), validateRegex('find', 'useRegex')],
         },
         promptGenerator: (context: RCEContext) => {
             const actionData = context.data;
             let text = 'replace ';
-            const target = actionData.params.useRegex ? escapeRegExp(actionData.params.find) : actionData.params.find;
+            const target = actionData.params.find;
             switch (actionData.params.match as MatchOptions) {
                 case 'allInFile':
                     text += 'all matches ';
@@ -400,12 +435,12 @@ export const editingActions = {
         handler: handleDeleteText,
         cancelEvents: [cancelOnDidChangeActiveTextEditor],
         validators: {
-            sync: [checkCurrentFile, createStringValidator(['find']), createLineRangeValidator('lineRange')],
+            sync: [checkCurrentFile, createStringValidator(['find']), createLineRangeValidator('lineRange'), validateRegex('find', 'useRegex')],
         },
         promptGenerator: (context: RCEContext) => {
             const actionData = context.data;
             let text = 'delete ';
-            const target = actionData.params.useRegex ? escapeRegExp(actionData.params.find) : actionData.params.find;
+            const target = actionData.params.find;
             switch (actionData.params.match as MatchOptions) {
                 case 'allInFile':
                     text += 'all matches ';
@@ -464,12 +499,12 @@ export const editingActions = {
         handler: handleFindText,
         cancelEvents: [cancelOnDidChangeActiveTextEditor],
         validators: {
-            sync: [checkCurrentFile, createStringValidator(['find']), createLineRangeValidator('lineRange')],
+            sync: [checkCurrentFile, createStringValidator(['find']), createLineRangeValidator('lineRange'), validateRegex('find', 'useRegex')],
         },
         promptGenerator: (context: RCEContext) => {
             const actionData = context.data;
             let text = 'find ';
-            const target = actionData.params.useRegex ? escapeRegExp(actionData.params.find) : actionData.params.find;
+            const target = actionData.params.find;
             if (actionData.params.highlight) text += 'and highlight ';
             switch (actionData.params.match as MatchOptions) {
                 case 'allInFile':
@@ -948,7 +983,7 @@ export function handleReplaceText(context: RCEContext): RCEHandlerReturns {
     }
 
     const originalText = filterFileContents(document.getText());
-    const regex = new RegExp(useRegex ? find : escapeRegExp(find), 'g');
+    const regex = new RegExp(useRegex ? find : escapeRegExp(find), 'gm');
     const cursorOffset = indexFromPosition(originalText, getVirtualCursor()!);
 
     const matches = findAndFilter(regex, originalText, cursorOffset, match, lineRange);
@@ -1012,7 +1047,7 @@ export function handleDeleteText(context: RCEContext): RCEHandlerReturns {
 
     const originalText = filterFileContents(document.getText());
 
-    const regex = new RegExp(useRegex ? find : escapeRegExp(find), 'g');
+    const regex = new RegExp(useRegex ? find : escapeRegExp(find), 'gm');
     const cursorOffset = indexFromPosition(originalText, getVirtualCursor()!);
 
     const matches = findAndFilter(regex, originalText, cursorOffset, match, lineRange);
@@ -1061,7 +1096,7 @@ export function handleFindText(context: RCEContext): RCEHandlerReturns {
     const match: MatchOptions = actionData.params.match;
     const useRegex: boolean = actionData.params.useRegex ?? false;
     const lineRange: LineRange | undefined = actionData.params.lineRange;
-    const moveCursor: 'before' | 'after' = actionData.params.moveCursor ?? 'after';
+    const moveCursor: 'start' | 'end' = actionData.params.moveCursor ?? 'start';
     const highlight: boolean = actionData.params.highlight ?? false;
 
     const document = vscode.window.activeTextEditor?.document;
@@ -1074,7 +1109,7 @@ export function handleFindText(context: RCEContext): RCEHandlerReturns {
 
     const documentText = filterFileContents(document.getText());
 
-    const regex = new RegExp(useRegex ? find : escapeRegExp(find), 'g');
+    const regex = new RegExp(useRegex ? find : escapeRegExp(find), 'gm');
     const cursorOffset = indexFromPosition(documentText, getVirtualCursor()!);
 
     const matches = findAndFilter(regex, documentText, cursorOffset, match, lineRange);
@@ -1086,7 +1121,7 @@ export function handleFindText(context: RCEContext): RCEHandlerReturns {
         // Single match
         const startPosition = positionFromIndex(documentText, matches[0].index);
         const endPosition = positionFromIndex(documentText, matches[0].index + matches[0][0].length);
-        setVirtualCursor(moveCursor === 'before' ? startPosition : endPosition);
+        if (actionData.params?.moveCursor) setVirtualCursor(moveCursor === 'start' ? startPosition : endPosition);
         if (highlight) {
             const range = new vscode.Range(startPosition, endPosition);
             vscode.window.activeTextEditor!.setDecorations(NEURO.highlightDecorationType!, [{
@@ -1097,7 +1132,7 @@ export function handleFindText(context: RCEContext): RCEHandlerReturns {
         }
         const cursorContext = getPositionContext(document, startPosition);
         logOutput('INFO', `Placed cursor at (${endPosition.line + 1}:${endPosition.character + 1})`);
-        return actionHandlerSuccess(`Found match and placed your cursor at (${endPosition.line + 1}:${endPosition.character + 1})\n\n${formatContext(cursorContext)}`, 'Found 1 match');
+        return actionHandlerSuccess(`Found match ${actionData.params?.moveCursor ? 'and placed your cursor ' : ''}at (${endPosition.line + 1}:${endPosition.character + 1})\n\n${formatContext(cursorContext)}`, 'Found 1 match');
     }
     else {
         // Multiple matches
@@ -1825,7 +1860,7 @@ function countLineDifferences(search: string, replace: string): {
     const linesAdded = replaceLines.length;
 
     // Generate description
-    let description;
+    let description: string;
 
     if (linesAdded === 0 && linesRemoved === 0) {
         description = 'no changes';
