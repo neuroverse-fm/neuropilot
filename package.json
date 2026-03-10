@@ -4,7 +4,7 @@
 	"private": true,
 	"description": "Allows Neuro-sama to either act as a companion/copilot or control Visual Studio Code by herself.",
 	"icon": "assets/heart-xaendril.png",
-	"version": "2.4.2",
+	"version": "2.4.4",
 	"publisher": "VSC-NeuroPilot",
 	"repository": "https://github.com/VSC-NeuroPilot/neuropilot",
 	"homepage": "https://vsc-neuropilot.github.io/neuropilot",
@@ -716,7 +716,7 @@
 			]
 		},
 		"viewsContainers": {
-			"secondarySidebar": [
+			"activitybar": [
 				{
 					"id": "neuropilot",
 					"title": "NeuroPilot",
@@ -838,7 +838,7 @@
 	},
 	"devDependencies": {
 		"@eslint/js": "^10.0.1",
-		"@stylistic/eslint-plugin": "^5.9.0",
+		"@stylistic/eslint-plugin": "^5.10.0",
 		"@types/glob-to-regexp": "^0.4.4",
 		"@types/json-schema": "^7.0.15",
 		"@types/mocha": "^10.0.10",
@@ -855,11 +855,11 @@
 		"cross-env": "^10.1.0",
 		"esbuild": "^0.27.3",
 		"esbuild-plugin-polyfill-node": "^0.3.0",
-		"eslint": "^10.0.2",
+		"eslint": "^10.0.3",
     	"eslint-plugin-jsdoc": "^62.7.1",
 		"eslint-plugin-unicorn": "^63.0.0",
 		"glob": "^13.0.6",
-		"globals": "^17.3.0",
+		"globals": "^17.4.0",
 		"husky": "^9.1.7",
 		"mocha": "^11.7.5",
 		"npm-run-all": "^4.1.5",

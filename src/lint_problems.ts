@@ -87,11 +87,23 @@ export const lintActions = {
             (context: RCEContext) => targetedFileLintingResolvedEvent(context.data.params?.file),
         ],
         validators: {
-            sync: [validateDirectoryAccess, (context: RCEContext) => {
+            sync: [validateDirectoryAccess, async (context: RCEContext) => {
                 const relativePath = context.data.params.file;
                 const workspaceUri = getWorkspaceUri()!;
                 const normalizedPath = normalizePath(workspaceUri.fsPath + '/' + relativePath);
-                const rawDiagnostics = vscode.languages.getDiagnostics(workspaceUri.with({ path: normalizedPath }));
+                const uri = workspaceUri.with({ path: normalizedPath });
+
+                // Check if the path is a directory
+                try {
+                    const stat = await vscode.workspace.fs.stat(uri);
+                    if (stat.type === vscode.FileType.Directory) {
+                        return actionValidationFailure(`Path "${relativePath}" is a folder, not a file.`, 'Targeted a folder, not a file.');
+                    }
+                } catch {
+                    // If we can't stat it, the existing logic will handle the error
+                }
+
+                const rawDiagnostics = vscode.languages.getDiagnostics(uri);
                 if (rawDiagnostics.length === 0) return actionValidationFailure(`No linting problems found for file ${relativePath}.`);
                 else return actionValidationAccept();
             }],
@@ -123,11 +135,23 @@ export const lintActions = {
             (context: RCEContext) => targetedFolderLintingResolvedEvent(context.data.params?.folder),
         ],
         validators: {
-            sync: [validateDirectoryAccess, (context: RCEContext) => {
+            sync: [validateDirectoryAccess, async (context: RCEContext) => {
                 const relativeFolder = context.data?.params.folder;
                 const workspacePath = getWorkspacePath();
                 assert(workspacePath);
                 const normalizedFolderPath = normalizePath(workspacePath + '/' + relativeFolder);
+                const uri = vscode.Uri.file(normalizedFolderPath);
+
+                // Check if the path is a file (not a directory)
+                try {
+                    const stat = await vscode.workspace.fs.stat(uri);
+                    if (stat.type === vscode.FileType.File) {
+                        return actionValidationFailure(`Path "${relativeFolder}" is a file, not a folder.`, 'Targeted a folder, not a file.');
+                    }
+                } catch {
+                    // If we can't stat it, the existing logic will handle the error
+                }
+
                 const diagnostics = vscode.languages.getDiagnostics();
                 const folderDiagnostics = diagnostics.filter(([diagUri, diags]) => {
                     return normalizePath(diagUri.fsPath).startsWith(normalizedFolderPath) &&

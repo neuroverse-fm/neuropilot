@@ -17,7 +17,7 @@ import type { JSONSchema7Object } from 'json-schema';
 
 /**
  * The parameters for forcing actions.
- * @see {@link NeuroClient.forceActions} for field documentation.
+ * @see {@link NeuroClient['forceActions']} for most field documentation.
  */
 export interface ActionForceParams {
     state?: string;
