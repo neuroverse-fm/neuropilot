@@ -15,6 +15,7 @@ import { fireOnActionStart, updateActionStatus } from '@events/actions';
 import { RCEContext } from '@/context/rce';
 
 import type { NeuroClient } from 'neuro-game-sdk';
+import type { JSONSchema4Object } from 'json-schema';
 
 export const CATEGORY_MISC = 'Miscellaneous';
 
@@ -24,7 +25,8 @@ const REGISTERED_ACTIONS: Set<string> = /* @__PURE__ */ new Set<string>();
 /**
  * A prompt parameter can either be a string or a function that converts an RCEContext into a prompt string.
  */
-export type PromptGenerator = string | ((context: RCEContext) => string);
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type PromptGenerator<T extends JSONSchema4Object | undefined, E = any> = string | ((context: RCEContext<T, E>) => string);
 
 let activeRequestContext: RCEContext | null = null;
 
@@ -195,7 +197,7 @@ export function revealRceNotification(): void {
         return;
 
     request.notificationVisible = true;
-    if (activeContext.action.preview) {
+    if (!ACTIONS.disablePreviewEffects && activeContext.action.preview) {
         activeContext.lifecycle.preview = activeContext.action.preview(activeContext);
     }
 

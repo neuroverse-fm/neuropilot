@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { ActionData } from 'neuro-game-sdk';
 
 import { NEURO } from '@/constants';
 import { DiffRangeType, escapeRegExp, getDiffRanges, getFence, getPositionContext, getProperty, getVirtualCursor, showDiffRanges, isPathNeuroSafe, logOutput, setVirtualCursor, simpleFileName, substituteMatch, clearDecorations, formatContext, filterFileContents, positionFromIndex, indexFromPosition, NeuroPositionContext } from '@/utils/misc';
@@ -7,6 +8,7 @@ import { CONFIG, CONNECTION } from '@/config';
 import { createCursorPositionChangedEvent } from '@events/cursor';
 import { RCECancelEvent } from '@events/utils';
 import { addActions, registerAction, unregisterAction } from '@/rce';
+import { createPreviewCursor, createPreviewHighlight } from '@previews/edits';
 import { RCEContext } from '@/context/rce';
 
 export const CATEGORY_EDITING = 'Editing';
@@ -238,6 +240,66 @@ const commonCancelEventsWithCursor: ((context: RCEContext) => RCECancelEvent)[] 
     createCursorPositionChangedEvent,
 ];
 
+/**
+ * Common function used to show previews for finding-related actions.
+ */
+export function previewFindFunctions(actionData: ActionData, type: 'find' | 'delete' | 'replace'): { dispose: () => unknown } {
+    const lineRange = actionData.params?.lineRange;
+    const highlights: { dispose: () => unknown }[] = [];
+    if (lineRange) {
+        highlights.push(previewLineHighlights(lineRange, `${type} some text in this area. This does not mean all text here will be replaced.`));
+    }
+
+    // TODO: Implement highlighting on text matches? Not sure if this feasible at all.
+    return vscode.Disposable.from(...highlights);
+}
+
+/**
+ * Common function used to create highlighted lines for previews
+ */
+export function previewLineHighlights(lineRange: { startLine: number, endLine: number }, prompt: string) {
+    const editor = vscode.window.activeTextEditor!;
+    const lineRangeHighlight = createPreviewHighlight();
+
+    const startLineIndex = lineRange.startLine - 1;
+    const endLineIndex = lineRange.endLine - 1;
+
+    const startPosition = new vscode.Position(startLineIndex, 0);
+    const endPosition = new vscode.Position(endLineIndex, editor.document.lineAt(endLineIndex).text.length);
+    editor.setDecorations(lineRangeHighlight, [
+        {
+            range: new vscode.Range(startPosition, endPosition),
+            hoverMessage: `(Preview) ${NEURO.currentController} wants to ${prompt}`,
+        },
+    ]);
+
+    return lineRangeHighlight;
+}
+
+/**
+ * Common function used to show previews for cursor movement actions
+ */
+export function previewCursorMovement(positionParam: { line: number, column: number, type: 'absolute' | 'relative' }, prompt: string) {
+    let line = positionParam.line;
+    let column = positionParam.column;
+    if (positionParam.type === 'relative') {
+        const cursor = getVirtualCursor()!;
+        line += cursor.line;
+        column += cursor.character;
+    }
+    else {
+        line -= 1;
+        column -= 1;
+    }
+    const disposable = createPreviewCursor();
+    const position = new vscode.Position(line, column);
+    vscode.window.activeTextEditor!.setDecorations(disposable, [{
+        range: new vscode.Range(position, position),
+        hoverMessage: `(Preview) ${NEURO.currentController} wants to ${prompt}`,
+    }] as const);
+    return disposable;
+}
+
 export const editingActions = {
     move_cursor_position: {
         name: 'move_cursor_position',
@@ -248,6 +310,7 @@ export const editingActions = {
             description: undefined,
         },
         handler: handlePlaceCursor,
+        preview: (context) => previewCursorMovement(context.data.params, 'move her cursor to this position.'),
         validators: {
             sync: [checkCurrentFile, createPositionValidator()],
         },
@@ -287,6 +350,11 @@ export const editingActions = {
             additionalProperties: false,
         },
         handler: handleInsertText,
+        preview: (context) => {
+            const positionParam = context.data.params.position;
+            if (!positionParam) return { dispose: () => { } };
+            else return previewCursorMovement(positionParam, 'insert text at this position.');
+        },
         cancelEvents: [
             ...commonCancelEvents,
             (context: RCEContext) => {
@@ -340,6 +408,32 @@ export const editingActions = {
             required: ['text'],
         },
         handler: handleInsertLines,
+        preview: (context) => {
+            const length = (context.data.params.text as string).split('\n').length;
+            let line: number | undefined = context.data.params.insertUnder;
+            if (!line) {
+                line = getVirtualCursor()!.line;
+            } else {
+                line -= 1;
+            };
+            const editor = vscode.window.activeTextEditor!;
+            const disposable = createPreviewHighlight();
+
+            if (line >= editor.document.lineCount)
+                line = editor.document.lineCount - 1;
+
+            const startPosition = new vscode.Position(line, 0);
+            const endPosition = new vscode.Position(line, editor.document.lineAt(line).text.length);
+
+            editor.setDecorations(disposable, [
+                {
+                    range: new vscode.Range(startPosition, endPosition),
+                    hoverMessage: `(Preview) ${NEURO.currentController} wants to insert ${length} line${length === 1 ? '' : 's'} of text UNDER this line.`,
+                },
+            ] as const);
+
+            return disposable;
+        },
         cancelEvents: [
             ...commonCancelEvents,
             (context: RCEContext) => {
@@ -375,6 +469,7 @@ export const editingActions = {
             required: ['find', 'replaceWith', 'match'],
         },
         handler: handleReplaceText,
+        preview: (context) => previewFindFunctions(context.data, 'replace'),
         cancelEvents: [cancelOnDidChangeActiveTextEditor],
         validators: {
             sync: [checkCurrentFile, createStringValidator(['find', 'replaceWith']), createLineRangeValidator('lineRange'), validateRegex('find', 'useRegex')],
@@ -433,6 +528,7 @@ export const editingActions = {
             additionalProperties: false,
         },
         handler: handleDeleteText,
+        preview: (context) => previewFindFunctions(context.data, 'delete'),
         cancelEvents: [cancelOnDidChangeActiveTextEditor],
         validators: {
             sync: [checkCurrentFile, createStringValidator(['find']), createLineRangeValidator('lineRange'), validateRegex('find', 'useRegex')],
@@ -497,6 +593,7 @@ export const editingActions = {
             additionalProperties: false,
         },
         handler: handleFindText,
+        preview: (context) => previewFindFunctions(context.data, 'find'),
         cancelEvents: [cancelOnDidChangeActiveTextEditor],
         validators: {
             sync: [checkCurrentFile, createStringValidator(['find']), createLineRangeValidator('lineRange'), validateRegex('find', 'useRegex')],
@@ -588,6 +685,21 @@ export const editingActions = {
             additionalProperties: false,
         },
         handler: handleRewriteAll,
+        preview: () => {
+            const editor = vscode.window.activeTextEditor!;
+            const fullRange = new vscode.Range(
+                new vscode.Position(0, 0),
+                editor.document.lineAt(editor.document.lineCount - 1).range.end,
+            );
+            const highlight = createPreviewHighlight();
+            editor.setDecorations(highlight, [
+                {
+                    range: fullRange,
+                    hoverMessage: `(Preview) ${NEURO.currentController} wants to rewrite this entire file. Good luck!`,
+                },
+            ]);
+            return highlight;
+        },
         cancelEvents: [cancelOnDidChangeActiveTextEditor],
         validators: {
             sync: [checkCurrentFile, createStringValidator(['content'])],
@@ -614,6 +726,7 @@ export const editingActions = {
             additionalProperties: false,
         },
         handler: handleRewriteLines,
+        preview: (context) => previewLineHighlights(context.data.params, 'rewrite these lines.'),
         cancelEvents: commonCancelEvents,
         validators: {
             sync: [checkCurrentFile, createLineRangeValidator(), createStringValidator(['content'])],
@@ -632,6 +745,7 @@ export const editingActions = {
         category: CATEGORY_EDITING,
         schema: LINE_RANGE_SCHEMA,
         handler: handleDeleteLines,
+        preview: (context) => previewLineHighlights(context.data.params, 'delete these lines.'),
         cancelEvents: commonCancelEvents,
         validators: {
             sync: [checkCurrentFile, createLineRangeValidator()],
@@ -661,6 +775,7 @@ export const editingActions = {
             + ' This will not move your own cursor.',
         category: CATEGORY_EDITING,
         handler: handleGetUserSelection,
+        // No preview effect needed, intended preview effect is the user cursor
         validators: {
             sync: [checkCurrentFile],
         },
@@ -682,6 +797,7 @@ export const editingActions = {
             required: ['content', 'requireSelectionUnchanged'],
         },
         handler: handleReplaceUserSelection,
+        // No preview effect needed, intended preview effect is the highlighted text
         cancelEvents: [
             ...commonCancelEvents,
             (context: RCEContext) => {
@@ -742,6 +858,7 @@ export const editingActions = {
             additionalProperties: false,
         },
         handler: handleDiffPatch,
+        // TODO: I'm not sure if or how this action would have a preview effect, like would it work if a big highlight range was added to the targted text?
         validators: {
             sync: [checkCurrentFile, (context: RCEContext) => {
                 const patch = parseDiffPatch(context.data.params.diff);
@@ -858,6 +975,7 @@ export function handleGetCursor(): RCEHandlerReturns {
     const cursorContext = getPositionContext(document, cursorPosition);
     const relativePath = vscode.workspace.asRelativePath(document.uri);
     logOutput('INFO', `Sending cursor position to ${NEURO.currentController}`);
+
     return actionHandlerSuccess(`In file ${relativePath}.\n\n${formatContext(cursorContext)}`, `Retrieved cursor at line ${cursorPosition.line + 1}, column ${cursorPosition.character + 1}`);
 }
 
@@ -1168,7 +1286,7 @@ export function handleUndo(): RCEHandlerReturns {
 
     return vscode.commands.executeCommand('undo').then(
         () => {
-            logOutput('INFO', 'Undoing last action in document');
+            logOutput('INFO', 'Undoing last edit in document');
             // We don't keep track of the virtual cursor position in the undo stack, so we reset it to the real cursor position
             const cursorContext = getPositionContext(document, vscode.window.activeTextEditor!.selection.active);
             setVirtualCursor(vscode.window.activeTextEditor!.selection.active);

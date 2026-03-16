@@ -12,7 +12,7 @@ import { actionValidationAccept, actionValidationFailure, ActionValidationResult
 import { CONFIG } from '@/config';
 import { notifyOnTerminalClose } from '@events/shells';
 import { addActions } from '@/rce';
-import { RCEContext } from '@context/rce';
+import { RCEContext } from '@ctx/rce';
 
 export const CATEGORY_TERMINAL = 'Terminal Access';
 
@@ -54,6 +54,7 @@ export const terminalActions = {
             additionalProperties: false,
         },
         handler: handleRunCommand,
+        // TODO: Auto-switch to targeted terminal (if already started) as preview effect
         cancelEvents: [
             (context: RCEContext) => notifyOnTerminalClose(context.data.params?.shell),
         ],
@@ -76,6 +77,7 @@ export const terminalActions = {
             additionalProperties: false,
         },
         handler: handleKillTerminal,
+        // TODO: Auto-switch to targeted terminal as preview effect
         cancelEvents: [
             (context: RCEContext) => notifyOnTerminalClose(context.data.params?.shell),
         ],

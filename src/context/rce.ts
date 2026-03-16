@@ -45,7 +45,7 @@ export class RCEContext<T extends JSONSchema7Object | undefined = any, K = any> 
     createdAt: string = new Date().toLocaleTimeString();
 
     data: ActionData<T>;
-    action: RCEAction<K>;
+    action: RCEAction<T, K>;
     readonly forced: boolean;
 
     /** Lifecycle-specific data */
