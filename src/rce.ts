@@ -588,23 +588,30 @@ function processResult(result: ActionHandlerResult): { status: 'success' | 'fail
 }
 
 type ActionStages = 'initializing'
-        | 'validating schema'
-        | 'running validators'
-        | 'setting up cancel events'
-        | 'executing handler'
-        | 'creating Copilot request';
+    | 'validating schema'
+    | 'running validators'
+    | 'setting up cancel events'
+    | 'executing handler'
+    | 'creating Copilot request';
 
 /**
  * RCE action handler code for unsupervised requests.
  * Intended to be used with something like `NEURO.client?.onAction(async (actionData: ActionData) => await RCEActionHandler(actionData, actionList, true))
  * @param actionData The action data from Neuro.
- * @param actionList The list of actions currently registered.
- * @param checkTasks Whether or not to check for tasks.
  */
 export async function RCEActionHandler(actionData: ActionData) {
     // TODO: Maybe make something like this a queryable property of context / lifecycle
     let stage: ActionStages = 'initializing';
     let context: RCEContext | undefined;
+    let alreadySentResult = false;
+    function sendResult(message?: string, retry = false) {
+        if (!alreadySentResult) {
+            alreadySentResult = true;
+            NEURO.client?.sendActionResult(context!.data.id, !retry, message);
+        } else if (message) {
+            NEURO.client?.sendContext(message);
+        }
+    }
     try {
         if (REGISTERED_ACTIONS.has(actionData.name)) {
             NEURO.actionHandled = true;
@@ -617,7 +624,7 @@ export async function RCEActionHandler(actionData: ActionData) {
             const effectivePermission = getPermissionLevel(context.action.name);
             if (effectivePermission === PermissionLevel.OFF) {
                 clearActionForce();
-                NEURO.client?.sendActionResult(actionData.id, true, 'Action failed: You don\'t have permission to execute this action.');
+                sendResult('Action failed: You don\'t have permission to execute this action.');
                 context.updateStatus('denied', 'Permission denied');
                 context.done(false);
                 return;
@@ -644,7 +651,7 @@ export async function RCEActionHandler(actionData: ActionData) {
                     const schemaFailures = `- ${messagesArray.join('\n- ')}`;
                     const message = 'Action failed, your inputs did not pass schema validation due to these problems:\n\n' + schemaFailures + '\n\nPlease pay attention to the schema and the above errors if you choose to retry.';
                     // Don't clear action force here since it should be retried
-                    NEURO.client?.sendActionResult(actionData.id, false, message);
+                    sendResult(message, true);
                     context.updateStatus('schema', `${messagesArray.length} schema validation rules failed`);
                     context.done(false);
                     return;
@@ -668,7 +675,7 @@ export async function RCEActionHandler(actionData: ActionData) {
                             context.lifecycle.validatorResults.sync.push(actionResult);
                             if (!(actionResult.retry ?? false))
                                 clearActionForce();
-                            NEURO.client?.sendActionResult(actionData.id, !(actionResult.retry ?? false), actionResult.message);
+                            sendResult(actionResult.message, !(actionResult.retry ?? false));
                             context.updateStatus(
                                 'failure',
                                 actionResult.historyNote ? `Validator failed: ${actionResult.historyNote}` : 'Validator failed' + (actionResult.retry ? '\nRequesting retry' : ''),
@@ -727,8 +734,7 @@ export async function RCEActionHandler(actionData: ActionData) {
                 const result = context.action.handler(context);
                 if (isThenable(result)) {
                     clearActionForce();
-                    NEURO.client?.sendActionResult(actionData.id, true);
-                    clearActionForce();
+                    sendResult();
 
                     const resolvedResult = await result;
                     const { status, statusMessage, contextMessage } = processResult(resolvedResult);
@@ -745,7 +751,7 @@ export async function RCEActionHandler(actionData: ActionData) {
                     if (resolvedResult.success !== 'retry')
                         clearActionForce();
                     context.updateStatus(status, statusMessage);
-                    NEURO.client?.sendActionResult(actionData.id, resolvedResult.success !== 'retry', contextMessage); // TODO: Actually make work
+                    sendResult(contextMessage, resolvedResult.success !== 'retry');
                     context.done(resolvedResult.success === 'success');
                 }
             }
@@ -753,7 +759,7 @@ export async function RCEActionHandler(actionData: ActionData) {
                 stage = 'creating Copilot request';
                 if (getActiveRequestContext()?.request) {
                     clearActionForce();
-                    NEURO.client?.sendActionResult(actionData.id, true, 'Action failed: Already waiting for permission to run another action.');
+                    sendResult('Action failed: Already waiting for permission to run another action.');
                     context.updateStatus('failure', 'Another action pending approval');
                     context.done(false);
                     return;
@@ -802,7 +808,7 @@ export async function RCEActionHandler(actionData: ActionData) {
     } catch (erm: unknown) {
         const actionName = actionData.name;
         notifyOnCaughtException(actionName, erm);
-        NEURO.client?.sendActionResult(actionData.id, true, `An error occurred while ${stage} (action "${actionName}"). You can retry if you like, but it may be better to ask Vedal to check what's up.`);
+        sendResult(`An error occurred while ${stage} (action "${actionName}"). You can retry if you like, but it may be better to ask Vedal to check what's up.`);
 
         // Track execution error
         updateActionStatus(actionData, 'exception', `Uncaught exception while ${stage}`);
