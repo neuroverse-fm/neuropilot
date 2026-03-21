@@ -3,7 +3,7 @@
  */
 
 import { Action, ActionForcePriorityEnum } from 'neuro-game-sdk';
-import { ACTIONS, Permission, PermissionLevel } from '@/config';
+import { Permission, PermissionLevel } from '@/config';
 import { logOutput, OutputTag, turtleSafari } from '@/utils/misc';
 import { PromptGenerator } from '@/rce';
 import { RCECancelEvent } from '@events/utils';
@@ -53,12 +53,6 @@ export interface RCEAction<T extends JSONSchema7Object | undefined = any, E = an
      * @example edit_file -> Edit File // if displayName isn't set
      */
     displayName?: string;
-    /** 
-     * The JSON schema for validating the action parameters if experimental schemas are disabled.
-     * Do not use this if you don't have an "experimental schema". Instead, simply specify {@link Action.schema the normal schema property}.
-     * @todo likely deprecating experimental schemas
-     */
-    schemaFallback?: Action['schema'];
     /**
      * An object that defines an array of functions to validate the action's "environment".
      * Validators run before requests/executions to ensure environment/input validity.
@@ -160,16 +154,10 @@ export type RCEHandlerReturns = ActionHandlerResult | Thenable<ActionHandlerResu
  * @returns The action stripped to its basic form, without the handler and permissions.
  */
 export function stripToAction(action: RCEAction): Action {
-    let schema: Action['schema'];
-    if (ACTIONS.experimentalSchemas && action.schemaFallback) {
-        schema = action.schema;
-    } else {
-        schema = action.schemaFallback ?? action.schema ?? undefined;
-    }
     return {
         name: action.name,
         description: turtleSafari(action.description),
-        schema,
+        schema: action.schema,
     };
 }
 
