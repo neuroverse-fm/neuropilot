@@ -18,7 +18,7 @@ jobs:
             
             - name: Merge
               run: |
-                git config set user.name GitHub Actions
+                git config set user.name "GitHub Actions"
                 git config set user.email actions@github.com
                 git switch dev
                 git merge master -m "Synchronise changes with `master` from https://github.com/VSC-NeuroPilot/neuropilot with `dev`"
