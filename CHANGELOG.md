@@ -25,6 +25,7 @@ Changes between each version before then will not be listed.
 ### Fixes
 
 - A small amount of action handlers (like `terminate_task`) weren't updating their execution status correctly. Alongside a refactoring of the way handlers can update status, these handlers have also been fixed to actually update the execution status.
+- `uniqueItems` was placed in the wrong subschema for `make_git_commit`. It's been fixed now.
 
 ## 2.4.4
 

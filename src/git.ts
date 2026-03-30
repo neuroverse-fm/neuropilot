@@ -208,7 +208,8 @@ export const gitActions = {
                 options: {
                     type: 'array',
                     description: 'Extra options you can choose for committing.',
-                    items: { type: 'string', enum: ['signoff', 'verbose', 'amend'], uniqueItems: true },
+                    items: { type: 'string', enum: ['signoff', 'verbose', 'amend'] },
+                    uniqueItems: true,
                 },
             },
             required: ['message'],
