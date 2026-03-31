@@ -24,5 +24,5 @@ jobs:
                 git config set user.email actions@github.com
                 git fetch
                 git switch dev
-                git merge master -m "Synchronise changes with `master` from https://github.com/VSC-NeuroPilot/neuropilot with `dev`"
+                git merge master -m 'Synchronise changes with `master` from ${{ GITHUB.repositoryUrl }} with `dev`'
                 git push
