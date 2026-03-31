@@ -14,12 +14,16 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - name: Checkout repo
-              uses: actions/checkout@v5
+              uses: actions/checkout@v6
+              with:
+                  ref: 'master'
+                  fetch-depth: 0
             
             - name: Merge
               run: |
-                git config set user.name GitHub Actions
+                git config set user.name "GitHub Actions"
                 git config set user.email actions@github.com
+                git fetch
                 git switch dev
-                git merge master -m "Synchronise changes with `master` from https://github.com/VSC-NeuroPilot/neuropilot with `dev`"
+                git merge master -m 'Synchronise changes with `master` from ${{ github.repositoryUrl }} with `dev`'
                 git push
