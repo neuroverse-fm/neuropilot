@@ -17,6 +17,7 @@ jobs:
               uses: actions/checkout@v6
               with:
                   ref: 'master'
+                  fetch-depth: 0
             
             - name: Merge
               run: |
@@ -24,5 +25,5 @@ jobs:
                 git config set user.email actions@github.com
                 git fetch
                 git switch dev
-                git merge master -m 'Synchronise changes with `master` from ${{ GITHUB.repositoryUrl }} with `dev`'
+                git merge master -m 'Synchronise changes with `master` from ${{ github.repositoryUrl }} with `dev`'
                 git push
