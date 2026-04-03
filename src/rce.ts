@@ -796,7 +796,7 @@ export async function RCEActionHandler(actionData: ActionData) {
 
                 // End of added code.
                 clearActionForce();
-                NEURO.client?.sendActionResult(actionData.id, true, 'Requested permission to run action.');
+                sendResult('Requested permission to run action.');
             }
         } else if (actionData.name === 'cancel_request') {
             NEURO.actionHandled = true;
