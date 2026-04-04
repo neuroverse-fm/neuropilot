@@ -590,7 +590,8 @@ function processResult(result: ActionHandlerResult): { status: 'success' | 'fail
 
 type ActionStages = 'initializing'
     | 'validating schema'
-    | 'running validators'
+    | 'running synchronous validators'
+    | 'running asynchronous validators'
     | 'setting up cancel events'
     | 'executing handler'
     | 'creating Copilot request';
@@ -661,20 +662,20 @@ export async function RCEActionHandler(actionData: ActionData) {
             }
 
             // Validate custom
-            stage = 'running validators';
+            stage = 'running synchronous validators';
             if (context.action.validators) {
-                if (context.action.validators.sync) {
+                if (context.action.validators.sync && context.action.validators.sync.length > 0) {
                     if (!context.lifecycle.validatorResults) {
                         context.lifecycle.validatorResults = {};
                     }
                     if (!context.lifecycle.validatorResults.sync) {
                         context.lifecycle.validatorResults.sync = [];
                     }
-                    context.updateStatus('pending', 'Running validators...');
+                    context.updateStatus('pending', 'Running synchronous validators...');
                     for (const validate of context.action.validators.sync) {
                         const actionResult = await validate(context);
+                        context.lifecycle.validatorResults.sync.push(actionResult);
                         if (!actionResult.success) {
-                            context.lifecycle.validatorResults.sync.push(actionResult);
                             if (!(actionResult.retry ?? false))
                                 clearActionForce();
                             sendResult(actionResult.message, !(actionResult.retry ?? false));
@@ -734,11 +735,43 @@ export async function RCEActionHandler(actionData: ActionData) {
                 }
             }
 
+            if (context.action.validators?.async && context.action.validators.async.length > 0) {
+                stage = 'running asynchronous validators';
+                sendResult('Now validating your request further, please wait a moment...');
+                context.updateStatus('pending', 'Running asynchronous validators...');
+                if (!context.lifecycle.validatorResults) {
+                    context.lifecycle.validatorResults = {};
+                }
+                if (!context.lifecycle.validatorResults.async) {
+                    context.lifecycle.validatorResults.async = [];
+                }
+                const asyncArray = [];
+                for (const v of context.action.validators.async) {
+                    asyncArray.push(v(context));
+                };
+                const results = await Promise.all(asyncArray);
+                context.lifecycle.validatorResults.async.push(...results);
+                for (const r of results) {
+                    if (!r.success) {
+                        // TODO: Handle reforcing an action
+                        if (!(r.retry ?? false))
+                            clearActionForce();
+                        NEURO.client?.sendContext(`Action failed: ${r.message}`);
+                        context.updateStatus(
+                            'failure',
+                            r.historyNote ? `Validator failed: ${r.historyNote}` : 'Validator failed' + (r.retry ? '\nRequesting retry' : ''),
+                        );
+                        context.done(false);
+                        return;
+                    }
+                }
+            }
+
             if (effectivePermission === PermissionLevel.AUTOPILOT) {
                 stage = 'executing handler';
                 context.updateStatus('pending', 'Executing handler...');
                 // Clear timers and cancel events before handler execution to prevent them from triggering mid-execution
-                // TODO: It's probably better to avoid having to set up cancel events in the first place if possible (unless on async validators of course)
+                // TODO: It's probably better to avoid having to set up cancel events in the first place here (unless on async validators of course)
                 context.clearPreHandlerResources();
                 const result = context.action.handler(context);
                 if (isThenable(result)) {

@@ -63,22 +63,7 @@ export interface RCEAction<T extends JSONSchema7Object | undefined = any, E = an
      * An object that defines an array of functions to validate the action's "environment".
      * Validators run before requests/executions to ensure environment/input validity.
      */
-    validators?: {
-        /** 
-         * Synchronous validators that will block execution of the rest of the thread.
-         * As this delays the action result to Neuro, any promises must resolve quickly so as to be effectively synchronous speed-wise. 
-         * 
-         * Tip: If you supply validators that ensure certain items are not nullable, you may be able to assert that they are a non-nullable value for {@link RCEAction.promptGenerator generating the Copilot-mode prompt}, {@link RCEAction.preview preview effects} and/or {@link RCEAction.handler handling the action}.
-         */
-        sync?: ((context: RCEContext<T, E>) => ActionValidationResult | Promise<ActionValidationResult>)[],
-        /**
-         * Asynchronous validators that will be ran in parallel to each other.
-         * These will be executed after an action result, so it's perfect for long-running validators.
-         * 
-         * Async validators will time out (and consequently fail) after 1 second (1000ms). It is planned that this value will be adjustable in the future.
-         */
-        async?: ((context: RCEContext<T, E>) => Promise<ActionValidationResult>)[];
-    }
+    validators?: RCEValidators<T, E>
     /**
      * Cancellation events attached to the action that will be automatically set up.
      * Each cancellation event will be setup in parallel to each other.
@@ -145,6 +130,29 @@ export interface RCEAction<T extends JSONSchema7Object | undefined = any, E = an
      * These functions will be parallelised, so the same key should not be accessed from multiple functions.
      */
     contextSetupHook?: ((context: RCEContext<T, E>) => Thenable<void>)[];
+}
+
+// apparently this JSDoc is really hard when trying to link to RCEAction.validators.async
+interface RCEValidators<T extends JSONSchema7Object | undefined, E> {
+    /** 
+     * Synchronous validators that will block execution of the rest of the thread.
+     * As this delays the action result to Neuro, any promises must resolve quickly so as to be effectively synchronous speed-wise. 
+     * 
+     * Tip: If you supply validators that ensure certain items are not nullable, you may be able to assert that they are a non-nullable value for:
+     * 
+     * - {@link RCEValidators.async asynchronous validators},
+     * - {@link RCEAction.promptGenerator generating the Copilot-mode prompt},
+     * - {@link RCEAction.preview preview effects}, and/or
+     * - {@link RCEAction.handler handling the action}.
+     */
+    sync?: ((context: RCEContext<T, E>) => ActionValidationResult | Promise<ActionValidationResult>)[],
+    /**
+     * Asynchronous validators that will be ran in parallel to each other.
+     * These will be executed after an action result, so it's perfect for long-running validators.
+     * 
+     * Async validators will time out (and consequently fail) after 1 second (1000ms). It is planned that this value will be adjustable in the future.
+     */
+    async?: ((context: RCEContext<T, E>) => Promise<ActionValidationResult>)[];
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
