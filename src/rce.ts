@@ -634,7 +634,11 @@ export async function RCEActionHandler(actionData: ActionData) {
             if (context.action.contextSetupHook) {
                 context.lifecycle.setupHooks = false;
                 // TODO: Add documentation for handling if a value already exists in case of async race timing and all that
-                Promise.allSettled(context.action.contextSetupHook).then(() => context!.lifecycle.setupHooks = true);
+                const setupArray = [];
+                for (const hook of context.action.contextSetupHook) {
+                    setupArray.push(hook(context));
+                }
+                Promise.allSettled(setupArray).then(() => context!.lifecycle.setupHooks = true);
             }
 
             // Validate schema
