@@ -136,7 +136,9 @@ export interface RCEAction<T extends JSONSchema7Object | undefined = any, E = an
 interface RCEValidators<T extends JSONSchema7Object | undefined, E> {
     /** 
      * Synchronous validators that will block execution of the rest of the thread.
-     * As this delays the action result to Neuro, any thenables must resolve quickly so as to be effectively synchronous speed-wise. 
+     * As this delays the action result to Neuro, any thenables must resolve quickly so as to be effectively synchronous speed-wise.
+     * 
+     * @todo Disallow functions that return a {@link Thenable} and make them exclusively for async validators
      * 
      * Tip: If you supply validators that ensure certain items are not nullable, you may be able to assert that they are a non-nullable value for:
      * 
