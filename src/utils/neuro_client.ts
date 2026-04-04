@@ -96,9 +96,7 @@ export interface RCEAction<T extends JSONSchema7Object | undefined = any, E = an
      * If your preview function does not require a dispose function to be called, return a no-op Disposable-like.
      * @example return { dispose: () => undefined } // for no-ops
      */
-    // The type must be `any`, using `never` causes it to return type errors. 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    preview?: (context: RCEContext<T, E>) => { dispose: () => any };
+    preview?: (context: RCEContext<T, E>) => { dispose: () => unknown };
     /** 
      * The function to handle the action.
      * This function must be synchronous.
@@ -242,22 +240,6 @@ export function actionValidationFailure(message: string, historyNote?: string): 
 }
 
 /**
- * Create a context message that tells Neuro that the action failed and logs this.
- * Also logs the message to the console.
- * Note that this does not send the context message.
- * @param message The message to format.
- * @param tag The tag to use for the log output.
- * This should explain, if possible, why the action failed.
- * If omitted, will just return "Action failed.".
- * @returns A context message with the specified message.
- */
-export function contextFailure(message?: string, tag: OutputTag = 'WARNING'): string {
-    const result = message !== undefined ? `Action failed: ${message}` : 'Action failed.';
-    logOutput(tag, result);
-    return result;
-}
-
-/**
  * Create an action result that tells Neuro to retry the forced action.
  * @param message The message to send to Neuro.
  * This should contain the information required to fix the mistake.
@@ -331,7 +313,7 @@ export function actionHandlerRetry(message: string, historyNote?: string): Actio
 
 //#endregion
 
-//#region Old validation result functions
+//#region Old validation/handler result helpers
 
 /**
  * Create an action result that tells Neuro that a required parameter is missing.
@@ -377,6 +359,7 @@ export function actionValidationNoPermission(permission: Permission): ActionVali
  * Note that this does not send the context message.
  * @param path The path that was attempted to be accessed.
  * @returns A context message pointing out the missing permission.
+ * @deprecated Should now be handled by validators.
  */
 export function contextNoAccess(path: string): string {
     logOutput('WARNING', `Action failed: Neuro attempted to access "${path}", but permission is disabled.`);
@@ -392,6 +375,23 @@ export function actionResultEnumFailure<T>(parameterName: string, validValues: T
         success: false,
         message: `Action failed: "${parameterName}" must be one of ${JSON.stringify(validValues)}, but got ${JSON.stringify(value)}.`,
     };
+}
+
+/**
+ * Create a context message that tells Neuro that the action failed and logs this.
+ * Also logs the message to the console.
+ * Note that this does not send the context message.
+ * @param message The message to format.
+ * @param tag The tag to use for the log output.
+ * This should explain, if possible, why the action failed.
+ * If omitted, will just return "Action failed.".
+ * @returns A context message with the specified message.
+ * @deprecated Action handlers can now be async, and RCE will handle  it properly.
+ */
+export function contextFailure(message?: string, tag: OutputTag = 'WARNING'): string {
+    const result = message !== undefined ? `Action failed: ${message}` : 'Action failed.';
+    logOutput(tag, result);
+    return result;
 }
 
 //#endregion
