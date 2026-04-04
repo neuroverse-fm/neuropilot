@@ -136,7 +136,7 @@ export interface RCEAction<T extends JSONSchema7Object | undefined = any, E = an
 interface RCEValidators<T extends JSONSchema7Object | undefined, E> {
     /** 
      * Synchronous validators that will block execution of the rest of the thread.
-     * As this delays the action result to Neuro, any promises must resolve quickly so as to be effectively synchronous speed-wise. 
+     * As this delays the action result to Neuro, any thenables must resolve quickly so as to be effectively synchronous speed-wise. 
      * 
      * Tip: If you supply validators that ensure certain items are not nullable, you may be able to assert that they are a non-nullable value for:
      * 
@@ -145,14 +145,14 @@ interface RCEValidators<T extends JSONSchema7Object | undefined, E> {
      * - {@link RCEAction.preview preview effects}, and/or
      * - {@link RCEAction.handler handling the action}.
      */
-    sync?: ((context: RCEContext<T, E>) => ActionValidationResult | Promise<ActionValidationResult>)[],
+    sync?: ((context: RCEContext<T, E>) => ActionValidationResult | Thenable<ActionValidationResult>)[],
     /**
      * Asynchronous validators that will be ran in parallel to each other.
      * These will be executed after an action result, so it's perfect for long-running validators.
      * 
      * Async validators will time out (and consequently fail) after 1 second (1000ms). It is planned that this value will be adjustable in the future.
      */
-    async?: ((context: RCEContext<T, E>) => Promise<ActionValidationResult>)[];
+    async?: ((context: RCEContext<T, E>) => Thenable<ActionValidationResult>)[];
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
