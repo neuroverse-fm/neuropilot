@@ -2,7 +2,7 @@ import { NEURO } from '@/constants';
 import { addFileActions } from '@/file_actions';
 import { addEditingActions } from '@/editing';
 import { addLintActions } from '@/lint_problems';
-import { RCEActionHandler } from '@/rce';
+import { addActions, cancelRequestAction, RCEActionHandler } from '@/rce';
 import { addChangelogActions } from '@/changelog';
 import { addRequestCookieAction } from '../../functions/cookies';
 
@@ -12,6 +12,7 @@ export function addCommonUnsupervisedActions() {
     addLintActions();
     addChangelogActions();
     addRequestCookieAction();
+    addActions([cancelRequestAction]);
 }
 
 /**

@@ -54,6 +54,7 @@ export const cancelRequestAction: RCEAction = {
     handler: handleCancelRequest,
     promptGenerator: () => '', // No prompt needed for this action
     defaultPermission: PermissionLevel.AUTOPILOT,
+    hidden: true,
 };
 
 /**
@@ -96,7 +97,7 @@ export function clearRceRequest(context: RCEContext | null = getActiveRequestCon
     context.request = undefined;
     if (getActiveRequestContext() === context) {
         setActiveRequestContext(null);
-        NEURO.client?.unregisterActions([cancelRequestAction.name]);
+        unregisterAction(cancelRequestAction.name);
         NEURO.statusBarItem!.tooltip = 'No active request';
         NEURO.statusBarItem!.color = new vscode.ThemeColor('statusBarItem.foreground');
         NEURO.statusBarItem!.backgroundColor = new vscode.ThemeColor('statusBarItem.background');
@@ -632,6 +633,7 @@ export async function RCEActionHandler(actionData: ActionData) {
 
             if (context.action.contextSetupHook) {
                 context.lifecycle.setupHooks = false;
+                // TODO: Add documentation for handling if a value already exists in case of async race timing and all that
                 Promise.allSettled(context.action.contextSetupHook).then(() => context!.lifecycle.setupHooks = true);
             }
 
@@ -685,12 +687,18 @@ export async function RCEActionHandler(actionData: ActionData) {
                         }
                     }
                 }
-                if (context.action.validators.async) logOutput('INFO', `Action "${actionData.name}" uses asynchronous validators, which have not been implemented yet.`); // implementation needs this to be moved to be *after* setup of cancel events (and action result obv).
+                // implementation needs this to be moved to *after* setup of cancel events
+                if (context.action.validators.async) logOutput('INFO', `Action "${actionData.name}" uses asynchronous validators, which have not been implemented yet.`);
             }
 
             // Set up cancel events
-            stage = 'setting up cancel events';
+            // if (effectivePermission === PermissionLevel.AUTOPILOT && !context.action.validators?.async) {
+            //     // blank for the sake of skipping through cancel event setup in this case
+            //     // I could make one long `if` chain but I'm not insane enough
+            // } else
+            // TODO: revisit above later 
             if (ACTIONS.enableCancelEvents && context.action.cancelEvents) {
+                stage = 'setting up cancel events';
                 context.lifecycle.events = [];
                 const eventListener = (eventObject: RCECancelEvent, eventData: unknown) => {
                     let createdReason: string;
@@ -730,6 +738,7 @@ export async function RCEActionHandler(actionData: ActionData) {
                 stage = 'executing handler';
                 context.updateStatus('pending', 'Executing handler...');
                 // Clear timers and cancel events before handler execution to prevent them from triggering mid-execution
+                // TODO: It's probably better to avoid having to set up cancel events in the first place if possible (unless on async validators of course)
                 context.clearPreHandlerResources();
                 const result = context.action.handler(context);
                 if (isThenable(result)) {
@@ -786,7 +795,7 @@ export async function RCEActionHandler(actionData: ActionData) {
                 );
 
                 NEURO.statusBarItem!.tooltip = new vscode.MarkdownString(prompt);
-                NEURO.client?.registerActions([stripToAction(cancelRequestAction)]);
+                registerAction(cancelRequestAction.name);
                 NEURO.statusBarItem!.backgroundColor = new vscode.ThemeColor('statusBarItem.warningBackground');
                 NEURO.statusBarItem!.color = new vscode.ThemeColor('statusBarItem.warningForeground');
 
@@ -798,13 +807,7 @@ export async function RCEActionHandler(actionData: ActionData) {
                 clearActionForce();
                 sendResult('Requested permission to run action.');
             }
-        } else if (actionData.name === 'cancel_request') {
-            NEURO.actionHandled = true;
-            fireOnActionStart(actionData, 'Executing...');
-            const cancelContext = new RCEContext(actionData);
-            cancelRequestAction.handler(cancelContext);
-            cancelContext.done(true);
-        }
+        } // special case handler removed for cancel_request because `hidden` property was added
     } catch (erm: unknown) {
         const actionName = actionData.name;
         notifyOnCaughtException(actionName, erm);
