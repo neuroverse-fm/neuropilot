@@ -1,8 +1,8 @@
 {
 	"compilerOptions": {
 		"composite": true,
-		"module": "commonjs",
-		"moduleResolution": "Node",
+		"module": "preserve",
+		"moduleResolution": "bundler",
 		"esModuleInterop": true,
 		"target": "es2020",
 		"outDir": "out",
