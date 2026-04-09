@@ -147,7 +147,7 @@ interface RCEValidators<T extends JSONSchema7Object | undefined, E> {
      * - {@link RCEAction.preview preview effects}, and/or
      * - {@link RCEAction.handler handling the action}.
      */
-    sync?: ((context: RCEContext<T, E>) => ActionValidationResult | Thenable<ActionValidationResult>)[],
+    sync?: ((context: RCEContext<T, E>) => ActionValidationResult)[],
     /**
      * Asynchronous validators that will be ran in parallel to each other.
      * These will be executed after an action result, so it's perfect for long-running validators.

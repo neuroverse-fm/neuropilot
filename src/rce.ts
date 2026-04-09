@@ -662,34 +662,30 @@ export async function RCEActionHandler(actionData: ActionData) {
             }
 
             // Validate custom
-            stage = 'running synchronous validators';
-            if (context.action.validators) {
-                if (context.action.validators.sync && context.action.validators.sync.length > 0) {
-                    if (!context.lifecycle.validatorResults) {
-                        context.lifecycle.validatorResults = {};
-                    }
-                    if (!context.lifecycle.validatorResults.sync) {
-                        context.lifecycle.validatorResults.sync = [];
-                    }
-                    context.updateStatus('pending', 'Running synchronous validators...');
-                    for (const validate of context.action.validators.sync) {
-                        const actionResult = await validate(context);
-                        context.lifecycle.validatorResults.sync.push(actionResult);
-                        if (!actionResult.success) {
-                            if (!(actionResult.retry ?? false))
-                                clearActionForce();
-                            sendResult(actionResult.message, !(actionResult.retry ?? false));
-                            context.updateStatus(
-                                'failure',
-                                actionResult.historyNote ? `Validator failed: ${actionResult.historyNote}` : 'Validator failed' + (actionResult.retry ? '\nRequesting retry' : ''),
-                            );
-                            context.done(false);
-                            return;
-                        }
+            if (context.action.validators?.sync && context.action.validators?.sync.length > 0) {
+                stage = 'running synchronous validators';
+                context.updateStatus('pending', 'Running synchronous validators...');
+                if (!context.lifecycle.validatorResults) {
+                    context.lifecycle.validatorResults = {};
+                }
+                if (!context.lifecycle.validatorResults.sync) {
+                    context.lifecycle.validatorResults.sync = [];
+                }
+                for (const validate of context.action.validators.sync) {
+                    const actionResult = validate(context);
+                    context.lifecycle.validatorResults.sync.push(actionResult);
+                    if (!actionResult.success) {
+                        if (!(actionResult.retry ?? false))
+                            clearActionForce();
+                        sendResult(actionResult.message, !(actionResult.retry ?? false));
+                        context.updateStatus(
+                            'failure',
+                            actionResult.historyNote ? `Validator failed: ${actionResult.historyNote}` : 'Validator failed' + (actionResult.retry ? '\nRequesting retry' : ''),
+                        );
+                        context.done(false);
+                        return;
                     }
                 }
-                // implementation needs this to be moved to *after* setup of cancel events
-                if (context.action.validators.async) logOutput('INFO', `Action "${actionData.name}" uses asynchronous validators, which have not been implemented yet.`);
             }
 
             // Set up cancel events
@@ -776,7 +772,7 @@ export async function RCEActionHandler(actionData: ActionData) {
                 const result = context.action.handler(context);
                 if (isThenable(result)) {
                     clearActionForce();
-                    sendResult();
+                    sendResult(); // TODO: Add a small "Running the action" result to send to Neuro?
 
                     const resolvedResult = await result;
                     const { status, statusMessage, contextMessage } = processResult(resolvedResult);
