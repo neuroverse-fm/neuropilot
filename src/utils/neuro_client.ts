@@ -10,7 +10,7 @@ import { RCECancelEvent } from '@events/utils';
 import type { RCEContext } from '@ctx/rce';
 
 import type { NeuroClient } from 'neuro-game-sdk';
-import type { reregisterAllActions } from '@/rce';
+import type { reregisterAllActions, registerAction, unregisterAction } from '@/rce';
 import type { JSONSchema7Object } from 'json-schema';
 
 //#region Action force utils
@@ -81,9 +81,7 @@ export interface RCEAction<T extends JSONSchema7Object | undefined = any, E = an
      * If your preview function does not require a dispose function to be called, return a no-op Disposable-like.
      * @example return { dispose: () => undefined } // for no-ops
      */
-    // The type must be `any`, using `never` causes it to return type errors. 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    preview?: (context: RCEContext<T, E>) => { dispose: () => any };
+    preview?: (context: RCEContext<T, E>) => { dispose: () => unknown };
     /** 
      * The function to handle the action.
      * This function must be synchronous.
@@ -112,8 +110,15 @@ export interface RCEAction<T extends JSONSchema7Object | undefined = any, E = an
     /**
      * Whether to automatically register the action with Neuro if all conditions are met.
      * Defaults to true.
-     * Note that this will not watch the conditions, so if the conditions change, the action will not be immediately registered or unregistered.
-     * You must call {@link reregisterAllActions} to update the registration.
+     * 
+     * If `false`, the RCE system will never automatically register the action, and only automatically unregister if the user disables permission.
+     * You need to call {@link registerAction} or {@link unregisterAction} manually.
+     * 
+     * If `true`, the action will be automatically registered and unregistered based on the {@link RCEAction.registerCondition registerCondition} and current permission settings.
+     * However, the conditions are not watched, so if the conditions change, the action may not be immediately registered or unregistered.
+     * Call {@link reregisterAllActions} to update the registration.
+     * 
+     * Note that certain events also call {@link reregisterAllActions}.
      */
     autoRegister?: boolean;
     /**
@@ -121,7 +126,12 @@ export interface RCEAction<T extends JSONSchema7Object | undefined = any, E = an
      * Usually meant for actions that are exclusively used in action forces.
      */
     hidden?: boolean;
-    /** A condition that must be true for the action to be registered. If not provided, the action is always registered. **This function must never throw.** */
+    /**
+     * A condition that must be true for the action to be registered.
+     * If not provided, the action is always registered.
+     * Should not be used if {@link RCEAction.autoRegister autoRegister} is `false`.
+     * **This function must never throw.**
+     */
     registerCondition?: () => boolean;
     /** 
      * Setup handlers that will be invoked to help setup the {@link RCEContext.storage} object.
@@ -250,22 +260,6 @@ export function actionValidationFailure(message: string, historyNote?: string): 
 }
 
 /**
- * Create a context message that tells Neuro that the action failed and logs this.
- * Also logs the message to the console.
- * Note that this does not send the context message.
- * @param message The message to format.
- * @param tag The tag to use for the log output.
- * This should explain, if possible, why the action failed.
- * If omitted, will just return "Action failed.".
- * @returns A context message with the specified message.
- */
-export function contextFailure(message?: string, tag: OutputTag = 'WARNING'): string {
-    const result = message !== undefined ? `Action failed: ${message}` : 'Action failed.';
-    logOutput(tag, result);
-    return result;
-}
-
-/**
  * Create an action result that tells Neuro to retry the forced action.
  * @param message The message to send to Neuro.
  * This should contain the information required to fix the mistake.
@@ -339,7 +333,7 @@ export function actionHandlerRetry(message: string, historyNote?: string): Actio
 
 //#endregion
 
-//#region Old validation result functions
+//#region Old validation/handler result helpers
 
 /**
  * Create an action result that tells Neuro that a required parameter is missing.
@@ -385,6 +379,7 @@ export function actionValidationNoPermission(permission: Permission): ActionVali
  * Note that this does not send the context message.
  * @param path The path that was attempted to be accessed.
  * @returns A context message pointing out the missing permission.
+ * @deprecated Should now be handled by validators.
  */
 export function contextNoAccess(path: string): string {
     logOutput('WARNING', `Action failed: Neuro attempted to access "${path}", but permission is disabled.`);
@@ -400,6 +395,23 @@ export function actionResultEnumFailure<T>(parameterName: string, validValues: T
         success: false,
         message: `Action failed: "${parameterName}" must be one of ${JSON.stringify(validValues)}, but got ${JSON.stringify(value)}.`,
     };
+}
+
+/**
+ * Create a context message that tells Neuro that the action failed and logs this.
+ * Also logs the message to the console.
+ * Note that this does not send the context message.
+ * @param message The message to format.
+ * @param tag The tag to use for the log output.
+ * This should explain, if possible, why the action failed.
+ * If omitted, will just return "Action failed.".
+ * @returns A context message with the specified message.
+ * @deprecated Action handlers can now be async, and RCE will handle  it properly.
+ */
+export function contextFailure(message?: string, tag: OutputTag = 'WARNING'): string {
+    const result = message !== undefined ? `Action failed: ${message}` : 'Action failed.';
+    logOutput(tag, result);
+    return result;
 }
 
 //#endregion

@@ -15,7 +15,7 @@ import { fireOnActionStart, updateActionStatus } from '@events/actions';
 import { RCEContext } from '@/context/rce';
 
 import type { NeuroClient } from 'neuro-game-sdk';
-import type { JSONSchema4Object } from 'json-schema';
+import type { JSONSchema7Object } from 'json-schema';
 
 export const CATEGORY_MISC = 'Miscellaneous';
 
@@ -26,7 +26,7 @@ const REGISTERED_ACTIONS: Set<string> = /* @__PURE__ */ new Set<string>();
  * A prompt parameter can either be a string or a function that converts an RCEContext into a prompt string.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type PromptGenerator<T extends JSONSchema4Object | undefined, E = any> = string | ((context: RCEContext<T, E>) => string);
+export type PromptGenerator<T extends JSONSchema7Object | undefined, E = any> = string | ((context: RCEContext<T, E>) => string);
 
 let activeRequestContext: RCEContext | null = null;
 
@@ -635,7 +635,11 @@ export async function RCEActionHandler(actionData: ActionData) {
             if (context.action.contextSetupHook) {
                 context.lifecycle.setupHooks = false;
                 // TODO: Add documentation for handling if a value already exists in case of async race timing and all that
-                Promise.allSettled(context.action.contextSetupHook).then(() => context!.lifecycle.setupHooks = true);
+                const setupArray = [];
+                for (const hook of context.action.contextSetupHook) {
+                    setupArray.push(hook(context));
+                }
+                Promise.allSettled(setupArray).then(() => context!.lifecycle.setupHooks = true);
             }
 
             // Validate schema
