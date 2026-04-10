@@ -606,6 +606,7 @@ export async function RCEActionHandler(actionData: ActionData) {
     let stage: ActionStages = 'initializing';
     let context: RCEContext | undefined;
     let alreadySentResult = false;
+    let cancelled = false;
     function sendResult(message?: string, retry = false) {
         if (!alreadySentResult) {
             alreadySentResult = true;
@@ -720,6 +721,7 @@ export async function RCEActionHandler(actionData: ActionData) {
                     } else {
                         createdLogReason = createdReason;
                     }
+                    cancelled = true;
                     logOutput('WARNING', `${CONNECTION.nameOfAPI}'${CONNECTION.nameOfAPI.endsWith('s') ? '' : 's'} action ${context!.action.name} was cancelled because ${createdLogReason}`);
                     NEURO.client?.sendContext(`Your request was cancelled because ${createdReason}`);
                     context!.updateStatus('cancelled', `Cancelled because ${createdLogReason}`);
@@ -749,7 +751,29 @@ export async function RCEActionHandler(actionData: ActionData) {
                 for (const v of context.action.validators.async) {
                     asyncArray.push(v(context));
                 };
-                const results = await Promise.all(asyncArray);
+
+                // Add 1-second timeout for async validators
+                const timeoutPromise = new Promise<never>((_, reject) => {
+                    setTimeout(() => reject(new Error('Async validators timed out after 1 second')), 1000);
+                });
+
+                let results;
+                try {
+                    results = await Promise.race([Promise.all(asyncArray), timeoutPromise]);
+                } catch (erm) {
+                    clearActionForce();
+                    const message = erm instanceof Error ? erm.message : 'Async validators timed out';
+                    NEURO.client?.sendContext(`Action failed: ${message}`);
+                    context.updateStatus('failure', 'Async validators timed out');
+                    context.done(false);
+                    return;
+                }
+
+                // Check if action was cancelled during async validator execution
+                if (cancelled) {
+                    return;
+                }
+
                 context.lifecycle.validatorResults.async.push(...results);
                 for (const r of results) {
                     if (!r.success) {

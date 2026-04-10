@@ -23,6 +23,7 @@ Changes between each version before then will not be listed.
   - At any time, you may disable preview effects using `neuropilot.actions.disablePreviewEffects`.
 - Actions can now have asynchronous validators. This allows validators requiring asynchronous operations to be properly handled according to the Neuro API specification.
   - To accomodate for this, file, lint and git actions now have some or all of their validators moved to async validators instead.
+  - Async validators have a (for now hardcoded) 1-second timeout limit, and are also stopped from progressing if a cancel event fires.
 
 ### Changes
 
