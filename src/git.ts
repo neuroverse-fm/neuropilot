@@ -356,9 +356,8 @@ export const gitActions = {
         schema: {
             type: 'object',
             properties: {
-                ref1: { type: 'string', description: 'The first ref to use to diff with. May not be used in some diff types.' },
-ref1: { type: 'string', description: 'The first ref to use to diff with. Only used if diffType is "diffWith", "diffIndexWith", and "diffBetween".' },
-ref2: { type: 'string', description: 'The second ref to diff against the first ref. Only used if diffType is "diffBetween".' },
+                ref1: { type: 'string', description: 'The first ref to use to diff with. Only used if diffType is "diffWith", "diffIndexWith", and "diffBetween".' },
+                ref2: { type: 'string', description: 'The second ref to diff against the first ref. Only used if diffType is "diffBetween".' },
                 filePath: { type: 'string', description: 'For certain diff types, you can specify a file to diff. If omitted, will usually diff the entire ref.' },
                 diffType: { type: 'string', enum: ['diffWithHEAD', 'diffWith', 'diffIndexWithHEAD', 'diffIndexWith', 'diffBetween', 'fullDiff'], description: 'The type of diff to run. This will also affect what parameters are required.' },
             },
