@@ -855,7 +855,7 @@
 	},
 	"dependencies": {
 		"@vscode/codicons": "^0.0.45",
-		"file-type": "^21.3.2",
+		"file-type": "^22.0.1",
 		"glob-to-regexp": "^0.4.1",
 		"ignore": "^7.0.5",
 		"jsonschema": "^1.5.0",
