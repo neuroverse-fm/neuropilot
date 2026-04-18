@@ -24,7 +24,7 @@ jobs:
     outputs:
       VERSION: ${{ steps.build.outputs.VERSION }}
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
       with:
         submodules: true
 
@@ -85,7 +85,7 @@ jobs:
       url: https://marketplace.visualstudio.com/item?itemName=vsc-neuropilot.neuropilot-base
     steps:
       - name: Checkout repo # why
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Download VSIX
         id: vsce-vsix-down
@@ -113,7 +113,7 @@ jobs:
       url: https://open-vsx.org/extension/vsc-neuropilot/neuropilot-base
     steps:
       - name: Checkout repo # why
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       
       - name: Download VSIX
         id: ovsx-vsix-down
