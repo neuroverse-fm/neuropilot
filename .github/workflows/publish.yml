@@ -62,7 +62,7 @@ jobs:
         pnpm vsce package --no-dependencies
     
     - name: Upload VSIX file
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: NeuroPilot ${{ steps.build.outputs.VERSION }}
         path: neuropilot-base-${{ steps.build.outputs.VERSION }}.vsix
