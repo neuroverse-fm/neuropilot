@@ -879,6 +879,6 @@
 		"ignore": "^7.0.5",
 		"jsonschema": "^1.5.0",
 		"neuro-game-sdk": "^1.0.10",
-		"preact": "^10.29.0"
+		"preact": "^10.29.1"
 	}
 }
