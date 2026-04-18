@@ -27,7 +27,7 @@ jobs:
             - name: Checkout
               uses: actions/checkout@v4
             - name: Cache VS Code test downloads
-              uses: actions/cache@v4
+              uses: actions/cache@v5
               with:
                 key: neuropilot-tests-vscode-${{ github.repository }}-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
                 restore-keys: |
@@ -62,12 +62,12 @@ jobs:
             - name: Checkout
               uses: actions/checkout@v4
             - name: Cache VS Code web test downloads
-              uses: actions/cache@v4
+              uses: actions/cache@v5
               with:
                 key: neuropilot-tests-vscode-web-v2-${{ github.repository }}-${{ runner.os }}
                 path: .vscode-test-web/
             - name: Cache Playwright browsers
-              uses: actions/cache@v4
+              uses: actions/cache@v5
               with:
                 key: neuropilot-playwright-v2-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
                 path: ~/.cache/ms-playwright
