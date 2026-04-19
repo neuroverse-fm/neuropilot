@@ -31,6 +31,10 @@ Changes between each version before then will not be listed.
   - Minor note: Action forces have also been reworked to go through RCE, also in preparation for the upcoming public API. This shouldn't change anything on Neuro's end, however, other than forcing retries over and over again for Neuro if she continuously fails to input stuff correctly.
 
 
+### Removals
+
+- Removed experimental schemas. Neuro will be given a relatively safe schema without using "fancier" semantics.
+
 ### Fixes
 
 - A small amount of action handlers (like `terminate_task`) weren't updating their execution status correctly. Alongside a refactoring of the way handlers can update status, these handlers have also been fixed to actually update the execution status.
