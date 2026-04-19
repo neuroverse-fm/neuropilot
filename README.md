@@ -59,7 +59,7 @@ Note that:
 
 - if Neuro has direct terminal access;
 - Neuro has Autopilot permissions for editing files and you let her edit dotfiles (allowing editing files and folders that start with a `.`); or
-- allow her to run tasks that, in essence, allows her to input arbitrary code. <!-- how do I word this better??? -->
+- allow her to run tasks that execute code written by her
 
 ...then you should assume all security features are pretty much out the window, since she can just rewrite the settings file and run whatever commands she wants.
 There are no safeguards on what she can run in the shell due to the various different shells that exist and aliasing also being a thing.
