@@ -26,6 +26,7 @@ jobs:
       - name: Check that changelog is updated
         env:
           PR_NUMBER: ${{ github.event.pull_request.number }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
 
