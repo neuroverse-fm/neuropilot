@@ -11,7 +11,8 @@ import type { RCEContext } from '@ctx/rce';
 
 import type { NeuroClient } from 'neuro-game-sdk';
 import type { reregisterAllActions, registerAction, unregisterAction } from '@/rce';
-import type { JSONSchema7Object } from 'json-schema';
+import type { JSONSchema7, JSONSchema7Object } from 'json-schema';
+import type { StandardJSONSchemaV1 } from '@standard-schema/spec';
 
 //#region Action force utils
 
@@ -39,6 +40,16 @@ export interface ActionForceParams {
 //#endregion
 
 //#region Action metadata & helpers
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export interface StandardRCEAction<T extends JSONSchema7Object | undefined = any, K = any> extends Omit<RCEAction<T, K>, 'schema'> {
+    /**
+     * A validator library's schema.
+     * To comply with the Neuro API, the top-level schema must be an object schema.
+     */
+    schema?: StandardJSONSchemaV1;
+    converter?: (schema: StandardJSONSchemaV1) => JSONSchema7;
+}
 
 /**
  * ActionHandler to use with constants for records of actions and their corresponding handlers.

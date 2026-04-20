@@ -1,5 +1,5 @@
 import type { JSONSchema7Object } from 'json-schema';
-import type { ActionValidationResult, RCEAction } from '@/utils/neuro_client';
+import type { ActionValidationResult, RCEAction, StandardRCEAction } from '@/utils/neuro_client';
 import type { ActionData } from 'neuro-game-sdk';
 import { Disposable, Progress } from 'vscode';
 import { ActionStatus, updateActionStatus } from '@events/actions';
@@ -45,7 +45,7 @@ export class RCEContext<T extends JSONSchema7Object | undefined = any, K = any> 
     createdAt: string = new Date().toLocaleTimeString();
 
     data: ActionData<T>;
-    action: RCEAction<T, K>;
+    action: RCEAction<T, K> | StandardRCEAction<T, K>;
     readonly forced: boolean;
 
     /** Lifecycle-specific data */

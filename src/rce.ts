@@ -5,7 +5,7 @@
 
 import * as vscode from 'vscode';
 import { ActionData } from 'neuro-game-sdk';
-import { ActionForceParams, actionHandlerFailure, ActionHandlerResult, actionHandlerSuccess, RCEAction, stripToAction } from '@/utils/neuro_client';
+import { ActionForceParams, actionHandlerFailure, ActionHandlerResult, actionHandlerSuccess, RCEAction, StandardRCEAction, stripToAction } from '@/utils/neuro_client';
 import { NEURO } from '@/constants';
 import { isThenable, logOutput, notifyOnCaughtException } from '@/utils/misc';
 import { ACTIONS, CONFIG, CONNECTION, getAllPermissions, getPermissionLevel, PermissionLevel, stringToPermissionLevel } from '@/config';
@@ -300,13 +300,20 @@ export function denyRceRequest(): void {
  * @param actions The actions to add.
  * @param register Whether to register the actions with Neuro immediately if the permissions allow.
  */
-export function addActions(actions: RCEAction[], register = true): void {
+export function addActions(actions: (RCEAction | StandardRCEAction)[], register = true): void {
     const actionsToAdd = actions.filter(a => !ACTIONS_ARRAY.some(existing => existing.name === a.name));
     const actionsNotToAdd = actions.filter(a => !actionsToAdd.includes(a));
     if (actionsNotToAdd.length > 0) {
         logOutput('WARNING', `Tried to add actions that are already registered: ${actionsNotToAdd.map(a => a.name).join(', ')}`);
     }
-    ACTIONS_ARRAY.push(...actionsToAdd);
+    const finalActionForms = actionsToAdd.map((a) => {
+        if ('converter' in a) delete a.converter;
+        if (a.schema && '~standard' in a.schema) {
+            const newSchema = a.schema['~standard'].jsonSchema.input({ target: 'draft-07' });
+            return { ...a, schema: newSchema } as RCEAction;
+        } else return a as RCEAction;
+    });
+    ACTIONS_ARRAY.push(...finalActionForms);
     if (register && NEURO.connected) {
         const actionNames = actionsToAdd.map(a => a.name);
         const actionsToRegister = actionNames
@@ -645,7 +652,12 @@ export async function RCEActionHandler(actionData: ActionData) {
             stage = 'validating schema';
             if (context.action.schema) {
                 context.updateStatus('pending', 'Validating schema...');
-                const schema = context.action.schema;
+                let schema;
+                if ('~standard' in context.action.schema) {
+                    schema = context.action.schema['~standard'].jsonSchema.input({ target: 'draft-07' });
+                } else {
+                    schema = context.action.schema;
+                }
                 const schemaValidationResult = validate(actionData.params, schema, { required: true });
                 if (!schemaValidationResult.valid) {
                     const messagesArray: string[] = [];

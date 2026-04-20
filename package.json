@@ -839,6 +839,7 @@
 	},
 	"devDependencies": {
 		"@eslint/js": "^10.0.1",
+		"@standard-schema/spec": "^1.1.0",
 		"@stylistic/eslint-plugin": "^5.10.0",
 		"@types/glob-to-regexp": "^0.4.4",
 		"@types/json-schema": "^7.0.15",
@@ -873,12 +874,14 @@
 		"yaml": "^2.8.3"
 	},
 	"dependencies": {
+		"@standard-community/standard-json": "^0.3.5",
 		"@vscode/codicons": "^0.0.45",
 		"file-type": "^22.0.1",
 		"glob-to-regexp": "^0.4.1",
 		"ignore": "^7.0.5",
 		"jsonschema": "^1.5.0",
 		"neuro-game-sdk": "^1.0.10",
-		"preact": "^10.29.1"
+		"preact": "^10.29.1",
+		"zod": "^4.3.6"
 	}
 }

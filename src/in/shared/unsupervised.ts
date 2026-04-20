@@ -4,7 +4,8 @@ import { addEditingActions } from '@/editing';
 import { addLintActions } from '@/lint_problems';
 import { addActions, cancelRequestAction, RCEActionHandler } from '@/rce';
 import { addChangelogActions } from '@/changelog';
-import { addRequestCookieAction } from '../../functions/cookies';
+import { addRequestCookieAction } from '@/functions/cookies';
+import { standardSchemaActions } from '@/integrations/standard-json-schema';
 
 export function addCommonUnsupervisedActions() {
     addFileActions();
@@ -13,6 +14,7 @@ export function addCommonUnsupervisedActions() {
     addChangelogActions();
     addRequestCookieAction();
     addActions([cancelRequestAction]);
+    addActions([standardSchemaActions.test_zod_schema]);
 }
 
 /**
