@@ -29,8 +29,8 @@ jobs:
           fetch-depth: 2
       - name: Check that changelog is updated
         run: |
-          echo "Comparing ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}"
-          changed=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }})
+          echo "Comparing ${{ github.base_ref }}..${{ github.head_ref }}"
+          changed=$(git diff --name-only ${{ github.base_ref }} ${{ github.head_ref }})
           echo "Changed files:"
           echo "$changed"
 
