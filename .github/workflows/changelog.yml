@@ -23,6 +23,10 @@ jobs:
       pull-requests: read
       contents: read
     steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
       - name: Check that changelog is updated
         env:
           PR_NUMBER: ${{ github.event.pull_request.number }}
