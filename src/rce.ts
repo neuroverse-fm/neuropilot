@@ -683,7 +683,7 @@ export async function RCEActionHandler(actionData: ActionData) {
                         sendResult(actionResult.message, !(actionResult.retry ?? false));
                         context.updateStatus(
                             'failure',
-                            actionResult.historyNote ? `Validator failed: ${actionResult.historyNote}` : 'Validator failed' + (actionResult.retry ? '\nRequesting retry' : ''),
+                            actionResult.historyNote ?? 'Validator failed.' + (actionResult.retry ? '\nRequesting retry' : ''),
                         );
                         context.done(false);
                         return;
