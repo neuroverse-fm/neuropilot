@@ -731,7 +731,7 @@ export async function RCEActionHandler(actionData: ActionData) {
 
                     // Reject the cancel promise to interrupt async validators
                     if (cancelPromiseReject) {
-                        cancelPromiseReject(new Error(`Action cancelled: ${createdReason}`));
+                        cancelPromiseReject(new Error(`Request was cancelled because ${createdLogReason}`));
                     }
                 };
                 for (const eventObject of context.action.cancelEvents) {
@@ -783,11 +783,13 @@ export async function RCEActionHandler(actionData: ActionData) {
                     }
 
                     clearActionForce();
-                    const message = erm instanceof Error ? erm.message : 'Async validators timed out';
-                    NEURO.client?.sendContext(`Action failed: ${message}`);
-                    context.updateStatus('failure', 'Async validators timed out');
-                    context.done(false);
-                    return;
+                    if (erm instanceof Error && erm.message.startsWith('Async validators timed out')) {
+                        NEURO.client?.sendContext(`Action failed: ${erm.message}`);
+                        context.updateStatus('failure', 'Async validators timed out');
+                        context.done(false);
+                        return;
+                    }
+                    else throw erm;
                 }
 
                 context.lifecycle.validatorResults.async.push(...results);
