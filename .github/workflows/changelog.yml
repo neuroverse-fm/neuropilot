@@ -5,14 +5,14 @@ on:
   pull_request:
     types: [opened, synchronize, reopened, labeled, unlabeled, ready_for_review]
     paths:
-      - 'assets/**'
-      - 'esbuild-configs/**'
-      - 'scripts/**'
-      - 'src/**'
-      - 'webview/**'
-      - '.vscodeignore'
-      - 'package.json'
-      - 'tsconfig*.json'
+      - "assets/**"
+      - "esbuild-configs/**"
+      - "scripts/**"
+      - "src/**"
+      - "webview/**"
+      - ".vscodeignore"
+      - "package.json"
+      - "tsconfig*.json"
 
 jobs:
   check-changelog:
@@ -23,14 +23,14 @@ jobs:
       pull-requests: read
       contents: read
     steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-        with:
-          fetch-depth: 2
       - name: Check that changelog is updated
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          echo "Comparing ${{ github.base_ref }}..${{ github.head_ref }}"
-          changed=$(git diff --name-only ${{ github.base_ref }} ${{ github.head_ref }})
+          set -euo pipefail
+
+          echo "Getting changed files list using gh CLI..."
+          changed=$(gh pr view $PR_NUMBER --json files --jq='.files.[].path')
           echo "Changed files:"
           echo "$changed"
 
