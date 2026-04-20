@@ -837,7 +837,7 @@ export async function RCEActionHandler(actionData: ActionData) {
                     if (resolvedResult.success !== 'retry')
                         clearActionForce();
                     context.updateStatus(status, statusMessage);
-                    sendResult(contextMessage, resolvedResult.success !== 'retry');
+                    sendResult(contextMessage, resolvedResult.success === 'retry');
                     context.done(resolvedResult.success === 'success');
                 }
             }
