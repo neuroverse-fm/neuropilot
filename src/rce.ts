@@ -699,6 +699,7 @@ export async function RCEActionHandler(actionData: ActionData) {
             //     // I could make one long `if` chain but I'm not insane enough
             // } else
             // TODO: revisit above later 
+            let cancelPromiseReject: ((reason?: Error) => void) | undefined;
             if (ACTIONS.enableCancelEvents && context.action.cancelEvents) {
                 stage = 'setting up cancel events';
                 context.lifecycle.events = [];
@@ -727,6 +728,11 @@ export async function RCEActionHandler(actionData: ActionData) {
                     context!.updateStatus('cancelled', `Cancelled because ${createdLogReason}`);
                     clearRceRequest(context!);
                     context!.done(false);
+
+                    // Reject the cancel promise to interrupt async validators
+                    if (cancelPromiseReject) {
+                        cancelPromiseReject(new Error(`Action cancelled: ${createdReason}`));
+                    }
                 };
                 for (const eventObject of context.action.cancelEvents) {
                     const eventDetails = eventObject(context);
@@ -735,6 +741,11 @@ export async function RCEActionHandler(actionData: ActionData) {
                         context.lifecycle.events.push(vscode.Disposable.from(subscription, eventDetails.disposable));
                     }
                 }
+            }
+
+            // Check if action was cancelled before async validators start
+            if (cancelled) {
+                return;
             }
 
             if (context.action.validators?.async && context.action.validators.async.length > 0) {
@@ -757,20 +768,25 @@ export async function RCEActionHandler(actionData: ActionData) {
                     setTimeout(() => reject(new Error('Async validators timed out after 1 second')), 1000);
                 });
 
+                // Create cancellation promise that can be rejected by cancel events
+                const cancelPromise = new Promise<never>((_, reject) => {
+                    cancelPromiseReject = reject;
+                });
+
                 let results;
                 try {
-                    results = await Promise.race([Promise.all(asyncArray), timeoutPromise]);
+                    results = await Promise.race([Promise.all(asyncArray), timeoutPromise, cancelPromise]);
                 } catch (erm) {
+                    // Check if action was cancelled
+                    if (cancelled) {
+                        return;
+                    }
+
                     clearActionForce();
                     const message = erm instanceof Error ? erm.message : 'Async validators timed out';
                     NEURO.client?.sendContext(`Action failed: ${message}`);
                     context.updateStatus('failure', 'Async validators timed out');
                     context.done(false);
-                    return;
-                }
-
-                // Check if action was cancelled during async validator execution
-                if (cancelled) {
                     return;
                 }
 
