@@ -55,6 +55,7 @@ export const cancelRequestAction: RCEAction = {
     promptGenerator: () => '', // No prompt needed for this action
     defaultPermission: PermissionLevel.AUTOPILOT,
     hidden: true,
+    autoRegister: false,
 };
 
 /**
@@ -231,6 +232,8 @@ export async function acceptRceRequest(): Promise<void> {
         vscode.window.showErrorMessage(`No active request from ${NEURO.currentController} to accept.`);
         return;
     }
+
+    unregisterAction(cancelRequestAction.name);
 
     NEURO.client?.sendContext(`${CONNECTION.userName} has accepted your request.`);
 
