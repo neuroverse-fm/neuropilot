@@ -129,10 +129,16 @@ async function binaryFileValidation(context: RCEContext): Promise<ActionValidati
     const absolutePath = normalizePath(workspaceUri.fsPath + '/' + relativePath.replace(/^\/|\/$/g, ''));
     const uri = workspaceUri.with({ path: absolutePath });
 
+    let stat: vscode.FileStat;
     try {
-        await vscode.workspace.fs.stat(uri);
+        stat = await vscode.workspace.fs.stat(uri);
     } catch {
         return actionValidationFailure('Specified file does not exist.', ACTION_FAIL_NOTES.doesntExist.replace('directory', 'file'));
+    }
+
+    // Fail if it is a directory
+    if ((stat.type & vscode.FileType.Directory) === vscode.FileType.Directory) {
+        return actionValidationFailure('Specified path is a directory, not a file.', ACTION_FAIL_NOTES.targetedFolder);
     }
 
     const file = await vscode.workspace.fs.readFile(uri);
