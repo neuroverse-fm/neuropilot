@@ -245,13 +245,13 @@ export async function acceptRceRequest(): Promise<void> {
         switch (result.success) {
             case 'retry': {
                 activeContext.updateStatus('failure', result.historyNote);
-                NEURO.client?.sendContext(result.message ? 'Action failed: ' + result.message : '\nPlease retry the action.');
+                NEURO.client?.sendContext(result.message ?? 'Action failed. Please retry the action.');
                 activeContext.done(false);
                 break;
             }
             default: {
                 if (result.historyNote) activeContext.updateStatus(result.success, result.historyNote);
-                const messageString = result.success === 'failure' ? result.message ? 'Action failed: ' + result.message : 'Action failed.' : result.message ?? 'Action successful.'; // this needs to be more reasonable to read
+                const messageString = result.message ?? (result.success === 'failure' ? 'Action failed.' : 'Action successful.');
                 NEURO.client?.sendContext(messageString);
                 break;
             }
@@ -570,21 +570,19 @@ export function getExtendedActionsInfo(): ExtendedActionInfo[] {
 
 function processResult(result: ActionHandlerResult): { status: 'success' | 'failure'; statusMessage: string; contextMessage: string | undefined } {
     const status = result.success === 'success' ? 'success' : 'failure';
-    let statusMessage: string;
-    let contextMessage: string | undefined;
 
-    const failedStatusMessage = result.historyNote ? 'Action failed: ' + result.historyNote : 'Action failed.';
-    const failedContextMessage = result.message ? 'Action failed: ' + result.message : 'Action failed.';
-    if (result.success === 'success') {
-        statusMessage = result.historyNote ?? 'Action succeeded.';
-        contextMessage = result.message;
-    } else if (result.success === 'failure') {
-        statusMessage = failedStatusMessage;
-        contextMessage = failedContextMessage;
-    } else { // result.success === 'retry'
-        statusMessage = failedStatusMessage + '\nRequesting retry.';
-        contextMessage = failedContextMessage + '\nPlease retry the action.';
-    }
+    // TODO: Require a context message in actionHandlerFailure / actionHandlerRetry so we can get rid of this
+    const contextMessage = result.message ?? (
+        result.success === 'success' ? undefined // No context message will be sent
+        : result.success === 'failure' ? 'Action failed.'
+        : 'Action failed. Please retry the action.'
+    );
+    const statusMessage = result.historyNote ?? (
+        result.success === 'success' ? 'Action succeeded.'
+        : result.success === 'failure' ? 'Action failed.'
+        : 'Action failed. Please retry the action.'
+    );
+
     return { status, statusMessage, contextMessage };
 }
 
@@ -775,6 +773,10 @@ export async function RCEActionHandler(actionData: ActionData) {
 
                 let results;
                 try {
+                    // Wait for the first of the following:
+                    // - All async validators complete
+                    // - The request times out
+                    // - The request is cancelled by a cancel event
                     results = await Promise.race([Promise.all(asyncArray), timeoutPromise, cancelPromise]);
                 } catch (erm) {
                     // Check if action was cancelled
@@ -785,7 +787,7 @@ export async function RCEActionHandler(actionData: ActionData) {
                     clearActionForce();
                     if (erm instanceof Error && erm.message.startsWith('Async validators timed out')) {
                         NEURO.client?.sendContext(`Action failed: ${erm.message}`);
-                        context.updateStatus('failure', 'Async validators timed out');
+                        context.updateStatus('failure', `Action failed: ${erm.message}`);
                         context.done(false);
                         return;
                     }
@@ -798,10 +800,10 @@ export async function RCEActionHandler(actionData: ActionData) {
                         // TODO: Handle reforcing an action
                         if (!(r.retry ?? false))
                             clearActionForce();
-                        NEURO.client?.sendContext(`Action failed: ${r.message}`);
+                        NEURO.client?.sendContext(r.message ?? 'Action failed.');
                         context.updateStatus(
                             'failure',
-                            r.historyNote ? `Validator failed: ${r.historyNote}` : 'Validator failed' + (r.retry ? '\nRequesting retry' : ''),
+                            r.historyNote ?? 'Validator failed.',
                         );
                         context.done(false);
                         return;
