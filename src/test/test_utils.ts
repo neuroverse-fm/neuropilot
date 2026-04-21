@@ -1,6 +1,6 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
-import { setVirtualCursor } from '../utils';
+import { setVirtualCursor } from '@/utils/misc';
 
 /**
  * Asserts that an object has the same properties as the expected object,
@@ -40,7 +40,7 @@ export async function createTestDirectory(name: string): Promise<vscode.Uri> {
 }
 
 /**
- * Wait for the given given function to return true, or reject after a timeout.
+ * Wait for the given function to return true, or reject after a timeout.
  * @param check The function to check.
  * @param timeoutMs The maximum time to wait for the function to return true.
  * @param interval The interval to check the function.
@@ -107,4 +107,11 @@ export async function setupDocument(text: string, options: SetupDocumentOptions 
         editor.selection = new vscode.Selection(cursorPosition, cursorPosition);
         setVirtualCursor(cursorPosition);
     }
+}
+
+/**
+ * Function that simply returns a mock function.
+ */
+export function returnMockFunction() {
+    return () => undefined;
 }

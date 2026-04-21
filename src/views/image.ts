@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { NEURO } from '@/constants';
 import { BaseWebviewViewProvider } from './base';
-import { logOutput } from '../utils';
+import { logOutput } from '@/utils/misc';
 import { COSMETIC } from '../config';
 
 export interface ImageData {

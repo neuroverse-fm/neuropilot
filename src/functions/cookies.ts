@@ -1,35 +1,11 @@
 import * as vscode from 'vscode';
-import { ActionData } from 'neuro-game-sdk';
 
-import { getFence, logOutput, simpleFileName } from '@/utils';
+import { logOutput } from '@/utils/misc';
 import { NEURO } from '@/constants';
 import { CONNECTION, PermissionLevel, getPermissionLevel } from '@/config';
 import { addActions, CATEGORY_MISC } from '@/rce';
-import { RCEAction } from '@/neuro_client_helper';
-import { updateActionStatus } from '@/events/actions';
-
-export function sendCurrentFile() {
-    const editor = vscode.window.activeTextEditor;
-    if (!editor) {
-        logOutput('ERROR', 'No active text editor');
-        vscode.window.showErrorMessage('No active text editor.');
-        return;
-    }
-    const document = editor.document;
-    const fileName = simpleFileName(document.fileName);
-    const language = document.languageId;
-    const text = document.getText();
-
-    if (!NEURO.connected) {
-        logOutput('ERROR', 'Attempted to send current file while disconnected');
-        vscode.window.showErrorMessage('Not connected to Neuro API.');
-        return;
-    }
-
-    logOutput('INFO', 'Sending current file to Neuro API');
-    const fence = getFence(text);
-    NEURO.client?.sendContext(`${CONNECTION.userName} sent you the contents of the file ${fileName}.\n\nContent:\n\n${fence}${language}\n${text}\n${fence}`);
-}
+import { actionHandlerFailure, actionHandlerSuccess, RCEAction } from '@/utils/neuro_client';
+import { RCEContext, SimplifiedStatusUpdateHandler } from '@ctx/rce';
 
 export const REQUEST_COOKIE_ACTION: RCEAction = {
     name: 'request_cookie',
@@ -43,7 +19,7 @@ export const REQUEST_COOKIE_ACTION: RCEAction = {
         additionalProperties: false,
     },
     handler: handleRequestCookie,
-    promptGenerator: (actionData) => `have a${actionData.params?.flavor ? ' ' + actionData.params.flavor : ''} cookie.`,
+    promptGenerator: (context: RCEContext) => `have a${context.data.params?.flavor ? ' ' + context.data.params.flavor : ''} cookie.`,
     defaultPermission: PermissionLevel.COPILOT,
 };
 
@@ -51,21 +27,20 @@ export function addRequestCookieAction() {
     addActions([REQUEST_COOKIE_ACTION]);
 }
 
-function handleRequestCookie(actionData: ActionData) {
+function handleRequestCookie(context: RCEContext) {
+    const { data: actionData, updateStatus } = context;
     const permission = getPermissionLevel(actionData.name);
 
     switch (permission) {
         case PermissionLevel.COPILOT: {
-            giveCookie(true, actionData.params.flavor, actionData);
-            updateActionStatus(actionData, 'pending', 'Waiting for cookie flavor...');
-            return `Waiting on ${CONNECTION.userName} to decide on the flavor.`;
+            giveCookie(true, actionData.params.flavor, updateStatus);
+            return actionHandlerSuccess(`Waiting on ${CONNECTION.userName} to decide on the flavor.`, 'Waiting for cookie flavor...');
         }
         case PermissionLevel.AUTOPILOT: {
             logOutput('INFO', `Neuro grabbed a ${actionData.params.flavor} cookie.`);
             if (actionData.params?.flavor) {
                 // Return flavor as requested
-                updateActionStatus(actionData, 'success', `${actionData.params.flavor} cookie grabbed`);
-                return `You grabbed a ${actionData.params.flavor} cookie!`;
+                return actionHandlerSuccess(`You grabbed a ${actionData.params.flavor} cookie!`, `${actionData.params.flavor} cookie grabbed`);
             }
             // Funny quotes if no flavor specified
             const base = 'You grabbed an undefined cookie. ';
@@ -83,9 +58,10 @@ function handleRequestCookie(actionData: ActionData) {
                 'Segmentation fault (core dumped).',
             ];
             const randomIndex = Math.floor(Math.random() * quotes.length);
-            updateActionStatus(actionData, 'failure', `${base.replace('You', CONNECTION.nameOfAPI)}${quotes[randomIndex].replace(/you|You/g, CONNECTION.nameOfAPI)} (undefined flavor)`);
-            return base + quotes[randomIndex];
+            return actionHandlerFailure(base + quotes[randomIndex], `${base.replace('You', CONNECTION.nameOfAPI)}${quotes[randomIndex].replace(/you|You/g, CONNECTION.nameOfAPI)} (undefined flavor)`);
         }
+        default:
+            return actionHandlerFailure('Uhhhh, something went wrong', 'Somehow, this action\'s permission wasn\'t set to Copilot or Autopilot, huh???'); // Added for type-safety I guess
     }
     // Removed the try-catch because this shoud be handled by the RCE system now
     // catch (erm) {
@@ -96,7 +72,7 @@ function handleRequestCookie(actionData: ActionData) {
     // }
 }
 
-export function giveCookie(isRequested = false, defaultFlavor = 'Chocolate Chip', actionData?: ActionData) {
+export function giveCookie(isRequested = false, defaultFlavor = 'Chocolate Chip', updateStatus?: SimplifiedStatusUpdateHandler) {
     if (!NEURO.connected) {
         logOutput('ERROR', 'Attempted to give cookie while disconnected');
         vscode.window.showErrorMessage('Not connected to Neuro API.');
@@ -110,7 +86,7 @@ export function giveCookie(isRequested = false, defaultFlavor = 'Chocolate Chip'
         title: `Give ${NEURO.currentController} a cookie`,
     }).then((flavor) => {
         if (!flavor) {
-            logOutput('INFO', 'No flavor given, canceling cookie');
+            logOutput('INFO', 'No flavor given, cancelling cookie');
             if (isRequested) {
                 // Funny quotes if cookie was requested but no flavor given
                 const quotes = [
@@ -130,12 +106,12 @@ export function giveCookie(isRequested = false, defaultFlavor = 'Chocolate Chip'
                 }
                 const randomIndex = Math.floor(Math.random() * quotes.length);
                 NEURO.client?.sendContext(quotes[randomIndex]);
-                if (actionData) updateActionStatus(actionData, 'failure', `${quotes[randomIndex].replace('your', `${CONNECTION.nameOfAPI}'s`)} (undefined flavor)`);
+                updateStatus?.('failure', `${quotes[randomIndex].replace('your', `${CONNECTION.nameOfAPI}'s`)} (undefined flavor)`);
             }
             return;
         }
         logOutput('INFO', 'Giving cookie to Neuro');
         NEURO.client?.sendContext(`${CONNECTION.userName} gave you a ${flavor} cookie!`);
-        if (actionData) updateActionStatus(actionData, 'success', `${flavor} cookie given`);
+        updateStatus?.('success', `${flavor} cookie given`);
     });
 }

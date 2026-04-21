@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { NEURO } from '@/constants';
-import { logOutput } from '@/utils';
+import { logOutput } from '@/utils/misc';
 import { getAction } from '@/rce';
 
 //#region Types
@@ -504,6 +504,15 @@ export function getPermissionLevel(actionName: string): PermissionLevel {
     if (NEURO.killSwitch || NEURO.tempDisabledActions.includes(actionName)) {
         return PermissionLevel.OFF;
     }
+    if (NEURO.currentActionForce?.overridePermissions !== undefined) {
+        if (typeof NEURO.currentActionForce.overridePermissions === 'object' && actionName in NEURO.currentActionForce.overridePermissions) {
+            return NEURO.currentActionForce.overridePermissions[actionName];
+        }
+        else {
+            // Can't be anything other than PermissionLevel, as the object case is handled above
+            return NEURO.currentActionForce.overridePermissions as PermissionLevel;
+        }
+    }
     const permissions = getAllPermissions();
     const permission = permissions[actionName];
 
@@ -591,6 +600,7 @@ class Actions {
     get hideCopilotRequests(): boolean { return getActions<boolean>('hideCopilotRequests')!; }
     get allowRunningAllTasks(): boolean { return getActions<boolean>('allowRunningAllTasks')!; }
     get enableCancelEvents(): boolean { return getActions<boolean>('enableCancelEvents')!; }
+    get disablePreviewEffects(): boolean { return getActions<boolean>('disablePreviewEffects')!; }
     get experimentalSchemas(): boolean { return getActions<boolean>('experimentalSchemas')!; }
 }
 

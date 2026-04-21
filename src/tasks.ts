@@ -7,13 +7,13 @@
 import * as vscode from 'vscode';
 
 import { NEURO } from '@/constants';
-import { logOutput, formatActionID, getFence, checkWorkspaceTrust, checkVirtualWorkspace } from '@/utils';
-import { ActionData } from 'neuro-game-sdk';
-import { RCEAction, actionValidationAccept, actionValidationFailure } from '@/neuro_client_helper';
+import { logOutput, formatActionID, getFence, checkWorkspaceTrust, checkVirtualWorkspace } from '@/utils/misc';
+import { ActionHandlerResult, RCEAction, RCEHandlerReturns, actionHandlerFailure, actionHandlerSuccess, actionValidationAccept, actionValidationFailure } from '@/utils/neuro_client';
 import { ACTIONS } from '@/config';
 import { notifyOnTaskFinish } from '@events/shells';
 import { addActions, getActions, removeActions } from './rce';
-import { updateActionStatus } from './events/actions';
+import { updateActionStatus } from '@events/actions';
+import { RCEContext } from '@ctx/rce';
 
 export const CATEGORY_TASKS = 'Tasks';
 const CATEGORY_REGISTERED_TASKS = 'Registered Tasks';
@@ -25,6 +25,7 @@ export const taskActions = {
         description: 'Terminate the currently running task',
         category: CATEGORY_TASKS,
         handler: handleTerminateTask,
+        // TODO: Auto-switch to task output (if already opened) as preview effect
         cancelEvents: [
             notifyOnTaskFinish,
         ],
@@ -47,37 +48,35 @@ export function addTaskActions() {
     // Tasks are registered asynchronously in reloadTasks()
 }
 
-export function handleTerminateTask(_actionData: ActionData): string | undefined {
-    const exe = NEURO.currentTaskExecution!;
+export function handleTerminateTask(): ActionHandlerResult {
+    const exe = NEURO.currentTaskExecution;
+    if (!exe) {
+        return actionHandlerFailure('No task to terminate.', 'No task to terminate');
+    }
     NEURO.currentTaskExecution = null;
     exe.task.terminate();
     logOutput('INFO', 'Terminated current task');
-    return 'Terminated current task.';
+    return actionHandlerSuccess('Terminated current task.', 'Terminated task');
 }
 
-export function handleRunTask(actionData: ActionData): string | undefined {
+export function handleRunTask(context: RCEContext): RCEHandlerReturns {
+    const { data: actionData, updateStatus } = context;
     if (NEURO.currentTaskExecution !== null) {
-        updateActionStatus(actionData, 'failure', 'Task already running');
-        return 'Action failed: A task is already running.';
+        return actionHandlerFailure('A task is already running.', 'Task is already running');
     }
 
     const task = NEURO.tasks.find(task => task.id === actionData.name);
     if (task === undefined) {
-        updateActionStatus(actionData, 'failure', 'Task not found');
-        return `Action failed: Task ${actionData.name} not found.`;
+        updateStatus('failure', 'Task not found');
+        return actionHandlerFailure(`Task ${actionData.name} not found.`, 'Task not found');
     }
 
-    try {
-        vscode.tasks.executeTask(task.task).then(value => {
-            logOutput('INFO', `Executing task ${task.id}`);
-            updateActionStatus(actionData, 'pending', 'Executing task...');
-            NEURO.currentTaskExecution = { task: value, data: actionData };
-        });
-        return `Executing task ${task.id}`;
-    } catch (erm) {
-        logOutput('DEBUG', JSON.stringify(erm));
-        return `Failed to execute task ${task.id}.`;
-    }
+    return vscode.tasks.executeTask(task.task).then(value => {
+        logOutput('INFO', `Executing task ${task.id}`);
+        updateStatus('pending', 'Executing task...');
+        NEURO.currentTaskExecution = { task: value, data: actionData };
+        return actionHandlerSuccess(`Executing task ${task.id}`);
+    });
 }
 
 export function taskEndedHandler(event: vscode.TaskEndEvent) {
@@ -140,6 +139,7 @@ export function reloadTasks() {
             description: task.description,
             category: CATEGORY_REGISTERED_TASKS,
             handler: handleRunTask,
+            // TODO: Auto-switch to task output (if already opened) as preview effect
             promptGenerator: `run the task: ${task.description}`,
             validators: {
                 sync: [checkVirtualWorkspace, checkWorkspaceTrust],

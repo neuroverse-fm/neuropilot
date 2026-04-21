@@ -1,14 +1,14 @@
 import * as assert from 'assert';
 import { editingActions } from '@/editing';
-import { ActionData } from 'neuro-game-sdk';
+import type { RCEContext } from '@/context/rce';
 
 // Tests for the insert_lines action prompt generator using real logic
 suite('insert_lines Action', () => {
     test('generates a prompt and reflects line count without insertUnder', () => {
         // === Arrange & Act ===
         const prompt = editingActions.insert_lines.promptGenerator({
-            params: { text: 'a\nb' },
-        } as ActionData);
+            data: { params: { text: 'a\nb' } },
+        } as RCEContext);
 
         // === Assert ===
         assert.ok(typeof prompt === 'string' && prompt.length > 0);
@@ -18,8 +18,8 @@ suite('insert_lines Action', () => {
     test('generates a prompt including insertUnder when provided', () => {
         // === Arrange & Act ===
         const prompt = editingActions.insert_lines.promptGenerator({
-            params: { text: 'one line', insertUnder: 7 },
-        } as ActionData);
+            data: { params: { text: 'one line', insertUnder: 7 } },
+        } as RCEContext);
 
         // === Assert ===
         assert.ok(typeof prompt === 'string' && prompt.length > 0);

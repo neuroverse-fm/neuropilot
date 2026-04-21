@@ -1,14 +1,14 @@
 import * as assert from 'assert';
 import { editingActions } from '@/editing';
-import { ActionData } from 'neuro-game-sdk';
+import type { RCEContext } from '@/context/rce';
 
 // Tests for the highlight_lines action prompt generator using real logic
 suite('highlight_lines Action', () => {
     test('generates a prompt and includes start and end', () => {
         // === Arrange & Act ===
         const prompt = editingActions.highlight_lines.promptGenerator({
-            params: { startLine: 1, endLine: 3 },
-        } as ActionData);
+            data: { params: { startLine: 1, endLine: 3 } },
+        } as RCEContext);
 
         // === Assert ===
         assert.ok(typeof prompt === 'string' && prompt.length > 0);

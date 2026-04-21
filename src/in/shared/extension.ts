@@ -1,23 +1,24 @@
 import * as vscode from 'vscode';
 import { NEURO, EXTENSIONS } from '@/constants';
-import { logOutput, createClient, onClientConnected, setVirtualCursor, showAPIMessage, disconnectClient, reconnectClient, getWorkspaceUri } from '@/utils';
-import { completionsProvider, registerCompletionResultHandler } from '@/completions';
-import { giveCookie, sendCurrentFile } from '@/context';
-import { registerChatResponseHandler } from '@/chat';
+import { logOutput, createClient, onClientConnected, setVirtualCursor, showAPIMessage, disconnectClient, reconnectClient, getWorkspaceUri, getFence, simpleFileName } from '@/utils/misc';
+import { completionsProvider } from '@/completions';
+import { giveCookie } from '@/functions/cookies';
 import { ACCESS, ACTIONS, checkDeprecatedSettings, CONFIG, CONNECTION, PermissionLevel, setPermissions } from '@/config';
 import { explainWithNeuro, fixWithNeuro, NeuroCodeActionsProvider, sendDiagnosticsDiff } from '@/lint_problems';
-import { editorChangeHandler, fileSaveListener, moveNeuroCursorHere, toggleSaveAction, workspaceEditHandler } from '@/editing';
+import { editorChangeHandler, fileSaveListener, moveNeuroCursorHere, workspaceEditHandler } from '@/editing';
 import { emergencyDenyRequests, acceptRceRequest, denyRceRequest, revealRceNotification, clearRceRequest, getActions, reregisterAllActions } from '@/rce';
 import type { GitExtension } from '@typing/git';
 import { getGitExtension } from '@/git';
 import { openDocsOnTarget, registerDocsCommands, registerDocsLink } from './docs';
-import { readChangelogAndSendToNeuro } from '@/changelog';
+import { sendChangelogOnDemand } from '@/changelog';
 import { moveCursorEmitterDiposable } from '@events/cursor';
-import { loadIgnoreFiles } from '@/ignore_files_utils';
-import { getWorkspacePath, normalizePath } from '@/utils';
+import { loadIgnoreFiles } from '@/utils/ignore_files';
+import { getWorkspacePath, normalizePath } from '@/utils/misc';
 import { ActionsViewProvider } from '@/views/actions';
-import { ImagesViewProvider } from '../views/image';
+import { ImagesViewProvider } from '@/views/image';
 import { ExecuteViewProvider, addCustomExecutionHistoryItem } from '@/views/execute';
+import { actionsEventEmitterDisposable } from '@events/actions';
+import { filePreviewProvider } from '@previews/files';
 
 // Shared commands
 export function registerCommonCommands() {
@@ -36,7 +37,7 @@ export function registerCommonCommands() {
         vscode.commands.registerCommand('neuropilot.switchNeuroAPIUser', switchCurrentNeuroAPIUser),
         vscode.commands.registerCommand('neuropilot.refreshExtensionDependencyState', obtainExtensionState),
         vscode.commands.registerCommand('neuropilot.resetTemporarilyDisabledActions', () => NEURO.tempDisabledActions = []),
-        vscode.commands.registerCommand('neuropilot.readChangelog', readChangelogAndSendToNeuro),
+        vscode.commands.registerCommand('neuropilot.readChangelog', sendChangelogOnDemand),
         vscode.commands.registerCommand('neuropilot.dev.clearMementos', clearAllMementos),
         vscode.commands.registerCommand('neuropilot.dev.addExecutionHistoryItem', () => {
             if (NEURO.viewProviders.execute) {
@@ -65,7 +66,7 @@ export function setupCommonEventHandlers() {
         vscode.workspace.onDidChangeConfiguration(async (event) => {
             if (event.affectsConfiguration('files.autoSave')) {
                 NEURO.client?.sendContext('The Auto-Save setting has been modified.');
-                toggleSaveAction();
+                reregisterAllActions(true);
             }
             if (event.affectsConfiguration('neuropilot.docsURL')) {
                 logOutput('INFO', 'NeuroPilot Docs URL changed.');
@@ -116,11 +117,15 @@ export function initializeCommonState(context: vscode.ExtensionContext) {
     NEURO.url = CONNECTION.websocketUrl;
     NEURO.gameName = CONNECTION.gameName;
     NEURO.connected = false;
-    NEURO.waiting = false;
-    NEURO.cancelled = false;
+    NEURO.currentActionForce = null;
     NEURO.outputChannel = vscode.window.createOutputChannel('NeuroPilot');
     NEURO.currentController = CONNECTION.nameOfAPI;
-    NEURO.context.subscriptions.push(NEURO.outputChannel);
+    NEURO.context.subscriptions.push(
+        NEURO.outputChannel,
+        actionsEventEmitterDisposable,
+        vscode.window.registerFileDecorationProvider(filePreviewProvider),
+        filePreviewProvider,
+    );
     checkDeprecatedSettings(context.extension.packageJSON.version as string);
 }
 
@@ -145,8 +150,6 @@ export function setupCommonProviders() {
 
 export function setupClientConnectedHandlers(...extraHandlers: (() => void)[]) {
     onClientConnected(registerPreActionHandler);
-    onClientConnected(registerCompletionResultHandler);
-    onClientConnected(registerChatResponseHandler);
     for (const handlers of extraHandlers) {
         onClientConnected(handlers);
     }
@@ -484,4 +487,27 @@ async function clearAllMementos(): Promise<void> {
     await Promise.all(updates);
 
     vscode.window.showInformationMessage('NeuroPilot mementos cleared.');
+}
+
+export function sendCurrentFile() {
+    const editor = vscode.window.activeTextEditor;
+    if (!editor) {
+        logOutput('ERROR', 'No active text editor');
+        vscode.window.showErrorMessage('No active text editor.');
+        return;
+    }
+    const document = editor.document;
+    const fileName = simpleFileName(document.fileName);
+    const language = document.languageId;
+    const text = document.getText();
+
+    if (!NEURO.connected) {
+        logOutput('ERROR', 'Attempted to send current file while disconnected');
+        vscode.window.showErrorMessage('Not connected to Neuro API.');
+        return;
+    }
+
+    logOutput('INFO', 'Sending current file to Neuro API');
+    const fence = getFence(text);
+    NEURO.client?.sendContext(`${CONNECTION.userName} sent you the contents of the file ${fileName}.\n\nContent:\n\n${fence}${language}\n${text}\n${fence}`);
 }

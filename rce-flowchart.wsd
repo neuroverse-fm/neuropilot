@@ -1,0 +1,121 @@
+@startuml RCEActionHandler
+
+skinparam conditionStyle diamond
+<style>
+activityDiagram {
+    legend {
+        MaximumWidth 400
+    }
+
+    activity {
+        HorizontalAlignment center
+        MaximumWidth 200
+    }
+
+    diamond {
+        Padding 100
+    }
+
+    .procedure {
+        BackgroundColor LightSteelBlue
+    }
+}
+</style>
+
+title RCE Action Handler (feat/rce-context-object)
+
+legend top left
+    For simplicity:
+    * Any stop node before an action result also sends an action result.
+    * Any action result after an action result has already been sent will send a context message instead.
+    * <back:PaleGreen>Green</back> action result = success, <back:Salmon>red</back> action result = failure
+endlegend
+
+start
+
+:Determine permission level;
+if (Permission level?) then (OFF)
+    stop
+endif
+:Context setup hooks (parallel);
+:Schema validation;
+if () then (any failure)
+    :Failure handling; <<procedure>>
+    detach
+endif
+:Run sync validators;
+if () then (any failure)
+    :Failure handling; <<procedure>>
+    detach
+endif
+:Build cancel events;
+if (Action has async validators?) then (yes)
+    #PaleGreen:Send action result; <<output>>
+    :Run async validators;
+    if () then (any failure)
+        :Failure handling; <<procedure>>
+        detach
+    endif
+else (no)
+endif
+if (Permission level?) then (AUTOPILOT)
+    :Dispose cancel events;
+    if (Action handler is?) then (sync)
+        :Run action handler;
+        if () then (success)
+        else (failure)
+            :Failure handling; <<procedure>>
+            detach
+        endif
+    else (async)
+        :Clear action force;
+        #PaleGreen:Send action result; <<output>>
+        :Run action handler;
+    endif
+else (COPILOT)
+    if () then (Another Copilot request\nalready active)
+        stop
+    endif
+    :Show prompt;
+    :Clear action force;
+    #PaleGreen:Send action result; <<output>>
+    fork
+        :<:clock2:>\nWait for timeout;
+        stop
+    fork again
+        :<:clock2:>\nWait for request to be revealed;
+        :Run preview effects;
+        :<:clock2:>\nWait for user input;
+    fork again
+        :<:clock2:>\nWait for cancellation event;
+        stop
+    end fork
+    if () then (accepted)
+        :Run action handler;
+    else (denied)
+    endif
+    :Clear timeout and dispose events;
+endif
+
+stop
+
+partition #LightSteelBlue Failure handling {
+    start
+    if (Should retry?) then (yes)
+        #Salmon:Send action result; <<output>>
+    else (no)
+        :Clear action force;
+        #PaleGreen:Send action result; <<output>>
+    endif
+    stop
+}
+
+' Current concerns:
+' - Due to src/rce.ts:L505-515, every validator always fails.
+' - If context setup hooks are parallel, they shouldn't be awaited before the result is sent, as that might delay the result.
+'   - So they must either be moved to after the action result, or be split into sync/async like the validators.
+'   - Problem: They can't pre-generate data for sync validators if they're moved after the action result.
+' - Timeout and events are not cleared / disposed until the handler completes. For async handlers they might trigger mid-execution.
+' - We build and immediately dispose cancel events for Autopilot mode, we should consider moving that into the Copilot mode branch.
+
+@enduml

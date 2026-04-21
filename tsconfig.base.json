@@ -8,15 +8,18 @@
 		"outDir": "out",
 		"sourceMap": true,
 		"strict": true,
+		"skipLibCheck": true,
+		"skipDefaultLibCheck": true,
+		"tsBuildInfoFile": "build/types.tsbuildinfo",
 		"paths": {
-			"~/*": [
-				"./*"
+			"@ctx/*": [
+				"./src/context/*"
 			],
-			"@/*": [
-				"./src/*"
+			"@entry/*": [
+				"./src/in/*"
 			],
-			"@shared/*": [
-				"./src/shared/*"
+			"@events/*": [
+				"./src/events/*"
 			],
 			"@typing/*": [
 				"./src/types/*"
@@ -24,12 +27,18 @@
 			"@test/*": [
 				"./src/test/*"
 			],
-			"@events/*": [
-				"./src/events/*"
+			"@previews/*": [
+				"./src/previews/*"
 			],
 			"@views/*": [
 				"./src/views/*"
-			]
+			],
+			"@/*": [
+				"./src/*"
+			],
+			"~/*": [
+				"./*"
+			],
 		}
 	},
 	"exclude": [

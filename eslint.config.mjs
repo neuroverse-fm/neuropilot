@@ -10,6 +10,7 @@ import tseslint from 'typescript-eslint';
 import stylistic from '@stylistic/eslint-plugin';
 import eslintPluginUnicorn from 'eslint-plugin-unicorn';
 import globals from 'globals';
+import jsdoc from 'eslint-plugin-jsdoc';
 
 export default tseslint.config(
     {
@@ -55,10 +56,12 @@ export default tseslint.config(
         plugins: {
             '@stylistic': stylistic,
             'unicorn': eslintPluginUnicorn,
+            'jsdoc': jsdoc,
         },
         rules: {
             'curly': 'off',
             'no-control-regex': 'off',
+            'no-useless-assignment': 'warn',
             '@stylistic/semi': ['error', 'always'],
             '@stylistic/indent': ['warn', 4, {
                 'flatTernaryExpressions': true,
@@ -88,6 +91,14 @@ export default tseslint.config(
                 'error',
                 {
                     'name': 'erm',
+                },
+            ],
+            'jsdoc/no-undefined-types': [
+                'warn',
+                {
+                    'definedTypes': [
+                        'Thenable',
+                    ],
                 },
             ],
         },
@@ -154,9 +165,10 @@ export default tseslint.config(
         languageOptions: {
             globals: {
                 ...globals.node,
-                ...globals.browser,
             },
-            // Do not provide a TypeScript project for JS files to avoid parser errors
+            parserOptions: {
+                tsconfigRootDir: import.meta.dirname,
+            },
         },
     },
 );

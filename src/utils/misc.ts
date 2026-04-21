@@ -1,14 +1,18 @@
 import * as vscode from 'vscode';
-import { NeuroClient, ActionData } from 'neuro-game-sdk';
+import assert from 'node:assert';
+import { NeuroClient } from 'neuro-game-sdk';
 import globToRegExp from 'glob-to-regexp';
 import { fileTypeFromBuffer } from 'file-type';
 
 import { NEURO } from '@/constants';
 import { ACCESS, CONFIG, CONNECTION, CursorPositionContextStyle, getPermissionLevel, PermissionLevel, setPermissionLevel } from '@/config';
 
-import { ActionValidationResult, actionValidationAccept, actionValidationFailure } from '@/neuro_client_helper';
-import assert from 'node:assert';
-import { patienceDiff } from './patience_diff';
+import { fastIsItIgnored } from './ignore_files';
+import { unregisterAllActions } from '@/rce';
+import { changelogActions } from '../changelog';
+
+import { ActionValidationResult, actionValidationAccept, actionValidationFailure } from './neuro_client';
+import { patienceDiff } from '@/patience_diff';
 import { fireCursorPositionChangedEvent } from '@events/cursor';
 
 export const REGEXP_ALWAYS = /^/;
@@ -20,7 +24,9 @@ let cachedExcludeKey = '';
 let cachedIncludeRegExp: RegExp = REGEXP_ALWAYS;
 let cachedExcludeRegExp: RegExp = REGEXP_NEVER;
 
-export function logOutput(tag: string, message: string) {
+export type OutputTag = 'DEBUG' | 'INFO' | 'WARNING' | 'ERROR';
+
+export function logOutput(tag: OutputTag, message: string) {
     if (!NEURO.outputChannel) {
         const testFlag = (globalThis as typeof globalThis & { NEUROPILOT_TEST?: boolean }).NEUROPILOT_TEST;
         if (testFlag === true || globalThis?.process?.env?.NEUROPILOT_TEST === 'true') {
@@ -45,12 +51,12 @@ export function createClient() {
     if (testFlag === true || globalThis?.process?.env?.NEUROPILOT_TEST === 'true') {
         if (!NEURO.client) {
             NEURO.client = {
-                sendContext: () => {},
-                disconnect: () => {},
-                registerActions: () => {},
-                unregisterActions: () => {},
-                sendActionResult: () => {},
-                onAction: () => {},
+                sendContext: () => { },
+                disconnect: () => { },
+                registerActions: () => { },
+                unregisterActions: () => { },
+                sendActionResult: () => { },
+                onAction: () => { },
             } as unknown as NeuroClient;
         }
         return;
@@ -63,8 +69,7 @@ export function createClient() {
     }
 
     NEURO.connected = false;
-    NEURO.waiting = false;
-    NEURO.cancelled = false;
+    NEURO.currentActionForce = null;
 
     // Reset auto-reconnect flag for new connection
     shouldAutoReconnect = true;
@@ -108,7 +113,7 @@ function attemptConnection(currentAttempt: number, maxAttempts: number, interval
                         attemptConnection(currentAttempt + 1, maxAttempts, interval);
                     }, interval);
                 } else {
-                    logOutput('WARN', `Failed to reconnect after ${maxAttempts} attempts`);
+                    logOutput('WARNING', `Failed to reconnect after ${maxAttempts} attempts`);
                     showAPIMessage('failed', `Failed to reconnect to the Neuro API after ${maxAttempts} attempt(s).`);
                 }
             } else {
@@ -148,7 +153,7 @@ function attemptConnection(currentAttempt: number, maxAttempts: number, interval
                 attemptConnection(currentAttempt + 1, maxAttempts, interval);
             }, interval);
         } else {
-            logOutput('WARN', `Failed to connect after ${maxAttempts} attempts`);
+            logOutput('WARNING', `Failed to connect after ${maxAttempts} attempts`);
             showAPIMessage('failed', `Failed to connect to the Neuro API after ${maxAttempts} attempt(s).`);
         }
     };
@@ -205,9 +210,9 @@ export interface NeuroPositionContext {
     contextBefore: string;
     /** The context after the range, or an empty string if the cursor is not defined. */
     contextAfter: string;
-    /** The zero-based line where {@link contextBefore} starts. */
+    /** The zero-based line where {@link NeuroPositionContext.contextBefore contextBefore} starts. */
     startLine: number;
-    /** The zero-based line where {@link contextAfter} ends. */
+    /** The zero-based line where {@link NeuroPositionContext.contextAfter contextBefore} ends. */
     endLine: number;
     /** The number of total lines in the file. */
     totalLines: number;
@@ -220,7 +225,7 @@ interface NeuroPositionContextOptions {
     cursorPosition?: vscode.Position;
     /** The start of the range around which to get the context. Defaults to the start of the document if not provided. */
     position?: vscode.Position;
-    /** The end of the range around which to get the context. If not provided, defaults to {@link position}, or the end of the document if {@link position} is not provided. */
+    /** The end of the range around which to get the context. If not provided, defaults to {@link NeuroPositionContextOptions.position position}, or the end of the document if {@link NeuroPositionContextOptions.position position} is not provided. */
     position2?: vscode.Position;
 }
 
@@ -335,10 +340,6 @@ export function combineGlobLinesToRegExp(lines: string[]): RegExp {
         .join('|');
     return new RegExp(result);
 }
-
-import { fastIsItIgnored } from '@/ignore_files_utils';
-import { unregisterAllActions } from './rce';
-import { changelogActions } from './changelog';
 
 /**
  * Check if an absolute path is safe for Neuro to access.
@@ -704,7 +705,7 @@ export function clearDecorations(editor: vscode.TextEditor) {
 /**
  * Checks workspace trust settings and returns an ActionValidationResult accordingly.
  */
-export function checkWorkspaceTrust(_actionData?: ActionData): ActionValidationResult {
+export function checkWorkspaceTrust(): ActionValidationResult {
     if (vscode.workspace.isTrusted) {
         return actionValidationAccept();
     }
@@ -737,7 +738,7 @@ export function getProperty(obj: unknown, path: string): unknown {
 /**
  * Checks if the extension is currently on a virtual file system.
  */
-export function checkVirtualWorkspace(_actionData?: ActionData): ActionValidationResult {
+export function checkVirtualWorkspace(): ActionValidationResult {
     if (vscode.workspace.workspaceFolders?.every(f => f.uri.scheme !== 'file')) {
         return actionValidationFailure('You cannot perform this action in a virtual workspace.');
     }
@@ -1069,4 +1070,89 @@ export function toTitleCase(str: string): string {
 export function isWindows(): boolean {
     if (vscode.env.uiKind === vscode.UIKind.Web) return false;
     else return process.platform === 'win32';
+}
+
+/**
+ * Checks if the object is a {@link Thenable} object
+ * @param obj The object that could be a Thenable
+ * @returns A boolean that indicates if it is a Thenable
+ */
+export function isThenable<T = unknown>(obj: T | Thenable<T>): boolean {
+    return typeof obj === 'object' && obj !== null && 'then' in obj && typeof obj.then === 'function';
+}
+
+/**
+ * Hex to RGBA converter
+ * @param hex A hex string that represents the colour
+ * @returns An object with the RGBA value derived from the hex.
+ */
+export function hexToRgba(hex: string): { r: number; g: number; b: number; a: number } {
+    let h = hex.replace('#', '').trim();
+
+    if (![3, 4, 6, 8].includes(h.length)) {
+        throw new Error(`Invalid hex color: ${hex}`);
+    }
+
+    // Validate that all characters are valid hexadecimal digits
+    if (!/^[0-9a-fA-F]+$/.test(h)) {
+        throw new Error(`Invalid hex color: ${hex}`);
+    }
+
+    // Expand shorthand forms (#RGB, #RGBA)
+    if (h.length === 3 || h.length === 4) {
+        h = h.split('').map(c => c + c).join('');
+    }
+
+    const r = parseInt(h.slice(0, 2), 16);
+    const g = parseInt(h.slice(2, 4), 16);
+    const b = parseInt(h.slice(4, 6), 16);
+    const a = h.length === 8 ? parseInt(h.slice(6, 8), 16) / 255 : 1;
+
+    // Safety check for NaN values (shouldn't happen after validation)
+    if (Number.isNaN(r) || Number.isNaN(g) || Number.isNaN(b) || Number.isNaN(a)) {
+        throw new Error(`Invalid hex color: ${hex}`);
+    }
+
+    return { r, g, b, a };
+}
+
+/**
+ * RGB(A) to hex converter
+ * @param r Red value
+ * @param g Green value
+ * @param b Blue value
+ * @param a Alpha value, 1 if omitted.
+ * @returns A hex string representation of the provided RGBA inputs.
+ */
+export function rgbaToHex(r: number, g: number, b: number, a?: number): string {
+    const clampInt = (v: number) => {
+        if (!isFinite(v) || Number.isNaN(v)) v = 0;
+        v = Math.round(v);
+        return Math.max(0, Math.min(255, v));
+    };
+
+    const normalizeAlpha = (v: number | undefined): number => {
+        if (v === undefined || v === null) return 1; // default opaque for normalization
+        if (!isFinite(v) || Number.isNaN(v)) return 1;
+        let alpha = Number(v);
+        if (alpha > 1) alpha = alpha / 255; // interpret as 0..255
+        alpha = Math.max(0, Math.min(1, alpha));
+        return alpha;
+    };
+
+    const rr = clampInt(r);
+    const gg = clampInt(g);
+    const bb = clampInt(b);
+
+    const toHex2 = (n: number) => n.toString(16).padStart(2, '0');
+
+    const base = `#${toHex2(rr)}${toHex2(gg)}${toHex2(bb)}`;
+
+    // If alpha was not provided at all, omit alpha byte.
+    if (arguments.length < 4) return base;
+
+    // alpha was provided (even if 1) — include alpha byte.
+    const alpha = normalizeAlpha(a);
+    const aByte = Math.round(alpha * 255);
+    return `${base}${toHex2(aByte)}`;
 }

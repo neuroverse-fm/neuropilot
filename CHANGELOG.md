@@ -6,6 +6,40 @@ Since v2.1.0, we're keeping a changelog of each version's changes in NeuroPilot.
 
 Changes between each version before then will not be listed.
 
+## 2.5.0
+
+### New settings
+
+- `neuropilot.actions.disablePreviewEffects` - Allows disabling preview effects. See below.
+
+### Additions
+
+- Certain actions can now emit preview effects if Neuro is using an action with its permission set to Copilot.
+  - These preview effects will be emitted primarily for editing actions (cursor and highlight effects), as well as file, linting and some git actions (file list effects).
+  - Any preview effects with built-in actions are done with blue colours, to differentiate with the other visual effects that this & other extensions have.
+  - Filesystem-based previews can be adjusted using the `workspace.colorCustomizations.neuropilot.filePreviewEffectsColour` setting.
+    - Support for changing other colours used in the extension (e.x. colours for diff added, diff removed, diff modified, highlight) *may* be added later.
+      - *may* means possibly, not guaranteed.
+  - At any time, you may disable preview effects using `neuropilot.actions.disablePreviewEffects`.
+- Actions can now have asynchronous validators. This allows validators requiring asynchronous operations to be properly handled according to the Neuro API specification.
+  - To accomodate for this, file, lint and git actions now have some or all of their validators moved to async validators instead.
+  - Async validators have a (for now hardcoded) 1-second timeout limit, and are also stopped from progressing if a cancel event fires.
+
+### Changes
+
+- The RCE system was reworked to handle asynchronous operations much better, in preparation for the upcoming public API. As a result, there may be slightly more context being sent to Neuro (most notably, from the new asynchronous validation system).
+  - Minor note: Action forces have also been reworked to go through RCE, also in preparation for the upcoming public API. This shouldn't change anything on Neuro's end, however, other than forcing retries over and over again for Neuro if she continuously fails to input stuff correctly.
+
+
+### Removals
+
+- Removed experimental schemas. Neuro will be given a relatively safe schema without using "fancier" semantics.
+
+### Fixes
+
+- A small amount of action handlers (like `terminate_task`) weren't updating their execution status correctly. Alongside a refactoring of the way handlers can update status, these handlers have also been fixed to actually update the execution status.
+- `uniqueItems` was placed in the wrong subschema for `make_git_commit`. It's been fixed now.
+
 ## 2.4.4
 
 Have fun drawing, Neuro!

@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
-import { handleTerminateTask, reloadTasks, taskEndedHandler } from '@/tasks';
-import { emergencyTerminalShutdown } from '@/pseudoterminal';
-import { isPathNeuroSafe, setVirtualCursor, normalizePath, getWorkspacePath } from '@/utils';
+import { addTaskActions, handleTerminateTask, reloadTasks, taskEndedHandler } from '@/tasks';
+import { addTerminalActions, emergencyTerminalShutdown } from '@/pseudoterminal';
+import { isPathNeuroSafe, setVirtualCursor, normalizePath, getWorkspacePath } from '@/utils/misc';
 import { NEURO } from '@/constants';
 import {
     initializeCommonState,
@@ -20,12 +20,13 @@ import {
     getHighlightDecorationRenderOptions,
     showUpdateReminder,
     startupCreateClient,
-} from '@shared/extension';
-import { registerChatParticipant } from '@/chat';
-import { addUnsupervisedActions, registerUnsupervisedHandlers } from './unsupervised';
+} from './shared/extension';
+import { addChatAction, registerChatParticipant } from '@/chat';
+import { addCommonUnsupervisedActions, registerUnsupervisedHandlers } from '@entry/shared/unsupervised';
 import { registerSendSelectionToNeuro } from '@/editing';
-import { loadIgnoreFiles } from '@/ignore_files_utils';
-import { reregisterAllActions } from '../rce';
+import { loadIgnoreFiles } from '@/utils/ignore_files';
+import { reregisterAllActions } from '@/rce';
+import { addCompleteCodeAction } from '@/completions';
 
 export function activate(context: vscode.ExtensionContext) {
     loadIgnoreFiles(
@@ -92,13 +93,19 @@ export function activate(context: vscode.ExtensionContext) {
 
 export function deactivate() {
     emergencyTerminalShutdown();
-    handleTerminateTask({
-        id: 'none',
-        name: 'terminate_task',
-    });
+    handleTerminateTask();
     commonDeactivate();
 }
 
 function reloadDesktopPermissions() {
     reloadPermissions(reloadTasks, () => reregisterAllActions(false));
 }
+
+function addUnsupervisedActions() {
+    addCommonUnsupervisedActions();
+    addChatAction();
+    addCompleteCodeAction();
+    addTaskActions();
+    addTerminalActions();
+}
+
