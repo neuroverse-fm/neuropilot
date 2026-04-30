@@ -13,7 +13,7 @@ import assert from 'node:assert';
 import { commonCancelEvents, checkCurrentFile, CONTEXT_NO_ACTIVE_DOCUMENT, STATUS_NO_ACTIVE_DOCUMENT, CONTEXT_NO_ACCESS, STATUS_NO_ACCESS, ACTION_FAIL_NOTES, validatePath, neuroSafeValidation, getUriExistence, validateIsAFile } from './utils/action_components';
 import { readFileActions } from './read_files';
 
-export const CATEGORY_FILE_ACTIONS = 'File Actions';
+export const CATEGORY_FILE_ACTIONS = 'File System';
 
 async function neuroSafeDeleteValidation(context: RCEContext): Promise<ActionValidationResult> {
     const actionData = context.data;

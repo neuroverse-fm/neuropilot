@@ -10,6 +10,7 @@ import { CONFIG, CONNECTION } from './config';
 import { targetedFileDeletedEvent } from '@events/files';
 import { RCECancelEvent } from '@events/utils';
 import { filePreviewProvider } from '@previews/files';
+import { addActions } from './rce';
 
 const CATEGORY_READING = 'Read Files';
 
@@ -255,6 +256,18 @@ export const readFileActions = {
         },
     },
 } satisfies Record<string, RCEAction>;
+
+export function addReadActions() {
+    addActions([
+        readFileActions.read_file,
+        readFileActions.switch_files,
+        readFileActions.move_cursor_position,
+        readFileActions.get_cursor_position,
+        readFileActions.get_user_selection,
+        readFileActions.highlight_lines,
+        readFileActions.find_text,
+    ]);
+}
 
 export function handleOpenFile(context: RCEContext): RCEHandlerReturns {
     const { data: actionData } = context;
