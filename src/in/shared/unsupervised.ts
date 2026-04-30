@@ -1,6 +1,6 @@
 import { NEURO } from '@/constants';
-import { addFileActions } from '@/file_actions';
-import { addEditingActions } from '@/editing';
+import { addFileActions } from '../../file_operations';
+import { addEditingActions } from '../../edit_files';
 import { addLintActions } from '@/lint_problems';
 import { addActions, cancelRequestAction, RCEActionHandler } from '@/rce';
 import { addChangelogActions } from '@/changelog';

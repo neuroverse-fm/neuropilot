@@ -1,5 +1,5 @@
 import * as assert from 'assert';
-import { editingActions } from '@/editing';
+import { editingActions } from '../../edit_files';
 
 // Test for the get_cursor action prompt generator using real logic
 suite('get_cursor Action', () => {

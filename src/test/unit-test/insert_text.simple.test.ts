@@ -1,5 +1,5 @@
 import * as assert from 'assert';
-import { editingActions } from '@/editing';
+import { editingActions } from '../../edit_files';
 import type { RCEContext } from '@/context/rce';
 
 // Tests for the insert_text action prompt generator using real logic

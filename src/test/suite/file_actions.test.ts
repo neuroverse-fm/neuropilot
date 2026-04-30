@@ -1,6 +1,6 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
-import * as fileActions from '@/file_actions';
+import * as fileActions from '../../file_operations';
 import { assertProperties, checkNoErrorWithTimeout, createTestDirectory, createTestFile, returnMockFunction } from '@test/test_utils';
 import { ActionData } from 'neuro-game-sdk';
 import type { RCEContext } from '@/context/rce';

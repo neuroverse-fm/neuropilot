@@ -1,5 +1,5 @@
 import * as assert from 'assert';
-import { editingActions } from '@/editing';
+import { editingActions } from '../../edit_files';
 
 // Tests for the undo and save action prompt generators using real logic
 suite('undo/save Actions', () => {

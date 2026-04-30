@@ -1,5 +1,5 @@
 import * as assert from 'assert';
-import { fileActions } from '@/file_actions';
+import { fileActions } from '../../file_operations';
 import type { RCEContext } from '@/context/rce';
 
 // Tests for file action prompt generators using real logic with loose checks

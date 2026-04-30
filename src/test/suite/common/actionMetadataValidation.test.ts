@@ -1,8 +1,8 @@
 import { validate } from 'jsonschema';
 import type { JSONSchema7 } from 'json-schema';
-import { CATEGORY_FILE_ACTIONS, fileActions } from '~/src/file_actions';
+import { CATEGORY_FILE_ACTIONS, fileActions } from '../../../file_operations';
 import assert from 'node:assert';
-import { CATEGORY_EDITING, editingActions } from '~/src/editing';
+import { CATEGORY_EDITING, editingActions } from '../../../edit_files';
 import { changelogActions } from '~/src/changelog';
 import { REQUEST_COOKIE_ACTION } from '@/functions/cookies';
 import { CATEGORY_GIT, CATEGORY_GIT_CONFIG, CATEGORY_GIT_REMOTES, gitActions } from '~/src/git';

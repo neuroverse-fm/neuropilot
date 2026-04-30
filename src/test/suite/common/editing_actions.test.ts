@@ -19,7 +19,7 @@ import {
     handleRewriteLines,
     handleDeleteLines,
     handleHighlightLines,
-} from '@/editing';
+} from '../../../edit_files';
 import { createTestFile, checkNoErrorWithTimeout, setupDocument, returnMockFunction } from '@test/test_utils';
 
 const makeContext = (data: ActionData) => ({ data, updateStatus: returnMockFunction() } as unknown as RCEContext);
