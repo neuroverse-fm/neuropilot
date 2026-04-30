@@ -328,26 +328,6 @@ export const editFileActions = {
         },
         promptGenerator: 'undo the last action.',
     },
-    save: {
-        name: 'save',
-        description: 'Manually save the currently open document.',
-        category: CATEGORY_EDITING,
-        handler: handleSave,
-        cancelEvents: [
-            ...commonCancelEvents,
-            () => new RCECancelEvent({
-                reason: 'the active document was saved.',
-                events: [
-                    [vscode.workspace.onDidSaveTextDocument, null],
-                ],
-            }),
-        ],
-        validators: {
-            sync: [checkCurrentFile],
-        },
-        promptGenerator: 'save.',
-        registerCondition: () => vscode.workspace.getConfiguration('files').get<string>('autoSave') !== 'afterDelay',
-    },
     rewrite_all: {
         name: 'rewrite_all',
         description: 'Rewrite the entire contents of the file. Your cursor will be moved to the start of the file.',
@@ -543,7 +523,6 @@ export function addEditingActions() {
         editFileActions.delete_lines,
         editFileActions.replace_user_selection,
         editFileActions.edit_with_diff,
-        editFileActions.save,
     ]);
 }
 
@@ -798,38 +777,6 @@ export function handleUndo(): RCEHandlerReturns {
         (erm) => {
             logOutput('ERROR', `Failed to undo last action: ${erm}`);
             return actionHandlerFailure('Failed to undo last action', 'Failed to undo');
-        },
-    );
-}
-
-export function handleSave(): RCEHandlerReturns {
-    const document = vscode.window.activeTextEditor?.document;
-    if (document === undefined) {
-        return actionHandlerFailure(CONTEXT_NO_ACTIVE_DOCUMENT, STATUS_NO_ACTIVE_DOCUMENT);
-    }
-    if (!isPathNeuroSafe(document.fileName)) {
-        return actionHandlerFailure(CONTEXT_NO_ACCESS, STATUS_NO_ACCESS);
-    }
-
-    NEURO.saving = true;
-    logOutput('INFO', `${NEURO.currentController} is saving the current document.`);
-
-    return document.save().then(
-        (saved) => {
-            if (saved) {
-                logOutput('INFO', 'Document saved successfully.');
-                NEURO.saving = false;
-                return actionHandlerSuccess('Document saved successfully.', 'Document saved');
-            } else {
-                logOutput('WARNING', 'Document save returned false.');
-                NEURO.saving = false;
-                return actionHandlerFailure('Document did not save.', 'Document did not save');
-            }
-        },
-        (erm: string) => {
-            logOutput('ERROR', `Failed to save document: ${erm}`);
-            NEURO.saving = false;
-            return actionHandlerFailure('Failed to save document.', 'Failed to save');
         },
     );
 }

@@ -1,5 +1,5 @@
 import * as assert from 'assert';
-import { editFileActions } from '../../edit_files';
+import { editFileActions } from '@/edit_files';
 import type { RCEContext } from '@/context/rce';
 
 // Tests for the replace_text action prompt generator using real logic

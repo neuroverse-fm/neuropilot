@@ -10,6 +10,7 @@ import { addActions } from './rce';
 import { RCEContext } from '@ctx/rce';
 import { filePreviewProvider } from '@/previews/files';
 import assert from 'node:assert';
+import { commonCancelEvents, checkCurrentFile, CONTEXT_NO_ACTIVE_DOCUMENT, STATUS_NO_ACTIVE_DOCUMENT, CONTEXT_NO_ACCESS, STATUS_NO_ACCESS } from './utils/action_components';
 
 export const CATEGORY_FILE_ACTIONS = 'File Actions';
 const ACTION_FAIL_NOTES = {
@@ -66,7 +67,7 @@ async function getUriExistence(uri: vscode.Uri): Promise<boolean> {
 }
 
 function neuroSafeValidation(shouldExist = false) {
-    return async ({ data: actionData}: RCEContext): Promise<ActionValidationResult> => {
+    return async ({ data: actionData }: RCEContext): Promise<ActionValidationResult> => {
         let result: ActionValidationResult = actionValidationAccept();
         if (actionData.params?.filePath) {
             result = await validatePath(actionData.params.filePath, shouldExist, 'file');
@@ -263,7 +264,7 @@ export const fileActions = {
         preview: (context: RCEContext) => {
             const workspaceUri = getWorkspaceUri();
             if (!workspaceUri) {
-                return { dispose: () => {} };
+                return { dispose: () => { } };
             }
 
             const folder = context.data.params?.folder;
@@ -577,6 +578,26 @@ export const fileActions = {
             const pathUri = vscode.Uri.joinPath(workspaceUri, context.data.params.path);
             return filePreviewProvider.mark([pathUri], 'delete this', true);
         },
+    },
+    save: {
+        name: 'save',
+        description: 'Manually save the currently open document.',
+        category: CATEGORY_FILE_ACTIONS,
+        handler: handleSave,
+        cancelEvents: [
+            ...commonCancelEvents,
+            () => new RCECancelEvent({
+                reason: 'the active document was saved.',
+                events: [
+                    [vscode.workspace.onDidSaveTextDocument, null],
+                ],
+            }),
+        ],
+        validators: {
+            sync: [checkCurrentFile],
+        },
+        promptGenerator: 'save.',
+        registerCondition: () => vscode.workspace.getConfiguration('files').get<string>('autoSave') !== 'afterDelay',
     },
 } satisfies Record<string, RCEAction>;
 
@@ -998,6 +1019,38 @@ export function handleReadFile(context: RCEContext): RCEHandlerReturns {
         notifyOnCaughtException('read_file', erm);
         return actionHandlerFailure(`Unable to read file ${file}`, EXCEPTION_THROWN_STRING);
     }
+}
+
+export function handleSave(): RCEHandlerReturns {
+    const document = vscode.window.activeTextEditor?.document;
+    if (document === undefined) {
+        return actionHandlerFailure(CONTEXT_NO_ACTIVE_DOCUMENT, STATUS_NO_ACTIVE_DOCUMENT);
+    }
+    if (!isPathNeuroSafe(document.fileName)) {
+        return actionHandlerFailure(CONTEXT_NO_ACCESS, STATUS_NO_ACCESS);
+    }
+
+    NEURO.saving = true;
+    logOutput('INFO', `${NEURO.currentController} is saving the current document.`);
+
+    return document.save().then(
+        (saved) => {
+            if (saved) {
+                logOutput('INFO', 'Document saved successfully.');
+                NEURO.saving = false;
+                return actionHandlerSuccess('Document saved successfully.', 'Document saved');
+            } else {
+                logOutput('WARNING', 'Document save returned false.');
+                NEURO.saving = false;
+                return actionHandlerFailure('Document did not save.', 'Document did not save');
+            }
+        },
+        (erm: string) => {
+            logOutput('ERROR', `Failed to save document: ${erm}`);
+            NEURO.saving = false;
+            return actionHandlerFailure('Failed to save document.', 'Failed to save');
+        },
+    );
 }
 
 /**

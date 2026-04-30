@@ -1,5 +1,5 @@
 import * as assert from 'assert';
-import { readFileActions } from '../../read_files';
+import { readFileActions } from '@/read_files';
 
 // Test for the get_cursor action prompt generator using real logic
 suite('get_cursor Action', () => {

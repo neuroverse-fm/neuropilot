@@ -11,11 +11,11 @@ import {
     handleReplaceText,
     handleDeleteText,
     handleUndo,
-    handleSave,
     handleRewriteAll,
     handleRewriteLines,
     handleDeleteLines,
-} from '../../../edit_files';
+} from '@/edit_files';
+import { handleSave } from '@/file_operations';
 import {
     handleFindText,
     handleHighlightLines,

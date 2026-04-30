@@ -1,5 +1,5 @@
 import * as assert from 'assert';
-import { readFileActions } from '../../read_files';
+import { readFileActions } from '@/read_files';
 import type { RCEContext } from '@/context/rce';
 
 // Tests for the find_text action prompt generator using real logic
