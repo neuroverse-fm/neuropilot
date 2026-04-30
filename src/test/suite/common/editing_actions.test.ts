@@ -6,20 +6,22 @@ import { ActionData } from 'neuro-game-sdk';
 import type { RCEContext } from '@/context/rce';
 import type { ActionHandlerResult } from '@/utils/neuro_client';
 import {
-    handlePlaceCursor,
-    handleGetCursor,
     handleInsertText,
     handleInsertLines,
     handleReplaceText,
     handleDeleteText,
-    handleFindText,
     handleUndo,
     handleSave,
     handleRewriteAll,
     handleRewriteLines,
     handleDeleteLines,
-    handleHighlightLines,
 } from '../../../edit_files';
+import {
+    handleFindText,
+    handleHighlightLines,
+    handlePlaceCursor,
+    handleGetCursor,
+} from '@/read_files';
 import { createTestFile, checkNoErrorWithTimeout, setupDocument, returnMockFunction } from '@test/test_utils';
 
 const makeContext = (data: ActionData) => ({ data, updateStatus: returnMockFunction() } as unknown as RCEContext);

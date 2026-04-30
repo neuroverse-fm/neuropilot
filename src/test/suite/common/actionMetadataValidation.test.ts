@@ -2,7 +2,7 @@ import { validate } from 'jsonschema';
 import type { JSONSchema7 } from 'json-schema';
 import { CATEGORY_FILE_ACTIONS, fileActions } from '../../../file_operations';
 import assert from 'node:assert';
-import { CATEGORY_EDITING, editingActions } from '../../../edit_files';
+import { CATEGORY_EDITING, editFileActions } from '../../../edit_files';
 import { changelogActions } from '~/src/changelog';
 import { REQUEST_COOKIE_ACTION } from '@/functions/cookies';
 import { CATEGORY_GIT, CATEGORY_GIT_CONFIG, CATEGORY_GIT_REMOTES, gitActions } from '~/src/git';
@@ -26,12 +26,12 @@ suite('Validate action metadata', async () => {
     });
 
     test('Edit Actions', () => {
-        const actions = Object.keys(editingActions) as (keyof typeof editingActions)[];
+        const actions = Object.keys(editFileActions) as (keyof typeof editFileActions)[];
         for (const a of actions) {
-            assert.strictEqual(a, editingActions[a].name);
-            assert.strictEqual(CATEGORY_EDITING, editingActions[a].category);
-            if ('schema' in editingActions[a] && editingActions[a].schema) {
-                assert.ok(validate(editingActions[a].schema, metaschema).valid);
+            assert.strictEqual(a, editFileActions[a].name);
+            assert.strictEqual(CATEGORY_EDITING, editFileActions[a].category);
+            if ('schema' in editFileActions[a] && editFileActions[a].schema) {
+                assert.ok(validate(editFileActions[a].schema, metaschema).valid);
             }
         }
     });
