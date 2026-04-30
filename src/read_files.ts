@@ -1,16 +1,134 @@
 import * as vscode from 'vscode';
 
 import { RCEContext } from '@ctx/rce';
-import { NEURO } from './constants';
-import { CATEGORY_EDITING, previewCursorMovement, previewFindFunctions } from './edit_files';
-import { isPathNeuroSafe, getVirtualCursor, setVirtualCursor, getPositionContext, logOutput, formatContext, getFence, escapeRegExp, filterFileContents, indexFromPosition, positionFromIndex } from './utils/misc';
-import { RCEAction, RCEHandlerReturns, actionHandlerFailure, actionHandlerSuccess } from './utils/neuro_client';
-import { cancelOnDidChangeActiveTextEditor, checkCurrentFile, commonCancelEvents, commonCancelEventsWithCursor, CONTEXT_NO_ACCESS, CONTEXT_NO_ACTIVE_DOCUMENT, createLineRangeValidator, createPositionValidator, createStringValidator, findAndFilter, LINE_RANGE_SCHEMA, LineRange, MATCH_OPTIONS, MatchOptions, POSITION_SCHEMA, STATUS_NO_ACCESS, STATUS_NO_ACTIVE_DOCUMENT, STATUS_NO_MATCHES_FOUND, validateRegex } from './utils/action_components';
+import { EXCEPTION_THROWN_STRING, NEURO, PROMISE_REJECTION_STRING } from './constants';
+import { previewCursorMovement, previewFindFunctions } from './edit_files';
+import { isPathNeuroSafe, getVirtualCursor, setVirtualCursor, getPositionContext, logOutput, formatContext, getFence, escapeRegExp, filterFileContents, indexFromPosition, positionFromIndex, getWorkspacePath, getWorkspaceUri, NeuroPositionContext, normalizePath, notifyOnCaughtException, simpleFileName } from './utils/misc';
+import { RCEAction, RCEHandlerReturns, actionHandlerFailure, actionHandlerSuccess, actionValidationAccept, actionValidationFailure } from './utils/neuro_client';
+import { ACTION_FAIL_NOTES, binaryFileValidation, cancelOnDidChangeActiveTextEditor, checkCurrentFile, commonCancelEvents, commonCancelEventsWithCursor, CONTEXT_NO_ACCESS, CONTEXT_NO_ACTIVE_DOCUMENT, createLineRangeValidator, createPositionValidator, createStringValidator, findAndFilter, LINE_RANGE_SCHEMA, LineRange, MATCH_OPTIONS, MatchOptions, neuroSafeValidation, POSITION_SCHEMA, STATUS_NO_ACCESS, STATUS_NO_ACTIVE_DOCUMENT, STATUS_NO_MATCHES_FOUND, validateIsAFile, validateRegex } from './utils/action_components';
 import { CONFIG, CONNECTION } from './config';
+import { targetedFileDeletedEvent } from '@events/files';
+import { RCECancelEvent } from '@events/utils';
+import { filePreviewProvider } from '@previews/files';
 
 const CATEGORY_READING = 'Read Files';
 
 export const readFileActions = {
+    read_file: {
+        name: 'read_file',
+        description: 'Read a file\'s contents without opening it.' +
+            'If filePath is not specified, reads the currently open file. ',
+        category: CATEGORY_READING,
+        schema: {
+            type: 'object',
+            properties: {
+                filePath: { type: 'string', description: 'The relative path to the file. If omitted, reads the currently open file.', examples: ['./index.html', 'style.css', 'src/main.js'] },
+            },
+            additionalProperties: false,
+        },
+        handler: handleReadFile,
+        preview: (context: RCEContext) => {
+            const workspaceUri = getWorkspaceUri();
+            if (!workspaceUri || !context.data.params?.filePath) {
+                return { dispose: () => { } };
+            }
+            const fileUri = vscode.Uri.joinPath(workspaceUri, context.data.params.filePath);
+            return filePreviewProvider.mark([fileUri], 'read this file');
+        },
+        cancelEvents: [
+            (context: RCEContext) => {
+                if (!context.data.params?.filePath) {
+                    // For current file, cancel on document change
+                    return new RCECancelEvent({
+                        reason: 'the active document was changed.',
+                        events: [
+                            [vscode.workspace.onDidChangeTextDocument, null],
+                        ],
+                    });
+                }
+                // it looks more readable this way okay
+                return null;
+            },
+            (context: RCEContext) => context.data.params?.filePath ? targetedFileDeletedEvent(context.data.params.filePath) : null,
+        ],
+        validators: {
+            async: [
+                async (context: RCEContext) => {
+                    // Some sub-validators don't understand an empty filePath and will crash unless passed a modified context
+                    // Copy to avoid mutation (there shouldn't be any recursive properties possible on context.data)
+                    const contextCopy = Object.assign({}, context);     // Shallow copy
+                    const actionData = structuredClone(context.data);   // Deep copy
+                    contextCopy.data = actionData;
+
+                    const workspaceUri = getWorkspaceUri();
+                    if (!workspaceUri) {
+                        return actionValidationFailure('You are not in a workspace.', 'Not in a workspace.');
+                    }
+
+                    // Default to currently open file if filePath not provided
+                    if (!actionData.params.filePath || actionData.params.filePath === '') {
+                        const document = vscode.window.activeTextEditor?.document;
+                        if (!document) {
+                            return actionValidationFailure('File path left empty and you are not in an active file to edit.', 'Not in editable file.');
+                        }
+
+                        actionData.params.filePath = vscode.workspace.asRelativePath(document.uri, false);
+                    } else {
+                        // Normalize user-provided paths using VS Code's relative path resolver
+                        const normalizedUri = vscode.Uri.joinPath(workspaceUri, actionData.params.filePath);
+                        actionData.params.filePath = vscode.workspace.asRelativePath(normalizedUri, false);
+                    }
+
+                    // Run all validators with the resolved filePath
+                    const neuroSafeResult = await neuroSafeValidation(true)(context);
+                    if (!neuroSafeResult.success) return neuroSafeResult;
+
+                    const binaryResult = await binaryFileValidation(contextCopy);
+                    if (!binaryResult.success) return binaryResult;
+
+                    const fileResult = await validateIsAFile(contextCopy);
+                    if (!fileResult.success) return fileResult;
+
+                    return actionValidationAccept();
+                },
+            ],
+        },
+        promptGenerator: (context: RCEContext) => {
+            if (context.data.params?.filePath) {
+                return `read the file "${context.data.params.filePath}" (without opening it).`;
+            }
+            return 'get the current file\'s contents.';
+        },
+    },
+    switch_files: {
+        name: 'switch_files',
+        description: 'Switch to a different file in the workspace. You cannot open a binary file directly.',
+        category: CATEGORY_READING,
+        schema: {
+            type: 'object',
+            properties: {
+                filePath: { type: 'string', description: 'The relative path to the file.', examples: ['src/index.ts', './main.py'] },
+            },
+            required: ['filePath'],
+            additionalProperties: false,
+        },
+        handler: handleOpenFile,
+        cancelEvents: [
+            (context: RCEContext) => targetedFileDeletedEvent(context.data.params?.filePath),
+        ],
+        validators: {
+            async: [neuroSafeValidation(true), validateIsAFile, binaryFileValidation],
+        },
+        promptGenerator: (context: RCEContext) => `open the file "${context.data.params?.filePath}".`,
+        preview: (context: RCEContext) => {
+            const workspaceUri = getWorkspaceUri();
+            if (!workspaceUri || !context.data.params?.filePath) {
+                return { dispose: () => { } };
+            }
+            const fileUri = vscode.Uri.joinPath(workspaceUri, context.data.params.filePath);
+            return filePreviewProvider.mark([fileUri], 'open this file');
+        },
+    },
     move_cursor_position: {
         name: 'move_cursor_position',
         description: 'Move your cursor in the current file to the specified position. Line and column numbers are one-based for "absolute" and zero-based for "relative".',
@@ -75,7 +193,7 @@ export const readFileActions = {
             + ' This will place your cursor directly before or after the found text (depending on "moveCursor"), unless you searched for multiple instances.'
             + ' Set "highlight" to true to highlight the found text, if you want to draw insert_turtle_here\'s or Chat\'s attention to it.'
             + ' If you search for multiple matches, the numbers at the start of each line are the one-based line numbers and not part of the code.',
-        category: CATEGORY_EDITING,
+        category: CATEGORY_READING,
         schema: {
             type: 'object',
             properties: {
@@ -137,6 +255,113 @@ export const readFileActions = {
         },
     },
 } satisfies Record<string, RCEAction>;
+
+export function handleOpenFile(context: RCEContext): RCEHandlerReturns {
+    const { data: actionData } = context;
+    const relativePath = actionData.params.filePath;
+
+    const workspaceUri = getWorkspaceUri()!;
+    const relative = normalizePath(relativePath).replace(/^\/|\/$/g, '');
+    const absolutePath = getWorkspacePath() + '/' + relative;
+    if (!isPathNeuroSafe(absolutePath)) {
+        return actionHandlerFailure(`You are not allowed to access ${relativePath}`, ACTION_FAIL_NOTES.noAccess);
+    }
+
+    const fileUri = vscode.Uri.joinPath(workspaceUri, relative);
+
+    return openFileAsync();
+
+    async function openFileAsync() {
+        try {
+            // Open via URI (not fsPath) to work across both file: and virtual workspace schemes
+            const document = await vscode.workspace.openTextDocument(fileUri);
+            await vscode.window.showTextDocument(document);
+
+            logOutput('INFO', `Opened file ${relativePath}`);
+
+            // Usually handled by editorChangedHandler in editing.ts. If disabled, send content now.
+            // Right after opening there may be no virtual cursor yet; in that case, send full file contents
+            // so consumers (and tests) receive deterministic context.
+            if (!CONFIG.sendContentsOnFileChange) {
+                const cursor = getVirtualCursor();
+                if (cursor === undefined || cursor === null) {
+                    // No cursor available yet: send entire document
+                    const decodedContent = document.getText();
+                    const fence = getFence(decodedContent);
+                    NEURO.client?.sendContext(`Contents of the file ${relativePath}:\n\n${fence}\n${decodedContent}\n${fence}`);
+                } else {
+                    // Cursor available: send contextual snippet around the cursor
+                    const cursorContext = getPositionContext(document, cursor);
+                    NEURO.client?.sendContext(formatContext(cursorContext));
+                }
+            }
+            return actionHandlerSuccess(`Opened file ${relativePath}`, 'File opened');
+        } catch (erm: unknown) {
+            if (erm instanceof vscode.FileSystemError && erm.code === 'FileNotFound') {
+                return actionHandlerFailure(`File ${relativePath} not found`, ACTION_FAIL_NOTES.doesntExist);
+            } else {
+                notifyOnCaughtException('open_file', erm);
+                return actionHandlerFailure(`Failed to open file ${relativePath}`, EXCEPTION_THROWN_STRING);
+            }
+        }
+    }
+}
+
+export function handleReadFile(context: RCEContext): RCEHandlerReturns {
+    const { data: actionData } = context;
+    const editor = vscode.window.activeTextEditor;
+    if (!editor) {
+        return actionHandlerFailure('No active text editor.', 'No active text editor.');
+    }
+    // If no filePath provided, read current file
+    if (!actionData.params.filePath || actionData.params.filePath === '' || vscode.workspace.asRelativePath(editor.document.uri) === vscode.workspace.asRelativePath(vscode.Uri.joinPath(getWorkspaceUri()!, actionData.params.filePath))) {
+        const document = editor.document;
+        const fileName = simpleFileName(document.fileName);
+        const cursor = getVirtualCursor()!;
+
+        if (!isPathNeuroSafe(document.fileName)) {
+            return actionHandlerFailure(`You are not allowed to access ${fileName}`, 'Access denied');
+        }
+
+        // Manually construct context to include entire file
+        const positionContext: NeuroPositionContext = {
+            contextBefore: filterFileContents(document.getText(new vscode.Range(new vscode.Position(0, 0), cursor))),
+            contextAfter: filterFileContents(document.getText(new vscode.Range(cursor, document.lineAt(document.lineCount - 1).rangeIncludingLineBreak.end))),
+            startLine: 0,
+            endLine: document.lineCount - 1,
+            totalLines: document.lineCount,
+            cursorDefined: true,
+        };
+
+        return actionHandlerSuccess(`Contents of the file ${fileName}:\n\n${formatContext(positionContext)}`, 'File read');
+    }
+
+    // Original read_file logic for specific file
+    const file = actionData.params.filePath;
+
+    const workspaceUri = getWorkspaceUri()!;
+    const absolute = normalizePath(workspaceUri.fsPath + '/' + file.replace(/^\/|\/$/g, ''));
+    if (!isPathNeuroSafe(absolute)) {
+        return actionHandlerFailure(`You are not allowed to access ${file}`, 'Access denied');
+    }
+    const fileAsUri = workspaceUri.with({ path: absolute });
+    try {
+        return vscode.workspace.fs.readFile(fileAsUri).then(
+            (data: Uint8Array) => {
+                const decodedContent = new TextDecoder('utf-8').decode(data);
+                const fence = getFence(decodedContent);
+                return actionHandlerSuccess(`Contents of the file ${file}:\n\n${fence}\n${decodedContent}\n${fence}`, 'File contents sent');
+            },
+            (erm: unknown) => {
+                logOutput('ERROR', `Couldn't read file ${absolute}: ${erm}`);
+                return actionHandlerFailure(`Couldn't read file ${file}`, PROMISE_REJECTION_STRING);
+            },
+        );
+    } catch (erm: unknown) {
+        notifyOnCaughtException('read_file', erm);
+        return actionHandlerFailure(`Unable to read file ${file}`, EXCEPTION_THROWN_STRING);
+    }
+}
 
 export function handlePlaceCursor(context: RCEContext): RCEHandlerReturns {
     const { data: actionData } = context;

@@ -3,7 +3,7 @@ import * as vscode from 'vscode';
 import { RCEContext } from '@ctx/rce';
 import { createCursorPositionChangedEvent } from '@events/cursor';
 import { RCECancelEvent } from '@events/utils';
-import { getProperty, isPathNeuroSafe, getVirtualCursor, indexFromPosition } from './misc';
+import { getProperty, isPathNeuroSafe, getVirtualCursor, indexFromPosition, getWorkspacePath, normalizePath, getWorkspaceUri, isBinary } from './misc';
 import { ActionValidationResult, RCEAction, actionValidationAccept, actionValidationFailure, actionValidationRetry } from './neuro_client';
 import { JSONSchema7 } from 'json-schema';
 
@@ -294,6 +294,148 @@ export function checkCurrentFile(): ActionValidationResult {
         return actionValidationFailure(CONTEXT_NO_ACTIVE_DOCUMENT);
     if (!isPathNeuroSafe(document.fileName))
         return actionValidationFailure(CONTEXT_NO_ACCESS);
+
+    return actionValidationAccept();
+}
+
+export const ACTION_FAIL_NOTES = {
+    noFilePath: 'Directory path left unspecified',
+    noAccess: 'Access disallowed to targeted directory',
+    noWorkspace: 'Not in a workspace',
+    alreadyExists: 'Targeted path already exists',
+    doesntExist: 'Targeted path does not exist',
+    binaryFile: 'Targeted file is a binary file',
+    targetedFile: 'Targeted path is a file',
+    targetedFolder: 'Targeted path is a folder',
+    incorrectType: 'Targeted path is not a file',
+} as const;
+
+/**
+ * The path validator.
+ * @param path The relative path to the file/folder.
+ * @param shouldExist Whether the file/folder should exist for validation to succeed. `true` returns a failure if it doesn't exist, `false` returns a failure if it does.
+ * @param pathType What type of path it is.
+ * @returns A validation message. {@link actionValidationFailure} if any validation steps fail, {@link actionValidationAccept} otherwise.
+ */
+export async function validatePath(path: string, shouldExist: boolean, pathType: string): Promise<ActionValidationResult> {
+    if (path === '') {
+        return actionValidationRetry('No file path specified.', ACTION_FAIL_NOTES.noFilePath);
+    };
+    const relativePath = normalizePath(path).replace(/^\/|\/$/g, '');
+    const absolutePath = (getWorkspacePath() ?? '') + '/' + relativePath;
+    if (!isPathNeuroSafe(absolutePath)) {
+        return actionValidationFailure(`You are not allowed to access this ${pathType}.`, ACTION_FAIL_NOTES.noAccess);
+    }
+    const base = vscode.workspace.workspaceFolders?.[0]?.uri;
+    if (!base) {
+        return actionValidationFailure('You are not in a workspace.', ACTION_FAIL_NOTES.noWorkspace);
+    }
+
+    const doesExist = await getUriExistence(vscode.Uri.joinPath(base, relativePath));
+    if (!shouldExist && doesExist) {
+        return actionValidationFailure(`${pathType} "${path}" already exists.`, ACTION_FAIL_NOTES.alreadyExists.replace('path', pathType));
+    } else if (shouldExist && !doesExist) {
+        return actionValidationFailure(`${pathType} "${path}" doesn't exist.`, ACTION_FAIL_NOTES.doesntExist.replace('path', pathType));
+    }
+
+    return actionValidationAccept();
+};
+
+export async function getUriExistence(uri: vscode.Uri): Promise<boolean> {
+    try {
+        await vscode.workspace.fs.stat(uri);
+        return true;
+    } catch (erm: unknown) {
+        if (erm instanceof vscode.FileSystemError && erm.code === 'FileNotFound') return false;
+        else throw erm;
+    }
+}
+
+export function neuroSafeValidation(shouldExist = false) {
+    return async ({ data: actionData }: RCEContext): Promise<ActionValidationResult> => {
+        let result: ActionValidationResult = actionValidationAccept();
+        if (actionData.params?.filePath) {
+            result = await validatePath(actionData.params.filePath, shouldExist, 'file');
+        }
+        if (!result.success) return result;
+        if (actionData.params?.folderPath) {
+            result = await validatePath(actionData.params.folderPath, shouldExist, 'folder');
+        }
+        return result;
+    };
+}
+
+/**
+ * Validate if the file is a binary file.
+ * Always fails for folders.
+ * @param actionData The action data.
+ * @returns The validation result.
+ */
+export async function binaryFileValidation(context: RCEContext): Promise<ActionValidationResult> {
+    const actionData = context.data;
+    const relativePath = actionData.params.filePath;
+
+    const workspaceUri = getWorkspaceUri();
+
+    if (!workspaceUri)
+        return actionValidationFailure('You are not in a workspace.', ACTION_FAIL_NOTES.noWorkspace);
+
+    const absolutePath = normalizePath(workspaceUri.fsPath + '/' + relativePath.replace(/^\/|\/$/g, ''));
+    const uri = workspaceUri.with({ path: absolutePath });
+
+    let stat: vscode.FileStat;
+    try {
+        stat = await vscode.workspace.fs.stat(uri);
+    } catch {
+        return actionValidationFailure('Specified file does not exist.', ACTION_FAIL_NOTES.doesntExist.replace('directory', 'file'));
+    }
+
+    // Fail if it is a directory
+    if ((stat.type & vscode.FileType.Directory) === vscode.FileType.Directory) {
+        return actionValidationFailure('Specified path is a directory, not a file.', ACTION_FAIL_NOTES.targetedFolder);
+    }
+
+    const file = await vscode.workspace.fs.readFile(uri);
+    if (await isBinary(file)) {
+        return actionValidationFailure('You cannot open a binary file.', ACTION_FAIL_NOTES.binaryFile);
+    }
+    return actionValidationAccept();
+}
+
+/**
+ * Validates if the targeted file is a file.
+ * @returns The validation result.
+ */
+export async function validateIsAFile(context: RCEContext): Promise<ActionValidationResult> {
+    const actionData = context.data;
+    const filePath = actionData.params?.filePath;
+    if (!filePath)
+        return actionValidationRetry('No file path specified.', ACTION_FAIL_NOTES.noFilePath);
+
+    const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+    if (!workspaceFolder)
+        return actionValidationFailure('You are not in an open workspace.', ACTION_FAIL_NOTES.noWorkspace);
+
+    const normalizedPath = normalizePath(filePath).replace(/^\/|\/$/g, '');
+    const segments = normalizedPath.split('/').filter(Boolean);
+    if (segments.length === 0)
+        return actionValidationRetry('No file path specified.', ACTION_FAIL_NOTES.noFilePath);
+    const fullPath = vscode.Uri.joinPath(workspaceFolder.uri, ...segments);
+
+    try {
+        const stat = await vscode.workspace.fs.stat(fullPath);
+        const isDirectory = (stat.type & vscode.FileType.Directory) === vscode.FileType.Directory;
+        const isFile = (stat.type & vscode.FileType.File) === vscode.FileType.File;
+
+        if (isDirectory)
+            return actionValidationFailure(`${filePath} is a directory, not a file.`, ACTION_FAIL_NOTES.targetedFolder);
+        if (!isFile)
+            return actionValidationFailure(`${filePath} is not a file.`, ACTION_FAIL_NOTES.targetedFolder);
+    } catch (erm: unknown) {
+        if (erm instanceof vscode.FileSystemError && erm.code === 'FileNotFound')
+            return actionValidationFailure(`${filePath} does not exist.`, ACTION_FAIL_NOTES.doesntExist);
+        throw erm;
+    }
 
     return actionValidationAccept();
 }
