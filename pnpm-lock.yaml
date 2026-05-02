@@ -24,8 +24,8 @@ importers:
         specifier: ^1.5.0
         version: 1.5.0
       neuro-game-sdk:
-        specifier: ^1.0.10
-        version: 1.0.10(ws@8.18.3)
+        specifier: ^1.1.0
+        version: 1.1.0
       preact:
         specifier: ^10.29.1
         version: 10.29.1
@@ -659,28 +659,24 @@ packages:
     engines: {node: '>= 10'}
     cpu: [arm64]
     os: [linux]
-    libc: [glibc]
 
   '@node-rs/crc32-linux-arm64-musl@1.10.6':
     resolution: {integrity: sha512-k8ra/bmg0hwRrIEE8JL1p32WfaN9gDlUUpQRWsbxd1WhjqvXea7kKO6K4DwVxyxlPhBS9Gkb5Urq7Y4mXANzaw==}
     engines: {node: '>= 10'}
     cpu: [arm64]
     os: [linux]
-    libc: [musl]
 
   '@node-rs/crc32-linux-x64-gnu@1.10.6':
     resolution: {integrity: sha512-IfjtqcuFK7JrSZ9mlAFhb83xgium30PguvRjIMI45C3FJwu18bnLk1oR619IYb/zetQT82MObgmqfKOtgemEKw==}
     engines: {node: '>= 10'}
     cpu: [x64]
     os: [linux]
-    libc: [glibc]
 
   '@node-rs/crc32-linux-x64-musl@1.10.6':
     resolution: {integrity: sha512-LbFYsA5M9pNunOweSt6uhxenYQF94v3bHDAQRPTQ3rnjn+mK6IC7YTAYoBjvoJP8lVzcvk9hRj8wp4Jyh6Y80g==}
     engines: {node: '>= 10'}
     cpu: [x64]
     os: [linux]
-    libc: [musl]
 
   '@node-rs/crc32-wasm32-wasi@1.10.6':
     resolution: {integrity: sha512-KaejdLgHMPsRaxnM+OG9L9XdWL2TabNx80HLdsCOoX9BVhEkfh39OeahBo8lBmidylKbLGMQoGfIKDjq0YMStw==}
@@ -2446,12 +2442,6 @@ packages:
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
     hasBin: true
 
-  modern-isomorphic-ws@1.0.6:
-    resolution: {integrity: sha512-PBJeIsFuYR8Mx4IC6KMtslXDb02oCKt58Dee/R10sz10FiPjBgZNTLyzlWR3428U4SzWUBJiiZ7iWvK2tcXShQ==}
-    deprecated: Starting with version 22.4.0, Node.js includes a WebSocket client API without an experimental flag
-    peerDependencies:
-      ws: ^8.11.0
-
   morgan@1.10.1:
     resolution: {integrity: sha512-223dMRJtI/l25dJKWpgij2cMtywuG/WiUKXdvwfbhGKBhy1puASqXwFzmWZ7+K73vUPoR7SS2Qz2cI/g9MKw0A==}
     engines: {node: '>= 0.8.0'}
@@ -2475,8 +2465,8 @@ packages:
     resolution: {integrity: sha512-+EUsqGPLsM+j/zdChZjsnX51g4XrHFOIXwfnCVPGlQk/k5giakcKsuxCObBRu6DSm9opw/O6slWbJdghQM4bBg==}
     engines: {node: '>= 0.6'}
 
-  neuro-game-sdk@1.0.10:
-    resolution: {integrity: sha512-JmrG0W8+mIBQOdv5FFzyuQk0BKp7CDDxmwLIvfhcewSNd2UyKBNAoBAKK166RSsePjeIu/EfqyQc9k59lEGPFg==}
+  neuro-game-sdk@1.1.0:
+    resolution: {integrity: sha512-RlAa17tSUjuIOV0/esrCVDCZB8DrBJ+Ixbr8GhdgrYRYAp5BdCx3rTZOp0W4vhLuhtRdqlbg4flC5QLsJeRPgw==}
 
   nice-try@1.0.5:
     resolution: {integrity: sha512-1nh45deeb5olNY7eX82BkPO7SSxR5SSYJiPTrTdFUVYwAl8CKMA5N9PjTYkHiRjisVcxcQ1HXdLhx2qxxJzLNQ==}
@@ -3286,6 +3276,7 @@ packages:
 
   uuid@8.3.2:
     resolution: {integrity: sha512-+NYs2QeMWy+GWFOEm9xnn6HCDp0l7QBD7ml8zLUmJ+93Q5NF0NocErnwkTkXVFNiX3/fpC6afS8Dhb/gz7R7eg==}
+    deprecated: uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).
     hasBin: true
 
   v8-to-istanbul@9.3.0:
@@ -3357,18 +3348,6 @@ packages:
 
   wrappy@1.0.2:
     resolution: {integrity: sha512-l4Sp/DRseor9wL6EvV2+TuQn63dMkPjZ/sp9XkghTEbV9KlPS1xUsZ3u7/IQO4wxtcFB4bgpQPRcR3QCvezPcQ==}
-
-  ws@8.18.3:
-    resolution: {integrity: sha512-PEIGCY5tSlUt50cqyMXfCzX+oOPqN0vuGqWzbcJ2xvnkzkq46oOpz7dQaTDBdfICb4N14+GARUDw2XV2N4tvzg==}
-    engines: {node: '>=10.0.0'}
-    peerDependencies:
-      bufferutil: ^4.0.1
-      utf-8-validate: '>=5.0.2'
-    peerDependenciesMeta:
-      bufferutil:
-        optional: true
-      utf-8-validate:
-        optional: true
 
   wsl-utils@0.1.0:
     resolution: {integrity: sha512-h3Fbisa2nKGPxCpm89Hk33lBLsnaGBvctQopaBSOW/uIs6FTe1ATyAnKFJrzVs9vpGdsTe73WF3V4lIsk4Gacw==}
@@ -5898,10 +5877,6 @@ snapshots:
       yargs-parser: 21.1.1
       yargs-unparser: 2.0.0
 
-  modern-isomorphic-ws@1.0.6(ws@8.18.3):
-    dependencies:
-      ws: 8.18.3
-
   morgan@1.10.1:
     dependencies:
       basic-auth: 2.0.1
@@ -5925,14 +5900,9 @@ snapshots:
 
   negotiator@0.6.3: {}
 
-  neuro-game-sdk@1.0.10(ws@8.18.3):
+  neuro-game-sdk@1.1.0:
     dependencies:
       '@types/json-schema': 7.0.15
-      '@types/ws': 8.18.1
-      modern-isomorphic-ws: 1.0.6(ws@8.18.3)
-      tslib: 2.8.1
-    transitivePeerDependencies:
-      - ws
 
   nice-try@1.0.5: {}
 
@@ -6958,8 +6928,6 @@ snapshots:
       strip-ansi: 7.1.2
 
   wrappy@1.0.2: {}
-
-  ws@8.18.3: {}
 
   wsl-utils@0.1.0:
     dependencies:
