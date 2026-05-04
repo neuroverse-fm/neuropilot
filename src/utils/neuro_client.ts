@@ -41,13 +41,54 @@ export interface ActionForceParams {
 
 //#region Action metadata & helpers
 
+/**
+ * Extracts the input type from a Standard Schema and casts it to be compatible with RCEAction.
+ * This is necessary because Standard Schema's InferInput returns a type that may not structurally match JSONSchema7Object.
+ */
+type StandardSchemaInput<TSchema extends StandardJSONSchemaV1 | undefined> =
+    TSchema extends StandardJSONSchemaV1
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ? StandardJSONSchemaV1.InferInput<TSchema> extends infer T ? T : any
+        : undefined;
+
+/**
+ * A Standard Schema-compatible action that automatically infers input types from the schema.
+ *
+ * @template TSchema The Standard Schema type (e.g., Zod schema, Valibot schema, etc.)
+ * @template K The extra context storage type
+ *
+ * @example
+ * ```typescript
+ * import { z } from 'zod';
+ *
+ * const mySchema = z.object({
+ *     filePath: z.string(),
+ *     content: z.string(),
+ * });
+ *
+ * const myAction: StandardRCEAction<typeof mySchema> = {
+ *     name: 'my_action',
+ *     schema: mySchema,
+ *     handler: (ctx) => {
+ *         // ctx.data.params is automatically typed as { filePath: string; content: string }
+ *         const { filePath, content } = ctx.data.params;
+ *         return actionHandlerSuccess();
+ *     },
+ *     // ...
+ * };
+ * ```
+ */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export interface StandardRCEAction<T extends JSONSchema7Object | undefined = any, K = any> extends Omit<RCEAction<T, K>, 'schema'> {
+export interface StandardRCEAction<TSchema extends StandardJSONSchemaV1 | undefined = any, K = any>
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    extends Omit<RCEAction<StandardSchemaInput<TSchema> & Record<string, any>, K>, 'schema'> {
     /**
-     * A validator library's schema.
+     * A Standard Schema-compliant schema (Zod, Valibot, ArkType, etc.).
+     * The input type will be automatically inferred for use in handlers, validators, and prompt generators.
+     *
      * To comply with the Neuro API, the top-level schema must be an object schema.
      */
-    schema?: StandardJSONSchemaV1;
+    schema?: TSchema;
 }
 
 /**
@@ -187,6 +228,44 @@ export function stripToAction(action: RCEAction): Action {
         description: turtleSafari(action.description),
         schema: action.schema,
     };
+}
+
+/**
+ * Helper function to define a Standard Schema action with automatic type inference.
+ * The schema type is inferred from the provided schema, eliminating the need for manual type annotations.
+ *
+ * @template TSchema The Standard Schema type (automatically inferred from the schema property)
+ * @template K The extra context storage type
+ * @param action The action definition
+ * @returns The same action with proper typing
+ *
+ * @example
+ * ```typescript
+ * import { z } from 'zod';
+ *
+ * const mySchema = z.object({
+ *     filePath: z.string(),
+ *     content: z.string(),
+ * });
+ *
+ * export const myAction = defineStandardAction({
+ *     name: 'my_action',
+ *     schema: mySchema,  // Type is inferred from here
+ *     handler: (ctx) => {
+ *         // ctx.data.params is automatically typed as { filePath: string; content: string }
+ *         const { filePath, content } = ctx.data.params;
+ *         return actionHandlerSuccess();
+ *     },
+ *     promptGenerator: null,
+ *     category: 'Files',
+ * });
+ * ```
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function defineStandardAction<TSchema extends StandardJSONSchemaV1, K = any>(
+    action: StandardRCEAction<TSchema, K>,
+): StandardRCEAction<TSchema, K> {
+    return action;
 }
 
 //#endregion
