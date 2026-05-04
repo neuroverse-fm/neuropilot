@@ -1,6 +1,7 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
-import * as fileActions from '@/file_actions';
+import * as fileActions from '@/file_operations';
+import * as readFiles from '@/read_files';
 import { assertProperties, checkNoErrorWithTimeout, createTestDirectory, createTestFile, returnMockFunction } from '@test/test_utils';
 import { ActionData } from 'neuro-game-sdk';
 import type { RCEContext } from '@/context/rce';
@@ -328,7 +329,7 @@ suite('File Actions', () => {
         NEURO.client = instance(mockedClient);
 
         // === Act ===
-        fileActions.handleOpenFile(makeContext({ id: 'abc', name: 'open_file', params: { filePath: filePath } } as ActionData));
+        readFiles.handleOpenFile(makeContext({ id: 'abc', name: 'open_file', params: { filePath: filePath } } as ActionData));
         // Allow VS Code to open and show the document before asserting
         await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); }, 5000, 100);
         // Brief delay to ensure activeTextEditor is updated across platforms
@@ -350,7 +351,7 @@ suite('File Actions', () => {
 
         // === Act ===
         await fileActions.handleCreateFile(makeContext({ id: 'abc', name: 'create_file', params: { filePath: relativePath } } as ActionData));
-        const openAllowed = getPermissionLevel(fileActions.fileActions.switch_files.name) === PermissionLevel.AUTOPILOT;
+        const openAllowed = getPermissionLevel(readFiles.readFileActions.switch_files.name) === PermissionLevel.AUTOPILOT;
 
         // === Assert ===
         if (openAllowed) {
