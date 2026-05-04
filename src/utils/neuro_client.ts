@@ -11,7 +11,7 @@ import type { RCEContext } from '@ctx/rce';
 
 import type { NeuroClient } from 'neuro-game-sdk';
 import type { reregisterAllActions, registerAction, unregisterAction } from '@/rce';
-import type { JSONSchema7, JSONSchema7Object } from 'json-schema';
+import type { JSONSchema7Object } from 'json-schema';
 import type { StandardJSONSchemaV1 } from '@standard-schema/spec';
 
 //#region Action force utils
@@ -48,7 +48,6 @@ export interface StandardRCEAction<T extends JSONSchema7Object | undefined = any
      * To comply with the Neuro API, the top-level schema must be an object schema.
      */
     schema?: StandardJSONSchemaV1;
-    converter?: (schema: StandardJSONSchemaV1) => JSONSchema7;
 }
 
 /**
