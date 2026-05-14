@@ -657,7 +657,11 @@ export async function RCEActionHandler(actionData: ActionData) {
                 context.updateStatus('pending', 'Validating schema...');
                 let schema;
                 if ('~standard' in context.action.schema) {
-                    schema = context.action.schema['~standard'].jsonSchema.input({ target: 'draft-07' });
+                    try {
+                        schema = context.action.schema['~standard'].jsonSchema.input({ target: 'draft-07' });
+                    } catch {
+                        schema = context.action.schema['~standard'].jsonSchema.input({ target: 'draft-2020-12' });
+                    }
                 } else {
                     schema = context.action.schema;
                 }
