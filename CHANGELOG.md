@@ -6,6 +6,13 @@ Since v2.1.0, we're keeping a changelog of each version's changes in NeuroPilot.
 
 Changes between each version before then will not be listed.
 
+## 3.1.0(?)
+
+### Additions
+
+- NeuroPilot's schemas have been slightly changed, as a result of migrating to a different way of expressing schemas:
+  - Some action's schema descriptions have been dropped in favour of examples
+
 ## 2.5.0
 
 ### New settings
