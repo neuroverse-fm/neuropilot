@@ -11,7 +11,7 @@ import type { RCEContext } from '@ctx/rce';
 
 import type { NeuroClient } from 'neuro-game-sdk';
 import type { reregisterAllActions, registerAction, unregisterAction } from '@/rce';
-import type { JSONSchema7Object } from 'json-schema';
+import type { JSONSchema7, JSONSchema7Object } from 'json-schema';
 import type { StandardJSONSchemaV1 } from '@standard-schema/spec';
 
 //#region Action force utils
@@ -79,7 +79,7 @@ type StandardSchemaInput<TSchema extends StandardJSONSchemaV1 | undefined> =
  * ```
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export interface StandardRCEAction<TSchema extends StandardJSONSchemaV1 | undefined = any, K = any>
+export interface StandardRCEAction<TSchema extends StandardJSONSchemaV1 | undefined = StandardJSONSchemaV1, K = any>
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     extends Omit<RCEAction<StandardSchemaInput<TSchema> & Record<string, any>, K>, 'schema'> {
     /**
@@ -476,7 +476,7 @@ export function actionResultEnumFailure<T>(parameterName: string, validValues: T
  * This should explain, if possible, why the action failed.
  * If omitted, will just return "Action failed.".
  * @returns A context message with the specified message.
- * @deprecated Action handlers can now be async, and RCE will handle  it properly.
+ * @deprecated Action handlers can now be async, and RCE will handle it properly.
  */
 export function contextFailure(message?: string, tag: OutputTag = 'WARNING'): string {
     const result = message !== undefined ? `Action failed: ${message}` : 'Action failed.';
@@ -485,3 +485,19 @@ export function contextFailure(message?: string, tag: OutputTag = 'WARNING'): st
 }
 
 //#endregion
+
+/**
+ * Checks if the schema is a Standard JSON Schema or regular JSON Schema.
+ * @param schema The schema in question.
+ * @returns A boolean for whether or not it is a Standard JSON Schema or normal JSON Schema.
+ * @throws If the schema passed is a Standard Schema, but doesn't support Standard JSON Schema.
+ */
+export function isStandardJSONSchema<T extends JSONSchema7 | StandardJSONSchemaV1>(schema: T): boolean {
+    if ('~standard' in schema) {
+        if ('jsonSchema' in schema['~standard']) {
+            return true;
+        } else {
+            throw new Error('Schema used is a Standard Schema, but does not support Standard JSON Schema!');
+        }
+    } else return false;
+}
