@@ -141,7 +141,7 @@ export interface RCEAction<S extends StandardJSONSchemaV1 | JSONSchema7 | undefi
      * It is this way due to a potential new addition in Neuro API "v2". (not officially proposed)
      * More info (comment): https://github.com/VedalAI/neuro-game-sdk/discussions/58#discussioncomment-12938623
      */
-    promptGenerator: PromptGenerator<T, E> | null;
+    promptGenerator: PromptGenerator<T> | null;
     /** Default permission for actions when no permission is configured in user or workspace settings. Defaults to {@link PermissionLevel.OFF}. */
     defaultPermission?: PermissionLevel;
     /**
@@ -182,6 +182,10 @@ export interface RCEAction<S extends StandardJSONSchemaV1 | JSONSchema7 | undefi
      * These functions will be parallelised, so the same key should not be accessed from multiple functions.
      */
     contextSetupHook?: ((context: RCEContext<T>) => Thenable<void>)[];
+}
+
+export function defineAction<const TInput extends InferDataFromSchema<TSchema>, const TSchema extends StandardJSONSchemaV1 | JSONSchema7 | undefined>(action: RCEAction<TSchema, TInput>): RCEAction<TSchema, TInput> {
+    return action;
 }
 
 // apparently this JSDoc is really hard when trying to link to RCEAction.validators.async
