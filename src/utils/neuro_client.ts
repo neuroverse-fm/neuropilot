@@ -45,11 +45,8 @@ export interface ActionForceParams {
  * Extracts the input type from a Standard Schema and casts it to be compatible with RCEAction.
  * This is necessary because Standard Schema's InferInput returns a type that may not structurally match JSONSchema7Object.
  */
-type StandardSchemaInput<TSchema extends StandardJSONSchemaV1 | undefined> =
-    TSchema extends StandardJSONSchemaV1
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        ? StandardJSONSchemaV1.InferInput<TSchema> extends infer T ? T : any
-        : undefined;
+type InferDataFromSchema<TSchema extends StandardJSONSchemaV1 | JSONSchema7 | undefined> =
+    TSchema extends StandardJSONSchemaV1 ? StandardJSONSchemaV1.InferInput<TSchema> : TSchema extends JSONSchema7 ? JSONSchema7Object : undefined;
 
 /**
  * A Standard Schema-compatible action that automatically infers input types from the schema.
@@ -81,7 +78,7 @@ type StandardSchemaInput<TSchema extends StandardJSONSchemaV1 | undefined> =
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export interface StandardRCEAction<TSchema extends StandardJSONSchemaV1 | undefined = StandardJSONSchemaV1, K = any>
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    extends Omit<RCEAction<StandardSchemaInput<TSchema> & Record<string, any>, K>, 'schema'> {
+    extends Omit<RCEAction<TSchema, InferDataFromSchema<TSchema> & Record<string, any>, K>, 'schema'> {
     /**
      * A Standard Schema-compliant schema (Zod, Valibot, ArkType, etc.).
      * The input type will be automatically inferred for use in handlers, validators, and prompt generators.
@@ -97,7 +94,7 @@ export interface StandardRCEAction<TSchema extends StandardJSONSchemaV1 | undefi
  * You may optionally type the interface if you are sure the action will take a specific form.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export interface RCEAction<T extends JSONSchema7Object | undefined = any, E = any> extends Action {
+export interface RCEAction<S extends StandardJSONSchemaV1 | JSONSchema7 | undefined = JSONSchema7, T extends unknown | undefined = InferDataFromSchema<S>, E = any> extends Action {
     /** 
      * A human-friendly name for the action. If not provided, the action's name converted to Title Case will be used. 
      * @example Edit File
@@ -108,7 +105,7 @@ export interface RCEAction<T extends JSONSchema7Object | undefined = any, E = an
      * An object that defines an array of functions to validate the action's "environment".
      * Validators run before requests/executions to ensure environment/input validity.
      */
-    validators?: RCEValidators<T, E>
+    validators?: RCEValidators<T>
     /**
      * Cancellation events attached to the action that will be automatically set up.
      * Each cancellation event will be setup in parallel to each other.
@@ -117,7 +114,7 @@ export interface RCEAction<T extends JSONSchema7Object | undefined = any, E = an
      * Following VS Code's pattern, Disposables will not be awaited if async.
      * Returns from calling the `dispose()` function will not be used anywhere.
      */
-    cancelEvents?: ((context: RCEContext<T, E>) => RCECancelEvent<E> | null)[];
+    cancelEvents?: ((context: RCEContext<T>) => RCECancelEvent<E> | null)[];
     /**
      * A function that is used to preview the action's effects.
      * This function will be called while awaiting user approval, if the action is set to Copilot permission.
@@ -126,7 +123,7 @@ export interface RCEAction<T extends JSONSchema7Object | undefined = any, E = an
      * If your preview function does not require a dispose function to be called, return a no-op Disposable-like.
      * @example return { dispose: () => undefined } // for no-ops
      */
-    preview?: (context: RCEContext<T, E>) => { dispose: () => unknown };
+    preview?: (context: RCEContext<T>) => { dispose: () => unknown };
     /** 
      * The function to handle the action.
      * This function must be synchronous.
@@ -134,7 +131,7 @@ export interface RCEAction<T extends JSONSchema7Object | undefined = any, E = an
      * An action result can be sent as either a synchronous result or asynchronous result, it will automatically be handled by RCE.
      * (see {@link RCEHandlerReturns})
      */
-    handler: RCEHandler<T, E>;
+    handler: RCEHandler<T>;
     /** 
      * The function to generate a prompt for the action request (Copilot Mode). 
      * The prompt should fit the phrasing scheme "Neuro wants to [prompt]".
@@ -184,11 +181,11 @@ export interface RCEAction<T extends JSONSchema7Object | undefined = any, E = an
      * 
      * These functions will be parallelised, so the same key should not be accessed from multiple functions.
      */
-    contextSetupHook?: ((context: RCEContext<T, E>) => Thenable<void>)[];
+    contextSetupHook?: ((context: RCEContext<T>) => Thenable<void>)[];
 }
 
 // apparently this JSDoc is really hard when trying to link to RCEAction.validators.async
-interface RCEValidators<T extends JSONSchema7Object | undefined, E> {
+interface RCEValidators<T extends unknown | undefined> {
     /** 
      * Synchronous validators that will block execution of the rest of the thread.
      * As this delays the action result to Neuro, any thenables must resolve quickly so as to be effectively synchronous speed-wise.
@@ -200,18 +197,17 @@ interface RCEValidators<T extends JSONSchema7Object | undefined, E> {
      * - {@link RCEAction.preview preview effects}, and/or
      * - {@link RCEAction.handler handling the action}.
      */
-    sync?: ((context: RCEContext<T, E>) => ActionValidationResult)[],
+    sync?: ((context: RCEContext<T>) => ActionValidationResult)[],
     /**
      * Asynchronous validators that will be ran in parallel to each other.
      * These will be executed after an action result, so it's perfect for long-running validators.
      * 
      * Async validators will time out (and consequently fail) after 1 second (1000ms). It is planned that this value will be adjustable in the future.
      */
-    async?: ((context: RCEContext<T, E>) => Thenable<ActionValidationResult>)[];
+    async?: ((context: RCEContext<T>) => Thenable<ActionValidationResult>)[];
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type RCEHandler<T extends JSONSchema7Object | undefined, E = any> = (context: RCEContext<T, E>) => RCEHandlerReturns;
+type RCEHandler<T extends unknown | undefined> = (context: RCEContext<T>) => RCEHandlerReturns;
 /**
  * The possible values that an RCE handler can return.
  */
