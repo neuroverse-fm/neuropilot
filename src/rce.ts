@@ -5,7 +5,7 @@
 
 import * as vscode from 'vscode';
 import { ActionData } from 'neuro-game-sdk';
-import { ActionForceParams, actionHandlerFailure, ActionHandlerResult, actionHandlerSuccess, RCEAction, StandardRCEAction, stripToAction } from '@/utils/neuro_client';
+import { ActionForceParams, actionHandlerFailure, ActionHandlerResult, actionHandlerSuccess, RCEAction, stripToAction } from '@/utils/neuro_client';
 import { NEURO } from '@/constants';
 import { isThenable, logOutput, notifyOnCaughtException } from '@/utils/misc';
 import { ACTIONS, CONFIG, CONNECTION, getAllPermissions, getPermissionLevel, PermissionLevel, stringToPermissionLevel } from '@/config';
@@ -13,8 +13,10 @@ import { validate } from 'jsonschema';
 import type { RCECancelEvent } from '@events/utils';
 import { fireOnActionStart, updateActionStatus } from '@events/actions';
 import { RCEContext } from '@/context/rce';
+import type { StandardJSONSchemaV1 } from '@standard-schema/spec';
 
 import type { NeuroClient } from 'neuro-game-sdk';
+import type { JSONSchema7 } from 'json-schema';
 
 export const CATEGORY_MISC = 'Miscellaneous';
 
@@ -24,7 +26,13 @@ const REGISTERED_ACTIONS: Set<string> = /* @__PURE__ */ new Set<string>();
 /**
  * A prompt parameter can either be a string or a function that converts an RCEContext into a prompt string.
  */
-export type PromptGenerator<T extends unknown | undefined> = string | ((context: RCEContext<T>) => string);
+
+
+export type PromptGenerator<
+    S extends StandardJSONSchemaV1 | JSONSchema7 | undefined = JSONSchema7 | undefined,
+    T = any,
+    E = unknown,
+> = string | ((context: RCEContext<S, T, E>) => string);
 
 let activeRequestContext: RCEContext | null = null;
 
@@ -301,7 +309,8 @@ export function denyRceRequest(): void {
  * @param actions The actions to add.
  * @param register Whether to register the actions with Neuro immediately if the permissions allow.
  */
-export function addActions(actions: (RCEAction | StandardRCEAction)[], register = true): void {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function addActions(actions: RCEAction<any, any>[], register = true): void {
     const actionsToAdd = actions.filter(a => !ACTIONS_ARRAY.some(existing => existing.name === a.name));
     const actionsNotToAdd = actions.filter(a => !actionsToAdd.includes(a));
     if (actionsNotToAdd.length > 0) {
@@ -309,10 +318,7 @@ export function addActions(actions: (RCEAction | StandardRCEAction)[], register 
     }
     const finalActionForms = actionsToAdd.map((a) => {
         if ('converter' in a) delete a.converter;
-        if (a.schema && '~standard' in a.schema) {
-            const newSchema = a.schema['~standard'].jsonSchema.input({ target: 'draft-07' });
-            return { ...a, schema: newSchema } as RCEAction;
-        } else return a as RCEAction;
+        return a as RCEAction;
     });
     ACTIONS_ARRAY.push(...finalActionForms);
     if (register && NEURO.connected) {
@@ -656,9 +662,9 @@ export async function RCEActionHandler(actionData: ActionData) {
                 let schema;
                 if ('~standard' in context.action.schema) {
                     try {
-                        schema = context.action.schema['~standard'].jsonSchema.input({ target: 'draft-07' });
+                        schema = (context.action.schema as StandardJSONSchemaV1)['~standard'].jsonSchema.input({ target: 'draft-07' });
                     } catch {
-                        schema = context.action.schema['~standard'].jsonSchema.input({ target: 'draft-2020-12' });
+                        schema = (context.action.schema as StandardJSONSchemaV1)['~standard'].jsonSchema.input({ target: 'draft-2020-12' });
                     }
                 } else {
                     schema = context.action.schema;

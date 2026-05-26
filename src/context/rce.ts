@@ -1,5 +1,7 @@
-import type { ActionValidationResult, RCEAction, StandardRCEAction } from '@/utils/neuro_client';
+import type { ActionValidationResult, InferDataFromSchema, RCEAction } from '@/utils/neuro_client';
 import type { ActionData } from 'neuro-game-sdk';
+import type { JSONSchema7 } from 'json-schema';
+import type { StandardJSONSchemaV1 } from '@standard-schema/spec';
 import { Disposable, Progress } from 'vscode';
 import { ActionStatus, updateActionStatus } from '@events/actions';
 import { getAction } from '@/rce';
@@ -38,14 +40,18 @@ export interface RCERequestState {
  * 6. Some arbitrary time in between here, event listeners for cancel events may also be fired, and the predicate will receive the context object as well.
  * 7. Handler
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export class RCEContext<T extends unknown | undefined = any> extends Disposable {
+export class RCEContext<
+    S extends StandardJSONSchemaV1 | JSONSchema7 | undefined = JSONSchema7 | undefined,
+    T = InferDataFromSchema<S>,
+    E = unknown,
+> extends Disposable {
     name: string;
     private success: boolean | null;
     createdAt: string = new Date().toLocaleTimeString();
 
-    data: ActionData/*<T>*/;
-    action: RCEAction | StandardRCEAction;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    data: ActionData<any> & { params?: T };
+    action: RCEAction<S, T, E>;
     readonly forced: boolean;
 
     /** Lifecycle-specific data */
@@ -68,7 +74,7 @@ export class RCEContext<T extends unknown | undefined = any> extends Disposable 
      */
     readonly updateStatus: SimplifiedStatusUpdateHandler = (status: ActionStatus, message?: string) => this._updateStatus(status, message);
 
-    constructor(data: ActionData<T>, forced = false) {
+    constructor(data: ActionData<any> & { params?: T }, forced = false) {
         super(() => {
             // Clear timers and cancel events
             this.clearPreHandlerResources();

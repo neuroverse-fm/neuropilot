@@ -102,7 +102,8 @@ function validateIllegalCharacters(key: string, illegalChars: string[]) {
     };
 }
 
-const commonFileEvents: ((context: RCEContext) => RCECancelEvent | null)[] = [
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const commonFileEvents: ((context: RCEContext) => RCECancelEvent<any> | null)[] = [
     (context: RCEContext) => targetedFileCreatedEvent(context.data.params?.filePath),
     (context: RCEContext) => targetedFileDeletedEvent(context.data.params?.filePath),
 ];

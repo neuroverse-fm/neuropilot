@@ -64,12 +64,14 @@ export const cancelOnDidChangeActiveTextEditor = () => new RCECancelEvent({
     ],
 });
 
-export const commonCancelEvents: ((context: RCEContext) => RCECancelEvent)[] = [
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const commonCancelEvents: ((context: RCEContext) => RCECancelEvent<any>)[] = [
     cancelOnDidChangeTextDocument,
     cancelOnDidChangeActiveTextEditor,
 ];
 
-export const commonCancelEventsWithCursor: ((context: RCEContext) => RCECancelEvent)[] = [
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const commonCancelEventsWithCursor: ((context: RCEContext) => RCECancelEvent<any>)[] = [
     ...commonCancelEvents,
     createCursorPositionChangedEvent,
 ];

@@ -4,7 +4,7 @@ import type { Change, CommitOptions, Commit, Repository, API, GitExtension } fro
 import { ForcePushMode } from '@typing/git.d';
 import { StatusStrings, RefTypeStrings } from '@typing/git_status';
 import { logOutput, simpleFileName, isPathNeuroSafe, normalizePath, getWorkspacePath, getWorkspaceUri } from '@/utils/misc';
-import { ActionValidationResult, actionValidationAccept, actionValidationFailure, RCEAction, actionValidationRetry, RCEHandlerReturns, actionHandlerSuccess, actionHandlerFailure, actionHandlerRetry, StandardRCEAction } from '@/utils/neuro_client';
+import { ActionValidationResult, actionValidationAccept, actionValidationFailure, RCEAction, actionValidationRetry, RCEHandlerReturns, actionHandlerSuccess, actionHandlerFailure, actionHandlerRetry } from '@/utils/neuro_client';
 import assert from 'node:assert';
 import { RCECancelEvent } from '@events/utils';
 import { addActions, registerAction, reregisterAllActions, unregisterAction } from './rce';
@@ -125,7 +125,8 @@ function gitDiffValidator(context: RCEContext): ActionValidationResult {
             return actionValidationFailure('Unknown diff type.', 'Unknown/unhandled diff type specified');
     }
 }
-const commonCancelEvents: ((context: RCEContext) => RCECancelEvent | null)[] = [
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const commonCancelEvents: ((context: RCEContext) => RCECancelEvent<any> | null)[] = [
     () => new RCECancelEvent({
         reason: 'the Git extension was disabled.',
         events: [
@@ -679,7 +680,7 @@ export const gitActions = {
         },
         autoRegister: false,
     },
-} satisfies Record<string, RCEAction | StandardRCEAction>;
+} satisfies Record<string, RCEAction>;
 
 // Get the current Git repository
 // let repo: Repository | undefined = git.repositories[0];
