@@ -58,7 +58,7 @@ export type InferDataFromSchema<TSchema extends SchemaTypes> =
 // Event type E uses any due to contravariance: RCECancelEvent<T> is contravariant in T,
 // so we need any to allow different specific event types (TextEditor, DiagnosticChangeEvent, etc.)
 // to be grouped together in arrays like Object.values(actions).
-export interface RCEAction<TData extends object | undefined = undefined, TEventData = unknown, TSchema extends SchemaTypes = JSONSchema7 | undefined, TDataShape extends unknown | undefined = TData extends object ? TData : InferDataFromSchema<TSchema>> extends Omit<Action, 'schema'> {
+export interface RCEAction<TData extends unknown | undefined = undefined, TEventData = unknown, TSchema extends SchemaTypes = JSONSchema7 | undefined, TDataShape extends unknown | undefined = TData extends object ? TData : InferDataFromSchema<TSchema>> extends Omit<Action, 'schema'> {
     /**
      * A valid JSON Schema or Standard JSON Schema that describes the action's parameters.
      * Standard JSON Schemas (like Zod v4+) will be automatically converted to JSON Schema before registration.
@@ -178,7 +178,7 @@ export function defineAction<
 
 // apparently this JSDoc is really hard when trying to link to RCEAction.validators.async
 interface RCEValidators<
-    TData extends object | undefined,
+    TData extends unknown | undefined,
     TSchema extends SchemaTypes,
     TDataShape = InferDataFromSchema<TSchema>,
     TEventData = unknown,

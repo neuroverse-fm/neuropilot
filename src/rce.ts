@@ -309,7 +309,7 @@ export function denyRceRequest(): void {
  * @param register Whether to register the actions with Neuro immediately if the permissions allow.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function addActions(actions: RCEAction<any, any>[], register = true): void {
+export function addActions(actions: RCEAction[], register = true): void {
     const actionsToAdd = actions.filter(a => !ACTIONS_ARRAY.some(existing => existing.name === a.name));
     const actionsNotToAdd = actions.filter(a => !actionsToAdd.includes(a));
     if (actionsNotToAdd.length > 0) {

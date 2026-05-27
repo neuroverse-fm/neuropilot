@@ -11,7 +11,7 @@ import { addActions } from '@/rce';
 import { createPreviewCursor, createPreviewHighlight } from '@previews/edits';
 import { RCEContext } from '@/context/rce';
 import { commonCancelEvents, cancelOnDidChangeActiveTextEditor, checkCurrentFile, createPositionValidator, CONTEXT_NO_ACCESS, CONTEXT_NO_ACTIVE_DOCUMENT, STATUS_NO_ACCESS, STATUS_NO_ACTIVE_DOCUMENT, STATUS_NO_MATCHES_FOUND, LINE_RANGE_SCHEMA, LineRange, MATCH_OPTIONS, MatchOptions, POSITION_SCHEMA, createLineRangeValidator, createStringValidator, validateRegex, findAndFilter } from './utils/action_components';
-import z from 'zod';
+import { z } from 'zod';
 
 export const CATEGORY_EDITING = 'Edit Files';
 
@@ -102,7 +102,7 @@ export const editFileActions = {
         },
         cancelEvents: [
             ...commonCancelEvents,
-            (context: RCEContext) => {
+            (context) => {
                 return context.data.params.position ? null : createCursorPositionChangedEvent();
             },
         ],
@@ -136,22 +136,6 @@ export const editFileActions = {
             + ' Remember to add indents after newlines where appropriate.'
             + ' Your cursor will be moved to the end of the inserted line.', // TODO: Clarify cursor stuff again
         category: CATEGORY_EDITING,
-        // schema: {
-        //     type: 'object',
-        //     properties: {
-        //         text: {
-        //             type: 'string',
-        //             description: 'The text to insert',
-        //         },
-        //         insertUnder: {
-        //             type: 'integer',
-        //             minimum: 1,
-        //             description: 'The one-based line number to insert under.',
-        //         },
-        //     },
-        //     additionalProperties: false,
-        //     required: ['text'],
-        // }
         schema: z.object({
             text: z.string().meta({
                 description: 'The text to insert',

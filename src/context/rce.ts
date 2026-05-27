@@ -39,13 +39,11 @@ export interface RCERequestState {
  * 7. Handler
  */
 export class RCEContext<
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const TData extends unknown | undefined = unknown,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const TEventData = any,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const TSchema extends SchemaTypes = any,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const TDataShape extends unknown | undefined = TData extends unknown ? TData : InferDataFromSchema<TSchema>,
 > extends Disposable {
     name: string;
@@ -98,7 +96,7 @@ export class RCEContext<
             this._updateStatus = (_status, _message) => undefined;
         });
         this.data = data;
-        this.action = getAction(data.name)!;
+        this.action = getAction(data.name)! as RCEAction<TData, TEventData, TSchema, TDataShape>;
         this.name = data.name;
         this.success = null;
         this.storage = {};

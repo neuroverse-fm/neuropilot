@@ -10,7 +10,7 @@ import { RCECancelEvent } from '@events/utils';
 import { addActions, registerAction, reregisterAllActions, unregisterAction } from './rce';
 import { RCEContext } from '@ctx/rce';
 import { filePreviewProvider } from '@previews/files';
-import z from 'zod';
+import { z } from 'zod';
 
 export const CATEGORY_GIT = 'Git';
 export const CATEGORY_GIT_REMOTES = 'Git Remotes';
