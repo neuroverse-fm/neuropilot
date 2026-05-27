@@ -54,6 +54,16 @@ export const LINE_RANGE_SCHEMA: (Omit<RCEAction, 'schema'> & { schema: Omit<JSON
     additionalProperties: false,
     required: ['startLine', 'endLine'],
 };
+export const _LINE_RANGE_SCHEMA = z.object({
+    startLine: z.number().int().min(1).meta({
+        description: 'The one-based line number to start from.',
+    }),
+    endLine: z.number().int().min(1).meta({
+        description: 'The one-based line number to end at.',
+    }),
+}).meta({
+    description: 'The line range to target.',
+}); // If description is not needed, simply call .meta({ description: undefined }) on this const after importing
 export interface Position {
     line: number;
     column: number;

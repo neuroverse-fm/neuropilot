@@ -10,7 +10,7 @@ import { RCECancelEvent } from '@events/utils';
 import { addActions } from '@/rce';
 import { createPreviewCursor, createPreviewHighlight } from '@previews/edits';
 import { RCEContext } from '@/context/rce';
-import { commonCancelEvents, cancelOnDidChangeActiveTextEditor, checkCurrentFile, createPositionValidator, CONTEXT_NO_ACCESS, CONTEXT_NO_ACTIVE_DOCUMENT, STATUS_NO_ACCESS, STATUS_NO_ACTIVE_DOCUMENT, STATUS_NO_MATCHES_FOUND, LINE_RANGE_SCHEMA, LineRange, MATCH_OPTIONS, MatchOptions, _POSITION_SCHEMA, createLineRangeValidator, createStringValidator, validateRegex, findAndFilter } from './utils/action_components';
+import { commonCancelEvents, cancelOnDidChangeActiveTextEditor, checkCurrentFile, createPositionValidator, CONTEXT_NO_ACCESS, CONTEXT_NO_ACTIVE_DOCUMENT, STATUS_NO_ACCESS, STATUS_NO_ACTIVE_DOCUMENT, STATUS_NO_MATCHES_FOUND, LINE_RANGE_SCHEMA, LineRange, MATCH_OPTIONS, MatchOptions, _POSITION_SCHEMA, createLineRangeValidator, createStringValidator, validateRegex, findAndFilter, _LINE_RANGE_SCHEMA } from './utils/action_components';
 import { z } from 'zod';
 
 export const CATEGORY_EDITING = 'Edit Files';
@@ -184,31 +184,34 @@ export const editFileActions = {
             return `insert ${lines} line${lines !== 1 ? 's' : ''} of code below ${insertUnder ? `line ${insertUnder}` : 'her cursor'}.`;
         },
     }),
-    replace_text: {
+    replace_text: defineAction({
         name: 'replace_text',
         description: 'Replace text in the active document.'
             + ' If you set "useRegex" to true, you can use a Regex in the "find" parameter and a substitution pattern in the "replaceWith" parameter.'
             + ' This will place your cursor at the end of the replaced text, unless you replaced multiple instances.',
         category: CATEGORY_EDITING,
-        schema: {
-            type: 'object',
-            properties: {
-                find: { type: 'string', description: 'The search text or RegEx pattern to search for text to replace.' },
-                replaceWith: { type: 'string', description: 'The text to replace the search result(s) with. If using RegEx, you can use substitution patterns here.' },
-                useRegex: { type: 'boolean', description: 'Whether or not the pattern(s) are RegEx patterns.' },
-                match: { type: 'string', enum: MATCH_OPTIONS, description: 'The method to match text to replace.' },
-                lineRange: LINE_RANGE_SCHEMA,
-            },
-            additionalProperties: false,
-            required: ['find', 'replaceWith', 'match'],
-        },
+        schema: z.object({
+            find: z.string().meta({
+                description: 'The search text or RegEx pattern to search for text to replace.',
+            }),
+            replaceWith: z.string().meta({
+                description: 'The text to replace the search result(s) with. If using RegEx, you can use substitution patterns here.',
+            }),
+            useRegex: z.boolean().meta({
+                description: 'Whether or not the pattern(s) are RegEx patterns.',
+            }).optional(),
+            match: z.enum(MATCH_OPTIONS).meta({
+                description: 'The method to match text to delete.',
+            }),
+            lineRange: _LINE_RANGE_SCHEMA.optional(),
+        }),
         handler: handleReplaceText,
         preview: (context) => previewFindFunctions(context.data, 'replace'),
         cancelEvents: [cancelOnDidChangeActiveTextEditor],
         validators: {
             sync: [checkCurrentFile, createStringValidator(['find', 'replaceWith']), createLineRangeValidator('lineRange'), validateRegex('find', 'useRegex')],
         },
-        promptGenerator: (context: RCEContext) => {
+        promptGenerator: (context) => {
             const actionData = context.data;
             let text = 'replace ';
             const target = actionData.params.find;
@@ -242,32 +245,33 @@ export const editFileActions = {
             text += '.';
             return text;
         },
-    },
-    delete_text: {
+    }),
+    delete_text: defineAction({
         name: 'delete_text',
         description: 'Delete text in the active document.'
             + ' If you set "useRegex" to true, you can use a Regex in the "find" parameter.'
             + ' This will place your cursor where the deleted text was, unless you deleted multiple instances.'
             + ' Line numbers are one-based.',
         category: CATEGORY_EDITING,
-        schema: {
-            type: 'object',
-            properties: {
-                find: { type: 'string', description: 'The glob/RegEx pattern to search for text to delete.' },
-                useRegex: { type: 'boolean', description: 'Whether or not the find pattern is a RegEx pattern.' },
-                match: { type: 'string', enum: MATCH_OPTIONS, description: 'The method to match text to delete.' },
-                lineRange: LINE_RANGE_SCHEMA,
-            },
-            required: ['find', 'match'],
-            additionalProperties: false,
-        },
+        schema: z.object({
+            find: z.string().meta({
+                description: 'The glob/RegEx pattern to search for text to delete.',
+            }),
+            useRegex: z.boolean().meta({
+                description: 'Whether or not the find pattern is a RegEx pattern.',
+            }).optional(),
+            match: z.enum(MATCH_OPTIONS).meta({
+                description: 'The method to match text to delete.',
+            }),
+            lineRange: _LINE_RANGE_SCHEMA.optional(),
+        }),
         handler: handleDeleteText,
         preview: (context) => previewFindFunctions(context.data, 'delete'),
         cancelEvents: [cancelOnDidChangeActiveTextEditor],
         validators: {
             sync: [checkCurrentFile, createStringValidator(['find']), createLineRangeValidator('lineRange'), validateRegex('find', 'useRegex')],
         },
-        promptGenerator: (context: RCEContext) => {
+        promptGenerator: (context) => {
             const actionData = context.data;
             let text = 'delete ';
             const target = actionData.params.find;
@@ -304,7 +308,7 @@ export const editFileActions = {
             text += '.';
             return text;
         },
-    },
+    }),
     undo: {
         name: 'undo',
         description: 'Undo the last change made to the active document.'
