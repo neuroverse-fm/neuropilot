@@ -58,7 +58,8 @@ export type InferDataFromSchema<TSchema extends SchemaTypes> =
 // Event type E uses any due to contravariance: RCECancelEvent<T> is contravariant in T,
 // so we need any to allow different specific event types (TextEditor, DiagnosticChangeEvent, etc.)
 // to be grouped together in arrays like Object.values(actions).
-export interface RCEAction<TData extends unknown | undefined = undefined, TEventData = unknown, TSchema extends SchemaTypes = SchemaTypes, TDataShape extends unknown | undefined = TData extends unknown ? TData : InferDataFromSchema<TSchema>> extends Omit<Action, 'schema'> {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export interface RCEAction<TData extends unknown | undefined = undefined, TEventData = any, TSchema extends SchemaTypes = SchemaTypes, TDataShape extends unknown | undefined = TData extends unknown ? TData : InferDataFromSchema<TSchema>> extends Omit<Action, 'schema'> {
     /**
      * A valid JSON Schema or Standard JSON Schema that describes the action's parameters.
      * Standard JSON Schemas (like Zod v4+) will be automatically converted to JSON Schema before registration.

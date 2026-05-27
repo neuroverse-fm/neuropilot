@@ -4,41 +4,47 @@ import { RCEContext } from '@ctx/rce';
 import { EXCEPTION_THROWN_STRING, NEURO, PROMISE_REJECTION_STRING } from './constants';
 import { previewCursorMovement, previewFindFunctions } from './edit_files';
 import { isPathNeuroSafe, getVirtualCursor, setVirtualCursor, getPositionContext, logOutput, formatContext, getFence, escapeRegExp, filterFileContents, indexFromPosition, positionFromIndex, getWorkspacePath, getWorkspaceUri, NeuroPositionContext, normalizePath, notifyOnCaughtException, simpleFileName } from './utils/misc';
-import { RCEAction, RCEHandlerReturns, actionHandlerFailure, actionHandlerSuccess, actionValidationAccept, actionValidationFailure } from './utils/neuro_client';
-import { ACTION_FAIL_NOTES, binaryFileValidation, cancelOnDidChangeActiveTextEditor, checkCurrentFile, commonCancelEvents, commonCancelEventsWithCursor, CONTEXT_NO_ACCESS, CONTEXT_NO_ACTIVE_DOCUMENT, createLineRangeValidator, createPositionValidator, createStringValidator, findAndFilter, LINE_RANGE_SCHEMA, LineRange, MATCH_OPTIONS, MatchOptions, neuroSafeValidation, POSITION_SCHEMA, STATUS_NO_ACCESS, STATUS_NO_ACTIVE_DOCUMENT, STATUS_NO_MATCHES_FOUND, validateIsAFile, validateRegex } from './utils/action_components';
+import { RCEHandlerReturns, actionHandlerFailure, actionHandlerSuccess, actionValidationAccept, actionValidationFailure, defineAction } from './utils/neuro_client';
+import { _LINE_RANGE_SCHEMA, _POSITION_SCHEMA, ACTION_FAIL_NOTES, binaryFileValidation, cancelOnDidChangeActiveTextEditor, checkCurrentFile, commonCancelEvents, commonCancelEventsWithCursor, CONTEXT_NO_ACCESS, CONTEXT_NO_ACTIVE_DOCUMENT, createLineRangeValidator, createPositionValidator, createStringValidator, findAndFilter, LINE_RANGE_SCHEMA, LineRange, MATCH_OPTIONS, MatchOptions, neuroSafeValidation, POSITION_SCHEMA, STATUS_NO_ACCESS, STATUS_NO_ACTIVE_DOCUMENT, STATUS_NO_MATCHES_FOUND, validateIsAFile, validateRegex } from './utils/action_components';
 import { CONFIG, CONNECTION } from './config';
 import { targetedFileDeletedEvent } from '@events/files';
 import { RCECancelEvent } from '@events/utils';
 import { filePreviewProvider } from '@previews/files';
 import { addActions } from './rce';
+import z from 'zod';
+import { StandardJSONSchemaV1 } from '@standard-schema/spec';
 
 const CATEGORY_READING = 'Read Files';
 
 export const readFileActions = {
-    read_file: {
+    read_file: defineAction({
         name: 'read_file',
         description: 'Read a file\'s contents without opening it.' +
             'If filePath is not specified, reads the currently open file. ',
         category: CATEGORY_READING,
-        schema: {
-            type: 'object',
-            properties: {
-                filePath: { type: 'string', description: 'The relative path to the file. If omitted, reads the currently open file.', examples: ['./index.html', 'style.css', 'src/main.js'] },
-            },
-            additionalProperties: false,
+        schema: z.object({
+            filePath: z.string().meta({
+                description: 'The relative path to the file. If omitted, reads the currently open file.',
+                examples: ['./index.html', 'style.css', 'src/main.js'],
+            }),
+        }),
+        handler(context) {
+            const { data: actionData } = context;
+            const relativePath = actionData.params.filePath;
+
+            return returnHandleOpenFile(relativePath);
         },
-        handler: handleReadFile,
-        preview: (context: RCEContext) => {
+        preview: (context) => {
             const workspaceUri = getWorkspaceUri();
-            if (!workspaceUri || !context.data.params?.filePath) {
+            if (!workspaceUri || !context.data.params.filePath) {
                 return { dispose: () => { } };
             }
             const fileUri = vscode.Uri.joinPath(workspaceUri, context.data.params.filePath);
             return filePreviewProvider.mark([fileUri], 'read this file');
         },
         cancelEvents: [
-            (context: RCEContext) => {
-                if (!context.data.params?.filePath) {
+            (context) => {
+                if (!context.data.params.filePath) {
                     // For current file, cancel on document change
                     return new RCECancelEvent({
                         reason: 'the active document was changed.',
@@ -50,11 +56,11 @@ export const readFileActions = {
                 // it looks more readable this way okay
                 return null;
             },
-            (context: RCEContext) => context.data.params?.filePath ? targetedFileDeletedEvent(context.data.params.filePath) : null,
+            (context) => context.data.params?.filePath ? targetedFileDeletedEvent(context.data.params.filePath) : null,
         ],
         validators: {
             async: [
-                async (context: RCEContext) => {
+                async (context) => {
                     // Some sub-validators don't understand an empty filePath and will crash unless passed a modified context
                     // Copy to avoid mutation (there shouldn't be any recursive properties possible on context.data)
                     const contextCopy = Object.assign({}, context);     // Shallow copy
@@ -94,61 +100,66 @@ export const readFileActions = {
                 },
             ],
         },
-        promptGenerator: (context: RCEContext) => {
+        promptGenerator: (context) => {
             if (context.data.params?.filePath) {
                 return `read the file "${context.data.params.filePath}" (without opening it).`;
             }
             return 'get the current file\'s contents.';
         },
-    },
-    switch_files: {
+    }),
+    switch_files: defineAction({
         name: 'switch_files',
         description: 'Switch to a different file in the workspace. You cannot open a binary file directly.',
         category: CATEGORY_READING,
-        schema: {
-            type: 'object',
-            properties: {
-                filePath: { type: 'string', description: 'The relative path to the file.', examples: ['src/index.ts', './main.py'] },
-            },
-            required: ['filePath'],
-            additionalProperties: false,
-        },
+        // schema: {
+        //     type: 'object',
+        //     properties: {
+        //         filePath: { type: 'string', description: 'The relative path to the file.', examples: ['src/index.ts', './main.py'] },
+        //     },
+        //     required: ['filePath'],
+        //     additionalProperties: false,
+        // },
+        schema: z.object({
+            filePath: z.string().meta({
+                description: 'The relative path to the file.',
+                examples: ['src/index.ts', './main.py'],
+            }),
+        }),
         handler: handleOpenFile,
         cancelEvents: [
-            (context: RCEContext) => targetedFileDeletedEvent(context.data.params?.filePath),
+            (context) => targetedFileDeletedEvent(context.data.params.filePath),
         ],
         validators: {
             async: [neuroSafeValidation(true), validateIsAFile, binaryFileValidation],
         },
-        promptGenerator: (context: RCEContext) => `open the file "${context.data.params?.filePath}".`,
-        preview: (context: RCEContext) => {
+        promptGenerator: (context) => `open the file "${context.data.params.filePath}".`,
+        preview: (context) => {
             const workspaceUri = getWorkspaceUri();
-            if (!workspaceUri || !context.data.params?.filePath) {
+            if (!workspaceUri || !context.data.params.filePath) {
                 return { dispose: () => { } };
             }
             const fileUri = vscode.Uri.joinPath(workspaceUri, context.data.params.filePath);
             return filePreviewProvider.mark([fileUri], 'open this file');
         },
-    },
-    move_cursor_position: {
+    }),
+    move_cursor_position: defineAction({
         name: 'move_cursor_position',
         description: 'Move your cursor in the current file to the specified position. Line and column numbers are one-based for "absolute" and zero-based for "relative".',
         category: CATEGORY_READING,
-        schema: {
-            ...POSITION_SCHEMA,
+        schema: _POSITION_SCHEMA.meta({
             description: undefined,
-        },
+        }),
         handler: handlePlaceCursor,
         preview: (context) => previewCursorMovement(context.data.params, 'move her cursor to this position.'),
         validators: {
             sync: [checkCurrentFile, createPositionValidator()],
         },
         cancelEvents: commonCancelEvents,
-        promptGenerator: (context: RCEContext) => {
+        promptGenerator: (context) => {
             const actionData = context.data;
             return `${actionData.params.type === 'absolute' ? 'place her cursor at' : 'move her cursor by'} (${actionData.params.line}:${actionData.params.column}).`;
         },
-    },
+    }),
     get_cursor_position: {
         name: 'get_cursor_position',
         description: 'Get your current cursor position and the text surrounding it.',
@@ -172,22 +183,24 @@ export const readFileActions = {
         },
         promptGenerator: 'get your cursor position and surrounding text.',
     },
-    highlight_lines: {
+    highlight_lines: defineAction({
         name: 'highlight_lines',
         description: 'Highlight the specified lines.'
             + ' Can be used to draw insert_turtle_here\'s or Chat\'s attention towards something.'
             + ' This will not move your cursor.'
             + ' Line numbers are one-based.',
         category: CATEGORY_READING,
-        schema: LINE_RANGE_SCHEMA,
+        schema: _LINE_RANGE_SCHEMA.meta({
+            description: undefined,
+        }),
         handler: handleHighlightLines,
         cancelEvents: commonCancelEvents,
         validators: {
             sync: [checkCurrentFile, createLineRangeValidator()],
         },
-        promptGenerator: (context: RCEContext) => `highlight lines ${context.data.params.startLine}-${context.data.params.endLine}.`,
-    },
-    find_text: {
+        promptGenerator: (context) => `highlight lines ${context.data.params.startLine}-${context.data.params.endLine}.`,
+    }),
+    find_text: defineAction({
         name: 'find_text',
         description: 'Find text in the active document.'
             + ' If you set "useRegex" to true, you can use a Regex in the "find" parameter.'
@@ -195,26 +208,31 @@ export const readFileActions = {
             + ' Set "highlight" to true to highlight the found text, if you want to draw insert_turtle_here\'s or Chat\'s attention to it.'
             + ' If you search for multiple matches, the numbers at the start of each line are the one-based line numbers and not part of the code.',
         category: CATEGORY_READING,
-        schema: {
-            type: 'object',
-            properties: {
-                find: { type: 'string', description: 'The search text or RegEx pattern to search for text to replace.' },
-                useRegex: { type: 'boolean', description: 'Whether or not the find pattern is a RegEx pattern.' },
-                match: { type: 'string', enum: MATCH_OPTIONS, description: 'The method to find matching texts.' },
-                lineRange: LINE_RANGE_SCHEMA,
-                moveCursor: { type: 'string', enum: ['start', 'end'], description: 'If there is only one match, where should your cursor move relative to that match?' },
-                highlight: { type: 'boolean', description: 'Set to true to highlight all matches.' },
-            },
-            required: ['find', 'match'],
-            additionalProperties: false,
-        },
+        schema: z.object({
+            find: z.string().meta({
+                description: 'The search text or RegEx pattern to search for text to replace.'
+            }),
+            useRegex: z.boolean().meta({
+                description: 'Whether or not the find pattern is a RegEx pattern.',
+            }).optional(),
+            match: z.enum(MATCH_OPTIONS).meta({
+                description: 'The method to find matching texts.',
+            }),
+            lineRange: _LINE_RANGE_SCHEMA.optional(),
+            moveCursor: z.enum(['start', 'end']).meta({
+                description: 'If there is only one match, where should your cursor move relative to that match?',
+            }).optional(),
+            highlight: z.boolean().meta({
+                description: 'Set to true to highlight all matches.',
+            }),
+        }),
         handler: handleFindText,
         preview: (context) => previewFindFunctions(context.data, 'find'),
         cancelEvents: [cancelOnDidChangeActiveTextEditor],
         validators: {
             sync: [checkCurrentFile, createStringValidator(['find']), createLineRangeValidator('lineRange'), validateRegex('find', 'useRegex')],
         },
-        promptGenerator: (context: RCEContext) => {
+        promptGenerator: (context) => {
             const actionData = context.data;
             let text = 'find ';
             const target = actionData.params.find;
@@ -254,8 +272,8 @@ export const readFileActions = {
             text += '.';
             return text;
         },
-    },
-} satisfies Record<string, RCEAction>;
+    }),
+};
 
 export function addReadActions() {
     addActions([
@@ -269,9 +287,58 @@ export function addReadActions() {
     ]);
 }
 
-export function handleOpenFile(context: RCEContext): RCEHandlerReturns {
+function returnHandleOpenFile(relativePath: string) {
+    const workspaceUri = getWorkspaceUri()!;
+    const relative = normalizePath(relativePath).replace(/^\/|\/$/g, '');
+    const absolutePath = getWorkspacePath() + '/' + relative;
+    if (!isPathNeuroSafe(absolutePath)) {
+        return actionHandlerFailure(`You are not allowed to access ${relativePath}`, ACTION_FAIL_NOTES.noAccess);
+    }
+
+    const fileUri = vscode.Uri.joinPath(workspaceUri, relative);
+
+    return openFileAsync();
+
+    async function openFileAsync() {
+        try {
+            // Open via URI (not fsPath) to work across both file: and virtual workspace schemes
+            const document = await vscode.workspace.openTextDocument(fileUri);
+            await vscode.window.showTextDocument(document);
+
+            logOutput('INFO', `Opened file ${relativePath}`);
+
+            // Usually handled by editorChangedHandler in editing.ts. If disabled, send content now.
+            // Right after opening there may be no virtual cursor yet; in that case, send full file contents
+            // so consumers (and tests) receive deterministic context.
+            if (!CONFIG.sendContentsOnFileChange) {
+                const cursor = getVirtualCursor();
+                if (cursor === undefined || cursor === null) {
+                    // No cursor available yet: send entire document
+                    const decodedContent = document.getText();
+                    const fence = getFence(decodedContent);
+                    NEURO.client?.sendContext(`Contents of the file ${relativePath}:\n\n${fence}\n${decodedContent}\n${fence}`);
+                } else {
+                    // Cursor available: send contextual snippet around the cursor
+                    const cursorContext = getPositionContext(document, cursor);
+                    NEURO.client?.sendContext(formatContext(cursorContext));
+                }
+            }
+            return actionHandlerSuccess(`Opened file ${relativePath}`, 'File opened');
+        } catch (erm: unknown) {
+            if (erm instanceof vscode.FileSystemError && erm.code === 'FileNotFound') {
+                return actionHandlerFailure(`File ${relativePath} not found`, ACTION_FAIL_NOTES.doesntExist);
+            } else {
+                notifyOnCaughtException('open_file', erm);
+                return actionHandlerFailure(`Failed to open file ${relativePath}`, EXCEPTION_THROWN_STRING);
+            }
+        }
+    }
+}
+
+/** @deprecated Functions should now be inlined */
+export function handleOpenFile(context: RCEContext<{ filePath: string }>): RCEHandlerReturns {
     const { data: actionData } = context;
-    const relativePath = actionData.params.filePath;
+    const relativePath = actionData.params!.filePath;
 
     const workspaceUri = getWorkspaceUri()!;
     const relative = normalizePath(relativePath).replace(/^\/|\/$/g, '');
