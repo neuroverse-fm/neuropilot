@@ -6,6 +6,7 @@ import { RCECancelEvent } from '@events/utils';
 import { getProperty, isPathNeuroSafe, getVirtualCursor, indexFromPosition, getWorkspacePath, normalizePath, getWorkspaceUri, isBinary } from './misc';
 import { ActionValidationResult, RCEAction, actionValidationAccept, actionValidationFailure, actionValidationRetry } from './neuro_client';
 import { JSONSchema7 } from 'json-schema';
+import { z } from 'zod';
 
 export const CONTEXT_NO_ACCESS = 'You do not have permission to access this file.';
 export const CONTEXT_NO_ACTIVE_DOCUMENT = 'No active document to edit.';
@@ -30,6 +31,19 @@ export const POSITION_SCHEMA: (Omit<RCEAction, 'schema'> & { schema: Omit<JSONSc
     additionalProperties: false,
     required: ['line', 'column', 'type'],
 };
+export const _POSITION_SCHEMA = z.object({
+    line: z.number().int().meta({
+        description: 'The line number for the position to target.',
+    }),
+    column: z.number().int().meta({
+        description: 'The column number for the position to target.',
+    }),
+    type: z.enum(['relative', 'absolute']).meta({
+        description: 'Whether or not to use the position relative to your cursor or the absolute position in the file. Additionally, if set to "relative", line & column numbers are zero-based, else if set to "absolute", they are one-based.',
+    }),
+}).meta({
+    description: 'Position parameters if you want to move your cursor or use a location other than the current location.',
+}); // If description is not needed, simply call .meta({ description: undefined }) on this const after importing
 export const LINE_RANGE_SCHEMA: (Omit<RCEAction, 'schema'> & { schema: Omit<JSONSchema7, 'type'> & { type: 'object' } })['schema'] = {
     type: 'object',
     description: 'The line range to target.',
@@ -354,7 +368,7 @@ export async function getUriExistence(uri: vscode.Uri): Promise<boolean> {
 }
 
 export function neuroSafeValidation(shouldExist = false) {
-    return async ({ data: actionData }: RCEContext): Promise<ActionValidationResult> => {
+    return async ({ data: actionData }: RCEContext<{ filePath?: string; folderPath?: string }>): Promise<ActionValidationResult> => {
         let result: ActionValidationResult = actionValidationAccept();
         if (actionData.params?.filePath) {
             result = await validatePath(actionData.params.filePath, shouldExist, 'file');
@@ -373,9 +387,9 @@ export function neuroSafeValidation(shouldExist = false) {
  * @param actionData The action data.
  * @returns The validation result.
  */
-export async function binaryFileValidation(context: RCEContext): Promise<ActionValidationResult> {
+export async function binaryFileValidation(context: RCEContext<{ filePath: string }>): Promise<ActionValidationResult> {
     const actionData = context.data;
-    const relativePath = actionData.params.filePath;
+    const relativePath = actionData.params!.filePath;
 
     const workspaceUri = getWorkspaceUri();
 
@@ -408,7 +422,7 @@ export async function binaryFileValidation(context: RCEContext): Promise<ActionV
  * Validates if the targeted file is a file.
  * @returns The validation result.
  */
-export async function validateIsAFile(context: RCEContext): Promise<ActionValidationResult> {
+export async function validateIsAFile(context: RCEContext<{ filePath: string; }>): Promise<ActionValidationResult> {
     const actionData = context.data;
     const filePath = actionData.params?.filePath;
     if (!filePath)

@@ -27,7 +27,7 @@ const REGISTERED_ACTIONS: Set<string> = /* @__PURE__ */ new Set<string>();
  * A prompt parameter can either be a string or a function that converts an RCEContext into a prompt string.
  */
 export type PromptGenerator<
-    TData extends object | undefined = object,
+    TData extends unknown | undefined = unknown,
     TSchema extends StandardJSONSchemaV1 | JSONSchema7 | undefined = JSONSchema7 | undefined,
     TEventData = unknown,
     TDataShape = InferDataFromSchema<TSchema>,
@@ -308,8 +308,9 @@ export function denyRceRequest(): void {
  * @param actions The actions to add.
  * @param register Whether to register the actions with Neuro immediately if the permissions allow.
  */
+// allowing any here because it genuinely doens't matter what gets passed in
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function addActions(actions: RCEAction[], register = true): void {
+export function addActions(actions: RCEAction<any, any, SchemaTypes, any>[], register = true): void {
     const actionsToAdd = actions.filter(a => !ACTIONS_ARRAY.some(existing => existing.name === a.name));
     const actionsNotToAdd = actions.filter(a => !actionsToAdd.includes(a));
     if (actionsNotToAdd.length > 0) {
@@ -560,8 +561,13 @@ export function getActions(): readonly RCEAction[] {
     return ACTIONS_ARRAY;
 }
 
-export function getAction<const S extends SchemaTypes>(actionName: string): RCEAction<S> | undefined {
-    return ACTIONS_ARRAY.find(a => a.name === actionName);
+export function getAction<
+    const TData extends unknown | undefined,
+    const TEventData,
+    const TSchema extends SchemaTypes,
+    const TDataShape extends unknown | undefined,
+>(actionName: string): RCEAction<TData, TEventData, TSchema, TDataShape> | undefined {
+    return ACTIONS_ARRAY.find(a => a.name === actionName) as RCEAction<TData, TEventData, TSchema, TDataShape> | undefined;
 }
 
 export function getExtendedActionsInfo(): ExtendedActionInfo[] {

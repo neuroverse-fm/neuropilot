@@ -10,7 +10,7 @@ import { RCECancelEvent } from '@events/utils';
 import { addActions } from '@/rce';
 import { createPreviewCursor, createPreviewHighlight } from '@previews/edits';
 import { RCEContext } from '@/context/rce';
-import { commonCancelEvents, cancelOnDidChangeActiveTextEditor, checkCurrentFile, createPositionValidator, CONTEXT_NO_ACCESS, CONTEXT_NO_ACTIVE_DOCUMENT, STATUS_NO_ACCESS, STATUS_NO_ACTIVE_DOCUMENT, STATUS_NO_MATCHES_FOUND, LINE_RANGE_SCHEMA, LineRange, MATCH_OPTIONS, MatchOptions, POSITION_SCHEMA, createLineRangeValidator, createStringValidator, validateRegex, findAndFilter } from './utils/action_components';
+import { commonCancelEvents, cancelOnDidChangeActiveTextEditor, checkCurrentFile, createPositionValidator, CONTEXT_NO_ACCESS, CONTEXT_NO_ACTIVE_DOCUMENT, STATUS_NO_ACCESS, STATUS_NO_ACTIVE_DOCUMENT, STATUS_NO_MATCHES_FOUND, LINE_RANGE_SCHEMA, LineRange, MATCH_OPTIONS, MatchOptions, _POSITION_SCHEMA, createLineRangeValidator, createStringValidator, validateRegex, findAndFilter } from './utils/action_components';
 import { z } from 'zod';
 
 export const CATEGORY_EDITING = 'Edit Files';
@@ -76,7 +76,7 @@ export function previewCursorMovement(positionParam: { line: number, column: num
 }
 
 export const editFileActions = {
-    insert_text: {
+    insert_text: defineAction({
         name: 'insert_text',
         description: 'Insert code at the specified position.'
             + ' Line and column numbers are one-based for "absolute" and zero-based for "relative".'
@@ -85,15 +85,12 @@ export const editFileActions = {
             + ' After inserting, your cursor will be placed at the end of the inserted text.'
             + ' Also make sure you use new lines and indentation appropriately.',
         category: CATEGORY_EDITING,
-        schema: {
-            type: 'object',
-            properties: {
-                text: { type: 'string', description: 'The text to insert.' },
-                position: POSITION_SCHEMA,
-            },
-            required: ['text'],
-            additionalProperties: false,
-        },
+        schema: z.object({
+            text: z.string().meta({
+                description: 'The text to insert.',
+            }),
+            position: _POSITION_SCHEMA,
+        }),
         handler: handleInsertText,
         preview: (context) => {
             const positionParam = context.data.params.position;
@@ -109,7 +106,7 @@ export const editFileActions = {
         validators: {
             sync: [checkCurrentFile, createPositionValidator('position'), createStringValidator(['text'])],
         },
-        promptGenerator: (context: RCEContext) => {
+        promptGenerator: (context) => {
             const actionData = context.data;
             const lineCount = actionData.params.text.trim().split('\n').length;
             let text = `insert ${lineCount} line${lineCount === 1 ? '' : 's'} of code`;
@@ -127,7 +124,7 @@ export const editFileActions = {
             text += '.';
             return text;
         },
-    },
+    }),
     insert_lines: defineAction({
         name: 'insert_lines',
         description: 'Insert code below a certain line.'
@@ -146,7 +143,7 @@ export const editFileActions = {
         }),
         handler: handleInsertLines,
         preview: (context) => {
-            const length = (context.data.params?.text as string).split('\n').length;
+            const length = (context.data.params.text as string).split('\n').length;
             let line: number | undefined = context.data.params?.insertUnder;
             if (!line) {
                 line = getVirtualCursor()!.line;
@@ -174,7 +171,7 @@ export const editFileActions = {
         cancelEvents: [
             ...commonCancelEvents,
             (context) => {
-                return context.data.params?.insertUnder ? null : createCursorPositionChangedEvent();
+                return context.data.params.insertUnder ? null : createCursorPositionChangedEvent();
             },
         ],
         validators: {
@@ -502,7 +499,7 @@ export const editFileActions = {
             return `apply a diff patch ( +${linesAdded} | -${linesRemoved} ).`;
         },
     },
-} satisfies Record<string, RCEAction>;
+};
 
 export function addEditingActions() {
     addActions([

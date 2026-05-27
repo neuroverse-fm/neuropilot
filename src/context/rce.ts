@@ -6,6 +6,15 @@ import { getAction } from '@/rce';
 
 export type RCEStorage = Record<string | number | symbol, unknown>;
 
+/**
+ * Conditional type for ActionData that makes params required when a schema exists,
+ * and optional/undefined when no schema is provided.
+ */
+export type RCEActionData<TSchema extends SchemaTypes, TDataShape> =
+    TSchema extends undefined
+        ? Omit<ActionData, 'params'> & { params?: undefined }
+        : Omit<ActionData, 'params'> & { params: TDataShape };
+
 export interface RCELifecycleMetadata {
     events?: Disposable[];
     preview?: { dispose: () => unknown };
@@ -42,15 +51,14 @@ export class RCEContext<
     const TData extends unknown | undefined = unknown,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const TEventData = any,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const TSchema extends SchemaTypes = any,
+    const TSchema extends SchemaTypes = SchemaTypes,
     const TDataShape extends unknown | undefined = TData extends unknown ? TData : InferDataFromSchema<TSchema>,
 > extends Disposable {
     name: string;
     private success: boolean | null;
     createdAt: string = new Date().toLocaleTimeString();
 
-    data: Omit<ActionData, 'params'> & { params?: TDataShape };
+    data: RCEActionData<TSchema, TDataShape>;
     action: RCEAction<TData, TEventData, TSchema, TDataShape>;
     readonly forced: boolean;
 
@@ -74,7 +82,7 @@ export class RCEContext<
      */
     readonly updateStatus: SimplifiedStatusUpdateHandler = (status: ActionStatus, message?: string) => this._updateStatus(status, message);
 
-    constructor(data: Omit<ActionData, 'params'> & { params?: TDataShape }, forced = false) {
+    constructor(data: RCEActionData<TSchema, TDataShape>, forced = false) {
         super(() => {
             // Clear timers and cancel events
             this.clearPreHandlerResources();
@@ -96,7 +104,7 @@ export class RCEContext<
             this._updateStatus = (_status, _message) => undefined;
         });
         this.data = data;
-        this.action = getAction(data.name)! as RCEAction<TData, TEventData, TSchema, TDataShape>;
+        this.action = getAction<TData, TEventData, TSchema, TDataShape>(data.name)!;
         this.name = data.name;
         this.success = null;
         this.storage = {};
