@@ -12,7 +12,6 @@ import { RCECancelEvent } from '@events/utils';
 import { filePreviewProvider } from '@previews/files';
 import { addActions } from './rce';
 import z from 'zod';
-import { StandardJSONSchemaV1 } from '@standard-schema/spec';
 
 const CATEGORY_READING = 'Read Files';
 
@@ -28,12 +27,7 @@ export const readFileActions = {
                 examples: ['./index.html', 'style.css', 'src/main.js'],
             }),
         }),
-        handler(context) {
-            const { data: actionData } = context;
-            const relativePath = actionData.params.filePath;
-
-            return returnHandleOpenFile(relativePath);
-        },
+        handler: handleReadFile,
         preview: (context) => {
             const workspaceUri = getWorkspaceUri();
             if (!workspaceUri || !context.data.params.filePath) {
@@ -125,7 +119,12 @@ export const readFileActions = {
                 examples: ['src/index.ts', './main.py'],
             }),
         }),
-        handler: handleOpenFile,
+        handler(context) {
+            const { data: actionData } = context;
+            const relativePath = actionData.params.filePath;
+
+            return returnHandleOpenFile(relativePath);
+        },
         cancelEvents: [
             (context) => targetedFileDeletedEvent(context.data.params.filePath),
         ],
