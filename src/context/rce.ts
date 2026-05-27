@@ -10,7 +10,7 @@ export type RCEStorage = Record<string | number | symbol, unknown>;
  * Conditional type for ActionData that makes params required when a schema exists,
  * and optional/undefined when no schema is provided.
  */
-export type RCEActionData<TSchema extends SchemaTypes, TDataShape> =
+export type RCEActionData<TDataShape, TSchema extends SchemaTypes> =
     TSchema extends undefined
         ? Omit<ActionData, 'params'> & { params?: undefined }
         : Omit<ActionData, 'params'> & { params: TDataShape };
@@ -58,7 +58,7 @@ export class RCEContext<
     private success: boolean | null;
     createdAt: string = new Date().toLocaleTimeString();
 
-    data: RCEActionData<TSchema, TDataShape>;
+    data: RCEActionData<TDataShape, TSchema>;
     action: RCEAction<TData, TEventData, TSchema, TDataShape>;
     readonly forced: boolean;
 
@@ -82,7 +82,7 @@ export class RCEContext<
      */
     readonly updateStatus: SimplifiedStatusUpdateHandler = (status: ActionStatus, message?: string) => this._updateStatus(status, message);
 
-    constructor(data: RCEActionData<TSchema, TDataShape>, forced = false) {
+    constructor(data: RCEActionData<TDataShape, TSchema>, forced = false) {
         super(() => {
             // Clear timers and cancel events
             this.clearPreHandlerResources();

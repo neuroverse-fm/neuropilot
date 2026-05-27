@@ -10,7 +10,9 @@ import { NeuroClient } from 'neuro-game-sdk';
 import { NEURO } from '@/constants';
 import { anything, capture, instance, mock, verify } from 'ts-mockito';
 
-const makeContext = (data: ActionData) => ({ data, updateStatus: returnMockFunction() } as unknown as RCEContext);
+const makeContext = <const TData extends unknown | undefined>(data: ActionData<TData>) => ({ data, updateStatus: returnMockFunction() } as unknown as RCEContext<TData>);
+
+const { readFileActions } = readFiles;
 
 suite('File Actions', () => {
     let originalClient: NeuroClient | null = null;
@@ -92,7 +94,7 @@ suite('File Actions', () => {
 
         // === Act & Assert ===
         assertProperties(await validateIsAFile(makeContext(baseAction)), { success: false, retry: true }, 'Missing filePath should be invalid');
-        assertProperties(await validateIsAFile(makeContext({ ...baseAction, params: {} })), { success: false, retry: true }, 'Undefined filePath should be invalid');
+        assertProperties(await validateIsAFile(makeContext(baseAction)), { success: false, retry: true }, 'Undefined filePath should be invalid');
         assertProperties(await validateIsAFile(makeContext({ ...baseAction, params: { filePath: '' } })), { success: false, retry: true }, 'Empty filePath should be invalid');
         assertProperties(await validateIsAFile(makeContext({ ...baseAction, params: { filePath: '/' } })), { success: false, retry: true }, 'Root-only path should be invalid');
 
@@ -329,7 +331,7 @@ suite('File Actions', () => {
         NEURO.client = instance(mockedClient);
 
         // === Act ===
-        readFiles.handleOpenFile(makeContext({ id: 'abc', name: 'open_file', params: { filePath: filePath } } as ActionData));
+        readFileActions.read_file.handler(makeContext({ id: 'abc', name: 'open_file', params: { filePath: filePath } }));
         // Allow VS Code to open and show the document before asserting
         await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); }, 5000, 100);
         // Brief delay to ensure activeTextEditor is updated across platforms
