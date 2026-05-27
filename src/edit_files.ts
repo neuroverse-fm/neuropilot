@@ -3,7 +3,7 @@ import { ActionData } from 'neuro-game-sdk';
 
 import { NEURO } from '@/constants';
 import { DiffRangeType, escapeRegExp, getDiffRanges, getFence, getPositionContext, getVirtualCursor, showDiffRanges, isPathNeuroSafe, logOutput, setVirtualCursor, simpleFileName, substituteMatch, clearDecorations, formatContext, filterFileContents, positionFromIndex, indexFromPosition, NeuroPositionContext } from '@/utils/misc';
-import { actionValidationAccept, actionValidationFailure, RCEAction, RCEHandlerReturns, actionHandlerSuccess, actionHandlerFailure } from '@/utils/neuro_client';
+import { actionValidationAccept, actionValidationFailure, RCEAction, RCEHandlerReturns, actionHandlerSuccess, actionHandlerFailure, defineAction } from '@/utils/neuro_client';
 import { CONFIG, CONNECTION } from '@/config';
 import { createCursorPositionChangedEvent } from '@events/cursor';
 import { RCECancelEvent } from '@events/utils';
@@ -11,6 +11,7 @@ import { addActions } from '@/rce';
 import { createPreviewCursor, createPreviewHighlight } from '@previews/edits';
 import { RCEContext } from '@/context/rce';
 import { commonCancelEvents, cancelOnDidChangeActiveTextEditor, checkCurrentFile, createPositionValidator, CONTEXT_NO_ACCESS, CONTEXT_NO_ACTIVE_DOCUMENT, STATUS_NO_ACCESS, STATUS_NO_ACTIVE_DOCUMENT, STATUS_NO_MATCHES_FOUND, LINE_RANGE_SCHEMA, LineRange, MATCH_OPTIONS, MatchOptions, POSITION_SCHEMA, createLineRangeValidator, createStringValidator, validateRegex, findAndFilter } from './utils/action_components';
+import z from 'zod';
 
 export const CATEGORY_EDITING = 'Edit Files';
 
@@ -127,7 +128,7 @@ export const editFileActions = {
             return text;
         },
     },
-    insert_lines: {
+    insert_lines: defineAction({
         name: 'insert_lines',
         description: 'Insert code below a certain line.'
             + ' Defaults to your current cursor\'s location'
@@ -135,26 +136,34 @@ export const editFileActions = {
             + ' Remember to add indents after newlines where appropriate.'
             + ' Your cursor will be moved to the end of the inserted line.', // TODO: Clarify cursor stuff again
         category: CATEGORY_EDITING,
-        schema: {
-            type: 'object',
-            properties: {
-                text: {
-                    type: 'string',
-                    description: 'The text to insert',
-                },
-                insertUnder: {
-                    type: 'integer',
-                    minimum: 1,
-                    description: 'The one-based line number to insert under.',
-                },
-            },
-            additionalProperties: false,
-            required: ['text'],
-        },
+        // schema: {
+        //     type: 'object',
+        //     properties: {
+        //         text: {
+        //             type: 'string',
+        //             description: 'The text to insert',
+        //         },
+        //         insertUnder: {
+        //             type: 'integer',
+        //             minimum: 1,
+        //             description: 'The one-based line number to insert under.',
+        //         },
+        //     },
+        //     additionalProperties: false,
+        //     required: ['text'],
+        // }
+        schema: z.object({
+            text: z.string().meta({
+                description: 'The text to insert',
+            }),
+            insertUnder: z.number({}).min(1).optional().meta({
+                description: 'The one-based line number to insert under.',
+            }),
+        }),
         handler: handleInsertLines,
         preview: (context) => {
-            const length = (context.data.params.text as string).split('\n').length;
-            let line: number | undefined = context.data.params.insertUnder;
+            const length = (context.data.params?.text as string).split('\n').length;
+            let line: number | undefined = context.data.params?.insertUnder;
             if (!line) {
                 line = getVirtualCursor()!.line;
             } else {
@@ -180,20 +189,20 @@ export const editFileActions = {
         },
         cancelEvents: [
             ...commonCancelEvents,
-            (context: RCEContext) => {
-                return context.data.params.position ? null : createCursorPositionChangedEvent();
+            (context) => {
+                return context.data.params?.insertUnder ? null : createCursorPositionChangedEvent();
             },
         ],
         validators: {
             sync: [checkCurrentFile, createStringValidator(['lines'])],
         },
-        promptGenerator: (context: RCEContext) => {
+        promptGenerator: (context) => {
             const actionData = context.data;
             const lines = actionData.params.text.trim().split('\n').length;
             const insertUnder = actionData.params.insertUnder;
             return `insert ${lines} line${lines !== 1 ? 's' : ''} of code below ${insertUnder ? `line ${insertUnder}` : 'her cursor'}.`;
         },
-    },
+    }),
     replace_text: {
         name: 'replace_text',
         description: 'Replace text in the active document.'
@@ -430,7 +439,7 @@ export const editFileActions = {
         cancelEvents: [
             ...commonCancelEvents,
             (context: RCEContext) => {
-                if (context.data.params.requireSelectionUnchanged)
+                if (context.data.params?.requireSelectionUnchanged)
                     return new RCECancelEvent({
                         reason: `${CONNECTION.userName}'s selection changed.`,
                         logReason: `${CONNECTION.userName}'s selection changed and requireSelectionUnchanged is set to true.`,

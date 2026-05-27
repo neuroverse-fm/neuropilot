@@ -74,3 +74,7 @@ export class RCECancelEvent<T = unknown> {
         this.logReason = init?.logReason;
     }
 }
+
+export function createRCECancelEvent<const TEventData>(init?: RCECancelEventInitializer<TEventData>): RCECancelEvent<TEventData> {
+    return new RCECancelEvent<TEventData>(init);
+}

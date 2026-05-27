@@ -1,7 +1,5 @@
-import type { ActionValidationResult, InferDataFromSchema, RCEAction } from '@/utils/neuro_client';
+import type { ActionValidationResult, InferDataFromSchema, RCEAction, SchemaTypes } from '@/utils/neuro_client';
 import type { ActionData } from 'neuro-game-sdk';
-import type { JSONSchema7 } from 'json-schema';
-import type { StandardJSONSchemaV1 } from '@standard-schema/spec';
 import { Disposable, Progress } from 'vscode';
 import { ActionStatus, updateActionStatus } from '@events/actions';
 import { getAction } from '@/rce';
@@ -41,17 +39,21 @@ export interface RCERequestState {
  * 7. Handler
  */
 export class RCEContext<
-    S extends StandardJSONSchemaV1 | JSONSchema7 | undefined = JSONSchema7 | undefined,
-    T = InferDataFromSchema<S>,
-    E = unknown,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const TData extends unknown | undefined = unknown,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const TEventData = any,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const TSchema extends SchemaTypes = any,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const TDataShape extends unknown | undefined = TData extends unknown ? TData : InferDataFromSchema<TSchema>,
 > extends Disposable {
     name: string;
     private success: boolean | null;
     createdAt: string = new Date().toLocaleTimeString();
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    data: ActionData<any> & { params?: T };
-    action: RCEAction<S, T, E>;
+    data: Omit<ActionData, 'params'> & { params?: TDataShape };
+    action: RCEAction<TData, TEventData, TSchema, TDataShape>;
     readonly forced: boolean;
 
     /** Lifecycle-specific data */
@@ -74,7 +76,7 @@ export class RCEContext<
      */
     readonly updateStatus: SimplifiedStatusUpdateHandler = (status: ActionStatus, message?: string) => this._updateStatus(status, message);
 
-    constructor(data: ActionData<any> & { params?: T }, forced = false) {
+    constructor(data: Omit<ActionData, 'params'> & { params?: TDataShape }, forced = false) {
         super(() => {
             // Clear timers and cancel events
             this.clearPreHandlerResources();

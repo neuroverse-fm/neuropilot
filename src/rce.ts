@@ -5,7 +5,7 @@
 
 import * as vscode from 'vscode';
 import { ActionData } from 'neuro-game-sdk';
-import { ActionForceParams, actionHandlerFailure, ActionHandlerResult, actionHandlerSuccess, RCEAction, stripToAction } from '@/utils/neuro_client';
+import { ActionForceParams, actionHandlerFailure, ActionHandlerResult, actionHandlerSuccess, InferDataFromSchema, RCEAction, SchemaTypes, stripToAction } from '@/utils/neuro_client';
 import { NEURO } from '@/constants';
 import { isThenable, logOutput, notifyOnCaughtException } from '@/utils/misc';
 import { ACTIONS, CONFIG, CONNECTION, getAllPermissions, getPermissionLevel, PermissionLevel, stringToPermissionLevel } from '@/config';
@@ -26,13 +26,12 @@ const REGISTERED_ACTIONS: Set<string> = /* @__PURE__ */ new Set<string>();
 /**
  * A prompt parameter can either be a string or a function that converts an RCEContext into a prompt string.
  */
-
-
 export type PromptGenerator<
-    S extends StandardJSONSchemaV1 | JSONSchema7 | undefined = JSONSchema7 | undefined,
-    T = any,
-    E = unknown,
-> = string | ((context: RCEContext<S, T, E>) => string);
+    TData extends object | undefined = object,
+    TSchema extends StandardJSONSchemaV1 | JSONSchema7 | undefined = JSONSchema7 | undefined,
+    TEventData = unknown,
+    TDataShape = InferDataFromSchema<TSchema>,
+> = string | ((context: RCEContext<TData, TEventData, TSchema, TDataShape>) => string);
 
 let activeRequestContext: RCEContext | null = null;
 
@@ -561,7 +560,7 @@ export function getActions(): readonly RCEAction[] {
     return ACTIONS_ARRAY;
 }
 
-export function getAction(actionName: string): RCEAction | undefined {
+export function getAction<const S extends SchemaTypes>(actionName: string): RCEAction<S> | undefined {
     return ACTIONS_ARRAY.find(a => a.name === actionName);
 }
 

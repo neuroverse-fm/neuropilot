@@ -1,6 +1,5 @@
 import { PermissionLevel } from '@/config';
-import { actionHandlerRetry, ActionHandlerResult, actionHandlerSuccess, defineAction } from '@/utils/neuro_client';
-import { RCEContext } from '@ctx/rce';
+import { actionHandlerRetry, actionHandlerSuccess, defineAction } from '@/utils/neuro_client';
 import { z } from 'zod';
 
 export const standardSchemaActions = {
@@ -10,18 +9,16 @@ export const standardSchemaActions = {
         schema: z.object({
             args: z.array(z.string()),
         }),
-        handler: handleTestZodSchema,
+        handler(ctx) {
+            if (!ctx.data.params?.args) {
+                return actionHandlerRetry('Missing args from test zod schema');
+            } else {
+                return actionHandlerSuccess();
+            }
+        },
         promptGenerator: null,
         hidden: true,
         defaultPermission: PermissionLevel.AUTOPILOT,
         category: 'Misc',
     }),
 };
-
-export function handleTestZodSchema(ctx: RCEContext): ActionHandlerResult {
-    if (!ctx.data.params?.args) {
-        return actionHandlerRetry('Missing args from test zod schema');
-    } else {
-        return actionHandlerSuccess();
-    }
-}
