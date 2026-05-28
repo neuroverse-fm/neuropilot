@@ -167,7 +167,9 @@ export interface RCEAction<TData extends unknown | undefined = undefined, TEvent
  *   cancelEvents: [(ctx) => new RCECancelEvent<vscode.FileDeleteEvent>({ ... })],
  *   // ...
  * });
+ * @pure
  */
+/*@__PURE__*/
 export function defineAction<
     const TData extends object | undefined,
     const TCancelEventData extends object,
