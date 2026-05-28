@@ -1,10 +1,11 @@
 import * as vscode from 'vscode';
+import assert from 'node:assert';
+
 import { EXCEPTION_THROWN_STRING, NEURO } from '@/constants';
 import { normalizePath, getWorkspacePath, logOutput, isPathNeuroSafe, getWorkspaceUri } from '@/utils/misc';
 import { CONFIG } from '@/config';
 import { filePreviewProvider } from '@/previews/files';
 import { actionValidationAccept, actionValidationFailure, ActionValidationResult, RCEAction, actionValidationRetry, ActionHandlerResult, actionHandlerSuccess, actionHandlerFailure } from '@/utils/neuro_client';
-import assert from 'node:assert';
 import { targetedFileLintingResolvedEvent, targetedFolderLintingResolvedEvent, workspaceLintingResolvedEvent } from '@events/linting';
 import { addActions } from '@/rce';
 import { RCEContext } from '@ctx/rce';

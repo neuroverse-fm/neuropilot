@@ -1,9 +1,10 @@
 import * as vscode from 'vscode';
 import { ActionData } from 'neuro-game-sdk';
+import { z } from 'zod';
 
 import { NEURO } from '@/constants';
 import { DiffRangeType, escapeRegExp, getDiffRanges, getFence, getPositionContext, getVirtualCursor, showDiffRanges, isPathNeuroSafe, logOutput, setVirtualCursor, simpleFileName, substituteMatch, clearDecorations, formatContext, filterFileContents, positionFromIndex, indexFromPosition, NeuroPositionContext } from '@/utils/misc';
-import { actionValidationAccept, actionValidationFailure, RCEAction, RCEHandlerReturns, actionHandlerSuccess, actionHandlerFailure, defineAction } from '@/utils/neuro_client';
+import { actionValidationAccept, actionValidationFailure, RCEHandlerReturns, actionHandlerSuccess, actionHandlerFailure, defineAction } from '@/utils/neuro_client';
 import { CONFIG, CONNECTION } from '@/config';
 import { createCursorPositionChangedEvent } from '@events/cursor';
 import { RCECancelEvent } from '@events/utils';
@@ -11,7 +12,6 @@ import { addActions } from '@/rce';
 import { createPreviewCursor, createPreviewHighlight } from '@previews/edits';
 import { RCEContext } from '@/context/rce';
 import { commonCancelEvents, cancelOnDidChangeActiveTextEditor, checkCurrentFile, createPositionValidator, CONTEXT_NO_ACCESS, CONTEXT_NO_ACTIVE_DOCUMENT, STATUS_NO_ACCESS, STATUS_NO_ACTIVE_DOCUMENT, STATUS_NO_MATCHES_FOUND, LINE_RANGE_SCHEMA, LineRange, MATCH_OPTIONS, MatchOptions, _POSITION_SCHEMA, createLineRangeValidator, createStringValidator, validateRegex, findAndFilter, _LINE_RANGE_SCHEMA } from './utils/action_components';
-import { z } from 'zod';
 
 export const CATEGORY_EDITING = 'Edit Files';
 

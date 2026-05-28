@@ -1,12 +1,12 @@
 import * as vscode from 'vscode';
+import { JSONSchema7 } from 'json-schema';
+import { z } from 'zod';
 
 import { RCEContext } from '@ctx/rce';
 import { createCursorPositionChangedEvent } from '@events/cursor';
 import { RCECancelEvent } from '@events/utils';
 import { getProperty, isPathNeuroSafe, getVirtualCursor, indexFromPosition, getWorkspacePath, normalizePath, getWorkspaceUri, isBinary } from './misc';
 import { ActionValidationResult, RCEAction, actionValidationAccept, actionValidationFailure, actionValidationRetry } from './neuro_client';
-import { JSONSchema7 } from 'json-schema';
-import { z } from 'zod';
 
 export const CONTEXT_NO_ACCESS = 'You do not have permission to access this file.';
 export const CONTEXT_NO_ACTIVE_DOCUMENT = 'No active document to edit.';

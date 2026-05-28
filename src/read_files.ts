@@ -1,17 +1,18 @@
 import * as vscode from 'vscode';
+import z from 'zod';
 
 import { RCEContext } from '@ctx/rce';
 import { EXCEPTION_THROWN_STRING, NEURO, PROMISE_REJECTION_STRING } from './constants';
 import { previewCursorMovement, previewFindFunctions } from './edit_files';
 import { isPathNeuroSafe, getVirtualCursor, setVirtualCursor, getPositionContext, logOutput, formatContext, getFence, escapeRegExp, filterFileContents, indexFromPosition, positionFromIndex, getWorkspacePath, getWorkspaceUri, NeuroPositionContext, normalizePath, notifyOnCaughtException, simpleFileName } from './utils/misc';
 import { RCEHandlerReturns, actionHandlerFailure, actionHandlerSuccess, actionValidationAccept, actionValidationFailure, defineAction } from './utils/neuro_client';
-import { _LINE_RANGE_SCHEMA, _POSITION_SCHEMA, ACTION_FAIL_NOTES, binaryFileValidation, cancelOnDidChangeActiveTextEditor, checkCurrentFile, commonCancelEvents, commonCancelEventsWithCursor, CONTEXT_NO_ACCESS, CONTEXT_NO_ACTIVE_DOCUMENT, createLineRangeValidator, createPositionValidator, createStringValidator, findAndFilter, LINE_RANGE_SCHEMA, LineRange, MATCH_OPTIONS, MatchOptions, neuroSafeValidation, POSITION_SCHEMA, STATUS_NO_ACCESS, STATUS_NO_ACTIVE_DOCUMENT, STATUS_NO_MATCHES_FOUND, validateIsAFile, validateRegex } from './utils/action_components';
+import { _LINE_RANGE_SCHEMA, _POSITION_SCHEMA, ACTION_FAIL_NOTES, binaryFileValidation, cancelOnDidChangeActiveTextEditor, checkCurrentFile, commonCancelEvents, commonCancelEventsWithCursor, CONTEXT_NO_ACCESS, CONTEXT_NO_ACTIVE_DOCUMENT, createLineRangeValidator, createPositionValidator, createStringValidator, findAndFilter, LineRange, MATCH_OPTIONS, MatchOptions, neuroSafeValidation, STATUS_NO_ACCESS, STATUS_NO_ACTIVE_DOCUMENT, STATUS_NO_MATCHES_FOUND, validateIsAFile, validateRegex } from './utils/action_components';
 import { CONFIG, CONNECTION } from './config';
 import { targetedFileDeletedEvent } from '@events/files';
 import { RCECancelEvent } from '@events/utils';
 import { filePreviewProvider } from '@previews/files';
 import { addActions } from './rce';
-import z from 'zod';
+import assert from 'node:assert';
 
 const CATEGORY_READING = 'Read Files';
 
@@ -148,7 +149,10 @@ export const readFileActions = {
         schema: _POSITION_SCHEMA.meta({
             description: undefined,
         }),
-        handler: handlePlaceCursor,
+        handler(ctx) {
+            const { line, column, type } = ctx.data.params;
+            return returnHandlePlaceCursor(line, column, type);
+        },
         preview: (context) => previewCursorMovement(context.data.params, 'move her cursor to this position.'),
         validators: {
             sync: [checkCurrentFile, createPositionValidator()],
@@ -159,7 +163,7 @@ export const readFileActions = {
             return `${actionData.params.type === 'absolute' ? 'place her cursor at' : 'move her cursor by'} (${actionData.params.line}:${actionData.params.column}).`;
         },
     }),
-    get_cursor_position: {
+    get_cursor_position: defineAction({
         name: 'get_cursor_position',
         description: 'Get your current cursor position and the text surrounding it.',
         category: CATEGORY_READING,
@@ -169,8 +173,8 @@ export const readFileActions = {
         },
         cancelEvents: commonCancelEventsWithCursor,
         promptGenerator: 'get her current cursor position and the text surrounding it.',
-    },
-    get_user_selection: {
+    }),
+    get_user_selection: defineAction({
         name: 'get_user_selection',
         description: 'Get insert_turtle_here\'s current selection and the text surrounding it.'
             + ' This will not move your own cursor.',
@@ -181,7 +185,7 @@ export const readFileActions = {
             sync: [checkCurrentFile],
         },
         promptGenerator: 'get your cursor position and surrounding text.',
-    },
+    }),
     highlight_lines: defineAction({
         name: 'highlight_lines',
         description: 'Highlight the specified lines.'
@@ -192,7 +196,10 @@ export const readFileActions = {
         schema: _LINE_RANGE_SCHEMA.meta({
             description: undefined,
         }),
-        handler: handleHighlightLines,
+        handler(ctx) {
+            const { startLine, endLine } = ctx.data.params;
+            return returnHandleHighlightLines(startLine, endLine);
+        },
         cancelEvents: commonCancelEvents,
         validators: {
             sync: [checkCurrentFile, createLineRangeValidator()],
@@ -209,7 +216,7 @@ export const readFileActions = {
         category: CATEGORY_READING,
         schema: z.object({
             find: z.string().meta({
-                description: 'The search text or RegEx pattern to search for text to replace.'
+                description: 'The search text or RegEx pattern to search for text to replace.',
             }),
             useRegex: z.boolean().meta({
                 description: 'Whether or not the find pattern is a RegEx pattern.',
@@ -225,7 +232,10 @@ export const readFileActions = {
                 description: 'Set to true to highlight all matches.',
             }),
         }),
-        handler: handleFindText,
+        handler(ctx) {
+            const { find, match, highlight, useRegex, lineRange, moveCursor } = ctx.data.params;
+            return returnHandleFindText(find, match, useRegex, lineRange, moveCursor, highlight);
+        },
         preview: (context) => previewFindFunctions(context.data, 'find'),
         cancelEvents: [cancelOnDidChangeActiveTextEditor],
         validators: {
@@ -398,18 +408,12 @@ function returnHandleReadFile(filePath?: string) {
 }
 
 /** @deprecated Functions should now be inlined */
-export function handleReadFile(context: RCEContext<{ filePath: string}>): RCEHandlerReturns {
+export function handleReadFile(context: RCEContext<{ filePath: string }>): RCEHandlerReturns {
     const { data: actionData } = context;
     return returnHandleReadFile(actionData.params!.filePath);
 }
 
-export function handlePlaceCursor(context: RCEContext): RCEHandlerReturns {
-    const { data: actionData } = context;
-    // One-based line and column (depending on config)
-    let line = actionData.params.line;
-    let column = actionData.params.column;
-    const type = actionData.params.type;
-
+function returnHandlePlaceCursor(line: number, column: number, type: 'relative' | 'absolute') {
     const document = vscode.window.activeTextEditor?.document;
     if (document === undefined) {
         return actionHandlerFailure(CONTEXT_NO_ACTIVE_DOCUMENT, STATUS_NO_ACTIVE_DOCUMENT);
@@ -442,6 +446,11 @@ export function handlePlaceCursor(context: RCEContext): RCEHandlerReturns {
     logOutput('INFO', `Placed ${NEURO.currentController}'s virtual cursor at (${basedLine}:${basedColumn}).`);
 
     return actionHandlerSuccess(`Cursor placed at (${basedLine}:${basedColumn})\n\n${formatContext(cursorContext)}`, `Cursor placed at (${basedLine}:${basedColumn})`);
+}
+/** @deprecated Functions should now be inlined */
+export function handlePlaceCursor(context: RCEContext<{ line: number, column: number, type: 'relative' | 'absolute' }>): RCEHandlerReturns {
+    const params = context.data.params!;
+    return returnHandlePlaceCursor(params.line, params.column, params.type);
 }
 
 export function handleGetCursor(): RCEHandlerReturns {
@@ -491,11 +500,7 @@ function handleGetUserSelection(): RCEHandlerReturns {
     return actionHandlerSuccess(`${preamble}\n\n${formatContext(cursorContext)}${postamble}`, `Cursor selection for ${CONNECTION.userName} formatted and sent to ${CONNECTION.nameOfAPI}.`);
 }
 
-export function handleHighlightLines(context: RCEContext): RCEHandlerReturns {
-    const { data: actionData } = context;
-    const startLine: number = actionData.params.startLine;
-    const endLine: number = actionData.params.endLine;
-
+function returnHandleHighlightLines(startLine: number, endLine: number) {
     const editor = vscode.window.activeTextEditor;
     const document = editor?.document;
     if (document === undefined) {
@@ -519,15 +524,13 @@ export function handleHighlightLines(context: RCEContext): RCEHandlerReturns {
     return actionHandlerSuccess(`Highlighted lines ${startLine}-${endLine}.`, `Highlighted lines ${startLine}-${endLine}`);
 }
 
-export function handleFindText(context: RCEContext): RCEHandlerReturns {
-    const { data: actionData } = context;
-    const find: string = actionData.params.find;
-    const match: MatchOptions = actionData.params.match;
-    const useRegex: boolean = actionData.params.useRegex ?? false;
-    const lineRange: LineRange | undefined = actionData.params.lineRange;
-    const moveCursor: 'start' | 'end' = actionData.params.moveCursor ?? 'start';
-    const highlight: boolean = actionData.params.highlight ?? false;
+/** @deprecated Functions should now be inlined */
+export function handleHighlightLines(context: RCEContext<{ startLine: number, endLine: number }>): RCEHandlerReturns {
+    const params = context.data.params!;
+    return returnHandleHighlightLines(params.startLine, params.endLine);
+}
 
+function returnHandleFindText(find: string, match: MatchOptions, useRegex = false, lineRange?: LineRange, moveCursor: 'start' | 'end' = 'start', highlight = false) {
     const document = vscode.window.activeTextEditor?.document;
     if (document === undefined) {
         return actionHandlerFailure(CONTEXT_NO_ACTIVE_DOCUMENT, STATUS_NO_ACTIVE_DOCUMENT);
@@ -550,7 +553,7 @@ export function handleFindText(context: RCEContext): RCEHandlerReturns {
         // Single match
         const startPosition = positionFromIndex(documentText, matches[0].index);
         const endPosition = positionFromIndex(documentText, matches[0].index + matches[0][0].length);
-        if (actionData.params?.moveCursor) setVirtualCursor(moveCursor === 'start' ? startPosition : endPosition);
+        if (moveCursor) setVirtualCursor(moveCursor === 'start' ? startPosition : endPosition);
         if (highlight) {
             const range = new vscode.Range(startPosition, endPosition);
             vscode.window.activeTextEditor!.setDecorations(NEURO.highlightDecorationType!, [{
@@ -561,7 +564,7 @@ export function handleFindText(context: RCEContext): RCEHandlerReturns {
         }
         const cursorContext = getPositionContext(document, startPosition);
         logOutput('INFO', `Placed cursor at (${endPosition.line + 1}:${endPosition.character + 1})`);
-        return actionHandlerSuccess(`Found match ${actionData.params?.moveCursor ? 'and placed your cursor ' : ''}at (${endPosition.line + 1}:${endPosition.character + 1})\n\n${formatContext(cursorContext)}`, 'Found 1 match');
+        return actionHandlerSuccess(`Found match ${moveCursor ? 'and placed your cursor ' : ''}at (${endPosition.line + 1}:${endPosition.character + 1})\n\n${formatContext(cursorContext)}`, 'Found 1 match');
     }
     else {
         // Multiple matches
@@ -582,4 +585,17 @@ export function handleFindText(context: RCEContext): RCEHandlerReturns {
         const fence = getFence(text);
         return actionHandlerSuccess(`Found ${positions.length} matches:\n\n${fence}\n${text}\n${fence}`, `Found ${positions.length} matches`);
     }
+}
+
+/** @deprecated Functions should now be inlined */
+export function handleFindText(context: RCEContext<{ find: string, match: MatchOptions, useRegex?: boolean, lineRange?: LineRange, moveCursor?: 'start' | 'end', highlight?: boolean }>): RCEHandlerReturns {
+    const { data: actionData } = context;
+    assert(actionData.params);
+    const find: string = actionData.params.find;
+    const match: MatchOptions = actionData.params.match;
+    const useRegex: boolean = actionData.params.useRegex ?? false;
+    const lineRange: LineRange | undefined = actionData.params.lineRange;
+    const moveCursor: 'start' | 'end' = actionData.params.moveCursor ?? 'start';
+    const highlight: boolean = actionData.params.highlight ?? false;
+    return returnHandleFindText(find, match, useRegex, lineRange, moveCursor, highlight);
 }
