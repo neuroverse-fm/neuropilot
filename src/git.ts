@@ -7,7 +7,7 @@ import type { Change, CommitOptions, Commit, Repository, API, GitExtension } fro
 import { ForcePushMode } from '@typing/git.d';
 import { StatusStrings, RefTypeStrings } from '@typing/git_status';
 import { logOutput, simpleFileName, isPathNeuroSafe, normalizePath, getWorkspacePath, getWorkspaceUri } from '@/utils/misc';
-import { ActionValidationResult, actionValidationAccept, actionValidationFailure, RCEAction, actionValidationRetry, RCEHandlerReturns, actionHandlerSuccess, actionHandlerFailure, actionHandlerRetry } from '@/utils/neuro_client';
+import { ActionValidationResult, actionValidationAccept, actionValidationFailure, actionValidationRetry, RCEHandlerReturns, actionHandlerSuccess, actionHandlerFailure, actionHandlerRetry, defineAction } from '@/utils/neuro_client';
 import { RCECancelEvent } from '@events/utils';
 import { addActions, registerAction, reregisterAllActions, unregisterAction } from './rce';
 import { RCEContext } from '@ctx/rce';
@@ -80,52 +80,6 @@ async function filePathGitValidator(context: RCEContext): Promise<ActionValidati
     return actionValidationAccept();
 }
 
-function gitDiffValidator(context: RCEContext): ActionValidationResult {
-    const actionData = context.data;
-    const diffType: string = actionData.params?.diffType ?? 'diffWithHEAD';
-    const FAIL_NOTE = `Inputs did not match what was necessary to make a ${diffType}-type diff`;
-    switch (diffType) {
-        case 'diffWithHEAD':
-            if (actionData.params?.ref1 || actionData.params?.ref2) {
-                return actionValidationAccept('Neither "ref1" nor "ref2" is needed.');
-            }
-            return actionValidationAccept();
-        case 'diffWith':
-            if (actionData.params?.ref1 && actionData.params?.ref2) {
-                return actionValidationAccept('Only "ref1" is needed for the "diffWith" diff type.');
-            } else if (!actionData.params?.ref1) {
-                return actionValidationRetry('"ref1" is required for the diff type of "diffWith"', FAIL_NOTE);
-            } else {
-                return actionValidationAccept();
-            }
-        case 'diffIndexWithHEAD':
-            if (actionData.params?.ref1 || actionData.params?.ref2) {
-                return actionValidationAccept('Neither "ref1" nor "ref2" is needed.');
-            }
-            return actionValidationAccept();
-        case 'diffIndexWith':
-            if (actionData.params?.ref1 && actionData.params?.ref2) {
-                return actionValidationAccept('Only "ref1" is needed for the "diffIndexWith" diff type.');
-            } else if (!actionData.params?.ref1) {
-                return actionValidationRetry('"ref1" is required for the diff type of "diffIndexWith"', FAIL_NOTE);
-            } else {
-                return actionValidationAccept();
-            }
-        case 'diffBetween':
-            if (!actionData.params?.ref1 || !actionData.params?.ref2) {
-                return actionValidationRetry('"ref1" AND "ref2" is required for the diff type of "diffWith"', FAIL_NOTE);
-            } else {
-                return actionValidationAccept();
-            }
-        case 'fullDiff':
-            if (actionData.params?.ref1 || actionData.params?.ref2) {
-                return actionValidationAccept('Neither "ref1" nor "ref2" is needed.');
-            }
-            return actionValidationAccept();
-        default:
-            return actionValidationFailure('Unknown diff type.', 'Unknown/unhandled diff type specified');
-    }
-}
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const commonCancelEvents: ((context: RCEContext) => RCECancelEvent<any> | null)[] = [
     () => new RCECancelEvent({
@@ -137,7 +91,7 @@ const commonCancelEvents: ((context: RCEContext) => RCECancelEvent<any> | null)[
 ];
 
 export const gitActions = {
-    init_git_repo: {
+    init_git_repo: defineAction({
         name: 'init_git_repo',
         description: 'Initialize a new Git repository in the current workspace folder',
         category: CATEGORY_GIT,
@@ -163,95 +117,72 @@ export const gitActions = {
             ],
         },
         registerCondition: () => !!git,
-    },
-    add_file_to_git: {
+    }),
+    add_file_to_git: defineAction({
         name: 'add_file_to_git',
         description: 'Add a file to the staging area',
         category: CATEGORY_GIT,
-        // schema: {
-        //     type: 'object',
-        //     properties: {
-        //         filePath: {
-        //             type: 'array',
-        //             description: 'Array of relative file paths to the files you want to add to staging.',
-        //             items: { type: 'string', examples: ['src/index.js', './README.md'] },
-        //             minItems: 1,
-        //             uniqueItems: true,
-        //         },
-        //     },
-        //     required: ['filePath'],
-        //     additionalProperties: false,
-        // },
         schema: z.object({
             filePath: z.array(z.string()).meta({
                 uniqueItems: true,
             }),
         }),
         handler: handleAddFileToGit,
-        preview: (ctx: RCEContext) => {
+        preview: (ctx) => {
             const ws = getWorkspaceUri();
             if (!ws) return { dispose: () => { } };
-            const filePaths: string[] = ctx.data.params!.filePath;
+            const filePaths: string[] = ctx.data.params.filePath;
             const fileUris: vscode.Uri[] = filePaths.map((p) => {
                 return vscode.Uri.joinPath(ws, p);
             });
             return filePreviewProvider.mark(fileUris, 'add this file to the Git staging area');
         },
         cancelEvents: commonCancelEvents,
-        promptGenerator: (context: RCEContext) => `add the file "${context.data.params.filePath}" to the staging area.`,
+        promptGenerator: (context) => `add the file "${context.data.params.filePath}" to the staging area.`,
         validators: {
             sync: [gitValidator],
             async: [filePathGitValidator],
         },
         registerCondition: () => !!repo,
-    },
-    make_git_commit: {
+    }),
+    make_git_commit: defineAction({
         name: 'make_git_commit',
         description: 'Commit staged changes with a message',
         category: CATEGORY_GIT,
-        schema: {
-            type: 'object',
-            properties: {
-                message: { type: 'string', description: 'The commit message to add.' },
-                options: {
-                    type: 'array',
-                    description: 'Extra options you can choose for committing.',
-                    items: { type: 'string', enum: ['signoff', 'verbose', 'amend'] },
-                    uniqueItems: true,
-                },
-            },
-            required: ['message'],
-            additionalProperties: false,
-        },
+        schema: z.object({
+            message: z.string().meta({
+                description: 'The commit message to add.',
+            }),
+            options: z.array(z.enum(['signoff', 'verbose', 'amend'])).optional().meta({
+                uniqueItems: true,
+            }),
+        }),
         handler: handleMakeGitCommit,
         cancelEvents: commonCancelEvents,
-        promptGenerator: (context: RCEContext) => `commit changes with the message "${context.data.params.message}".`,
+        promptGenerator: (context) => `commit changes with the message "${context.data.params.message}".`,
         validators: {
             sync: [gitValidator],
         },
         registerCondition: () => !!repo,
-    },
-    merge_to_current_branch: {
+    }),
+    merge_to_current_branch: defineAction({
         name: 'merge_to_current_branch',
         description: 'Merge another branch into the current branch.',
         category: CATEGORY_GIT,
-        schema: {
-            type: 'object',
-            properties: {
-                ref_to_merge: { type: 'string', description: 'The branch name to merge into the current branch.' },
-            },
-            required: ['ref_to_merge'],
-            additionalProperties: false,
-        },
+        schema: z.object({
+            ref_to_merge: z.string().meta({
+                description: 'The branch name to merge into the current branch.',
+            }),
+        }),
         handler: handleGitMerge,
         cancelEvents: commonCancelEvents,
-        promptGenerator: (context: RCEContext) => `merge "${context.data.params.ref_to_merge}" into the current branch.`,
+        promptGenerator: (context) => `merge "${context.data.params.ref_to_merge}" into the current branch.`,
         validators: {
             sync: [gitValidator],
         },
         registerCondition: () => !!repo,
-    },
-    git_status: {
+    }),
+    git_status: defineAction({
         name: 'git_status',
         description: 'Get the current status of the Git repository',
         category: CATEGORY_GIT,
@@ -262,134 +193,170 @@ export const gitActions = {
             sync: [gitValidator],
         },
         registerCondition: () => !!repo,
-    },
-    remove_file_from_git: {
+    }),
+    remove_file_from_git: defineAction({
         name: 'remove_file_from_git',
         description: 'Remove a file from the staging area',
         category: CATEGORY_GIT,
-        schema: {
-            type: 'object',
-            properties: {
-                filePath: {
-                    type: 'array',
-                    description: 'Array of relative file paths to remove from staging.',
-                    items: { type: 'string', examples: ['src/index.js', './README.md'] },
-                    minItems: 1,
-                    uniqueItems: true,
-                },
-            },
-            required: ['filePath'],
-            additionalProperties: false,
-        },
+        schema: z.object({
+            filePath: z.array(z.string().meta({
+                examples: ['src/index.js', './README.md'],
+            })).min(1).meta({
+                uniqueItems: true,
+            }),
+        }),
         handler: handleRemoveFileFromGit,
-        preview: (ctx: RCEContext) => {
+        preview: (ctx) => {
             const ws = getWorkspaceUri();
             if (!ws) return { dispose: () => { } };
-            const filePaths: string[] = ctx.data.params!.filePath;
+            const filePaths: string[] = ctx.data.params.filePath;
             const fileUris: vscode.Uri[] = filePaths.map((p) => {
                 return vscode.Uri.joinPath(ws, p);
             });
             return filePreviewProvider.mark(fileUris, 'remove this file from the Git staging area');
         },
         cancelEvents: commonCancelEvents,
-        promptGenerator: (context: RCEContext) => `remove the file "${context.data.params.filePath}" from the staging area.`,
+        promptGenerator: (context) => `remove the file "${context.data.params.filePath}" from the staging area.`,
         validators: {
             sync: [gitValidator],
             async: [filePathGitValidator],
         },
         registerCondition: () => !!repo,
-    },
-    delete_git_branch: {
+    }),
+    delete_git_branch: defineAction({
         name: 'delete_git_branch',
         description: 'Delete a branch in the current Git repository',
         category: CATEGORY_GIT,
-        schema: {
-            type: 'object',
-            properties: {
-                branchName: { type: 'string', description: 'Which branch in the Git repository should be deleted?' },
-                force: { type: 'boolean', description: 'If true, forcibly deletes a branch.' },
-            },
-            required: ['branchName'],
-            additionalProperties: false,
-        },
+        schema: z.object({
+            branchName: z.string().meta({
+                description: 'Which branch in the Git repository should be deleted?',
+            }),
+            force: z.boolean().optional().meta({
+                description: 'If true, forcibly deletes a branch.',
+            }),
+        }),
         handler: handleDeleteGitBranch,
         cancelEvents: commonCancelEvents,
-        promptGenerator: (context: RCEContext) => `delete the branch "${context.data.params.branchName}".`,
+        promptGenerator: (context) => `delete the branch "${context.data.params.branchName}".`,
         validators: {
             sync: [gitValidator],
         },
         registerCondition: () => !!repo,
-    },
-    switch_git_branch: {
+    }),
+    switch_git_branch: defineAction({
         name: 'switch_git_branch',
         description: 'Switch to a different branch in the current Git repository',
         category: CATEGORY_GIT,
-        schema: {
-            type: 'object',
-            properties: {
-                branchName: { type: 'string', description: 'The name of the branch to switch to.' },
-            },
-            required: ['branchName'],
-            additionalProperties: false,
-        },
+        schema: z.object({
+            branchName: z.string().meta({
+                description: 'The name of the branch to switch to.',
+            }),
+        }),
         handler: handleSwitchGitBranch,
         cancelEvents: commonCancelEvents,
-        promptGenerator: (context: RCEContext) => `switch to the branch "${context.data.params.branchName}".`,
+        promptGenerator: (context) => `switch to the branch "${context.data.params.branchName}".`,
         validators: {
             sync: [gitValidator],
         },
         registerCondition: () => !!repo,
-    },
-    new_git_branch: {
+    }),
+    new_git_branch: defineAction({
         name: 'new_git_branch',
         description: 'Create a new branch in the current Git repository',
         category: CATEGORY_GIT,
-        schema: {
-            type: 'object',
-            properties: {
-                branchName: { type: 'string', description: 'The name of the new branch.' },
-            },
-            required: ['branchName'],
-            additionalProperties: false,
-        },
+        schema: z.object({
+            branchName: z.string().meta({
+                description: 'The name of the new branch.',
+            }),
+        }),
         handler: handleNewGitBranch,
         cancelEvents: commonCancelEvents,
-        promptGenerator: (context: RCEContext) => `create a new branch "${context.data.params.branchName}".`,
+        promptGenerator: (context) => `create a new branch "${context.data.params.branchName}".`,
         validators: {
             sync: [gitValidator],
         },
         registerCondition: () => !!repo,
-    },
-    diff_files: {
+    }),
+    diff_files: defineAction({
         name: 'diff_files',
         description: 'Get the differences between two versions of a file in the Git repository',
         category: CATEGORY_GIT,
-        schema: {
-            type: 'object',
-            properties: {
-                ref1: { type: 'string', description: 'The first ref to use to diff with. Only used if diffType is "diffWith", "diffIndexWith", and "diffBetween".' },
-                ref2: { type: 'string', description: 'The second ref to diff against the first ref. Only used if diffType is "diffBetween".' },
-                filePath: { type: 'string', description: 'For certain diff types, you can specify a file to diff. If omitted, will usually diff the entire ref.' },
-                diffType: { type: 'string', enum: ['diffWithHEAD', 'diffWith', 'diffIndexWithHEAD', 'diffIndexWith', 'diffBetween', 'fullDiff'], description: 'The type of diff to run. This will also affect what parameters are required.' },
-            },
-            additionalProperties: false,
-        },
+        schema: z.object({
+            ref1: z.string().meta({
+                description: 'The first ref to use to diff with. Only used if diffType is "diffWith", "diffIndexWith", and "diffBetween".',
+            }).optional(),
+            ref2: z.string().meta({
+                description: 'The second ref to diff against the first ref. Only used if diffType is "diffBetween".',
+            }).optional(),
+            filePath: z.string().meta({
+                description: 'For certain diff types, you can specify a file to diff. If omitted, will usually diff the entire ref.',
+            }).optional(),
+            diffType: z.enum(['diffWithHEAD', 'diffWith', 'diffIndexWithHEAD', 'diffIndexWith', 'diffBetween', 'fullDiff']).meta({
+                description: 'The type of diff to run. This will also affect what parameters are required.',
+            }).optional(),
+        }),
         handler: handleDiffFiles,
-        preview: (ctx: RCEContext) => {
+        preview: (ctx) => {
             const ws = getWorkspaceUri();
             if (!ws) return { dispose: () => { } };
-            const filePath: string = ctx.data.params!.filePath;
+            const filePath = ctx.data.params.filePath;
+            if (!filePath) return { dispose: () => { } };
             const fileUri: vscode.Uri = vscode.Uri.joinPath(ws, filePath);
             return filePreviewProvider.mark([fileUri], 'view the diff for this file');
         },
         cancelEvents: commonCancelEvents,
-        promptGenerator: (context: RCEContext) => `obtain ${context.data.params?.filePath ? `"${context.data.params.filePath}"'s` : 'a'} Git diff${context.data.params?.ref1 && context.data.params?.ref2 ? ` between ${context.data.params.ref1} and ${context.data.params.ref2}` : context.data.params?.ref1 ? ` at ref ${context.data.params.ref1}` : ''}${context.data.params?.diffType ? ` (of type "${context.data.params.diffType}")` : ''}.`,
+        promptGenerator: (context) => `obtain ${context.data.params.filePath ? `"${context.data.params.filePath}"'s` : 'a'} Git diff${context.data.params.ref1 && context.data.params.ref2 ? ` between ${context.data.params.ref1} and ${context.data.params.ref2}` : context.data.params.ref1 ? ` at ref ${context.data.params.ref1}` : ''}${context.data.params.diffType ? ` (of type "${context.data.params.diffType}")` : ''}.`,
         validators: {
-            sync: [gitValidator, gitDiffValidator],
+            sync: [gitValidator, (ctx) => {
+                const actionData = ctx.data;
+                const diffType: string = actionData.params.diffType ?? 'diffWithHEAD';
+                const FAIL_NOTE = `Inputs did not match what was necessary to make a ${diffType}-type diff`;
+                switch (diffType) {
+                    case 'diffWithHEAD':
+                        if (actionData.params.ref1 || actionData.params.ref2) {
+                            return actionValidationAccept('Neither "ref1" nor "ref2" is needed.');
+                        }
+                        return actionValidationAccept();
+                    case 'diffWith':
+                        if (actionData.params.ref1 && actionData.params.ref2) {
+                            return actionValidationAccept('Only "ref1" is needed for the "diffWith" diff type.');
+                        } else if (!actionData.params.ref1) {
+                            return actionValidationRetry('"ref1" is required for the diff type of "diffWith"', FAIL_NOTE);
+                        } else {
+                            return actionValidationAccept();
+                        }
+                    case 'diffIndexWithHEAD':
+                        if (actionData.params.ref1 || actionData.params.ref2) {
+                            return actionValidationAccept('Neither "ref1" nor "ref2" is needed.');
+                        }
+                        return actionValidationAccept();
+                    case 'diffIndexWith':
+                        if (actionData.params.ref1 && actionData.params.ref2) {
+                            return actionValidationAccept('Only "ref1" is needed for the "diffIndexWith" diff type.');
+                        } else if (!actionData.params.ref1) {
+                            return actionValidationRetry('"ref1" is required for the diff type of "diffIndexWith"', FAIL_NOTE);
+                        } else {
+                            return actionValidationAccept();
+                        }
+                    case 'diffBetween':
+                        if (!actionData.params.ref1 || !actionData.params.ref2) {
+                            return actionValidationRetry('"ref1" AND "ref2" is required for the diff type of "diffWith"', FAIL_NOTE);
+                        } else {
+                            return actionValidationAccept();
+                        }
+                    case 'fullDiff':
+                        if (actionData.params.ref1 || actionData.params.ref2) {
+                            return actionValidationAccept('Neither "ref1" nor "ref2" is needed.');
+                        }
+                        return actionValidationAccept();
+                    default:
+                        return actionValidationFailure('Unknown diff type.', 'Unknown/unhandled diff type specified');
+                }
+            }],
             async: [filePathGitValidator],
         },
         registerCondition: () => !!repo,
-    },
+    }),
     git_log: {
         name: 'git_log',
         description: 'Get the commit history of the current branch',

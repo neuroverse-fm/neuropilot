@@ -37,9 +37,9 @@ export const readFileActions = {
             const fileUri = vscode.Uri.joinPath(workspaceUri, context.data.params.filePath);
             return filePreviewProvider.mark([fileUri], 'read this file');
         },
-        cancelEvents: [ // TODO: FIX CANCEL EVENTS TYPING ERROR
+        cancelEvents: [
             (context) => {
-                if (!context.data.params.filePath) {
+                if (!context.data.params?.filePath) {
                     // For current file, cancel on document change
                     return new RCECancelEvent({
                         reason: 'the active document was changed.',
@@ -345,7 +345,7 @@ function returnHandleOpenFile(relativePath: string) {
 }
 
 /** @deprecated Functions should now be inlined */
-export function handleOpenFile(context: RCEContext<{ filePath: string }>): RCEHandlerReturns {
+export function handleOpenFile(context: RCEContext<undefined, typeof readFileActions.switch_files.schema>): RCEHandlerReturns {
     const { data: actionData } = context;
     const relativePath = actionData.params!.filePath;
 

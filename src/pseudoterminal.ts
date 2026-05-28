@@ -59,7 +59,7 @@ export const terminalActions = {
             return returnHandleRunCommand(command, shell);
         },
         // TODO: Auto-switch to targeted terminal (if already started) as preview effect
-        cancelEvents: [ // TODO: FIX CANCEL EVENTS TYPING
+        cancelEvents: [
             (context) => notifyOnTerminalClose(context.data.params.shell),
         ],
         validators: {

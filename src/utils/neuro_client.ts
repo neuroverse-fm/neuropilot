@@ -58,8 +58,7 @@ export type InferDataFromSchema<TSchema extends SchemaTypes> =
 // Event type E uses any due to contravariance: RCECancelEvent<T> is contravariant in T,
 // so we need any to allow different specific event types (TextEditor, DiagnosticChangeEvent, etc.)
 // to be grouped together in arrays like Object.values(actions).
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export interface RCEAction<TData extends unknown | undefined = undefined, TEventData = any, TSchema extends SchemaTypes = SchemaTypes, TDataShape extends unknown | undefined = TData extends unknown ? TData : InferDataFromSchema<TSchema>> extends Omit<Action, 'schema'> {
+export interface RCEAction<TData extends unknown | undefined = undefined, TSchema extends SchemaTypes = SchemaTypes, TDataShape extends unknown | undefined = TData extends undefined ? InferDataFromSchema<TSchema> : TData> extends Omit<Action, 'schema'> {
     /**
      * A valid JSON Schema or Standard JSON Schema that describes the action's parameters.
      * Standard JSON Schemas (like Zod v4+) will be automatically converted to JSON Schema before registration.
@@ -75,7 +74,7 @@ export interface RCEAction<TData extends unknown | undefined = undefined, TEvent
      * An object that defines an array of functions to validate the action's "environment".
      * Validators run before requests/executions to ensure environment/input validity.
      */
-    validators?: RCEValidators<TData, TSchema, TDataShape, TEventData>
+    validators?: RCEValidators<TData, TSchema, TDataShape>
     /**
      * Cancellation events attached to the action that will be automatically set up.
      * Each cancellation event will be setup in parallel to each other.
@@ -84,7 +83,8 @@ export interface RCEAction<TData extends unknown | undefined = undefined, TEvent
      * Following VS Code's pattern, Disposables will not be awaited if async.
      * Returns from calling the `dispose()` function will not be used anywhere.
      */
-    cancelEvents?: ((context: RCEContext<TData, TEventData, TSchema, TDataShape>) => RCECancelEvent<TEventData> | null)[];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    cancelEvents?: ((context: RCEContext<TData, TSchema, TDataShape>) => RCECancelEvent<any> | null)[];
     /**
      * A function that is used to preview the action's effects.
      * This function will be called while awaiting user approval, if the action is set to Copilot permission.
@@ -93,7 +93,7 @@ export interface RCEAction<TData extends unknown | undefined = undefined, TEvent
      * If your preview function does not require a dispose function to be called, return a no-op Disposable-like.
      * @example return { dispose: () => undefined } // for no-ops
      */
-    preview?: (context: RCEContext<TData, TEventData, TSchema, TDataShape>) => { dispose: () => unknown };
+    preview?: (context: RCEContext<TData, TSchema, TDataShape>) => { dispose: () => unknown };
     /** 
      * The function to handle the action.
      * This function must be synchronous.
@@ -101,7 +101,7 @@ export interface RCEAction<TData extends unknown | undefined = undefined, TEvent
      * An action result can be sent as either a synchronous result or asynchronous result, it will automatically be handled by RCE.
      * (see {@link RCEHandlerReturns})
      */
-    handler: RCEHandler<TData, TSchema, TDataShape, TEventData>;
+    handler: RCEHandler<TData, TSchema, TDataShape>;
     /** 
      * The function to generate a prompt for the action request (Copilot Mode). 
      * The prompt should fit the phrasing scheme "Neuro wants to [prompt]".
@@ -111,7 +111,7 @@ export interface RCEAction<TData extends unknown | undefined = undefined, TEvent
      * It is this way due to a potential new addition in Neuro API "v2". (not officially proposed)
      * More info (comment): https://github.com/VedalAI/neuro-game-sdk/discussions/58#discussioncomment-12938623
      */
-    promptGenerator: PromptGenerator<TData, TSchema, TEventData, TDataShape> | null;
+    promptGenerator: PromptGenerator<TData, TSchema, TDataShape> | null;
     /** Default permission for actions when no permission is configured in user or workspace settings. Defaults to {@link PermissionLevel.OFF}. */
     defaultPermission?: PermissionLevel;
     /**
@@ -151,7 +151,7 @@ export interface RCEAction<TData extends unknown | undefined = undefined, TEvent
      * 
      * These functions will be parallelised, so the same key should not be accessed from multiple functions.
      */
-    contextSetupHook?: ((context: RCEContext<TData, TEventData, TSchema, TDataShape>) => Thenable<void>)[];
+    contextSetupHook?: ((context: RCEContext<TData, TSchema, TDataShape>) => Thenable<void>)[];
 }
 
 /**
@@ -172,10 +172,9 @@ export interface RCEAction<TData extends unknown | undefined = undefined, TEvent
 /*@__PURE__*/
 export function defineAction<
     const TData extends object | undefined,
-    const TCancelEventData extends object,
     const TSchema extends SchemaTypes,
     const TInput extends InferDataFromSchema<TSchema>,
->(action: RCEAction<TData, TCancelEventData, TSchema, TInput>): RCEAction<TData, TCancelEventData, TSchema, TInput> {
+>(action: RCEAction<TData, TSchema, TInput>): RCEAction<TData, TSchema, TInput> {
     return action;
 }
 
@@ -184,7 +183,6 @@ interface RCEValidators<
     TData extends unknown | undefined,
     TSchema extends SchemaTypes,
     TDataShape = InferDataFromSchema<TSchema>,
-    TEventData = unknown,
 > {
     /** 
      * Synchronous validators that will block execution of the rest of the thread.
@@ -199,7 +197,7 @@ interface RCEValidators<
      * 
      * @todo Turn into factory function that returns arrays?
      */
-    sync?: ((context: RCEContext<TData, TEventData, TSchema, TDataShape>) => ActionValidationResult)[],
+    sync?: ((context: RCEContext<TData, TSchema, TDataShape>) => ActionValidationResult)[],
     /**
      * Asynchronous validators that will be ran in parallel to each other.
      * These will be executed after an action result, so it's perfect for long-running validators.
@@ -207,15 +205,14 @@ interface RCEValidators<
      * Async validators will time out (and consequently fail) after 1 second (1000ms). It is planned that this value will be adjustable in the future.
      * @todo Turn into factory function that returns arrays?
      */
-    async?: ((context: RCEContext<TData, TEventData, TSchema, TDataShape>) => Thenable<ActionValidationResult>)[];
+    async?: ((context: RCEContext<TData, TSchema, TDataShape>) => Thenable<ActionValidationResult>)[];
 }
 
 type RCEHandler<
     TData extends unknown | undefined,
     TSchema extends SchemaTypes,
     TDataShape = InferDataFromSchema<TSchema>,
-    TEventData = unknown,
-> = (context: RCEContext<TData, TEventData, TSchema, TDataShape>) => RCEHandlerReturns;
+> = (context: RCEContext<TData, TSchema, TDataShape>) => RCEHandlerReturns;
 /**
  * The possible values that an RCE handler can return.
  */

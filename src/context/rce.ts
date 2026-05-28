@@ -2,7 +2,6 @@ import type { ActionValidationResult, InferDataFromSchema, RCEAction, SchemaType
 import type { ActionData } from 'neuro-game-sdk';
 import { Disposable, Progress } from 'vscode';
 import { ActionStatus, updateActionStatus } from '@events/actions';
-import { getAction } from '@/rce';
 
 export type RCEStorage = Record<string | number | symbol, unknown>;
 
@@ -48,18 +47,14 @@ export interface RCERequestState {
  * 7. Handler
  */
 export class RCEContext<
-    const TData extends unknown | undefined = unknown,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const TEventData = any,
+    const TData extends unknown | undefined = undefined,
     const TSchema extends SchemaTypes = SchemaTypes,
-    const TDataShape extends unknown | undefined = TData extends unknown ? TData : InferDataFromSchema<TSchema>,
+    const TDataShape extends unknown | undefined = TData extends undefined ? InferDataFromSchema<TSchema> : TData,
 > extends Disposable {
-    name: string;
-    private success: boolean | null;
+    private success: boolean | null = null;
     createdAt: string = new Date().toLocaleTimeString();
 
     data: RCEActionData<TDataShape, TSchema>;
-    action: RCEAction<TData, TEventData, TSchema, TDataShape>;
     readonly forced: boolean;
 
     /** Lifecycle-specific data */
@@ -73,7 +68,7 @@ export class RCEContext<
      * each stage.
      * This data does not persist across different executions.
      */
-    public storage?: RCEStorage;
+    public storage: RCEStorage = {};
     private _updateStatus: SimplifiedStatusUpdateHandler = (status: ActionStatus, message?: string) => updateActionStatus(this.data, status, message);
     /**
      * Updates the status of the action on the action execution history panel
@@ -98,16 +93,11 @@ export class RCEContext<
             for (const k in this.lifecycle) {
                 this.lifecycle[k as keyof typeof this.lifecycle] = undefined;
             }
-            this.storage = undefined;
+            this.storage = {} as never;
             this.data = {} as never;
-            this.action = {} as never;
             this._updateStatus = (_status, _message) => undefined;
         });
         this.data = data;
-        this.action = getAction<TData, TEventData, TSchema, TDataShape>(data.name)!;
-        this.name = data.name;
-        this.success = null;
-        this.storage = {};
         this.forced = forced;
     }
 
