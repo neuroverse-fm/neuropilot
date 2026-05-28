@@ -7,6 +7,7 @@ import { addChangelogActions } from '@/changelog';
 import { addRequestCookieAction } from '@/functions/cookies';
 import { standardSchemaActions } from '@/integrations/standard-json-schema';
 import { addReadActions } from '@/read_files';
+import { ExtensionMode } from 'vscode';
 
 export function addCommonUnsupervisedActions() {
     addFileActions();
@@ -16,7 +17,7 @@ export function addCommonUnsupervisedActions() {
     addChangelogActions();
     addRequestCookieAction();
     addActions([cancelRequestAction]);
-    addActions([standardSchemaActions.test_zod_schema]);
+    if (NEURO.context?.extensionMode === ExtensionMode.Development) addActions([standardSchemaActions.test_zod_schema]);
 }
 
 /**
