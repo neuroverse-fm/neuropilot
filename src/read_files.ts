@@ -27,7 +27,7 @@ export const readFileActions = {
                 examples: ['./index.html', 'style.css', 'src/main.js'],
             }),
         }),
-        handler: handleReadFile,
+        handler: (ctx) => returnHandleReadFile(ctx.data.params.filePath),
         preview: (context) => {
             const workspaceUri = getWorkspaceUri();
             if (!workspaceUri || !context.data.params.filePath) {
@@ -36,7 +36,7 @@ export const readFileActions = {
             const fileUri = vscode.Uri.joinPath(workspaceUri, context.data.params.filePath);
             return filePreviewProvider.mark([fileUri], 'read this file');
         },
-        cancelEvents: [
+        cancelEvents: [ // TODO: FIX CANCEL EVENTS TYPING ERROR
             (context) => {
                 if (!context.data.params.filePath) {
                     // For current file, cancel on document change
@@ -342,14 +342,13 @@ export function handleOpenFile(context: RCEContext<{ filePath: string }>): RCEHa
     return returnHandleOpenFile(relativePath);
 }
 
-export function handleReadFile(context: RCEContext): RCEHandlerReturns {
-    const { data: actionData } = context;
+function returnHandleReadFile(filePath?: string) {
     const editor = vscode.window.activeTextEditor;
     if (!editor) {
         return actionHandlerFailure('No active text editor.', 'No active text editor.');
     }
     // If no filePath provided, read current file
-    if (!actionData.params.filePath || actionData.params.filePath === '' || vscode.workspace.asRelativePath(editor.document.uri) === vscode.workspace.asRelativePath(vscode.Uri.joinPath(getWorkspaceUri()!, actionData.params.filePath))) {
+    if (!filePath || filePath === '' || vscode.workspace.asRelativePath(editor.document.uri) === vscode.workspace.asRelativePath(vscode.Uri.joinPath(getWorkspaceUri()!, filePath))) {
         const document = editor.document;
         const fileName = simpleFileName(document.fileName);
         const cursor = getVirtualCursor()!;
@@ -372,7 +371,7 @@ export function handleReadFile(context: RCEContext): RCEHandlerReturns {
     }
 
     // Original read_file logic for specific file
-    const file = actionData.params.filePath;
+    const file = filePath;
 
     const workspaceUri = getWorkspaceUri()!;
     const absolute = normalizePath(workspaceUri.fsPath + '/' + file.replace(/^\/|\/$/g, ''));
@@ -396,6 +395,12 @@ export function handleReadFile(context: RCEContext): RCEHandlerReturns {
         notifyOnCaughtException('read_file', erm);
         return actionHandlerFailure(`Unable to read file ${file}`, EXCEPTION_THROWN_STRING);
     }
+}
+
+/** @deprecated Functions should now be inlined */
+export function handleReadFile(context: RCEContext<{ filePath: string}>): RCEHandlerReturns {
+    const { data: actionData } = context;
+    return returnHandleReadFile(actionData.params!.filePath);
 }
 
 export function handlePlaceCursor(context: RCEContext): RCEHandlerReturns {
