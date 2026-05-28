@@ -345,7 +345,7 @@ export const fileActions = {
         promptGenerator: 'save.',
         registerCondition: () => vscode.workspace.getConfiguration('files').get<string>('autoSave') !== 'afterDelay',
     },
-} satisfies Record<string, RCEAction>;
+};
 
 export function addFileActions() {
     addActions([

@@ -681,7 +681,7 @@ export const gitActions = {
         },
         autoRegister: false,
     },
-} satisfies Record<string, RCEAction>;
+};
 
 // Get the current Git repository
 // let repo: Repository | undefined = git.repositories[0];

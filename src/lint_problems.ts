@@ -208,7 +208,7 @@ export const lintActions = {
             return filePreviewProvider.mark([workspaceUri], 'get linting problems in workspace', false, false);
         },
     },
-} satisfies Record<string, RCEAction>;
+};
 
 export function addLintActions() {
     addActions([
