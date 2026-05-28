@@ -5,7 +5,7 @@
 
 import * as vscode from 'vscode';
 import { ActionData } from 'neuro-game-sdk';
-import { ActionForceParams, actionHandlerFailure, ActionHandlerResult, actionHandlerSuccess, InferDataFromSchema, RCEAction, SchemaTypes, stripToAction } from '@/utils/neuro_client';
+import { ActionForceParams, actionHandlerFailure, ActionHandlerResult, actionHandlerSuccess, InferDataFromSchema, RCEAction, SchemaTypes, stripToAction, tryConvertStandardJSONSchema } from '@/utils/neuro_client';
 import { NEURO } from '@/constants';
 import { isThenable, logOutput, notifyOnCaughtException } from '@/utils/misc';
 import { ACTIONS, CONFIG, CONNECTION, getAllPermissions, getPermissionLevel, PermissionLevel, stringToPermissionLevel } from '@/config';
@@ -664,13 +664,13 @@ export async function RCEActionHandler(actionData: ActionData) {
             stage = 'validating schema';
             if (context.action.schema) {
                 context.updateStatus('pending', 'Validating schema...');
-                let schema;
+                let schema: JSONSchema7;
                 if ('~standard' in context.action.schema) {
-                    try {
-                        schema = (context.action.schema as StandardJSONSchemaV1)['~standard'].jsonSchema.input({ target: 'draft-07' });
-                    } catch {
-                        schema = (context.action.schema as StandardJSONSchemaV1)['~standard'].jsonSchema.input({ target: 'draft-2020-12' });
+                    const convertedSchema = tryConvertStandardJSONSchema(context.action.schema);
+                    if (convertedSchema.type === 'draft-2020-12') {
+                        logOutput('WARNING', `Converting schema of "${context.data.name}" failed with draft-07!`);
                     }
+                    schema = convertedSchema.schema;
                 } else {
                     schema = context.action.schema;
                 }

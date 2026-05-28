@@ -231,7 +231,7 @@ export function stripToAction(action: RCEAction): Action {
 
     // Auto-convert Standard JSON Schema to JSON Schema
     if (schema && isStandardJSONSchema(schema)) {
-        schema = schema['~standard'].jsonSchema.input({ target: 'draft-07' });
+        schema = tryConvertStandardJSONSchema(schema).schema;
     }
 
     return {
@@ -474,4 +474,28 @@ export function isStandardJSONSchema(schema: unknown): schema is StandardJSONSch
             throw new Error('Schema used is a Standard Schema, but does not support Standard JSON Schema!');
         }
     } else return false;
+}
+
+export type SupportedSchemaDrafts = 'draft-07' | 'draft-2020-12';
+
+/**
+ * Try to convert a Standard JSON Schema object into a normal JSON schema object.
+ * @param schema The schema to convert.
+ * @returns An object containing the schema and type.
+ * @throws If the Standard JSON Schema object cannot be converted to a normal JSON schema.
+ */
+export function tryConvertStandardJSONSchema(schema: StandardJSONSchemaV1): { schema: JSONSchema7, type: SupportedSchemaDrafts } {
+    let jsonSchema: JSONSchema7;
+    let type: SupportedSchemaDrafts;
+    try {
+        type = 'draft-07';
+        jsonSchema = schema['~standard'].jsonSchema.input({ target: type });
+    } catch {
+        type = 'draft-2020-12';
+        jsonSchema = schema['~standard'].jsonSchema.input({ target: type });
+    }
+    return {
+        schema: jsonSchema,
+        type,
+    };
 }
