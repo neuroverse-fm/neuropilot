@@ -6,12 +6,14 @@ Since v2.1.0, we're keeping a changelog of each version's changes in NeuroPilot.
 
 Changes between each version before then will not be listed.
 
-## 3.1.0(?)
+## 3.0.0
 
 ### Additions
 
-- NeuroPilot's schemas have been slightly changed, as a result of migrating to a different way of expressing schemas:
-  - Some action's schema descriptions have been dropped in favour of examples
+- Internally, NeuroPilot changed to use [Zod](https://zod.dev) for JSON schema generation and validation.
+  - This shouldn't mean that schemas are changed. If any schemas have been changed as a result of this, it is considered a regression, and is worth reporting.
+  - NeuroPilot actually accepts any TypeScript schema library that conforms to the [Standard JSON Schema specification](https://standardschema.dev/json-schema), however this is only relevant for the public API where companion developers can choose between schema libraries listed as compatible in the above list.
+  - By default, NeuroPilot will attempt to convert these schemas to the `draft-07` JSON schema version. Failing that, it will try to convert to `draft-2020-12` instead, with a warning logged in console. NeuroPilot does *not* attempt conversion to `openapi-3.0`, as it uses keywords not in the official specification.
 
 ## 2.5.0
 
