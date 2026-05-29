@@ -91,7 +91,7 @@ export const editFileActions = {
             }),
             position: _POSITION_SCHEMA,
         }),
-        handler: handleInsertText,
+        handler: ({ data: { params } }) => returnHandleInsertText(params.text, params.position),
         preview: (context) => {
             const positionParam = context.data.params.position;
             if (!positionParam) return { dispose: () => { } };
@@ -525,12 +525,8 @@ export function addEditingActions() {
     ]);
 }
 
-export function handleInsertText(context: RCEContext): RCEHandlerReturns {
-    const { data: actionData } = context;
-    const text: string = actionData.params.text;
+function returnHandleInsertText(text: string, position: { line: number, column: number, type: 'relative' | 'absolute' }) {
     const cursor = getVirtualCursor()!;
-    let position = actionData.params.position;
-
     let line: number;
     let column: number;
 
@@ -579,6 +575,14 @@ export function handleInsertText(context: RCEContext): RCEHandlerReturns {
             return actionHandlerFailure('Failed to insert text', 'Failed to insert text');
         }
     });
+}
+
+/** @deprecated Functions should now be inlined */
+export function handleInsertText(context: RCEContext<{ text: string; position: { line: number, column: number, type: 'relative' | 'absolute' } }>): RCEHandlerReturns {
+    const { data: actionData } = context;
+    const text: string = actionData.params!.text;
+    const position = actionData.params!.position;
+    return returnHandleInsertText(text, position);
 }
 
 export function handleInsertLines(context: RCEContext): RCEHandlerReturns {
