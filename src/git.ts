@@ -681,11 +681,6 @@ export function addGitActions() {
     }
 }
 
-/*
- * Actions with the Git repo
- * Requires neuropilot.permission.gitConfig to be enabled.
- */
-
 export function handleNewGitRepo(): RCEHandlerReturns {
     const workspaceFolders = vscode.workspace.workspaceFolders;
     if (!workspaceFolders || workspaceFolders.length === 0) {
@@ -738,10 +733,6 @@ export function handleSetGitConfig(context: RCEContext): RCEHandlerReturns {
     });
 }
 
-/*
- * Actions with Git branches
- */
-
 export function handleNewGitBranch(context: RCEContext): RCEHandlerReturns {
     const { data: actionData } = context;
     assert(repo);
@@ -781,10 +772,6 @@ export function handleDeleteGitBranch(context: RCEContext): RCEHandlerReturns {
         return actionHandlerFailure(`Failed to delete branch "${branchName}".${forceDelete === false ? '\nEnsure the branch is merged before deleting, or force delete it to discard changes.' : ''}`, PROMISE_REJECTION_STRING);
     });
 }
-
-/*
- * Actions with the Git index
- */
 
 interface StateStringProps {
     fileName?: string;
@@ -1119,11 +1106,6 @@ export function handleGitBlame(context: RCEContext): RCEHandlerReturns {
     });
 }
 
-/**
- * Actions with Git tags
- * Requires neuropilot.permission.gitTags to be enabled.
- */
-
 export function handleTagHEAD(context: RCEContext): RCEHandlerReturns {
     const { data: actionData } = context;
     assert(repo);
@@ -1150,11 +1132,6 @@ export function handleDeleteTag(context: RCEContext): RCEHandlerReturns {
         return actionHandlerFailure(`Couldn't delete tag "${name}"`, PROMISE_REJECTION_STRING);
     });
 }
-
-/*
- * Actions with Git remotes
- * Requires neuropilot.permission.gitRemotes to be enabled.
- */
 
 export function handleFetchGitCommits(context: RCEContext): RCEHandlerReturns {
     const { data: actionData } = context;
@@ -1197,11 +1174,6 @@ export function handlePushGitCommits(context: RCEContext): RCEHandlerReturns {
         return actionHandlerFailure(`Failed to push commits to remote "${remoteName}": ${erm}`, PROMISE_REJECTION_STRING);
     });
 }
-
-/*
- * THESE ACTIONS ARE CONSIDERED DANGEROUS REMOTE OPERATIONS
- * Requires neuropilot.permission.editRemoteData to be enabled, IN ADDITION to neuropilot.permission.gitRemotes.
- */
 
 export function handleAddGitRemote(context: RCEContext): RCEHandlerReturns {
     const { data: actionData } = context;
