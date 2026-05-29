@@ -3,7 +3,7 @@ import assert from 'node:assert';
 
 import { EXCEPTION_THROWN_STRING, NEURO, PROMISE_REJECTION_STRING } from '@/constants';
 import { getProperty, getWorkspacePath, getWorkspaceUri, isPathNeuroSafe, logOutput, normalizePath, notifyOnCaughtException, stripTailSlashes } from '@/utils/misc';
-import { RCEAction, actionValidationFailure, actionValidationAccept, ActionValidationResult, actionValidationRetry, RCEHandlerReturns, actionHandlerSuccess, actionHandlerFailure } from '@/utils/neuro_client';
+import { actionValidationFailure, actionValidationAccept, ActionValidationResult, actionValidationRetry, RCEHandlerReturns, actionHandlerSuccess, actionHandlerFailure, defineAction } from '@/utils/neuro_client';
 import { PermissionLevel, getPermissionLevel } from '@/config';
 import { targetedFileCreatedEvent, targetedFileDeletedEvent } from '@events/files';
 import { RCECancelEvent } from '@events/utils';
@@ -12,6 +12,7 @@ import { RCEContext } from '@ctx/rce';
 import { filePreviewProvider } from '@/previews/files';
 import { commonCancelEvents, checkCurrentFile, CONTEXT_NO_ACTIVE_DOCUMENT, STATUS_NO_ACTIVE_DOCUMENT, CONTEXT_NO_ACCESS, STATUS_NO_ACCESS, ACTION_FAIL_NOTES, validatePath, neuroSafeValidation, getUriExistence, validateIsAFile } from './utils/action_components';
 import { readFileActions } from './read_files';
+import z from 'zod';
 
 export const CATEGORY_FILE_ACTIONS = 'File System';
 
@@ -103,33 +104,33 @@ function validateIllegalCharacters(key: string, illegalChars: string[]) {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const commonFileEvents: ((context: RCEContext) => RCECancelEvent<any> | null)[] = [
-    (context: RCEContext) => targetedFileCreatedEvent(context.data.params?.filePath),
-    (context: RCEContext) => targetedFileDeletedEvent(context.data.params?.filePath),
+const commonFileEvents: ((context: RCEContext<{ filePath: string }>) => RCECancelEvent<any> | null)[] = [
+    (context) => targetedFileCreatedEvent(context.data.params!.filePath),
+    (context) => targetedFileDeletedEvent(context.data.params!.filePath),
 ];
 
 export const fileActions = {
-    list_files_and_folders: {
+    list_files_and_folders: defineAction({
         name: 'list_files_and_folders',
         description: 'Get a list of files in the workspace. Will not return subdirectories by default, use `recursive` to do so.',
-        schema: {
-            type: 'object',
-            properties: {
-                folder: { type: 'string', description: 'If you want to view only a subfolder\'s contents, specify a subfolder in this property. If not specified, defaults to the workspace root.' },
-                recursive: { type: 'boolean', description: 'Set this to `true` if you want to view all subfolders\' contents as well.' },
-            },
-            additionalProperties: false,
-        },
+        schema: z.object({
+            folder: z.string().meta({
+                description: 'If you want to view only a subfolder\'s contents, specify a subfolder in this property. If not specified, defaults to the workspace root.',
+            }).optional(),
+            recursive: z.boolean().meta({
+                description: 'Set this to `true` if you want to view all subfolders\' contents as well.',
+            }).optional(),
+        }),
         category: CATEGORY_FILE_ACTIONS,
         handler: handleGetWorkspaceFiles,
-        preview: (context: RCEContext) => {
+        preview: (context) => {
             const workspaceUri = getWorkspaceUri();
             if (!workspaceUri) {
                 return { dispose: () => { } };
             }
 
-            const folder = context.data.params?.folder;
-            const recursive = context.data.params?.recursive ?? false;
+            const folder = context.data.params.folder;
+            const recursive = context.data.params.recursive ?? false;
             const folderUri = folder
                 ? vscode.Uri.joinPath(workspaceUri, folder)
                 : workspaceUri;
@@ -170,11 +171,11 @@ export const fileActions = {
             };
         },
         validators: {
-            async: [async (context: RCEContext) => {
+            async: [async (context) => {
                 const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
                 if (workspaceFolder === undefined)
                     return actionValidationFailure('No open workspace to get files from.');
-                let folder = context.data.params?.folder as string;
+                let folder = context.data.params.folder as string;
                 if (folder) {
                     folder = stripTailSlashes(folder);
                     const relativeFolderPath = normalizePath(folder);
@@ -187,26 +188,24 @@ export const fileActions = {
             }],
         },
         cancelEvents: [
-            (context: RCEContext) => {
-                if (context.data.params?.folder) {
+            (context) => {
+                if (context.data.params.folder) {
                     return targetedFileDeletedEvent(stripTailSlashes(context.data.params.folder));
                 } else return null;
             },
         ],
-        promptGenerator: (context: RCEContext) => `${context.data.params?.recursive ? 'recursively get' : 'get'} a list of files in ${context.data.params?.folder ? `"${stripTailSlashes(context.data.params.folder)}"` : 'the workspace'}.`,
-    },
-    create_file: {
+        promptGenerator: (context) => `${context.data.params.recursive ? 'recursively get' : 'get'} a list of files in ${context.data.params?.folder ? `"${stripTailSlashes(context.data.params.folder)}"` : 'the workspace'}.`,
+    }),
+    create_file: defineAction({
         name: 'create_file',
         description: 'Create a new file at the specified path. The path should include the name of the new file.',
         category: CATEGORY_FILE_ACTIONS,
-        schema: {
-            type: 'object',
-            properties: {
-                filePath: { type: 'string', description: 'The relative path to the new file.', examples: ['./newfile.py', 'src/module.js'] },
-            },
-            required: ['filePath'],
-            additionalProperties: false,
-        },
+        schema: z.object({
+            filePath: z.string().meta({
+                description: 'The relative path to the new file.',
+                examples: ['./newfile.py', 'src/module.js'],
+            }),
+        }),
         handler: handleCreateFile,
         cancelEvents: commonFileEvents,
         validators: {
@@ -216,31 +215,29 @@ export const fileActions = {
                 validateNotTreatingFileAsFolder('filePath'),
             ],
         },
-        promptGenerator: (context: RCEContext) => `create the file "${context.data.params?.filePath}".`,
-        preview: (context: RCEContext) => {
+        promptGenerator: (context) => `create the file "${context.data.params.filePath}".`,
+        preview: (context) => {
             const workspaceUri = getWorkspaceUri();
-            if (!workspaceUri || !context.data.params?.filePath) {
+            if (!workspaceUri || !context.data.params.filePath) {
                 return { dispose: () => { } };
             }
             const fileUri = vscode.Uri.joinPath(workspaceUri, context.data.params.filePath);
             return filePreviewProvider.mark([fileUri], 'create this file');
         },
-    },
-    create_folder: {
+    }),
+    create_folder: defineAction({
         name: 'create_folder',
         description: 'Create a new folder at the specified path. The path should include the name of the new folder.',
         category: CATEGORY_FILE_ACTIONS,
-        schema: {
-            type: 'object',
-            properties: {
-                folderPath: { type: 'string', description: 'The relative path to the folder.', examples: ['./src', 'public'] },
-            },
-            required: ['folderPath'],
-            additionalProperties: false,
-        },
+        schema: z.object({
+            folderPath: z.string().meta({
+                description: 'The relative path to the folder.',
+                examples: ['./src', 'public'],
+            }),
+        }),
         handler: handleCreateFolder,
         cancelEvents: [
-            (context: RCEContext) => targetedFileCreatedEvent(context.data.params?.folderPath),
+            (context) => targetedFileCreatedEvent(context.data.params.folderPath!),
         ],
         validators: {
             sync: [validateIllegalCharacters('folderPath', '<>:"|?*'.split(''))],
@@ -249,33 +246,34 @@ export const fileActions = {
                 validateNotTreatingFileAsFolder('folderPath'),
             ],
         },
-        promptGenerator: (context: RCEContext) => `create the folder "${context.data.params?.folderPath}".`,
-        preview: (context: RCEContext) => {
+        promptGenerator: (context) => `create the folder "${context.data.params.folderPath}".`,
+        preview: (context) => {
             const workspaceUri = getWorkspaceUri();
-            if (!workspaceUri || !context.data.params?.folderPath) {
+            if (!workspaceUri || !context.data.params.folderPath) {
                 return { dispose: () => { } };
             }
             const folderUri = vscode.Uri.joinPath(workspaceUri, context.data.params.folderPath);
             return filePreviewProvider.mark([folderUri], 'create this folder');
         },
-    },
-    rename_file_or_folder: {
+    }),
+    rename_file_or_folder: defineAction({
         name: 'rename_file_or_folder',
         description: 'Rename a file or folder. Specify the full relative path for both the old and new names.',
         category: CATEGORY_FILE_ACTIONS,
-        schema: {
-            type: 'object',
-            properties: {
-                oldPath: { type: 'string', description: 'The relative path to the old directory.', examples: ['src', './main.py'] },
-                newPath: { type: 'string', description: 'The relative path to the new directory.', examples: ['wip', './new.py'] },
-            },
-            required: ['oldPath', 'newPath'],
-            additionalProperties: false,
-        },
+        schema: z.object({
+            oldPath: z.string().meta({
+                description: 'The relative path to the old directory.',
+                examples: ['src', './main.py'],
+            }),
+            newPath: z.string().meta({
+                description: 'The relative path to the new directory.',
+                examples: ['wip', './new.py'],
+            }),
+        }),
         handler: handleRenameFileOrFolder,
         cancelEvents: [
-            (context: RCEContext) => targetedFileCreatedEvent(context.data.params?.newPath),
-            (context: RCEContext) => targetedFileDeletedEvent(context.data.params?.oldPath),
+            (context) => targetedFileCreatedEvent(context.data.params.newPath),
+            (context) => targetedFileDeletedEvent(context.data.params.oldPath),
         ],
         validators: {
             sync: [validateIllegalCharacters('newPath', '<>:"|?*'.split(''))],
@@ -284,48 +282,48 @@ export const fileActions = {
                 validateNotTreatingFileAsFolder('newPath'),
             ],
         },
-        promptGenerator: (context: RCEContext) => `rename "${context.data.params?.oldPath}" to "${context.data.params?.newPath}".`,
-        preview: (context: RCEContext) => {
+        promptGenerator: (context) => `rename "${context.data.params?.oldPath}" to "${context.data.params?.newPath}".`,
+        preview: (context) => {
             const workspaceUri = getWorkspaceUri();
-            if (!workspaceUri || !context.data.params?.oldPath || !context.data.params?.newPath) {
+            if (!workspaceUri || !context.data.params.oldPath || !context.data.params.newPath) {
                 return { dispose: () => { } };
             }
             const oldUri = vscode.Uri.joinPath(workspaceUri, context.data.params.oldPath);
             const newUri = vscode.Uri.joinPath(workspaceUri, context.data.params.newPath);
             return filePreviewProvider.mark([oldUri, newUri], 'rename this', true);
         },
-    },
-    delete_file_or_folder: {
+    }),
+    delete_file_or_folder: defineAction({
         name: 'delete_file_or_folder',
         description: 'Delete a file or folder. If you want to delete a folder, set the "recursive" parameter to true.',
         category: CATEGORY_FILE_ACTIONS,
-        schema: {
-            type: 'object',
-            properties: {
-                path: { type: 'string', description: 'The relative path to the file/folder to delete.', examples: ['src/index.ts', './utils'] },
-                recursive: { type: 'boolean', description: 'If set to true, enables you to delete a folder and all its sub-folders.' },
-            },
-            required: ['path'],
-            additionalProperties: false,
-        },
+        schema: z.object({
+            path: z.string().meta({
+                description: 'The relative path to the file/folder to delete.',
+                examples: ['src/index.ts', './utils'],
+            }),
+            recrsive: z.boolean().meta({
+                description: 'If set to true, enables you to delete a folder and all its sub-folders.',
+            }).optional(),
+        }),
         handler: handleDeleteFileOrFolder,
         cancelEvents: [
-            (context: RCEContext) => targetedFileDeletedEvent(context.data.params?.path),
+            (context) => targetedFileDeletedEvent(context.data.params?.path),
         ],
         validators: {
             async: [neuroSafeDeleteValidation],
         },
-        promptGenerator: (context: RCEContext) => `delete "${context.data.params?.path}".`,
-        preview: (context: RCEContext) => {
+        promptGenerator: (context) => `delete "${context.data.params.path}".`,
+        preview: (context) => {
             const workspaceUri = getWorkspaceUri();
-            if (!workspaceUri || !context.data.params?.path) {
+            if (!workspaceUri || !context.data.params.path) {
                 return { dispose: () => { } };
             }
             const pathUri = vscode.Uri.joinPath(workspaceUri, context.data.params.path);
             return filePreviewProvider.mark([pathUri], 'delete this', true);
         },
-    },
-    save: {
+    }),
+    save: defineAction({
         name: 'save',
         description: 'Manually save the currently open document.',
         category: CATEGORY_FILE_ACTIONS,
@@ -344,7 +342,7 @@ export const fileActions = {
         },
         promptGenerator: 'save.',
         registerCondition: () => vscode.workspace.getConfiguration('files').get<string>('autoSave') !== 'afterDelay',
-    },
+    }),
 };
 
 export function addFileActions() {
@@ -355,6 +353,7 @@ export function addFileActions() {
         fileActions.rename_file_or_folder,
         fileActions.delete_file_or_folder,
     ]);
+    addActions([fileActions.save]);
 }
 
 export function handleCreateFile(context: RCEContext): RCEHandlerReturns {
