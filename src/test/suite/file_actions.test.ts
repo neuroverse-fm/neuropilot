@@ -39,6 +39,10 @@ suite('File Actions', () => {
         mockedClient = mock(NeuroClient);
         NEURO.client = instance(mockedClient);
 
+        // Initialize decoration types expected by handlers
+        NEURO.cursorDecorationType = vscode.window.createTextEditorDecorationType({});
+        NEURO.highlightDecorationType = vscode.window.createTextEditorDecorationType({});
+
         // Close all open editors
         await withTimeout(vscode.commands.executeCommand('workbench.action.closeAllEditors'), 'closeAllEditors');
     });
@@ -331,7 +335,7 @@ suite('File Actions', () => {
         NEURO.client = instance(mockedClient);
 
         // === Act ===
-        readFileActions.read_file.handler(makeContext({ id: 'abc', name: 'open_file', params: { filePath: filePath } }));
+        readFileActions.switch_files.handler(makeContext({ id: 'abc', name: 'switch_files', params: { filePath: filePath } }));
         // Allow VS Code to open and show the document before asserting
         await checkNoErrorWithTimeout(() => { verify(mockedClient.sendContext(anything())).once(); }, 5000, 100);
         // Brief delay to ensure activeTextEditor is updated across platforms

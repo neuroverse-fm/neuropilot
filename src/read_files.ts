@@ -28,7 +28,10 @@ export const readFileActions = {
                 examples: ['./index.html', 'style.css', 'src/main.js'],
             }),
         }),
-        handler: (ctx) => returnHandleReadFile(ctx.data.params.filePath),
+        handler(context) {
+            const { data: actionData } = context;
+            return returnHandleReadFile(actionData.params?.filePath);
+        },
         preview: (context) => {
             const workspaceUri = getWorkspaceUri();
             if (!workspaceUri || !context.data.params.filePath) {
@@ -106,14 +109,6 @@ export const readFileActions = {
         name: 'switch_files',
         description: 'Switch to a different file in the workspace. You cannot open a binary file directly.',
         category: CATEGORY_READING,
-        // schema: {
-        //     type: 'object',
-        //     properties: {
-        //         filePath: { type: 'string', description: 'The relative path to the file.', examples: ['src/index.ts', './main.py'] },
-        //     },
-        //     required: ['filePath'],
-        //     additionalProperties: false,
-        // },
         schema: z.object({
             filePath: z.string().meta({
                 description: 'The relative path to the file.',
@@ -167,7 +162,7 @@ export const readFileActions = {
         name: 'get_cursor_position',
         description: 'Get your current cursor position and the text surrounding it.',
         category: CATEGORY_READING,
-        handler: handleGetCursor,
+        handler: returnHandleGetCursor,
         validators: {
             sync: [checkCurrentFile],
         },
@@ -179,7 +174,7 @@ export const readFileActions = {
         description: 'Get insert_turtle_here\'s current selection and the text surrounding it.'
             + ' This will not move your own cursor.',
         category: CATEGORY_READING,
-        handler: handleGetUserSelection,
+        handler: returnHandleGetUserSelection,
         // No preview effect needed, intended preview effect is the user cursor
         validators: {
             sync: [checkCurrentFile],
@@ -453,7 +448,7 @@ export function handlePlaceCursor(context: RCEContext<{ line: number, column: nu
     return returnHandlePlaceCursor(params.line, params.column, params.type);
 }
 
-export function handleGetCursor(): RCEHandlerReturns {
+function returnHandleGetCursor() {
     const document = vscode.window.activeTextEditor?.document;
     if (document === undefined) {
         return actionHandlerFailure(CONTEXT_NO_ACTIVE_DOCUMENT, STATUS_NO_ACTIVE_DOCUMENT);
@@ -470,7 +465,12 @@ export function handleGetCursor(): RCEHandlerReturns {
     return actionHandlerSuccess(`In file ${relativePath}.\n\n${formatContext(cursorContext)}`, `Retrieved cursor at line ${cursorPosition.line + 1}, column ${cursorPosition.character + 1}`);
 }
 
-function handleGetUserSelection(): RCEHandlerReturns {
+/** @deprecated Functions should now be inlined */
+export function handleGetCursor(): RCEHandlerReturns {
+    return returnHandleGetCursor();
+}
+
+function returnHandleGetUserSelection() {
     const editor = vscode.window.activeTextEditor;
     const document = editor?.document;
     if (editor === undefined || document === undefined) {
@@ -498,6 +498,11 @@ function handleGetUserSelection(): RCEHandlerReturns {
         : `\n\n${CONNECTION.userName}'s selection contains:\n\n${fence}\n${selectedText}\n${fence}`;
 
     return actionHandlerSuccess(`${preamble}\n\n${formatContext(cursorContext)}${postamble}`, `Cursor selection for ${CONNECTION.userName} formatted and sent to ${CONNECTION.nameOfAPI}.`);
+}
+
+/** @deprecated Functions should now be inlined */
+export function handleGetUserSelection(): RCEHandlerReturns {
+    return returnHandleGetUserSelection();
 }
 
 function returnHandleHighlightLines(startLine: number, endLine: number) {
