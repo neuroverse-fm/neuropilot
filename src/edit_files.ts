@@ -11,7 +11,7 @@ import { RCECancelEvent } from '@events/utils';
 import { addActions } from '@/rce';
 import { createPreviewCursor, createPreviewHighlight } from '@previews/edits';
 import { RCEContext } from '@/context/rce';
-import { commonCancelEvents, cancelOnDidChangeActiveTextEditor, checkCurrentFile, createPositionValidator, CONTEXT_NO_ACCESS, CONTEXT_NO_ACTIVE_DOCUMENT, STATUS_NO_ACCESS, STATUS_NO_ACTIVE_DOCUMENT, STATUS_NO_MATCHES_FOUND, LINE_RANGE_SCHEMA, LineRange, MATCH_OPTIONS, MatchOptions, _POSITION_SCHEMA, createLineRangeValidator, createStringValidator, validateRegex, findAndFilter, _LINE_RANGE_SCHEMA } from './utils/action_components';
+import { commonCancelEvents, cancelOnDidChangeActiveTextEditor, checkCurrentFile, createPositionValidator, CONTEXT_NO_ACCESS, CONTEXT_NO_ACTIVE_DOCUMENT, STATUS_NO_ACCESS, STATUS_NO_ACTIVE_DOCUMENT, STATUS_NO_MATCHES_FOUND, LineRange, MATCH_OPTIONS, MatchOptions, _POSITION_SCHEMA, createLineRangeValidator, createStringValidator, validateRegex, findAndFilter, _LINE_RANGE_SCHEMA } from './utils/action_components';
 
 export const CATEGORY_EDITING = 'Edit Files';
 
@@ -309,7 +309,7 @@ export const editFileActions = {
             return text;
         },
     }),
-    undo: {
+    undo: defineAction({
         name: 'undo',
         description: 'Undo the last change made to the active document.'
             + ' Where your cursor will be moved cannot be determined.' // It will move to the real cursor but thats kinda useless for her to know
@@ -321,19 +321,16 @@ export const editFileActions = {
             sync: [checkCurrentFile],
         },
         promptGenerator: 'undo the last action.',
-    },
-    rewrite_all: {
+    }),
+    rewrite_all: defineAction({
         name: 'rewrite_all',
         description: 'Rewrite the entire contents of the file. Your cursor will be moved to the start of the file.',
         category: CATEGORY_EDITING,
-        schema: {
-            type: 'object',
-            properties: {
-                content: { type: 'string', description: 'The content to rewrite the file with.' },
-            },
-            required: ['content'],
-            additionalProperties: false,
-        },
+        schema: z.object({
+            content: z.string().meta({
+                description: 'The content to rewrite the file with.',
+            }),
+        }),
         handler: handleRewriteAll,
         preview: () => {
             const editor = vscode.window.activeTextEditor!;
@@ -354,77 +351,76 @@ export const editFileActions = {
         validators: {
             sync: [checkCurrentFile, createStringValidator(['content'])],
         },
-        promptGenerator: (context: RCEContext) => {
+        promptGenerator: (context) => {
             const actionData = context.data;
             const lineCount = actionData.params.content.trim().split('\n').length;
             return `rewrite the entire file with ${lineCount} line${lineCount === 1 ? '' : 's'} of content.`;
         },
-    },
-    rewrite_lines: {
+    }),
+    rewrite_lines: defineAction({
         name: 'rewrite_lines',
         description: 'Rewrite everything in the specified line range.'
             + ' After rewriting, your cursor will be placed at the end of the last inserted line.'
             + ' Line numbers are one-based.',
         category: CATEGORY_EDITING,
-        schema: {
-            type: 'object',
-            properties: {
-                ...LINE_RANGE_SCHEMA.properties,
-                content: { type: 'string', description: 'The content to replace the selected range of lines with.' },
-            },
-            required: [...LINE_RANGE_SCHEMA.required!, 'content'],
-            additionalProperties: false,
-        },
+        schema: z.object({
+            lineRange: _LINE_RANGE_SCHEMA,
+            content: z.string().meta({
+                description: 'The content to replace the selected range of lines with.',
+            }),
+        }),
         handler: handleRewriteLines,
-        preview: (context) => previewLineHighlights(context.data.params, 'rewrite these lines.'),
+        preview: (context) => previewLineHighlights(context.data.params.lineRange, 'rewrite these lines.'),
         cancelEvents: commonCancelEvents,
         validators: {
             sync: [checkCurrentFile, createLineRangeValidator(), createStringValidator(['content'])],
         },
-        promptGenerator: (context: RCEContext) => {
+        promptGenerator: (context) => {
             const actionData = context.data;
             const lineCount = actionData.params.content.trim().split('\n').length;
-            return `rewrite lines ${actionData.params.startLine}-${actionData.params.endLine} with ${lineCount} line${lineCount === 1 ? '' : 's'} of content.`;
+            return `rewrite lines ${actionData.params.lineRange.startLine}-${actionData.params.lineRange.endLine} with ${lineCount} line${lineCount === 1 ? '' : 's'} of content.`;
         },
-    },
-    delete_lines: {
+    }),
+    delete_lines: defineAction({
         name: 'delete_lines',
         description: 'Delete everything in the specified line range.'
             + ' After deleting, your cursor will be placed at the end of the line before the deleted lines, if possible.'
             + ' Line numbers are one-based.',
         category: CATEGORY_EDITING,
-        schema: LINE_RANGE_SCHEMA,
+        schema: _LINE_RANGE_SCHEMA.meta({
+            description: undefined,
+        }),
         handler: handleDeleteLines,
         preview: (context) => previewLineHighlights(context.data.params, 'delete these lines.'),
         cancelEvents: commonCancelEvents,
         validators: {
             sync: [checkCurrentFile, createLineRangeValidator()],
         },
-        promptGenerator: (context: RCEContext) => {
+        promptGenerator: (context) => {
             return `delete lines ${context.data.params.startLine}-${context.data.params.endLine}.`;
         },
-    },
-    replace_user_selection: {
+    }),
+    replace_user_selection: defineAction({
         name: 'replace_user_selection',
         description: 'Replace insert_turtle_here\'s current selection with the provided text.'
             + ' If insert_turtle_here has no selection, this will insert the text at insert_turtle_here\'s current cursor position.'
             + ' After replacing/inserting, your cursor will be placed at the end of the inserted text.'
             + ' If "requireSelectionUnchanged" is true, the action will be automatically cancelled if insert_turtle_here\'s selection changes or has changed since it was last obtained.',
         category: CATEGORY_EDITING,
-        schema: {
-            type: 'object',
-            properties: {
-                content: { type: 'string', description: 'The content to replace insert_turtle_here\'s selection with.' },
-                requireSelectionUnchanged: { type: 'boolean', description: 'Does your change require that insert_turtle_here keeps his selection unchanged?' },
-            },
-            required: ['content', 'requireSelectionUnchanged'],
-        },
+        schema: z.object({
+            content: z.string().meta({
+                description: 'The content to replace insert_turtle_here\'s selection with.',
+            }),
+            requireSelectionUnchanged: z.boolean().meta({
+                description: 'Does your change require that insert_turtle_here keeps his selection unchanged?',
+            }),
+        }),
         handler: handleReplaceUserSelection,
         // No preview effect needed, intended preview effect is the highlighted text
         cancelEvents: [
             ...commonCancelEvents,
-            (context: RCEContext) => {
-                if (context.data.params?.requireSelectionUnchanged)
+            (context) => {
+                if (context.data.params.requireSelectionUnchanged)
                     return new RCECancelEvent({
                         reason: `${CONNECTION.userName}'s selection changed.`,
                         logReason: `${CONNECTION.userName}'s selection changed and requireSelectionUnchanged is set to true.`,
@@ -437,7 +433,7 @@ export const editFileActions = {
             sync: [
                 checkCurrentFile,
                 createStringValidator(['content']),
-                (context: RCEContext) => { // Validate that the selection is known and unchanged if required
+                (context) => { // Validate that the selection is known and unchanged if required
                     if (!context.data.params.requireSelectionUnchanged)
                         return actionValidationAccept();
                     if (NEURO.lastKnownUserSelection === null || NEURO.lastKnownUserSelection !== vscode.window.activeTextEditor?.selection)
@@ -446,13 +442,13 @@ export const editFileActions = {
                 },
             ],
         },
-        promptGenerator: (context: RCEContext) => {
+        promptGenerator: (context) => {
             const actionData = context.data;
             const lineCount = actionData.params.content.trim().split('\n').length;
             return `replace your current selection with ${lineCount} line${lineCount === 1 ? '' : 's'} of content.`;
         },
-    },
-    edit_with_diff: {
+    }),
+    edit_with_diff: defineAction({
         name: 'edit_with_diff',
         description: 'Write a diff patch to apply to the file.' +
             ' The diff patch must be written in a pseudo-search-replace-diff format.' +
@@ -462,19 +458,28 @@ export const editFileActions = {
             ' You can only specify **one** search/replace pair per diff patch.*' +
             ' Read the schema for an example.',
         category: CATEGORY_EDITING,
-        schema: {
-            type: 'object',
-            properties: {
-                diff: { type: 'string', description: 'The diff patch to apply. Must follow a pseudo-search-replace-diff format.', examples: ['>>>>>> SEARCH\ndef turtle():\n    return "Vedal"\n======\ndef turtle():\n    return "insert_turtle_here"\n<<<<<< REPLACE'] },
-                moveCursor: { type: 'boolean', description: 'Whether or not to move the cursor to the end of the patch replacement.', default: false },
-            },
-            required: ['diff'],
-            additionalProperties: false,
-        },
+        // schema: {
+        //     type: 'object',
+        //     properties: {
+        //         diff: { type: 'string', description: 'The diff patch to apply. Must follow a pseudo-search-replace-diff format.', examples: ['>>>>>> SEARCH\ndef turtle():\n    return "Vedal"\n======\ndef turtle():\n    return "insert_turtle_here"\n<<<<<< REPLACE'] },
+        //         moveCursor: { type: 'boolean', description: 'Whether or not to move the cursor to the end of the patch replacement.', default: false },
+        //     },
+        //     required: ['diff'],
+        //     additionalProperties: false,
+        // },
+        schema: z.object({
+            diff: z.string().meta({
+                description: 'The diff patch to apply. Must follow a pseudo-search-replace-diff format.',
+                examples: ['>>>>>> SEARCH\ndef turtle():\n    return "Vedal"\n======\ndef turtle():\n    return "insert_turtle_here"\n<<<<<< REPLACE'],
+            }),
+            moveCursor: z.boolean().meta({
+                description: 'Whether or not to move the cursor to the end of the patch replacement.',
+            }).default(false),
+        }),
         handler: handleDiffPatch,
         // TODO: I'm not sure if or how this action would have a preview effect, like would it work if a big highlight range was added to the targted text?
         validators: {
-            sync: [checkCurrentFile, (context: RCEContext) => {
+            sync: [checkCurrentFile, (context) => {
                 const patch = parseDiffPatch(context.data.params.diff);
                 if (!patch) {
                     return actionValidationFailure('Invalid diff format. Expected format:\n\n```\n>>>>>> SEARCH\n[code to find]\n======\n[replacement code]\n<<<<<< REPLACE\n```');
@@ -497,12 +502,12 @@ export const editFileActions = {
             }],
         },
         cancelEvents: commonCancelEvents,
-        promptGenerator: (context: RCEContext) => {
+        promptGenerator: (context) => {
             const patch = parseDiffPatch(context.data.params.diff)!;
             const { linesAdded, linesRemoved } = countLineDifferences(patch.search, patch.replace);
             return `apply a diff patch ( +${linesAdded} | -${linesRemoved} ).`;
         },
-    },
+    }),
 };
 
 export function addEditingActions() {
@@ -891,8 +896,8 @@ export function handleDeleteLines(context: RCEContext): RCEHandlerReturns {
 
 export function handleRewriteLines(context: RCEContext): RCEHandlerReturns {
     const { data: actionData } = context;
-    const startLine = actionData.params.startLine;
-    const endLine = actionData.params.endLine;
+    const startLine = actionData.params.lineRange.startLine;
+    const endLine = actionData.params.lineRange.endLine;
     const content = actionData.params.content;
 
     const document = vscode.window.activeTextEditor?.document;

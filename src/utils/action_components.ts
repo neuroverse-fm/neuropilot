@@ -1,12 +1,11 @@
 import * as vscode from 'vscode';
-import { JSONSchema7 } from 'json-schema';
 import { z } from 'zod';
 
 import { RCEContext } from '@ctx/rce';
 import { createCursorPositionChangedEvent } from '@events/cursor';
 import { RCECancelEvent } from '@events/utils';
 import { getProperty, isPathNeuroSafe, getVirtualCursor, indexFromPosition, getWorkspacePath, normalizePath, getWorkspaceUri, isBinary } from './misc';
-import { ActionValidationResult, RCEAction, actionValidationAccept, actionValidationFailure, actionValidationRetry } from './neuro_client';
+import { ActionValidationResult, actionValidationAccept, actionValidationFailure, actionValidationRetry } from './neuro_client';
 
 export const CONTEXT_NO_ACCESS = 'You do not have permission to access this file.';
 export const CONTEXT_NO_ACTIVE_DOCUMENT = 'No active document to edit.';
@@ -20,17 +19,6 @@ export const STATUS_NO_MATCHES_FOUND = 'No matches found';
 
 export type MatchOptions = 'firstInFile' | 'lastInFile' | 'firstAfterCursor' | 'lastBeforeCursor' | 'allInFile';
 export const MATCH_OPTIONS: MatchOptions[] = ['firstInFile', 'lastInFile', 'firstAfterCursor', 'lastBeforeCursor', 'allInFile'] as const;
-export const POSITION_SCHEMA: (Omit<RCEAction, 'schema'> & { schema: Omit<JSONSchema7, 'type'> & { type: 'object' } })['schema'] = {
-    type: 'object',
-    description: 'Position parameters if you want to move your cursor or use a location other than the current location.',
-    properties: {
-        line: { type: 'integer', description: 'The line number for the position to target.' },
-        column: { type: 'integer', description: 'The column number for the position to target.' },
-        type: { type: 'string', enum: ['relative', 'absolute'], description: 'Whether or not to use the position relative to your cursor or the absolute position in the file. Additionally, if set to "relative", line & column numbers are zero-based, else if set to "absolute", they are one-based.' },
-    },
-    additionalProperties: false,
-    required: ['line', 'column', 'type'],
-};
 export const _POSITION_SCHEMA = z.object({
     line: z.number().int().meta({
         description: 'The line number for the position to target.',
@@ -44,16 +32,6 @@ export const _POSITION_SCHEMA = z.object({
 }).meta({
     description: 'Position parameters if you want to move your cursor or use a location other than the current location.',
 }); // If description is not needed, simply call .meta({ description: undefined }) on this const after importing
-export const LINE_RANGE_SCHEMA: (Omit<RCEAction, 'schema'> & { schema: Omit<JSONSchema7, 'type'> & { type: 'object' } })['schema'] = {
-    type: 'object',
-    description: 'The line range to target.',
-    properties: {
-        startLine: { type: 'integer', minimum: 1, description: 'The one-based line number to start from.' },
-        endLine: { type: 'integer', minimum: 1, description: 'The one-based line number to end at.' },
-    },
-    additionalProperties: false,
-    required: ['startLine', 'endLine'],
-};
 export const _LINE_RANGE_SCHEMA = z.object({
     startLine: z.number().int().min(1).meta({
         description: 'The one-based line number to start from.',
