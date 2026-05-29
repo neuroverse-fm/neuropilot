@@ -20,10 +20,10 @@ export const STATUS_NO_MATCHES_FOUND = 'No matches found';
 export type MatchOptions = 'firstInFile' | 'lastInFile' | 'firstAfterCursor' | 'lastBeforeCursor' | 'allInFile';
 export const MATCH_OPTIONS: MatchOptions[] = ['firstInFile', 'lastInFile', 'firstAfterCursor', 'lastBeforeCursor', 'allInFile'] as const;
 export const _POSITION_SCHEMA = z.object({
-    line: z.number().int().meta({
+    line: z.int().meta({
         description: 'The line number for the position to target.',
     }),
-    column: z.number().int().meta({
+    column: z.int().meta({
         description: 'The column number for the position to target.',
     }),
     type: z.enum(['relative', 'absolute']).meta({
@@ -33,10 +33,10 @@ export const _POSITION_SCHEMA = z.object({
     description: 'Position parameters if you want to move your cursor or use a location other than the current location.',
 }); // If description is not needed, simply call .meta({ description: undefined }) on this const after importing
 export const _LINE_RANGE_SCHEMA = z.object({
-    startLine: z.number().int().min(1).meta({
+    startLine: z.int().min(1).meta({
         description: 'The one-based line number to start from.',
     }),
-    endLine: z.number().int().min(1).meta({
+    endLine: z.int().min(1).meta({
         description: 'The one-based line number to end at.',
     }),
 }).meta({

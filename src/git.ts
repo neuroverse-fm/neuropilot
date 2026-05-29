@@ -362,7 +362,7 @@ export const gitActions = {
         description: 'Get the commit history of the current branch',
         category: CATEGORY_GIT,
         schema: z.object({
-            log_limit: z.number().int().min(1).meta({
+            log_limit: z.int().min(1).meta({
                 description: 'Limits the number of items returned, starting from the latest commit.',
             }).optional(),
         }),
