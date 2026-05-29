@@ -1,11 +1,11 @@
 import * as vscode from 'vscode';
+import { z } from 'zod';
 
 import { EXCEPTION_THROWN_STRING, NEURO } from '@/constants';
 import { getFence, logOutput } from '@/utils/misc';
-import { actionHandlerFailure, ActionHandlerResult, actionHandlerSuccess, RCEAction } from '@/utils/neuro_client';
+import { actionHandlerFailure, ActionHandlerResult, actionHandlerSuccess, defineAction } from '@/utils/neuro_client';
 import { CONNECTION, PermissionLevel } from '@/config';
 import { addActions, CATEGORY_MISC } from './rce';
-import { RCEContext } from '@ctx/rce';
 
 const MEMENTO_KEY = 'lastDeliveredChangelogVersion';
 
@@ -15,24 +15,22 @@ interface ChangelogSection {
 }
 
 export const changelogActions = {
-    read_changelog: {
+    read_changelog: defineAction({
         name: 'read_changelog',
         description: 'Get changelog entries starting from a specified version. If fromVersion is omitted, any new entries after the last read_changelog command are read.',
         category: CATEGORY_MISC,
-        schema: {
-            type: 'object',
-            properties: {
-                fromVersion: { type: 'string', description: 'Version (e.g., 2.2.1) to start including entries from, inclusive.' },
-            },
-            additionalProperties: false,
-        },
+        schema: z.object({
+            fromVersion: z.string().meta({
+                description: 'Version (e.g., 2.2.1) to start including entries from, inclusive.',
+            }),
+        }),
         defaultPermission: PermissionLevel.COPILOT,
-        handler: handleReadChangelog,
-        promptGenerator: (context: RCEContext) => context.data.params?.fromVersion
+        handler: (ctx) => handleReadChangelog(ctx.data.params.fromVersion),
+        promptGenerator: (context) => context.data.params.fromVersion
             ? `read all changelog entries starting from version ${context.data.params.fromVersion} (inclusive).`
             : 'read the latest changelog entries.',
-    },
-} satisfies Record<string, RCEAction>;
+    }),
+};
 
 export function addChangelogActions(): void {
     addActions([changelogActions.read_changelog]);
@@ -84,8 +82,8 @@ export async function sendChangelogOnDemand() {
     }
 }
 
-function handleReadChangelog(context: RCEContext): Thenable<ActionHandlerResult> {
-    return readAndStructureChangelog(context.data.params?.fromVersion);
+function handleReadChangelog(version: string): Thenable<ActionHandlerResult> {
+    return readAndStructureChangelog(version);
 }
 
 async function readAndParseChangelog(): Promise<{ sections: ChangelogSection[]; latest: string; }> {
