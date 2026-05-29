@@ -6,6 +6,9 @@ import { createCursorPositionChangedEvent } from '@events/cursor';
 import { RCECancelEvent } from '@events/utils';
 import { getProperty, isPathNeuroSafe, getVirtualCursor, indexFromPosition, getWorkspacePath, normalizePath, getWorkspaceUri, isBinary } from './misc';
 import { ActionValidationResult, actionValidationAccept, actionValidationFailure, actionValidationRetry } from './neuro_client';
+import { ActionData } from 'neuro-game-sdk';
+import { NEURO } from '@/constants';
+import { createPreviewHighlight } from '@previews/edits';
 
 export const CONTEXT_NO_ACCESS = 'You do not have permission to access this file.';
 export const CONTEXT_NO_ACTIVE_DOCUMENT = 'No active document to edit.';
@@ -442,4 +445,40 @@ export async function validateIsAFile(context: RCEContext<{ filePath: string; }>
     }
 
     return actionValidationAccept();
+}
+
+/**
+ * Common function used to show previews for finding-related actions.
+ */
+export function previewFindFunctions(actionData: ActionData, type: 'find' | 'delete' | 'replace'): { dispose: () => unknown } {
+    const lineRange = actionData.params?.lineRange;
+    const highlights: { dispose: () => unknown }[] = [];
+    if (lineRange) {
+        highlights.push(previewLineHighlights(lineRange, `${type} some text in this area. This does not mean all text here will be replaced.`));
+    }
+
+    // TODO: Implement highlighting on text matches? Not sure if this feasible at all.
+    return vscode.Disposable.from(...highlights);
+}
+
+/**
+ * Common function used to create highlighted lines for previews
+ */
+export function previewLineHighlights(lineRange: { startLine: number, endLine: number }, prompt: string) {
+    const editor = vscode.window.activeTextEditor!;
+    const lineRangeHighlight = createPreviewHighlight();
+
+    const startLineIndex = lineRange.startLine - 1;
+    const endLineIndex = lineRange.endLine - 1;
+
+    const startPosition = new vscode.Position(startLineIndex, 0);
+    const endPosition = new vscode.Position(endLineIndex, editor.document.lineAt(endLineIndex).text.length);
+    editor.setDecorations(lineRangeHighlight, [
+        {
+            range: new vscode.Range(startPosition, endPosition),
+            hoverMessage: `(Preview) ${NEURO.currentController} wants to ${prompt}`,
+        },
+    ]);
+
+    return lineRangeHighlight;
 }

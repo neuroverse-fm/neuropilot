@@ -1,5 +1,4 @@
 import * as vscode from 'vscode';
-import { ActionData } from 'neuro-game-sdk';
 import { z } from 'zod';
 
 import { NEURO } from '@/constants';
@@ -11,45 +10,9 @@ import { RCECancelEvent } from '@events/utils';
 import { addActions } from '@/rce';
 import { createPreviewCursor, createPreviewHighlight } from '@previews/edits';
 import { RCEContext } from '@/context/rce';
-import { commonCancelEvents, cancelOnDidChangeActiveTextEditor, checkCurrentFile, createPositionValidator, CONTEXT_NO_ACCESS, CONTEXT_NO_ACTIVE_DOCUMENT, STATUS_NO_ACCESS, STATUS_NO_ACTIVE_DOCUMENT, STATUS_NO_MATCHES_FOUND, LineRange, MATCH_OPTIONS, MatchOptions, _POSITION_SCHEMA, createLineRangeValidator, createStringValidator, validateRegex, findAndFilter, _LINE_RANGE_SCHEMA } from './utils/action_components';
+import { commonCancelEvents, cancelOnDidChangeActiveTextEditor, checkCurrentFile, createPositionValidator, CONTEXT_NO_ACCESS, CONTEXT_NO_ACTIVE_DOCUMENT, STATUS_NO_ACCESS, STATUS_NO_ACTIVE_DOCUMENT, STATUS_NO_MATCHES_FOUND, LineRange, MATCH_OPTIONS, MatchOptions, _POSITION_SCHEMA, createLineRangeValidator, createStringValidator, validateRegex, findAndFilter, _LINE_RANGE_SCHEMA, previewFindFunctions, previewLineHighlights } from './utils/action_components';
 
 export const CATEGORY_EDITING = 'Edit Files';
-
-/**
- * Common function used to show previews for finding-related actions.
- */
-export function previewFindFunctions(actionData: ActionData, type: 'find' | 'delete' | 'replace'): { dispose: () => unknown } {
-    const lineRange = actionData.params?.lineRange;
-    const highlights: { dispose: () => unknown }[] = [];
-    if (lineRange) {
-        highlights.push(previewLineHighlights(lineRange, `${type} some text in this area. This does not mean all text here will be replaced.`));
-    }
-
-    // TODO: Implement highlighting on text matches? Not sure if this feasible at all.
-    return vscode.Disposable.from(...highlights);
-}
-
-/**
- * Common function used to create highlighted lines for previews
- */
-export function previewLineHighlights(lineRange: { startLine: number, endLine: number }, prompt: string) {
-    const editor = vscode.window.activeTextEditor!;
-    const lineRangeHighlight = createPreviewHighlight();
-
-    const startLineIndex = lineRange.startLine - 1;
-    const endLineIndex = lineRange.endLine - 1;
-
-    const startPosition = new vscode.Position(startLineIndex, 0);
-    const endPosition = new vscode.Position(endLineIndex, editor.document.lineAt(endLineIndex).text.length);
-    editor.setDecorations(lineRangeHighlight, [
-        {
-            range: new vscode.Range(startPosition, endPosition),
-            hoverMessage: `(Preview) ${NEURO.currentController} wants to ${prompt}`,
-        },
-    ]);
-
-    return lineRangeHighlight;
-}
 
 /**
  * Common function used to show previews for cursor movement actions
