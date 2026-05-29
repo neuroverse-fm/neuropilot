@@ -357,77 +357,67 @@ export const gitActions = {
         },
         registerCondition: () => !!repo,
     }),
-    git_log: {
+    git_log: defineAction({
         name: 'git_log',
         description: 'Get the commit history of the current branch',
         category: CATEGORY_GIT,
-        schema: {
-            type: 'object',
-            properties: {
-                log_limit: {
-                    type: 'integer',
-                    minimum: 1,
-                    description: 'Limits the number of items returned, starting from the latest commit.',
-                },
-            },
-            additionalProperties: false,
-        },
+        schema: z.object({
+            log_limit: z.number().int().min(1).meta({
+                description: 'Limits the number of items returned, starting from the latest commit.',
+            }).optional(),
+        }),
         handler: handleGitLog,
         cancelEvents: commonCancelEvents,
-        promptGenerator: (context: RCEContext) => `get the ${context.data.params?.log_limit ? `${context.data.params.log_limit} most recent commits in the ` : ''}Git log.`,
+        promptGenerator: (context) => `get the ${context.data.params.log_limit ? `${context.data.params.log_limit} most recent commits in the ` : ''}Git log.`,
         validators: {
             sync: [gitValidator],
         },
         registerCondition: () => !!repo,
-    },
-    git_blame: {
+    }),
+    git_blame: defineAction({
         name: 'git_blame',
         description: 'Get commit attributions for each line in a file.',
         category: CATEGORY_GIT,
-        schema: {
-            type: 'object',
-            properties: {
-                filePath: { type: 'string', description: 'The file to get attributions on.' },
-            },
-            required: ['filePath'],
-            additionalProperties: false,
-        },
+        schema: z.object({
+            filePath: z.string().meta({
+                description: 'The file to get attributions on.',
+            }),
+        }),
         handler: handleGitBlame,
-        preview: (ctx: RCEContext) => {
+        preview: (ctx) => {
             const ws = getWorkspaceUri();
             if (!ws) return { dispose: () => { } };
-            const filePath: string = ctx.data.params!.filePath;
+            const filePath: string = ctx.data.params.filePath;
             const fileUri: vscode.Uri = vscode.Uri.joinPath(ws, filePath);
             return filePreviewProvider.mark([fileUri], 'view the blame history for this file');
         },
         cancelEvents: commonCancelEvents,
-        promptGenerator: (context: RCEContext) => `get the Git blame for the file "${context.data.params.filePath}".`,
+        promptGenerator: (context) => `get the Git blame for the file "${context.data.params.filePath}".`,
         validators: {
             sync: [gitValidator],
             async: [filePathGitValidator],
         },
         registerCondition: () => !!repo,
-    },
+    }),
 
     // Requires gitTags
-    tag_head: {
+    tag_head: defineAction({
         name: 'tag_head',
         description: 'Tag the current commit using Git.',
         category: CATEGORY_GIT,
-        schema: {
-            type: 'object',
-            properties: {
-                name: { type: 'string', description: 'The name of the tag.' },
-                upstream: { type: 'string', description: 'What commit/ref do you want to tag? If not set, will tag the current commit.' },
-            },
-            required: ['name'],
-            additionalProperties: false,
-        },
+        schema: z.object({
+            name: z.string().meta({
+                description: 'The name of the tag.',
+            }),
+            upstream: z.string().meta({
+                description: 'What commit/ref do you want to tag? If not set, will tag the current commit.',
+            }).optional(),
+        }),
         handler: handleTagHEAD,
         cancelEvents: commonCancelEvents,
-        promptGenerator: (context: RCEContext) => `tag the current commit with the name "${context.data.params.name}" and associate it with the "${context.data.params.upstream}" remote.`,
+        promptGenerator: (context) => `tag the current commit with the name "${context.data.params.name}" and associate it with the "${context.data.params.upstream}" remote.`,
         validators: {
-            sync: [gitValidator, (context: RCEContext) => {
+            sync: [gitValidator, (context) => {
                 const tagPattern = /^(?![/.@])(?!.*[/.@]$)(?!.*[/.@]{2,})(?:[a-z]+(?:[/.@][a-z]+)*)$/;
                 if (!tagPattern.test(context.data.params.name)) {
                     return actionValidationFailure('The Git tag does not conform to Git\'s tag naming rules.');
@@ -436,7 +426,7 @@ export const gitActions = {
             }],
         },
         registerCondition: () => !!repo,
-    },
+    }),
     delete_tag: {
         name: 'delete_tag',
         description: 'Delete a tag from Git.',
@@ -459,63 +449,60 @@ export const gitActions = {
     },
 
     // Requires gitConfigs
-    set_git_config: {
+    set_git_config: defineAction({
         name: 'set_git_config',
         description: 'Set a Git configuration value',
         category: CATEGORY_GIT_CONFIG,
-        schema: {
-            type: 'object',
-            properties: {
-                key: { type: 'string', description: 'The config key to target.' },
-                value: { type: 'string', description: 'The new value for the config key.' },
-            },
-            required: ['key', 'value'],
-            additionalProperties: false,
-        },
+        schema: z.object({
+            key: z.string().meta({
+                description: 'The config key to target.',
+            }),
+            value: z.string().meta({
+                description: 'The new value for the config key.',
+            }),
+        }),
         handler: handleSetGitConfig,
         cancelEvents: commonCancelEvents,
-        promptGenerator: (context: RCEContext) => `set the Git config key "${context.data.params.key}" to "${context.data.params.value}".`,
+        promptGenerator: (context) => `set the Git config key "${context.data.params.key}" to "${context.data.params.value}".`,
         validators: {
             sync: [gitValidator],
         },
         registerCondition: () => !!repo,
-    },
-    get_git_config: {
+    }),
+    get_git_config: defineAction({
         name: 'get_git_config',
         description: 'Get a Git configuration value',
         category: CATEGORY_GIT_CONFIG,
-        schema: {
-            type: 'object',
-            properties: {
-                key: { type: 'string', description: 'The config key to get. If omitted, you will get the full list of config keys and their values.' },
-            },
-            additionalProperties: false,
-        },
+        schema: z.object({
+            key: z.string().meta({
+                description: 'The config key to get. If omitted, you will get the full list of config keys and their values.',
+            }),
+        }),
         handler: handleGetGitConfig,
         cancelEvents: commonCancelEvents,
-        promptGenerator: (context: RCEContext) => context.data.params?.key ? `get the Git config key "${context.data.params.key}".` : 'get the Git config.',
+        promptGenerator: (context) => context.data.params?.key ? `get the Git config key "${context.data.params.key}".` : 'get the Git config.',
         validators: {
             sync: [gitValidator],
         },
         registerCondition: () => !!repo,
-    },
+    }),
 
     // Requires gitRemotes
-    fetch_git_commits: {
+    fetch_git_commits: defineAction({
         name: 'fetch_git_commits',
         description: 'Fetch commits from the remote repository',
         category: CATEGORY_GIT_REMOTES,
-        schema: {
-            type: 'object',
-            properties: {
-                remoteName: { type: 'string', description: 'Which remote to fetch from. If omitted, will fetch from the default set repo.' },
-                branchName: { type: 'string', description: 'Which branch to fetch from. If omitted, will fetch from the set remote branch of the current branch.' },
-            },
-            additionalProperties: false,
-        },
+        schema: z.object({
+            remoteName: z.string().meta({
+                description: 'Which remote to fetch from. If omitted, will fetch from the default set repo.',
+            }).optional(),
+            branchName: z.string().meta({
+                description: 'Which branch to fetch from. If omitted, will fetch from the set remote branch of the current branch.',
+            }).optional(),
+        }),
         handler: handleFetchGitCommits,
         cancelEvents: commonCancelEvents,
-        promptGenerator: (context: RCEContext) => {
+        promptGenerator: (context) => {
             if (context.data.params.remoteName && context.data.params.branchName)
                 return `fetch commits ${context.data.params.remoteName}/${context.data.params.branchName}.`;
             else if (context.data.params.remoteName)
@@ -528,8 +515,8 @@ export const gitActions = {
             sync: [gitValidator],
         },
         registerCondition: () => !!repo,
-    },
-    pull_git_commits: {
+    }),
+    pull_git_commits: defineAction({
         name: 'pull_git_commits',
         description: 'Pull commits from the remote repository',
         category: CATEGORY_GIT_REMOTES,
@@ -540,23 +527,25 @@ export const gitActions = {
             sync: [gitValidator],
         },
         registerCondition: () => !!repo,
-    },
-    push_git_commits: {
+    }),
+    push_git_commits: defineAction({
         name: 'push_git_commits',
         description: 'Push commits to the remote repository',
         category: CATEGORY_GIT_REMOTES,
-        schema: {
-            type: 'object',
-            properties: {
-                remoteName: { type: 'string', description: 'The remote to push to. If omitted, will push to the default remote.' },
-                branchName: { type: 'string', description: 'The branch to push to. If omitted, will push to the set remote branch.' },
-                forcePush: { type: 'boolean', description: 'If true, will forcibly push to remote.' },
-            },
-            additionalProperties: false,
-        },
+        schema: z.object({
+            remoteName: z.string().meta({
+                description: 'The remote to push to. If omitted, will push to the default remote.',
+            }).optional(),
+            branchName: z.string().meta({
+                description: 'The branch to push to. If omitted, will push to the set remote branch.',
+            }).optional(),
+            forcePush: z.string().meta({
+                description: 'If true, will forcibly push to remote.',
+            }).optional(),
+        }),
         handler: handlePushGitCommits,
         cancelEvents: commonCancelEvents,
-        promptGenerator: (context: RCEContext) => {
+        promptGenerator: (context) => {
             const force = context.data.params.forcePush ? 'force ' : '';
             if (context.data.params.remoteName && context.data.params.branchName)
                 return `${force}push commits to ${context.data.params.remoteName}/${context.data.params.branchName}.`;
@@ -570,73 +559,68 @@ export const gitActions = {
             sync: [gitValidator],
         },
         registerCondition: () => !!repo,
-    },
+    }),
 
     // Requires gitRemotes and editRemoteData
-    add_git_remote: {
+    add_git_remote: defineAction({
         name: 'add_git_remote',
         description: 'Add a new remote to the Git repository',
         category: CATEGORY_GIT_REMOTES,
-        schema: {
-            type: 'object',
-            properties: {
-                remoteName: { type: 'string', description: 'The nickname set for the remote. You will use this name for inputs to other remote-related actions if you wish to use their remote parameters.' },
-                remoteURL: { type: 'string', description: 'The URL that the remote name is aliased to. It must be either SSH (which will only work if SSH is properly set up) or HTTPS.' },
-            },
-            required: ['remoteName', 'remoteURL'],
-            additionalProperties: false,
-        },
+        schema: z.object({
+            remoteName: z.string().meta({
+                description: 'The nickname set for the remote. You will use this name for inputs to other remote-related actions if you wish to use their remote parameters.',
+            }),
+            remoteURL: z.string().meta({
+                description: 'The URL that the remote name is aliased to. It must be either SSH (which will only work if SSH is properly set up) or HTTPS.',
+            }),
+        }),
         handler: handleAddGitRemote,
         cancelEvents: commonCancelEvents,
-        promptGenerator: (context: RCEContext) => `add a new remote "${context.data.params.remoteName}" with URL "${context.data.params.remoteURL}".`,
+        promptGenerator: (context) => `add a new remote "${context.data.params.remoteName}" with URL "${context.data.params.remoteURL}".`,
         validators: {
             sync: [gitValidator],
         },
         registerCondition: () => !!repo,
-    },
-    remove_git_remote: {
+    }),
+    remove_git_remote: defineAction({
         name: 'remove_git_remote',
         description: 'Remove a remote from the Git repository',
         category: CATEGORY_GIT_REMOTES,
-        schema: {
-            type: 'object',
-            properties: {
-                remoteName: { type: 'string', description: 'Name of the remote Git repository to remove.' },
-            },
-            required: ['remoteName'],
-            additionalProperties: false,
-        },
+        schema: z.object({
+            remoteName: z.string().meta({
+                description: 'Name of the remote Git repository to remove.',
+            }),
+        }),
         handler: handleRemoveGitRemote,
         cancelEvents: commonCancelEvents,
-        promptGenerator: (context: RCEContext) => `remove the remote "${context.data.params.remoteName}".`,
+        promptGenerator: (context) => `remove the remote "${context.data.params.remoteName}".`,
         validators: {
             sync: [gitValidator],
         },
         registerCondition: () => !!repo,
-    },
-    rename_git_remote: {
+    }),
+    rename_git_remote: defineAction({
         name: 'rename_git_remote',
         description: 'Rename a remote in the Git repository',
         category: CATEGORY_GIT_REMOTES,
-        schema: {
-            type: 'object',
-            properties: {
-                oldRemoteName: { type: 'string', description: 'The current remote name.' },
-                newRemoteName: { type: 'string', description: 'The new remote name.' },
-            },
-            required: ['oldRemoteName', 'newRemoteName'],
-            additionalProperties: false,
-        },
+        schema: z.object({
+            oldRemoteName: z.string().meta({
+                description: 'The current remote name.',
+            }),
+            newRemoteName: z.string().meta({
+                description: 'The new remote name.',
+            }),
+        }),
         handler: handleRenameGitRemote,
         cancelEvents: commonCancelEvents,
-        promptGenerator: (context: RCEContext) => `rename the remote "${context.data.params.oldRemoteName}" to "${context.data.params.newRemoteName}".`,
+        promptGenerator: (context) => `rename the remote "${context.data.params.oldRemoteName}" to "${context.data.params.newRemoteName}".`,
         validators: {
             sync: [gitValidator],
         },
         registerCondition: () => !!repo,
-    },
+    }),
     // Special: Only registered during a merge conflict
-    abort_merge: {
+    abort_merge: defineAction({
         name: 'abort_merge',
         description: 'Abort the current merge operation.',
         category: CATEGORY_GIT,
@@ -647,15 +631,8 @@ export const gitActions = {
             sync: [gitValidator],
         },
         autoRegister: false,
-    },
+    }),
 };
-
-// Get the current Git repository
-// let repo: Repository | undefined = git.repositories[0];
-// Handle git repo checks in each handler
-// eg.
-// if (!git)
-//     return actionResultFailure(NO_GIT_STRING);
 
 // Register all git commands
 export function addGitActions() {
