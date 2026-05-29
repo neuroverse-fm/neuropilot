@@ -1,12 +1,12 @@
 import * as vscode from 'vscode';
+import assert from 'node:assert';
+import { z } from 'zod';
 
 import { NEURO } from '@/constants';
 import { filterFileContents, logOutput, simpleFileName } from '@/utils/misc';
 import { CONFIG, CONNECTION, PermissionLevel } from '@/config';
-import assert from 'node:assert';
 import { actionHandlerFailure, actionHandlerSuccess, actionValidationAccept, actionValidationFailure, defineAction } from './utils/neuro_client';
 import { abortActionForce, addActions, registerAction, tryForceActions } from '@/rce';
-import z from 'zod';
 
 let requestCancelled = false;
 

@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import assert from 'node:assert';
+import { z } from 'zod';
 
 import { EXCEPTION_THROWN_STRING, NEURO, PROMISE_REJECTION_STRING } from '@/constants';
 import { getProperty, getWorkspacePath, getWorkspaceUri, isPathNeuroSafe, logOutput, normalizePath, notifyOnCaughtException, stripTailSlashes } from '@/utils/misc';
@@ -12,7 +13,6 @@ import { RCEContext } from '@ctx/rce';
 import { filePreviewProvider } from '@/previews/files';
 import { commonCancelEvents, checkCurrentFile, CONTEXT_NO_ACTIVE_DOCUMENT, STATUS_NO_ACTIVE_DOCUMENT, CONTEXT_NO_ACCESS, STATUS_NO_ACCESS, ACTION_FAIL_NOTES, validatePath, neuroSafeValidation, getUriExistence, validateIsAFile } from './utils/action_components';
 import { readFileActions } from './read_files';
-import z from 'zod';
 
 export const CATEGORY_FILE_ACTIONS = 'File System';
 

@@ -4,20 +4,19 @@
  */
 
 import * as vscode from 'vscode';
-import { ActionData } from 'neuro-game-sdk';
+import assert from 'node:assert';
+import { ActionData, type NeuroClient } from 'neuro-game-sdk';
+import { validate } from 'jsonschema';
+import type { StandardJSONSchemaV1 } from '@standard-schema/spec';
+import type { JSONSchema7 } from 'json-schema';
+
 import { ActionForceParams, actionHandlerFailure, ActionHandlerResult, actionHandlerSuccess, InferDataFromSchema, RCEAction, SchemaTypes, stripToAction, tryConvertStandardJSONSchema } from '@/utils/neuro_client';
 import { NEURO } from '@/constants';
 import { isThenable, logOutput, notifyOnCaughtException } from '@/utils/misc';
 import { ACTIONS, CONFIG, CONNECTION, getAllPermissions, getPermissionLevel, PermissionLevel, stringToPermissionLevel } from '@/config';
-import { validate } from 'jsonschema';
 import type { RCECancelEvent } from '@events/utils';
 import { fireOnActionStart, updateActionStatus } from '@events/actions';
 import { RCEContext } from '@/context/rce';
-import type { StandardJSONSchemaV1 } from '@standard-schema/spec';
-
-import type { NeuroClient } from 'neuro-game-sdk';
-import type { JSONSchema7 } from 'json-schema';
-import assert from 'assert';
 
 export const CATEGORY_MISC = 'Miscellaneous';
 

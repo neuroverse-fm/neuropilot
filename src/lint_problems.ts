@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import assert from 'node:assert';
+import { z } from 'zod';
 
 import { EXCEPTION_THROWN_STRING, NEURO } from '@/constants';
 import { normalizePath, getWorkspacePath, logOutput, isPathNeuroSafe, getWorkspaceUri } from '@/utils/misc';
@@ -9,7 +10,6 @@ import { actionValidationAccept, actionValidationFailure, ActionValidationResult
 import { targetedFileLintingResolvedEvent, targetedFolderLintingResolvedEvent, workspaceLintingResolvedEvent } from '@events/linting';
 import { addActions } from '@/rce';
 import { RCEContext } from '@ctx/rce';
-import z from 'zod';
 
 export const CATEGORY_LINTING = 'Linting';
 

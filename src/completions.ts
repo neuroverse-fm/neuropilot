@@ -1,11 +1,12 @@
 import * as vscode from 'vscode';
+import { ActionForcePriorityEnum } from 'neuro-game-sdk';
+import { z } from 'zod';
+
 import { NEURO } from '@/constants';
 import { logOutput, simpleFileName, getPositionContext, formatContext, NeuroPositionContext } from '@/utils/misc';
 import { CONFIG, CONNECTION, PermissionLevel } from '@/config';
 import { actionHandlerFailure, actionHandlerSuccess, actionValidationAccept, actionValidationFailure, actionValidationRetry, defineAction } from '@/utils/neuro_client';
 import { abortActionForce, addActions, canForceActions, tryForceActions } from '@/rce';
-import { ActionForcePriorityEnum } from 'neuro-game-sdk';
-import z from 'zod';
 
 let lastSuggestions: string[] = [];
 let requestCancelled = false;

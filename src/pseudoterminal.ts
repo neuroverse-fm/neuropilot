@@ -6,7 +6,7 @@
 
 import * as vscode from 'vscode';
 import { spawn, ChildProcessWithoutNullStreams } from 'node:child_process';
-import z from 'zod';
+import { z } from 'zod';
 
 import { NEURO } from '@/constants';
 import { checkWorkspaceTrust, checkVirtualWorkspace, logOutput, delayAsync, getFence } from '@/utils/misc';

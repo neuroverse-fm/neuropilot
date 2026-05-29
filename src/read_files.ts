@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
-import z from 'zod';
+import assert from 'node:assert';
+import { z } from 'zod';
 
 import { RCEContext } from '@ctx/rce';
 import { EXCEPTION_THROWN_STRING, NEURO, PROMISE_REJECTION_STRING } from './constants';
@@ -12,7 +13,6 @@ import { targetedFileDeletedEvent } from '@events/files';
 import { RCECancelEvent } from '@events/utils';
 import { filePreviewProvider } from '@previews/files';
 import { addActions } from './rce';
-import assert from 'node:assert';
 
 const CATEGORY_READING = 'Read Files';
 
