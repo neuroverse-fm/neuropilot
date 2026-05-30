@@ -427,26 +427,23 @@ export const gitActions = {
         },
         registerCondition: () => !!repo,
     }),
-    delete_tag: {
+    delete_tag: defineAction({
         name: 'delete_tag',
         description: 'Delete a tag from Git.',
         category: CATEGORY_GIT,
-        schema: {
-            type: 'object',
-            properties: {
-                name: { type: 'string', description: 'The name of the tag to delete.' },
-            },
-            required: ['name'],
-            additionalProperties: false,
-        },
+        schema: z.object({
+            name: z.string().meta({
+                description: 'The name of the tag to delete.',
+            }),
+        }),
         handler: handleDeleteTag,
         cancelEvents: commonCancelEvents,
-        promptGenerator: (context: RCEContext) => `delete the tag "${context.data.params.name}".`,
+        promptGenerator: (context) => `delete the tag "${context.data.params.name}".`,
         validators: {
             sync: [gitValidator],
         },
         registerCondition: () => !!repo,
-    },
+    }),
 
     // Requires gitConfigs
     set_git_config: defineAction({
