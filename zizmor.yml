@@ -5,7 +5,7 @@ rules:
   template-injection:
     ignore:
       - publish.yml
-  dependabot-config:
+  dependabot-cooldown:
     config:
       days: 1
   dangerous-triggers:
