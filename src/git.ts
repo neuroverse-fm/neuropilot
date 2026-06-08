@@ -65,7 +65,7 @@ async function filePathGitValidator(context: RCEContext): Promise<ActionValidati
         return actionValidationRetry('No file path specified.');
     };
 
-    const filePath: string | string[] = actionData.params?.filePath;
+    const filePath: string | string[] = actionData.params.filePath;
     if (typeof filePath === 'string') {
         const result = await neuroSafeValidationHelper(filePath);
         if (!result.success) return result;
@@ -901,8 +901,8 @@ export function handleRemoveFileFromGit(context: RCEContext): RCEHandlerReturns 
 export function handleMakeGitCommit(context: RCEContext): RCEHandlerReturns {
     const { data: actionData } = context;
     assert(repo);
-    const message = `${NEURO.currentController} committed: ${actionData.params?.message}`;
-    const commitOptions: string[] | undefined = actionData.params?.options;
+    const message = `${NEURO.currentController} committed: ${actionData.params.message}`;
+    const commitOptions: string[] | undefined = actionData.params.options;
     let ExtraCommitOptions: CommitOptions | undefined = {};
 
     if (!commitOptions) {
@@ -1066,7 +1066,7 @@ export function handleGitLog(context: RCEContext): RCEHandlerReturns {
     const { data: actionData } = context;
     assert(repo);
 
-    const logLimit: number | undefined = actionData.params?.log_limit;
+    const logLimit: number | undefined = actionData.params .log_limit;
 
     return repo.log().then((commits: Commit[]) => {
         // If log_limit is defined, restrict number of commits to that value.
