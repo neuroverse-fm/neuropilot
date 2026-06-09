@@ -12,6 +12,14 @@
 	"engines": {
 		"vscode": "^1.95.0"
 	},
+	"devEngines": {
+		"runtime": {
+			"name": "node",
+			"onFail": "error",
+			"version": "24.16.0"
+		}
+	},
+	"packageManager": "pnpm@11.5.0",
 	"categories": [
 		"AI",
 		"Programming Languages",

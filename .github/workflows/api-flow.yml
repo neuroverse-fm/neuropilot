@@ -18,27 +18,30 @@ on:
         description: Whether or not this is a prerelease
         default: false
 
+permissions: {}
+
 jobs:
-  publiah:
+  publish:
     runs-on: ubuntu-latest
     environment:
       name: npm registry (API types)
       url: https://npmx.dev/package/@vsc-neuropilot/api-types
+    permissions:
+      id-token: write
+      contents: read
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          persist-credentials: false
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
-        with:
-          version: 10.33.0
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: 24.15.0
-          cache: "pnpm"
-          cache-dependency-path: "./pnpm-lock.yaml"
+          node-version-file: ./package.json
           registry-url: https://registry.npmjs.org
 
       - name: Install deps
