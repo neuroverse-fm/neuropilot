@@ -104,7 +104,7 @@ export const editFileActions = {
                 description: 'The one-based line number to insert under.',
             }),
         }),
-        handler: handleInsertLines,
+        handler: (ctx) => returnHandleInsertLines(ctx.data.params.text, ctx.data.params.insertUnder),
         preview: (context) => {
             const length = (context.data.params.text as string).split('\n').length;
             let line: number | undefined = context.data.params?.insertUnder;
@@ -548,15 +548,13 @@ export function handleInsertText(context: RCEContext<{ text: string; position: {
     return returnHandleInsertText(text, position);
 }
 
-export function handleInsertLines(context: RCEContext): RCEHandlerReturns {
-    const { data: actionData } = context;
+function returnHandleInsertLines(text: string, insertUnder?: number) {
     /**
      * The current implementation is a lazy one of just appending a newline and pasting the text in
      * We want to allow specification of the line to insert under, with the default set to the current cursor location
      */
     const cursor = getVirtualCursor()!;
-    let text: string = '\n' + actionData.params.text;
-    let insertLocation: number = actionData.params.insertUnder !== undefined ? actionData.params.insertUnder - 1 : cursor.line;
+    let insertLocation: number = insertUnder !== undefined ? insertUnder - 1 : cursor.line;
 
     const document = vscode.window.activeTextEditor?.document;
     if (document === undefined) {
@@ -597,14 +595,13 @@ export function handleInsertLines(context: RCEContext): RCEHandlerReturns {
     });
 }
 
-export function handleReplaceText(context: RCEContext): RCEHandlerReturns {
+/** @deprecated Functions should now be inlined */
+export function handleInsertLines(context: RCEContext<{ text: string; insertUnder: number; }>): RCEHandlerReturns {
     const { data: actionData } = context;
-    const find: string = actionData.params.find;
-    const replaceWith: string = actionData.params.replaceWith;
-    const match: string = actionData.params.match;
-    const useRegex: boolean = actionData.params.useRegex ?? false;
-    const lineRange: LineRange | undefined = actionData.params.lineRange;
+    return returnHandleInsertLines(actionData.params!.text, actionData.params!.insertUnder);
+}
 
+function returnHandleReplaceText(find: string, replaceWith: string, match: string, useRegex = false, lineRange?: LineRange) {
     const document = vscode.window.activeTextEditor?.document;
     if (document === undefined) {
         return actionHandlerFailure(CONTEXT_NO_ACTIVE_DOCUMENT, STATUS_NO_ACTIVE_DOCUMENT);
@@ -661,13 +658,19 @@ export function handleReplaceText(context: RCEContext): RCEHandlerReturns {
     });
 }
 
-export function handleDeleteText(context: RCEContext): RCEHandlerReturns {
+/** @deprecated Functions should now be inlined */
+export function handleReplaceText(context: RCEContext<{ find: string; replaceWith: string; match: string; useRegex?: boolean; lineRange?: LineRange }>): RCEHandlerReturns {
     const { data: actionData } = context;
-    const find: string = actionData.params.find;
-    const match: string = actionData.params.match;
-    const useRegex: boolean = actionData.params.useRegex ?? false;
-    const lineRange: LineRange | undefined = actionData.params.lineRange;
+    const find = actionData.params!.find;
+    const replaceWith = actionData.params!.replaceWith;
+    const match = actionData.params!.match;
+    const useRegex = actionData.params!.useRegex;
+    const lineRange = actionData.params!.lineRange;
 
+    return returnHandleReplaceText(find, replaceWith, match, useRegex, lineRange);
+}
+
+function returnHandleDeleteText(find: string, match: string, useRegex = false, lineRange?: LineRange) {
     const document = vscode.window.activeTextEditor?.document;
     if (document === undefined) {
         return actionHandlerFailure(CONTEXT_NO_ACTIVE_DOCUMENT, STATUS_NO_ACTIVE_DOCUMENT);
@@ -721,6 +724,17 @@ export function handleDeleteText(context: RCEContext): RCEHandlerReturns {
     });
 }
 
+/** @deprecated Functions should now be inlined */
+export function handleDeleteText(context: RCEContext<{ find: string; match: string; useRegex?: boolean; lineRange?: LineRange }>): RCEHandlerReturns {
+    const { data: actionData } = context;
+    const find = actionData.params!.find;
+    const match = actionData.params!.match;
+    const useRegex = actionData.params!.useRegex;
+    const lineRange = actionData.params!.lineRange;
+
+    return returnHandleDeleteText(find, match, useRegex, lineRange);
+}
+
 export function handleUndo(): RCEHandlerReturns {
     const document = vscode.window.activeTextEditor?.document;
     if (document === undefined) {
@@ -747,10 +761,7 @@ export function handleUndo(): RCEHandlerReturns {
     );
 }
 
-export function handleRewriteAll(context: RCEContext): RCEHandlerReturns {
-    const { data: actionData } = context;
-    const content: string = actionData.params.content;
-
+function returnHandleRewriteAll(content: string) {
     const document = vscode.window.activeTextEditor?.document;
     if (document === undefined) {
         return actionHandlerFailure(CONTEXT_NO_ACTIVE_DOCUMENT, STATUS_NO_ACTIVE_DOCUMENT);
@@ -791,11 +802,14 @@ export function handleRewriteAll(context: RCEContext): RCEHandlerReturns {
     });
 }
 
-export function handleDeleteLines(context: RCEContext): RCEHandlerReturns {
+/** @deprecated Functions should now be inlined */
+export function handleRewriteAll(context: RCEContext<{ content: string }>): RCEHandlerReturns {
     const { data: actionData } = context;
-    const startLine = actionData.params.startLine;
-    const endLine = actionData.params.endLine;
 
+    return returnHandleRewriteAll(actionData.params!.content);
+}
+
+function returnHandleDeleteLines(startLine: number, endLine: number) {
     const document = vscode.window.activeTextEditor?.document;
     if (document === undefined) {
         return actionHandlerFailure(CONTEXT_NO_ACTIVE_DOCUMENT, STATUS_NO_ACTIVE_DOCUMENT);
@@ -861,11 +875,18 @@ export function handleDeleteLines(context: RCEContext): RCEHandlerReturns {
     });
 }
 
-export function handleRewriteLines(context: RCEContext): RCEHandlerReturns {
+/** @deprecated Functions should now be inlined */
+export function handleDeleteLines(context: RCEContext<{ startLine: number; endLine: number; }>): RCEHandlerReturns {
     const { data: actionData } = context;
-    const startLine = actionData.params.lineRange.startLine;
-    const endLine = actionData.params.lineRange.endLine;
-    const content = actionData.params.content;
+    const startLine = actionData.params!.startLine;
+    const endLine = actionData.params!.endLine;
+
+    return returnHandleDeleteLines(startLine, endLine);
+}
+
+function returnHandleRewriteLines(lineRange: LineRange, content: string) {
+    const startLine = lineRange.startLine;
+    const endLine = lineRange.endLine;
 
     const document = vscode.window.activeTextEditor?.document;
     if (document === undefined) {
@@ -910,10 +931,15 @@ export function handleRewriteLines(context: RCEContext): RCEHandlerReturns {
     });
 }
 
-export function handleDiffPatch(context: RCEContext): RCEHandlerReturns {
+/** @deprecated Functions should now be inlined */
+export function handleRewriteLines(context: RCEContext<{ lineRange: LineRange, content: string }>): RCEHandlerReturns {
     const { data: actionData } = context;
-    const diff = actionData.params.diff;
+    const { lineRange, content } = actionData.params!;
 
+    return returnHandleRewriteLines(lineRange, content);
+}
+
+function returnHandleDiffPatch(diff: string, moveCursor = false) {
     const document = vscode.window.activeTextEditor?.document;
     if (document === undefined) {
         return actionHandlerFailure(CONTEXT_NO_ACTIVE_DOCUMENT, STATUS_NO_ACTIVE_DOCUMENT);
@@ -956,7 +982,7 @@ export function handleDiffPatch(context: RCEContext): RCEHandlerReturns {
             const newEndPosition = positionFromIndex(filteredText, searchIndex + replace.length);
             let cursorPosition: vscode.Position;
 
-            if (actionData.params.moveCursor === true) {
+            if (moveCursor === true) {
                 // Update cursor position to the end of the replaced text
                 cursorPosition = newEndPosition;
                 setVirtualCursor(cursorPosition);
@@ -985,10 +1011,13 @@ export function handleDiffPatch(context: RCEContext): RCEHandlerReturns {
     });
 }
 
-export function handleReplaceUserSelection(context: RCEContext): RCEHandlerReturns {
+/** @deprecated Functions should now be inlined */
+export function handleDiffPatch(context: RCEContext<{ diff: string; moveCursor?: boolean }>): RCEHandlerReturns {
     const { data: actionData } = context;
-    const content: string = actionData.params.content;
+    return returnHandleDiffPatch(actionData.params!.diff, actionData.params!.moveCursor);
+}
 
+function returnHandleReplaceUserSelection(content: string) {
     const editor = vscode.window.activeTextEditor;
     const document = editor?.document;
     if (editor === undefined || document === undefined) {
@@ -1024,6 +1053,12 @@ export function handleReplaceUserSelection(context: RCEContext): RCEHandlerRetur
             return actionHandlerFailure('Failed to replace selection', 'Failed to replace selection');
         }
     });
+}
+
+/** @deprecated Functions should now be inlined */
+export function handleReplaceUserSelection(context: RCEContext<{ content: string; }>): RCEHandlerReturns {
+    const { data: actionData } = context;
+    return returnHandleReplaceUserSelection(actionData.params!.content);
 }
 
 export function fileSaveListener(e: vscode.TextDocument) {
