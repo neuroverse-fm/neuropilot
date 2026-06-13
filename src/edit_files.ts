@@ -228,7 +228,7 @@ export const editFileActions = {
             }),
             lineRange: _LINE_RANGE_SCHEMA.optional(),
         }),
-        handler: handleDeleteText,
+        handler: ({ data: { params: { find, useRegex, match, lineRange } } }) => returnHandleDeleteText(find, match, useRegex, lineRange),
         preview: (context) => previewFindFunctions(context.data, 'delete'),
         cancelEvents: [cancelOnDidChangeActiveTextEditor],
         validators: {
@@ -294,7 +294,7 @@ export const editFileActions = {
                 description: 'The content to rewrite the file with.',
             }),
         }),
-        handler: handleRewriteAll,
+        handler: (ctx) => returnHandleRewriteAll(ctx.data.params.content),
         preview: () => {
             const editor = vscode.window.activeTextEditor!;
             const fullRange = new vscode.Range(
@@ -332,7 +332,7 @@ export const editFileActions = {
                 description: 'The content to replace the selected range of lines with.',
             }),
         }),
-        handler: handleRewriteLines,
+        handler: ({ data: { params } }) => returnHandleRewriteLines(params.lineRange, params.content),
         preview: (context) => previewLineHighlights(context.data.params.lineRange, 'rewrite these lines.'),
         cancelEvents: commonCancelEvents,
         validators: {
@@ -353,7 +353,7 @@ export const editFileActions = {
         schema: _LINE_RANGE_SCHEMA.meta({
             description: undefined,
         }),
-        handler: handleDeleteLines,
+        handler: (ctx) => returnHandleDeleteLines(ctx.data.params.startLine, ctx.data.params.endLine),
         preview: (context) => previewLineHighlights(context.data.params, 'delete these lines.'),
         cancelEvents: commonCancelEvents,
         validators: {
@@ -378,7 +378,7 @@ export const editFileActions = {
                 description: 'Does your change require that insert_turtle_here keeps his selection unchanged?',
             }),
         }),
-        handler: handleReplaceUserSelection,
+        handler: ({ data: { params } }) => returnHandleReplaceUserSelection(params.content),
         // No preview effect needed, intended preview effect is the highlighted text
         cancelEvents: [
             ...commonCancelEvents,
@@ -437,9 +437,9 @@ export const editFileActions = {
             }),
             moveCursor: z.boolean().meta({
                 description: 'Whether or not to move the cursor to the end of the patch replacement.',
-            }).default(false),
+            }).optional(),
         }),
-        handler: handleDiffPatch,
+        handler: ({ data: { params } }) => returnHandleDiffPatch(params.diff, params.moveCursor),
         // TODO: I'm not sure if or how this action would have a preview effect, like would it work if a big highlight range was added to the targted text?
         validators: {
             sync: [checkCurrentFile, (context) => {

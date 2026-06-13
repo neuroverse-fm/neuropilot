@@ -125,7 +125,7 @@ export const gitActions = {
                 uniqueItems: true,
             }).min(1),
         }),
-        handler: handleAddFileToGit,
+        handler: (ctx) => returnHandleAddFileToGit(ctx.data.params.filePath),
         preview: (ctx) => {
             const ws = getWorkspaceUri();
             if (!ws) return { dispose: () => { } };
@@ -155,7 +155,7 @@ export const gitActions = {
                 uniqueItems: true,
             }),
         }),
-        handler: handleMakeGitCommit,
+        handler: (ctx) => returnHandleMakeGitCommit(ctx.data.params.message, ctx.data.params.options),
         cancelEvents: commonCancelEvents,
         promptGenerator: (context) => `commit changes with the message "${context.data.params.message}".`,
         validators: {
@@ -172,7 +172,7 @@ export const gitActions = {
                 description: 'The branch name to merge into the current branch.',
             }),
         }),
-        handler: handleGitMerge,
+        handler: (ctx) => returnHandleGitMerge(ctx.data.params.ref_to_merge),
         cancelEvents: commonCancelEvents,
         promptGenerator: (context) => `merge "${context.data.params.ref_to_merge}" into the current branch.`,
         validators: {
@@ -203,7 +203,7 @@ export const gitActions = {
                 uniqueItems: true,
             }),
         }),
-        handler: handleRemoveFileFromGit,
+        handler: (ctx) => returnHandleRemoveFileFromGit(ctx.data.params.filePath),
         preview: (ctx) => {
             const ws = getWorkspaceUri();
             if (!ws) return { dispose: () => { } };
@@ -233,7 +233,7 @@ export const gitActions = {
                 description: 'If true, forcibly deletes a branch.',
             }),
         }),
-        handler: handleDeleteGitBranch,
+        handler: (ctx) => returnHandleDeleteGitBranch(ctx.data.params.branchName, ctx.data.params.force),
         cancelEvents: commonCancelEvents,
         promptGenerator: (context) => `delete the branch "${context.data.params.branchName}".`,
         validators: {
@@ -250,7 +250,7 @@ export const gitActions = {
                 description: 'The name of the branch to switch to.',
             }),
         }),
-        handler: handleSwitchGitBranch,
+        handler: (ctx) => returnHandleSwitchGitBranch(ctx.data.params.branchName),
         cancelEvents: commonCancelEvents,
         promptGenerator: (context) => `switch to the branch "${context.data.params.branchName}".`,
         validators: {
@@ -267,7 +267,7 @@ export const gitActions = {
                 description: 'The name of the new branch.',
             }),
         }),
-        handler: handleNewGitBranch,
+        handler: (ctx) => returnHandleNewGitBranch(ctx.data.params.branchName),
         cancelEvents: commonCancelEvents,
         promptGenerator: (context) => `create a new branch "${context.data.params.branchName}".`,
         validators: {
@@ -293,7 +293,7 @@ export const gitActions = {
                 description: 'The type of diff to run. This will also affect what parameters are required.',
             }).optional(),
         }),
-        handler: handleDiffFiles,
+        handler: ({ data: { params } }) => returnHandleDiffFiles(params.ref1, params.ref2, params.filePath, params.diffType),
         preview: (ctx) => {
             const ws = getWorkspaceUri();
             if (!ws) return { dispose: () => { } };
@@ -364,7 +364,7 @@ export const gitActions = {
                 description: 'Limits the number of items returned, starting from the latest commit.',
             }).optional(),
         }),
-        handler: handleGitLog,
+        handler: (ctx) => returnHandleGitLog(ctx.data.params.log_limit),
         cancelEvents: commonCancelEvents,
         promptGenerator: (context) => `get the ${context.data.params.log_limit ? `${context.data.params.log_limit} most recent commits in the ` : ''}Git log.`,
         validators: {
@@ -381,7 +381,7 @@ export const gitActions = {
                 description: 'The file to get attributions on.',
             }),
         }),
-        handler: handleGitBlame,
+        handler: (ctx) => returnHandleGitBlame(ctx.data.params.filePath),
         preview: (ctx) => {
             const ws = getWorkspaceUri();
             if (!ws) return { dispose: () => { } };
@@ -411,7 +411,7 @@ export const gitActions = {
                 description: 'What commit/ref do you want to tag? If not set, will tag the current commit.',
             }).optional(),
         }),
-        handler: handleTagHEAD,
+        handler: (ctx) => returnHandleTagHEAD(ctx.data.params.name, ctx.data.params.upstream),
         cancelEvents: commonCancelEvents,
         promptGenerator: (context) => `tag the current commit with the name "${context.data.params.name}" and associate it with the "${context.data.params.upstream}" remote.`,
         validators: {
@@ -434,7 +434,7 @@ export const gitActions = {
                 description: 'The name of the tag to delete.',
             }),
         }),
-        handler: handleDeleteTag,
+        handler: (ctx) => returnHandleDeleteTag(ctx.data.params.name),
         cancelEvents: commonCancelEvents,
         promptGenerator: (context) => `delete the tag "${context.data.params.name}".`,
         validators: {
@@ -456,7 +456,7 @@ export const gitActions = {
                 description: 'The new value for the config key.',
             }),
         }),
-        handler: handleSetGitConfig,
+        handler: (ctx) => returnHandleSetConfig(ctx.data.params.key, ctx.data.params.value),
         cancelEvents: commonCancelEvents,
         promptGenerator: (context) => `set the Git config key "${context.data.params.key}" to "${context.data.params.value}".`,
         validators: {
@@ -471,9 +471,9 @@ export const gitActions = {
         schema: z.object({
             key: z.string().meta({
                 description: 'The config key to get. If omitted, you will get the full list of config keys and their values.',
-            }),
+            }).optional(),
         }),
-        handler: handleGetGitConfig,
+        handler: (ctx) => returnHandleGetGitConfig(ctx.data.params.key),
         cancelEvents: commonCancelEvents,
         promptGenerator: (context) => context.data.params?.key ? `get the Git config key "${context.data.params.key}".` : 'get the Git config.',
         validators: {
@@ -495,7 +495,7 @@ export const gitActions = {
                 description: 'Which branch to fetch from. If omitted, will fetch from the set remote branch of the current branch.',
             }).optional(),
         }),
-        handler: handleFetchGitCommits,
+        handler: ({ data: { params } }) => returnHandleFetchGitCommits(params.remoteName, params.branchName),
         cancelEvents: commonCancelEvents,
         promptGenerator: (context) => {
             if (context.data.params.remoteName && context.data.params.branchName)
@@ -538,7 +538,7 @@ export const gitActions = {
                 description: 'If true, will forcibly push to remote.',
             }).optional(),
         }),
-        handler: handlePushGitCommits,
+        handler: ({ data: { params: { remoteName, branchName, forcePush } } }) => returnHandlePushGitCommits(remoteName, branchName, forcePush),
         cancelEvents: commonCancelEvents,
         promptGenerator: (context) => {
             const force = context.data.params.forcePush ? 'force ' : '';
@@ -569,7 +569,7 @@ export const gitActions = {
                 description: 'The URL that the remote name is aliased to. It must be either SSH (which will only work if SSH is properly set up) or HTTPS.',
             }),
         }),
-        handler: handleAddGitRemote,
+        handler: ({ data: { params } }) => returnHandleAddGitRemote(params.remoteName, params.remoteURL),
         cancelEvents: commonCancelEvents,
         promptGenerator: (context) => `add a new remote "${context.data.params.remoteName}" with URL "${context.data.params.remoteURL}".`,
         validators: {
@@ -586,7 +586,7 @@ export const gitActions = {
                 description: 'Name of the remote Git repository to remove.',
             }),
         }),
-        handler: handleRemoveGitRemote,
+        handler: (ctx) => returnHandleRemoveGitRemote(ctx.data.params.remoteName),
         cancelEvents: commonCancelEvents,
         promptGenerator: (context) => `remove the remote "${context.data.params.remoteName}".`,
         validators: {
@@ -606,7 +606,7 @@ export const gitActions = {
                 description: 'The new remote name.',
             }),
         }),
-        handler: handleRenameGitRemote,
+        handler: (ctx) => returnHandleRenameGitRemote(ctx.data.params.oldRemoteName, ctx.data.params.newRemoteName),
         cancelEvents: commonCancelEvents,
         promptGenerator: (context) => `rename the remote "${context.data.params.oldRemoteName}" to "${context.data.params.newRemoteName}".`,
         validators: {
