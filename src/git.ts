@@ -59,13 +59,11 @@ async function neuroSafeValidationHelper(filePath: string): Promise<ActionValida
     }
 }
 
-async function filePathGitValidator(context: RCEContext): Promise<ActionValidationResult> {
-    const actionData = context.data;
-    if (actionData.params.filePath === '') {
+async function filePathGitValidator(filePath: string | string[]): Promise<ActionValidationResult> {
+    if (filePath === '') {
         return actionValidationRetry('No file path specified.');
     };
 
-    const filePath: string | string[] = actionData.params.filePath;
     if (typeof filePath === 'string') {
         const result = await neuroSafeValidationHelper(filePath);
         if (!result.success) return result;
@@ -125,7 +123,7 @@ export const gitActions = {
         schema: z.object({
             filePath: z.array(z.string()).meta({
                 uniqueItems: true,
-            }),
+            }).min(1),
         }),
         handler: handleAddFileToGit,
         preview: (ctx) => {
@@ -141,7 +139,7 @@ export const gitActions = {
         promptGenerator: (context) => `add the file "${context.data.params.filePath}" to the staging area.`,
         validators: {
             sync: [gitValidator],
-            async: [filePathGitValidator],
+            async: [(ctx) => filePathGitValidator(ctx.data.params.filePath)],
         },
         registerCondition: () => !!repo,
     }),
@@ -219,7 +217,7 @@ export const gitActions = {
         promptGenerator: (context) => `remove the file "${context.data.params.filePath}" from the staging area.`,
         validators: {
             sync: [gitValidator],
-            async: [filePathGitValidator],
+            async: [(ctx) => filePathGitValidator(ctx.data.params.filePath)],
         },
         registerCondition: () => !!repo,
     }),
@@ -353,7 +351,7 @@ export const gitActions = {
                         return actionValidationFailure('Unknown diff type.', 'Unknown/unhandled diff type specified');
                 }
             }],
-            async: [filePathGitValidator],
+            async: [(ctx) => ctx.data.params.filePath ? filePathGitValidator(ctx.data.params.filePath) : new Promise<ActionValidationResult>(() => actionValidationAccept())],
         },
         registerCondition: () => !!repo,
     }),
@@ -395,7 +393,7 @@ export const gitActions = {
         promptGenerator: (context) => `get the Git blame for the file "${context.data.params.filePath}".`,
         validators: {
             sync: [gitValidator],
-            async: [filePathGitValidator],
+            async: [(ctx) => filePathGitValidator(ctx.data.params.filePath)],
         },
         registerCondition: () => !!repo,
     }),
@@ -536,7 +534,7 @@ export const gitActions = {
             branchName: z.string().meta({
                 description: 'The branch to push to. If omitted, will push to the set remote branch.',
             }).optional(),
-            forcePush: z.string().meta({
+            forcePush: z.boolean().meta({
                 description: 'If true, will forcibly push to remote.',
             }).optional(),
         }),
@@ -696,11 +694,8 @@ export function handleNewGitRepo(): RCEHandlerReturns {
     });
 }
 
-export function handleGetGitConfig(context: RCEContext): RCEHandlerReturns {
-    const { data: actionData } = context;
+function returnHandleGetGitConfig(configKey?: string) {
     assert(repo);
-    const configKey: string | undefined = actionData.params.key;
-
     if (!configKey) {
         return repo.getConfigs().then((configs: { key: string; value: string; }[]) => {
             return actionHandlerSuccess(`Git config:\n${configs.map((config) => `- ${config.key}: ${config.value}`).join('\n')}`, `Sent ${configs.length} repo Git config(s)`);
@@ -716,12 +711,16 @@ export function handleGetGitConfig(context: RCEContext): RCEHandlerReturns {
     }
 }
 
-export function handleSetGitConfig(context: RCEContext): RCEHandlerReturns {
+/** @deprecated Functions should now be inlined */
+export function handleGetGitConfig(context: RCEContext<{ key: string; }>): RCEHandlerReturns {
     const { data: actionData } = context;
-    assert(repo);
-    const configKey: string = actionData.params.key;
-    const configValue: string = actionData.params.value;
+    const configKey: string | undefined = actionData.params!.key;
 
+    return returnHandleGetGitConfig(configKey);
+}
+
+function returnHandleSetConfig(configKey: string, configValue: string) {
+    assert(repo);
     return repo.setConfig(configKey, configValue).then(() => {
         return actionHandlerSuccess(`Set Git config key "${configKey}" to: ${configValue}`, `Wrote new repo config value of "${configKey}"`);
     }, (erm: string) => {
@@ -730,11 +729,18 @@ export function handleSetGitConfig(context: RCEContext): RCEHandlerReturns {
     });
 }
 
-export function handleNewGitBranch(context: RCEContext): RCEHandlerReturns {
+/** @deprecated Functions should now be inlined */
+export function handleSetGitConfig(context: RCEContext<{ key: string; value: string; }>): RCEHandlerReturns {
     const { data: actionData } = context;
-    assert(repo);
-    const branchName: string = actionData.params.branchName;
 
+    const configKey: string = actionData.params!.key;
+    const configValue: string = actionData.params!.value;
+
+    return returnHandleSetConfig(configKey, configValue);
+}
+
+function returnHandleNewGitBranch(branchName: string) {
+    assert(repo);
     return repo.createBranch(branchName, true).then(() => {
         return actionHandlerSuccess(`Created and switched to new branch ${branchName}.`, `Branch "${branchName}" created`);
     }, (erm: string) => {
@@ -743,11 +749,16 @@ export function handleNewGitBranch(context: RCEContext): RCEHandlerReturns {
     });
 }
 
-export function handleSwitchGitBranch(context: RCEContext): RCEHandlerReturns {
+/** @deprecated Functions should now be inlined */
+export function handleNewGitBranch(context: RCEContext<{ branchName: string; }>): RCEHandlerReturns {
     const { data: actionData } = context;
-    assert(repo);
-    const branchName: string = actionData.params.branchName;
+    const branchName: string = actionData.params!.branchName;
 
+    return returnHandleNewGitBranch(branchName);
+}
+
+function returnHandleSwitchGitBranch(branchName: string) {
+    assert(repo);
     return repo.checkout(branchName).then(() => {
         return actionHandlerSuccess(`Switched to branch ${branchName}.`, `Branch "${branchName}" checked out`);
     }, (erm: string) => {
@@ -756,18 +767,31 @@ export function handleSwitchGitBranch(context: RCEContext): RCEHandlerReturns {
     });
 }
 
-export function handleDeleteGitBranch(context: RCEContext): RCEHandlerReturns {
+/** @deprecated Functions should now be inlined */
+export function handleSwitchGitBranch(context: RCEContext<{ branchName: string; }>): RCEHandlerReturns {
     const { data: actionData } = context;
-    assert(repo);
-    const branchName: string = actionData.params.branchName;
-    const forceDelete: boolean = actionData.params.force ?? false;
+    const branchName: string = actionData.params!.branchName;
 
+    return returnHandleSwitchGitBranch(branchName);
+}
+
+function returnHandleDeleteGitBranch(branchName: string, forceDelete = false) {
+    assert(repo);
     return repo.deleteBranch(branchName, forceDelete).then(() => {
         return actionHandlerSuccess(`Deleted branch ${branchName}.`, `Branch "${branchName}"${forceDelete ? ' forcibly' : ''} deleted`);
     }, (erm: string) => {
         logOutput('ERROR', `Failed to delete branch: ${erm}`);
         return actionHandlerFailure(`Failed to delete branch "${branchName}".${forceDelete === false ? '\nEnsure the branch is merged before deleting, or force delete it to discard changes.' : ''}`, PROMISE_REJECTION_STRING);
     });
+}
+
+/** @deprecated Functions should now be inlined */
+export function handleDeleteGitBranch(context: RCEContext<{ branchName: string, force?: boolean }>): RCEHandlerReturns {
+    const { data: actionData } = context;
+    const branchName = actionData.params!.branchName;
+    const forceDelete = actionData.params!.force;
+
+    return returnHandleDeleteGitBranch(branchName, forceDelete);
 }
 
 interface StateStringProps {
@@ -862,10 +886,8 @@ function getAbsoluteFilePath(filePath = '.'): string {
     return normalizePath(workspaceFolder + '/' + filePath);
 }
 
-export function handleAddFileToGit(context: RCEContext): RCEHandlerReturns {
-    const { data: actionData } = context;
+function returnHandleAddFileToGit(filePath: string[]) {
     assert(repo);
-    const filePath: string[] = actionData.params.filePath;
     const absolutePaths: string[] = [];
 
     for (const path of filePath) {
@@ -880,10 +902,17 @@ export function handleAddFileToGit(context: RCEContext): RCEHandlerReturns {
     });
 }
 
-export function handleRemoveFileFromGit(context: RCEContext): RCEHandlerReturns {
+/** @deprecated Functions should now be inlined */
+export function handleAddFileToGit(context: RCEContext<{ filePath: string[] }>): RCEHandlerReturns {
     const { data: actionData } = context;
+
+    const filePath: string[] = actionData.params!.filePath;
+
+    return returnHandleAddFileToGit(filePath);
+}
+
+function returnHandleRemoveFileFromGit(filePath: string[]) {
     assert(repo);
-    const filePath: string[] = actionData.params.filePath;
     const absolutePaths: string[] = [];
 
     for (const path of filePath) {
@@ -898,11 +927,18 @@ export function handleRemoveFileFromGit(context: RCEContext): RCEHandlerReturns 
     });
 }
 
-export function handleMakeGitCommit(context: RCEContext): RCEHandlerReturns {
+/** @deprecated Functions should now be inlined */
+export function handleRemoveFileFromGit(context: RCEContext<{ filePath: string[] }>): RCEHandlerReturns {
     const { data: actionData } = context;
+    const filePath: string[] = actionData.params!.filePath;
+
+    return returnHandleRemoveFileFromGit(filePath);
+}
+
+function returnHandleMakeGitCommit(message: string, options?: string[]) {
     assert(repo);
-    const message = `${NEURO.currentController} committed: ${actionData.params.message}`;
-    const commitOptions: string[] | undefined = actionData.params.options;
+    const commitMessage = `${NEURO.currentController} committed: ${message}`;
+    const commitOptions: string[] | undefined = options;
     let ExtraCommitOptions: CommitOptions | undefined = {};
 
     if (!commitOptions) {
@@ -934,20 +970,24 @@ export function handleMakeGitCommit(context: RCEContext): RCEHandlerReturns {
         }
     }
 
-    repo.inputBox.value = message;
-    return repo.commit(message, ExtraCommitOptions).then(() => {
-        return actionHandlerSuccess(`Committed with message: "${message}"\nCommit options used: ${commitOptions ? commitOptions : 'None'}`, `${ExtraCommitOptions?.amend ? 'Amended c' : 'C'}ommit applied${ExtraCommitOptions?.signoff ? ' with signoff' : ''}`);
+    repo.inputBox.value = commitMessage;
+    return repo.commit(commitMessage, ExtraCommitOptions).then(() => {
+        return actionHandlerSuccess(`Committed with message: "${commitMessage}"\nCommit options used: ${commitOptions ? commitOptions : 'None'}`, `${ExtraCommitOptions?.amend ? 'Amended c' : 'C'}ommit applied${ExtraCommitOptions?.signoff ? ' with signoff' : ''}`);
     }, (erm: string) => {
         logOutput('ERROR', `Failed to commit: ${erm}`);
         return actionHandlerFailure('Failed to record commit', PROMISE_REJECTION_STRING);
     });
 }
 
-export function handleGitMerge(context: RCEContext): RCEHandlerReturns {
+/** @deprecated Functions should now be inlined */
+export function handleMakeGitCommit(context: RCEContext<{ message: string; options?: ('amend' | 'signoff' | 'verbose')[] }>): RCEHandlerReturns {
     const { data: actionData } = context;
-    assert(repo);
-    const refToMerge = actionData.params.ref_to_merge;
 
+    return returnHandleMakeGitCommit(actionData.params!.message, actionData.params!.options);
+}
+
+function returnHandleGitMerge(refToMerge: string) {
+    assert(repo);
     return repo.merge(refToMerge).then(() => {
         return actionHandlerSuccess(`Cleanly merged ${refToMerge} into the current branch.`, `Cleanly merged ${refToMerge}`);
     }, (erm: string) => {
@@ -959,6 +999,14 @@ export function handleGitMerge(context: RCEContext): RCEHandlerReturns {
             return actionHandlerFailure(`Couldn't merge ${refToMerge}.`, PROMISE_REJECTION_STRING);
         }
     });
+}
+
+/** @deprecated Functions should now be inlined */
+export function handleGitMerge(context: RCEContext<{ ref_to_merge: string }>): RCEHandlerReturns {
+    const { data: actionData } = context;
+    const refToMerge = actionData.params!.ref_to_merge;
+
+    return returnHandleGitMerge(refToMerge);
 }
 
 export function handleAbortMerge(): RCEHandlerReturns {
@@ -973,16 +1021,9 @@ export function handleAbortMerge(): RCEHandlerReturns {
     });
 }
 
-export function handleDiffFiles(context: RCEContext): RCEHandlerReturns {
-    const { data: actionData } = context;
+function returnHandleDiffFiles(ref1?: string, ref2?: string, filePath = '.', diffType = 'diffWithHEAD') {
     assert(repo);
-
-    const ref1: string | undefined = actionData.params.ref1;
-    const ref2: string | undefined = actionData.params.ref2;
-    const filePath: string = actionData.params.filePath ?? '.';
     const diffThisFile = getAbsoluteFilePath(filePath);
-
-    const diffType: string = actionData.params.diffType ?? 'diffWithHEAD'; // Default to diffWithHEAD
 
     switch (diffType) {
         case 'diffWithHEAD':
@@ -1062,12 +1103,20 @@ export function handleDiffFiles(context: RCEContext): RCEHandlerReturns {
     }
 }
 
-export function handleGitLog(context: RCEContext): RCEHandlerReturns {
+/** @deprecated Functions should now be inlined */
+export function handleDiffFiles(context: RCEContext<{ ref1?: string; ref2?: string; filePath?: string; diffType?: string; }>): RCEHandlerReturns {
     const { data: actionData } = context;
+
+    const ref1 = actionData.params!.ref1;
+    const ref2 = actionData.params!.ref2;
+    const filePath = actionData.params!.filePath;
+    const diffType = actionData.params!.diffType;
+
+    return returnHandleDiffFiles(ref1, ref2, filePath, diffType);
+}
+
+function returnHandleGitLog(logLimit?: number) {
     assert(repo);
-
-    const logLimit: number | undefined = actionData.params .log_limit;
-
     return repo.log().then((commits: Commit[]) => {
         // If log_limit is defined, restrict number of commits to that value.
         if (logLimit) {
@@ -1085,10 +1134,16 @@ export function handleGitLog(context: RCEContext): RCEHandlerReturns {
     });
 }
 
-export function handleGitBlame(context: RCEContext): RCEHandlerReturns {
+/** @deprecated Functions should now be inlined */
+export function handleGitLog(context: RCEContext<{ log_limit?: number }>): RCEHandlerReturns {
     const { data: actionData } = context;
+    const logLimit = actionData.params!.log_limit;
+
+    return returnHandleGitLog(logLimit);
+}
+
+function returnHandleGitBlame(filePath: string) {
     assert(repo);
-    const filePath: string = actionData.params.filePath;
     const absolutePath: string = getAbsoluteFilePath(filePath);
 
     if (!isPathNeuroSafe(absolutePath)) {
@@ -1103,12 +1158,16 @@ export function handleGitBlame(context: RCEContext): RCEHandlerReturns {
     });
 }
 
-export function handleTagHEAD(context: RCEContext): RCEHandlerReturns {
+/** @deprecated Functions should now be inlined */
+export function handleGitBlame(context: RCEContext<{ filePath: string }>): RCEHandlerReturns {
     const { data: actionData } = context;
-    assert(repo);
-    const name: string = actionData.params.name;
-    const upstream: string = actionData.params.upstream ?? 'HEAD';
+    const filePath: string = actionData.params!.filePath;
 
+    return returnHandleGitBlame(filePath);
+}
+
+function returnHandleTagHEAD(name: string, upstream = 'HEAD') {
+    assert(repo);
     return repo.tag(name, upstream).then(() => {
         return actionHandlerSuccess(`Tag ${name} created for ${upstream}.`, `Tag "${name}" created`);
     }, (erm: string) => {
@@ -1117,11 +1176,17 @@ export function handleTagHEAD(context: RCEContext): RCEHandlerReturns {
     });
 }
 
-export function handleDeleteTag(context: RCEContext): RCEHandlerReturns {
+/** @deprecated Functions should now be inlined */
+export function handleTagHEAD(context: RCEContext<{ name: string; upstream?: string }>): RCEHandlerReturns {
     const { data: actionData } = context;
-    assert(repo);
-    const name: string = actionData.params.name;
+    const name = actionData.params!.name;
+    const upstream = actionData.params!.upstream;
 
+    return returnHandleTagHEAD(name, upstream);
+}
+
+function returnHandleDeleteTag(name: string) {
+    assert(repo);
     return repo.deleteTag(name).then(() => {
         return actionHandlerSuccess(`Deleted tag ${name}`, `Tag "${name}" deleted`);
     }, (erm: string) => {
@@ -1130,18 +1195,31 @@ export function handleDeleteTag(context: RCEContext): RCEHandlerReturns {
     });
 }
 
-export function handleFetchGitCommits(context: RCEContext): RCEHandlerReturns {
+/** @deprecated Functions should now be inlined */
+export function handleDeleteTag(context: RCEContext<{ name: string; }>): RCEHandlerReturns {
     const { data: actionData } = context;
-    assert(repo);
-    const remoteName: string = actionData.params.remoteName;
-    const branchName: string = actionData.params.branchName;
+    const name: string = actionData.params!.name;
 
+    return returnHandleDeleteTag(name);
+}
+
+function returnHandleFetchGitCommits(remoteName?: string, branchName?: string) {
+    assert(repo);
     return repo.fetch(remoteName, branchName).then(() => {
         return actionHandlerSuccess(`Fetched commits from ${remoteName ? 'remote ' + remoteName : 'default remote'}${branchName ? `, branch "${branchName}"` : ''}.`, `Fetched from ${remoteName || 'default remote'}`);
     }, (erm: string) => {
         logOutput('ERROR', `Failed to fetch commits: ${erm}`);
         return actionHandlerFailure(`Failed to fetch commits from remote "${remoteName}"`, PROMISE_REJECTION_STRING);
     });
+}
+
+/** @deprecated Functions should now be inlined */
+export function handleFetchGitCommits(context: RCEContext<{ remoteName?: string; branchName?: string; }>): RCEHandlerReturns {
+    const { data: actionData } = context;
+    const remoteName = actionData.params!.remoteName;
+    const branchName = actionData.params!.branchName;
+
+    return returnHandleFetchGitCommits(remoteName, branchName);
 }
 
 export function handlePullGitCommits(): RCEHandlerReturns {
@@ -1155,13 +1233,8 @@ export function handlePullGitCommits(): RCEHandlerReturns {
     });
 }
 
-export function handlePushGitCommits(context: RCEContext): RCEHandlerReturns {
-    const { data: actionData } = context;
+function returnHandlePushGitCommits(remoteName?: string, branchName?: string, forcePush = false) {
     assert(repo);
-    const remoteName: string | undefined = actionData.params.remoteName;
-    const branchName: string | undefined = actionData.params.branchName;
-    const forcePush: boolean = actionData.params.forcePush ?? false;
-
     const forcePushMode: ForcePushMode | undefined = forcePush === true ? ForcePushMode.Force : undefined;
 
     return repo.push(remoteName, branchName, true, forcePushMode).then(() => {
@@ -1172,13 +1245,18 @@ export function handlePushGitCommits(context: RCEContext): RCEHandlerReturns {
     });
 }
 
-export function handleAddGitRemote(context: RCEContext): RCEHandlerReturns {
+/** @deprecated Functions should now be inlined */
+export function handlePushGitCommits(context: RCEContext<{ remoteName?: string; branchName?: string; forcePush?: boolean }>): RCEHandlerReturns {
     const { data: actionData } = context;
+    const remoteName = actionData.params!.remoteName;
+    const branchName = actionData.params!.branchName;
+    const forcePush = actionData.params!.forcePush;
+
+    return returnHandlePushGitCommits(remoteName, branchName, forcePush);
+}
+
+function returnHandleAddGitRemote(remoteName: string, remoteUrl: string) {
     assert(repo);
-
-    const remoteName: string = actionData.params.remoteName;
-    const remoteUrl: string = actionData.params.remoteURL;
-
     return repo.addRemote(remoteName, remoteUrl).then(() => {
         return actionHandlerSuccess(`Added remote "${remoteName}" with URL: ${remoteUrl}`, `Remote "${remoteName}" added`);
     }, (erm: string) => {
@@ -1187,11 +1265,17 @@ export function handleAddGitRemote(context: RCEContext): RCEHandlerReturns {
     });
 }
 
-export function handleRemoveGitRemote(context: RCEContext): RCEHandlerReturns {
+/** @deprecated Functions should now be inlined */
+export function handleAddGitRemote(context: RCEContext<{ remoteName: string; remoteURL: string; }>): RCEHandlerReturns {
     const { data: actionData } = context;
-    assert(repo);
-    const remoteName: string = actionData.params.remoteName;
+    const remoteName: string = actionData.params!.remoteName;
+    const remoteUrl: string = actionData.params!.remoteURL;
 
+    return returnHandleAddGitRemote(remoteName, remoteUrl);
+}
+
+function returnHandleRemoveGitRemote(remoteName: string) {
+    assert(repo);
     return repo.removeRemote(remoteName).then(() => {
         return actionHandlerSuccess(`Removed remote "${remoteName}".`, `Remote "${remoteName}" removed`);
     }, (erm: string) => {
@@ -1200,16 +1284,29 @@ export function handleRemoveGitRemote(context: RCEContext): RCEHandlerReturns {
     });
 }
 
-export function handleRenameGitRemote(context: RCEContext): RCEHandlerReturns {
+/** @deprecated Functions should now be inlined */
+export function handleRemoveGitRemote(context: RCEContext<{ remoteName: string; }>): RCEHandlerReturns {
     const { data: actionData } = context;
-    assert(repo);
-    const oldRemoteName: string = actionData.params.oldRemoteName;
-    const newRemoteName: string = actionData.params.newRemoteName;
+    const remoteName: string = actionData.params!.remoteName;
 
+    return returnHandleRemoveGitRemote(remoteName);
+}
+
+function returnHandleRenameGitRemote(oldRemoteName: string, newRemoteName: string) {
+    assert(repo);
     return repo.renameRemote(oldRemoteName, newRemoteName).then(() => {
         return actionHandlerSuccess(`Renamed remote "${oldRemoteName}" to "${newRemoteName}".`, `Remote "${oldRemoteName}" renamed to "${newRemoteName}"`);
     }, (erm: string) => {
         logOutput('ERROR', `Failed to rename remote ${oldRemoteName}: ${erm}`);
         return actionHandlerFailure(`Failed to rename remote "${oldRemoteName}" to "${newRemoteName}"`, PROMISE_REJECTION_STRING);
     });
+}
+
+/** @deprecated Functions should now be inlined */
+export function handleRenameGitRemote(context: RCEContext<{ oldRemoteName: string; newRemoteName: string; }>): RCEHandlerReturns {
+    const { data: actionData } = context;
+    const oldRemoteName: string = actionData.params!.oldRemoteName;
+    const newRemoteName: string = actionData.params!.newRemoteName;
+
+    return returnHandleRenameGitRemote(oldRemoteName, newRemoteName);
 }

@@ -168,7 +168,7 @@ export const editFileActions = {
             }),
             lineRange: _LINE_RANGE_SCHEMA.optional(),
         }),
-        handler: handleReplaceText,
+        handler: ({ data: { params } }) => returnHandleReplaceText(params.find, params.replaceWith, params.match, params.useRegex, params.lineRange),
         preview: (context) => previewFindFunctions(context.data, 'replace'),
         cancelEvents: [cancelOnDidChangeActiveTextEditor],
         validators: {
