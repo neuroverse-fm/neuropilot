@@ -141,6 +141,7 @@ export async function webTestBrowser(_prodFlag, watchFlag) {
             polyfillNode({
                 polyfills: {
                     child_process: false,
+                    crypto: true,
                     module: false,
                     os: false,
                     path: false,

@@ -3,7 +3,7 @@ import * as vscode from 'vscode';
 import { setVirtualCursor } from '@/utils/misc';
 import { RCEContext } from '@ctx/rce';
 import { ActionData } from 'neuro-game-sdk';
-import { randomUUID } from 'crypto';
+import { randomUUID } from 'node:crypto';
 
 export const fakeContext = <const TParams extends ActionData['params']>(name: string, params: TParams) => {
     const ctx = new RCEContext({ id: randomUUID(), name, params });
