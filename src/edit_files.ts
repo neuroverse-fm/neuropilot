@@ -100,7 +100,7 @@ export const editFileActions = {
             text: z.string().meta({
                 description: 'The text to insert',
             }),
-            insertUnder: z.number({}).min(1).optional().meta({
+            insertUnder: z.int({}).min(1).optional().meta({
                 description: 'The one-based line number to insert under.',
             }),
         }),
