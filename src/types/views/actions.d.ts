@@ -1,3 +1,5 @@
+import type { PermissionLevel } from '../actions';
+
 export type SettingsContext = 'user' | 'workspace';
 
 export interface ActionNode {

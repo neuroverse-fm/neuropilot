@@ -1,3 +1,5 @@
+import type { ActionStatus } from '../actions';
+
 export interface ExecuteResult {
     status: ActionStatus;
     action: string;
