@@ -10,7 +10,7 @@ import { validate } from 'jsonschema';
 import type { StandardJSONSchemaV1 } from '@standard-schema/spec';
 import type { JSONSchema7 } from 'json-schema';
 
-import { ActionForceParams, actionHandlerFailure, ActionHandlerResult, actionHandlerSuccess, InferDataFromSchema, RCEAction, SchemaTypes, stripToAction, tryConvertStandardJSONSchema } from '@/utils/neuro_client';
+import { ActionForceParams, actionHandlerFailure, ActionHandlerResult, actionHandlerSuccess, InferDataFromSchema, RCEAction, SchemaTypes, stripToAction, attemptConvertStandardJSONSchema } from '@/utils/neuro_client';
 import { NEURO } from '@/constants';
 import { isThenable, logOutput, notifyOnCaughtException } from '@/utils/misc';
 import { ACTIONS, CONFIG, CONNECTION, getAllPermissions, getPermissionLevel, PermissionLevel, stringToPermissionLevel } from '@/config';
@@ -670,7 +670,7 @@ export async function RCEActionHandler(actionData: ActionData) {
                 context.updateStatus('pending', 'Validating schema...');
                 let schema: JSONSchema7;
                 if ('~standard' in action.schema) {
-                    const convertedSchema = tryConvertStandardJSONSchema(action.schema);
+                    const convertedSchema = attemptConvertStandardJSONSchema(action.schema);
                     if (convertedSchema.type === 'draft-2020-12') {
                         logOutput('WARNING', `Converting schema of "${context.data.name}" failed with draft-07!`);
                     }

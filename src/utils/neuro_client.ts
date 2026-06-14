@@ -225,7 +225,7 @@ export function stripToAction(action: RCEAction): Action {
 
     // Auto-convert Standard JSON Schema to JSON Schema
     if (schema && isStandardJSONSchema(schema)) {
-        schema = tryConvertStandardJSONSchema(schema).schema;
+        schema = attemptConvertStandardJSONSchema(schema).schema;
     }
 
     return {
@@ -478,7 +478,7 @@ export type SupportedSchemaDrafts = 'draft-07' | 'draft-2020-12';
  * @returns An object containing the schema and type.
  * @throws If the Standard JSON Schema object cannot be converted to a normal JSON schema.
  */
-export function tryConvertStandardJSONSchema(schema: StandardJSONSchemaV1): { schema: JSONSchema7, type: SupportedSchemaDrafts } {
+export function attemptConvertStandardJSONSchema(schema: StandardJSONSchemaV1): { schema: JSONSchema7, type: SupportedSchemaDrafts } {
     let jsonSchema: JSONSchema7;
     let type: SupportedSchemaDrafts;
     try {
