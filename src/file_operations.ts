@@ -206,7 +206,7 @@ export const fileActions = {
                 examples: ['./newfile.py', 'src/module.js'],
             }),
         }),
-        handler: handleCreateFile,
+        handler: (ctx) => returnHandleCreateFile(ctx.data.params.filePath, ctx.updateStatus),
         cancelEvents: commonFileEvents,
         validators: {
             sync: [validateIllegalCharacters('filePath', '<>:"|?*'.split(''))],
@@ -235,7 +235,7 @@ export const fileActions = {
                 examples: ['./src', 'public'],
             }),
         }),
-        handler: handleCreateFolder,
+        handler: (ctx) => returnHandleCreateFolder(ctx.data.params.folderPath, ctx.updateStatus),
         cancelEvents: [
             (context) => targetedFileCreatedEvent(context.data.params.folderPath!),
         ],
@@ -270,7 +270,7 @@ export const fileActions = {
                 examples: ['wip', './new.py'],
             }),
         }),
-        handler: handleRenameFileOrFolder,
+        handler: ({ updateStatus, data: { params } }) => returnHandleRenameFileOrFolder(params.oldPath, params.newPath, updateStatus),
         cancelEvents: [
             (context) => targetedFileCreatedEvent(context.data.params.newPath),
             (context) => targetedFileDeletedEvent(context.data.params.oldPath),
@@ -306,7 +306,7 @@ export const fileActions = {
                 description: 'If set to true, enables you to delete a folder and all its sub-folders.',
             }).optional(),
         }),
-        handler: handleDeleteFileOrFolder,
+        handler: ({ updateStatus, data: { params } }) => returnHandleDeleteFileOrFolder(updateStatus, params.path, params.recursive),
         cancelEvents: [
             (context) => targetedFileDeletedEvent(context.data.params?.path),
         ],
@@ -469,6 +469,7 @@ function returnHandleCreateFolder(folderPath: string, updateStatus: RCEContext['
     }
 }
 
+/** @deprecated Functions should now be inlined */
 export function handleCreateFolder(context: RCEContext<{ folderPath: string; }>): RCEHandlerReturns {
     const { data: actionData, updateStatus } = context;
     return returnHandleCreateFolder(actionData.params!.folderPath, updateStatus);
@@ -532,6 +533,7 @@ function returnHandleRenameFileOrFolder(oldPath: string, newPath: string, update
     }
 }
 
+/** @deprecated Functions should now be inlined */
 export function handleRenameFileOrFolder(context: RCEContext<{ oldPath: string; newPath: string; }>): RCEHandlerReturns {
     const { data: actionData, updateStatus } = context;
     const oldRelativePathParam = actionData.params!.oldPath;
@@ -611,6 +613,7 @@ function returnHandleDeleteFileOrFolder(updateStatus: RCEContext['updateStatus']
     }
 }
 
+/** @deprecated Functions should now be inlined */
 export function handleDeleteFileOrFolder(context: RCEContext<{ path: string; recursive?: boolean }>): RCEHandlerReturns {
     const { data: actionData, updateStatus } = context;
     const relativePathParam = actionData.params!.path;
@@ -683,6 +686,7 @@ function returnHandleGetWorkspaceFiles(updateStatus: RCEContext['updateStatus'],
     }
 }
 
+/** @deprecated Functions should now be inlined */
 export function handleGetWorkspaceFiles(context: RCEContext<{ folder?: string, recursive?: boolean }>): RCEHandlerReturns {
     const { data: actionData, updateStatus } = context;
     const { folder, recursive } = actionData.params!;

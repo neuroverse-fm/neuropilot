@@ -82,7 +82,7 @@ export const lintActions = {
                 examples: ['src/index.ts', './main.py'],
             }),
         }),
-        handler: handleGetFileLintProblems,
+        handler: (ctx) => returnHandleGetFileLintProblems(ctx.data.params.file),
         cancelEvents: [
             (context) => targetedFileLintingResolvedEvent(context.data.params.file),
         ],
@@ -128,7 +128,7 @@ export const lintActions = {
                 examples: ['./src', 'test'],
             }),
         }),
-        handler: handleGetFolderLintProblems,
+        handler: (ctx) => returnHandleGetFolderLintProblems(ctx.data.params.folder),
         cancelEvents: [
             (context) => targetedFolderLintingResolvedEvent(context.data.params.folder),
         ],
@@ -262,12 +262,9 @@ export function getFormattedDiagnosticsForFile(filePath: string, diagnostics: vs
     return '\n' + formattedLines.join('\n');
 }
 
-
-// Handle diagnostics for a single file
-export function handleGetFileLintProblems(context: RCEContext<{ file: string; }>): ActionHandlerResult {
-    const { data: actionData } = context;
-    const relativePath = actionData.params!.file;
-    const workspaceUri = getWorkspaceUri()!;
+function returnHandleGetFileLintProblems(relativePath: string) {
+    const workspaceUri = getWorkspaceUri();
+    assert(workspaceUri);
 
     try {
         const normalizedPath = normalizePath(workspaceUri.fsPath + '/' + relativePath);
@@ -285,10 +282,16 @@ export function handleGetFileLintProblems(context: RCEContext<{ file: string; }>
     }
 }
 
-export function handleGetFolderLintProblems(context: RCEContext<{ folder: string; }>): ActionHandlerResult {
+/** @deprecated Functions should now be inlined */
+// Handle diagnostics for a single file
+export function handleGetFileLintProblems(context: RCEContext<{ file: string; }>): ActionHandlerResult {
     const { data: actionData } = context;
-    const relativeFolder = actionData.params!.folder;
+    const relativePath = actionData.params!.file;
 
+    return returnHandleGetFileLintProblems(relativePath);
+}
+
+function returnHandleGetFolderLintProblems(relativeFolder: string) {
     const workspacePath = getWorkspacePath();
     assert(workspacePath);
 
@@ -319,12 +322,18 @@ export function handleGetFolderLintProblems(context: RCEContext<{ folder: string
     }
 }
 
+/** @deprecated Functions should now be inlined */
+export function handleGetFolderLintProblems(context: RCEContext<{ folder: string; }>): ActionHandlerResult {
+    const { data: actionData } = context;
+    const relativeFolder = actionData.params!.folder;
+
+    return returnHandleGetFolderLintProblems(relativeFolder);
+}
+
 // Handle diagnostics for the entire workspace
 export function handleGetWorkspaceLintProblems(): ActionHandlerResult {
     const workspacePath = getWorkspacePath();
-    if (!workspacePath) {
-        return actionHandlerFailure('No workspace opened.', 'No workspace opened.');
-    }
+    assert(workspacePath);
 
     try {
         const diagnostics = vscode.languages.getDiagnostics();
