@@ -55,9 +55,6 @@ export type InferDataFromSchema<TSchema extends SchemaTypes> =
  * 
  * You may optionally type the interface if you are sure the action will take a specific form.
  */
-// Event type E uses any due to contravariance: RCECancelEvent<T> is contravariant in T,
-// so we need any to allow different specific event types (TextEditor, DiagnosticChangeEvent, etc.)
-// to be grouped together in arrays like Object.values(actions).
 export interface RCEAction<TData extends unknown | undefined = undefined, TSchema extends SchemaTypes = SchemaTypes, TDataShape extends unknown | undefined = TData extends undefined ? InferDataFromSchema<TSchema> : TData> extends Omit<Action, 'schema'> {
     /**
      * A valid JSON Schema or Standard JSON Schema that describes the action's parameters.
@@ -491,6 +488,7 @@ export function tryConvertStandardJSONSchema(schema: StandardJSONSchemaV1): { sc
         type = 'draft-2020-12';
         jsonSchema = schema['~standard'].jsonSchema.input({ target: type });
     }
+    delete jsonSchema['$schema'];
     return {
         schema: jsonSchema,
         type,

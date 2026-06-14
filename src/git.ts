@@ -44,6 +44,51 @@ function gitValidator(): ActionValidationResult {
     return actionValidationAccept();
 }
 
+function gitDiffValidator(ref1?: string, ref2?: string, diffType = 'diffWithHEAD') {
+    const FAIL_NOTE = `Inputs did not match what was necessary to make a ${diffType}-type diff`;
+    switch (diffType) {
+        case 'diffWithHEAD':
+            if (ref1 || ref2) {
+                return actionValidationAccept('Neither "ref1" nor "ref2" is needed.');
+            }
+            return actionValidationAccept();
+        case 'diffWith':
+            if (ref1 && ref2) {
+                return actionValidationAccept('Only "ref1" is needed for the "diffWith" diff type.');
+            } else if (!ref1) {
+                return actionValidationRetry('"ref1" is required for the diff type of "diffWith"', FAIL_NOTE);
+            } else {
+                return actionValidationAccept();
+            }
+        case 'diffIndexWithHEAD':
+            if (ref1 || ref2) {
+                return actionValidationAccept('Neither "ref1" nor "ref2" is needed.');
+            }
+            return actionValidationAccept();
+        case 'diffIndexWith':
+            if (ref1 && ref2) {
+                return actionValidationAccept('Only "ref1" is needed for the "diffIndexWith" diff type.');
+            } else if (!ref1) {
+                return actionValidationRetry('"ref1" is required for the diff type of "diffIndexWith"', FAIL_NOTE);
+            } else {
+                return actionValidationAccept();
+            }
+        case 'diffBetween':
+            if (!ref1 || !ref2) {
+                return actionValidationRetry('"ref1" AND "ref2" is required for the diff type of "diffWith"', FAIL_NOTE);
+            } else {
+                return actionValidationAccept();
+            }
+        case 'fullDiff':
+            if (ref1 || ref2) {
+                return actionValidationAccept('Neither "ref1" nor "ref2" is needed.');
+            }
+            return actionValidationAccept();
+        default:
+            return actionValidationFailure('Unknown diff type.', 'Unknown/unhandled diff type specified');
+    }
+}
+
 async function neuroSafeValidationHelper(filePath: string): Promise<ActionValidationResult> {
     const absolutePath = getAbsoluteFilePath(filePath);
     if (!isPathNeuroSafe(absolutePath)) {
@@ -305,52 +350,7 @@ export const gitActions = {
         cancelEvents: commonCancelEvents,
         promptGenerator: (context) => `obtain ${context.data.params.filePath ? `"${context.data.params.filePath}"'s` : 'a'} Git diff${context.data.params.ref1 && context.data.params.ref2 ? ` between ${context.data.params.ref1} and ${context.data.params.ref2}` : context.data.params.ref1 ? ` at ref ${context.data.params.ref1}` : ''}${context.data.params.diffType ? ` (of type "${context.data.params.diffType}")` : ''}.`,
         validators: {
-            sync: [gitValidator, (ctx) => {
-                const actionData = ctx.data;
-                const diffType: string = actionData.params.diffType ?? 'diffWithHEAD';
-                const FAIL_NOTE = `Inputs did not match what was necessary to make a ${diffType}-type diff`;
-                switch (diffType) {
-                    case 'diffWithHEAD':
-                        if (actionData.params.ref1 || actionData.params.ref2) {
-                            return actionValidationAccept('Neither "ref1" nor "ref2" is needed.');
-                        }
-                        return actionValidationAccept();
-                    case 'diffWith':
-                        if (actionData.params.ref1 && actionData.params.ref2) {
-                            return actionValidationAccept('Only "ref1" is needed for the "diffWith" diff type.');
-                        } else if (!actionData.params.ref1) {
-                            return actionValidationRetry('"ref1" is required for the diff type of "diffWith"', FAIL_NOTE);
-                        } else {
-                            return actionValidationAccept();
-                        }
-                    case 'diffIndexWithHEAD':
-                        if (actionData.params.ref1 || actionData.params.ref2) {
-                            return actionValidationAccept('Neither "ref1" nor "ref2" is needed.');
-                        }
-                        return actionValidationAccept();
-                    case 'diffIndexWith':
-                        if (actionData.params.ref1 && actionData.params.ref2) {
-                            return actionValidationAccept('Only "ref1" is needed for the "diffIndexWith" diff type.');
-                        } else if (!actionData.params.ref1) {
-                            return actionValidationRetry('"ref1" is required for the diff type of "diffIndexWith"', FAIL_NOTE);
-                        } else {
-                            return actionValidationAccept();
-                        }
-                    case 'diffBetween':
-                        if (!actionData.params.ref1 || !actionData.params.ref2) {
-                            return actionValidationRetry('"ref1" AND "ref2" is required for the diff type of "diffWith"', FAIL_NOTE);
-                        } else {
-                            return actionValidationAccept();
-                        }
-                    case 'fullDiff':
-                        if (actionData.params.ref1 || actionData.params.ref2) {
-                            return actionValidationAccept('Neither "ref1" nor "ref2" is needed.');
-                        }
-                        return actionValidationAccept();
-                    default:
-                        return actionValidationFailure('Unknown diff type.', 'Unknown/unhandled diff type specified');
-                }
-            }],
+            sync: [gitValidator, ({ data: { params } }) => gitDiffValidator(params.ref1, params.ref2, params.diffType)],
             async: [(ctx) => ctx.data.params.filePath ? filePathGitValidator(ctx.data.params.filePath) : new Promise<ActionValidationResult>(() => actionValidationAccept())],
         },
         registerCondition: () => !!repo,

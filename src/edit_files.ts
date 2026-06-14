@@ -554,6 +554,7 @@ function returnHandleInsertLines(text: string, insertUnder?: number) {
      * We want to allow specification of the line to insert under, with the default set to the current cursor location
      */
     const cursor = getVirtualCursor()!;
+    text = '\n' + text;
     let insertLocation: number = insertUnder !== undefined ? insertUnder - 1 : cursor.line;
 
     const document = vscode.window.activeTextEditor?.document;

@@ -16,18 +16,17 @@ import { readFileActions } from './read_files';
 
 export const CATEGORY_FILE_ACTIONS = 'File System';
 
-async function neuroSafeDeleteValidation(context: RCEContext<{ path: string, recursive?: boolean }>): Promise<ActionValidationResult> {
-    const actionData = context.data;
-    const check = await validatePath(actionData.params!.path, true, actionData.params!.recursive ? 'folder' : 'file');
+async function neuroSafeDeleteValidation(path: string, recursive?: boolean): Promise<ActionValidationResult> {
+    const check = await validatePath(path, true, recursive ? 'folder' : 'file');
     if (!check.success) return check;
 
     const base = vscode.workspace.workspaceFolders![0].uri;
-    const relative = normalizePath(actionData.params!.path).replace(/^\/|\/$/g, '');
+    const relative = normalizePath(path).replace(/^\/|\/$/g, '');
     const stat = await vscode.workspace.fs.stat(vscode.Uri.joinPath(base, relative));
-    if (stat.type === vscode.FileType.File && actionData.params!.recursive)
-        return actionValidationFailure(`Cannot delete file ${actionData.params!.path} with recursive.`, ACTION_FAIL_NOTES.targetedFile + ', but recursive was true');
-    else if (stat.type === vscode.FileType.Directory && !actionData.params!.recursive)
-        return actionValidationFailure(`Cannot delete directory ${actionData.params!.path} without recursive.`, ACTION_FAIL_NOTES.targetedFolder + ', but recursive was false');
+    if (stat.type === vscode.FileType.File && recursive)
+        return actionValidationFailure(`Cannot delete file ${path} with recursive.`, ACTION_FAIL_NOTES.targetedFile + ', but recursive was true');
+    else if (stat.type === vscode.FileType.Directory && !recursive)
+        return actionValidationFailure(`Cannot delete directory ${path} without recursive.`, ACTION_FAIL_NOTES.targetedFolder + ', but recursive was false');
 
     return actionValidationAccept();
 }
@@ -311,21 +310,7 @@ export const fileActions = {
             (context) => targetedFileDeletedEvent(context.data.params?.path),
         ],
         validators: {
-            async: [async (context) => {
-                const actionData = context.data;
-                const check = await validatePath(actionData.params.path, true, actionData.params.recursive ? 'folder' : 'file');
-                if (!check.success) return check;
-
-                const base = vscode.workspace.workspaceFolders![0].uri;
-                const relative = normalizePath(actionData.params.path).replace(/^\/|\/$/g, '');
-                const stat = await vscode.workspace.fs.stat(vscode.Uri.joinPath(base, relative));
-                if (stat.type === vscode.FileType.File && actionData.params.recursive)
-                    return actionValidationFailure(`Cannot delete file ${actionData.params.path} with recursive.`, ACTION_FAIL_NOTES.targetedFile + ', but recursive was true');
-                else if (stat.type === vscode.FileType.Directory && !actionData.params.recursive)
-                    return actionValidationFailure(`Cannot delete directory ${actionData.params.path} without recursive.`, ACTION_FAIL_NOTES.targetedFolder + ', but recursive was false');
-
-                return actionValidationAccept();
-            }],
+            async: [({ data: { params } }) => neuroSafeDeleteValidation(params.path, params.recursive)],
         },
         promptGenerator: (context) => `delete "${context.data.params.path}".`,
         preview: (context) => {
