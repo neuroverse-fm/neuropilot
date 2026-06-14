@@ -11,3 +11,5 @@ rules:
   dangerous-triggers:
     ignore:
       - autoclose.yml
+  unpinned-uses:
+    disable: true
