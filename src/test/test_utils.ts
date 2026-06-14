@@ -3,10 +3,13 @@ import * as vscode from 'vscode';
 import { setVirtualCursor } from '@/utils/misc';
 import { RCEContext } from '@ctx/rce';
 import { ActionData } from 'neuro-game-sdk';
-import { randomUUID } from 'crypto';
+
+function testRandomUUID(): string {
+    return globalThis.crypto.randomUUID();
+}
 
 export const fakeContext = <const TParams extends ActionData['params']>(name: string, params: TParams) => {
-    const ctx = new RCEContext({ id: randomUUID(), name, params });
+    const ctx = new RCEContext({ id: testRandomUUID(), name, params });
     ctx['_updateStatus'] = returnMockFunction();
     return ctx;
 };
