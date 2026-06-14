@@ -819,6 +819,8 @@
 		"build:web:esbuild": "node ./scripts/esbuild.mjs --mode web",
 		"build:desktop:tsc": "tsc --noEmit --project tsconfig.app.json",
 		"build:desktop:esbuild": "node ./scripts/esbuild.mjs --mode desktop",
+		"build:webview:tsc": "tsc --noEmit --project tsconfig.webview.json",
+		"build:webview:esbuild": "node ./scripts/esbuild.mjs --mode webview",
 		"watch:web": "npm-run-all -p watch:web:* watch:webview:*",
 		"watch:desktop": "npm-run-all -p watch:desktop:* watch:webview:*",
 		"watch:web:esbuild": "node ./scripts/esbuild.mjs --watch --mode web",
