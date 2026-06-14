@@ -225,7 +225,7 @@ export const readFileActions = {
             }).optional(),
             highlight: z.boolean().meta({
                 description: 'Set to true to highlight all matches.',
-            }),
+            }).optional(),
         }),
         handler(ctx) {
             const { find, match, highlight, useRegex, lineRange, moveCursor } = ctx.data.params;

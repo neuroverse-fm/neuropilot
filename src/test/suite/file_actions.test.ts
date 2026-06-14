@@ -2,15 +2,14 @@ import * as assert from 'assert';
 import * as vscode from 'vscode';
 import * as fileActions from '@/file_operations';
 import * as readFiles from '@/read_files';
-import { assertProperties, checkNoErrorWithTimeout, createTestDirectory, createTestFile, returnMockFunction } from '@test/test_utils';
+import { assertProperties, checkNoErrorWithTimeout, createTestDirectory, createTestFile, fakeContext } from '@test/test_utils';
 import { ActionData } from 'neuro-game-sdk';
-import type { RCEContext } from '@/context/rce';
 import { getPermissionLevel, PermissionLevel } from '@/config';
 import { NeuroClient } from 'neuro-game-sdk';
 import { NEURO } from '@/constants';
 import { anything, capture, instance, mock, verify } from 'ts-mockito';
 
-const makeContext = <const TData extends unknown | undefined>(data: ActionData<TData>) => ({ data, updateStatus: returnMockFunction() } as unknown as RCEContext<TData>);
+const makeContext = (data: ActionData['params']) => fakeContext('igiveup', data);
 
 const { readFileActions } = readFiles;
 

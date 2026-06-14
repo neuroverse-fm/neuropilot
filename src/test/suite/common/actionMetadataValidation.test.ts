@@ -44,7 +44,7 @@ suite('Validate action metadata', async () => {
         const actions = Object.keys(gitActions) as (keyof typeof gitActions)[];
         for (const a of actions) {
             assert.strictEqual(a, gitActions[a].name);
-            assert.ok([CATEGORY_GIT, CATEGORY_GIT_CONFIG, CATEGORY_GIT_REMOTES].includes(gitActions[a].category));
+            assert.ok([CATEGORY_GIT, CATEGORY_GIT_CONFIG, CATEGORY_GIT_REMOTES].includes(gitActions[a].category ?? ''));
             if ('schema' in gitActions[a] && gitActions[a].schema) {
                 // gitActions[a].schema is now safely accessible
                 const schema = gitActions[a].schema;

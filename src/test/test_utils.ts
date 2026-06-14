@@ -1,6 +1,15 @@
-import * as assert from 'assert';
+import assert from 'assert';
 import * as vscode from 'vscode';
 import { setVirtualCursor } from '@/utils/misc';
+import { RCEContext } from '@ctx/rce';
+import { ActionData } from 'neuro-game-sdk';
+import { randomUUID } from 'crypto';
+
+export const fakeContext = <const TParams extends ActionData['params']>(name: string, params: TParams) => {
+    const ctx = new RCEContext({ id: randomUUID(), name, params });
+    ctx['_updateStatus'] = returnMockFunction();
+    return ctx;
+};
 
 /**
  * Asserts that an object has the same properties as the expected object,

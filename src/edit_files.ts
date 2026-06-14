@@ -52,7 +52,7 @@ export const editFileActions = {
             text: z.string().meta({
                 description: 'The text to insert.',
             }),
-            position: _POSITION_SCHEMA,
+            position: _POSITION_SCHEMA.optional(),
         }),
         handler: ({ data: { params } }) => returnHandleInsertText(params.text, params.position),
         preview: (context) => {
@@ -488,7 +488,7 @@ export function addEditingActions() {
     ]);
 }
 
-function returnHandleInsertText(text: string, position: { line: number, column: number, type: 'relative' | 'absolute' }) {
+function returnHandleInsertText(text: string, position?: { line: number, column: number, type: 'relative' | 'absolute' }) {
     const cursor = getVirtualCursor()!;
     let line: number;
     let column: number;
@@ -541,7 +541,7 @@ function returnHandleInsertText(text: string, position: { line: number, column: 
 }
 
 /** @deprecated Functions should now be inlined */
-export function handleInsertText(context: RCEContext<{ text: string; position: { line: number, column: number, type: 'relative' | 'absolute' } }>): RCEHandlerReturns {
+export function handleInsertText(context: RCEContext<{ text: string; position?: { line: number, column: number, type: 'relative' | 'absolute' } }>): RCEHandlerReturns {
     const { data: actionData } = context;
     const text: string = actionData.params!.text;
     const position = actionData.params!.position;
