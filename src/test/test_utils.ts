@@ -5,7 +5,7 @@ import { RCEContext } from '@ctx/rce';
 import { ActionData } from 'neuro-game-sdk';
 import { randomUUID } from 'node:crypto';
 
-export const fakeContext = <const TParams extends ActionData['params']>(name: string, params: TParams) => {
+export function fakeContext<const TParams extends ActionData['params']>(name: string, params: TParams): RCEContext<undefined, undefined, TParams> {
     const ctx = new RCEContext({ id: randomUUID(), name, params });
     ctx['_updateStatus'] = returnMockFunction();
     return ctx;
