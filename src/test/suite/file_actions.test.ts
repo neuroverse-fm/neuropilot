@@ -199,68 +199,19 @@ suite('File Actions', () => {
         const nonexistentDirPath = 'nonexistent/dir';
 
         // === Act & Assert ===
-        assertProperties(await neuroSafeDeleteValidation(makeContext({
-            id: 'abc',
-            name: 'delete_file_or_folder',
-            params: {
-                path: filePath,
-                recursive: false,
-            },
-        } as ActionData)), { success: true }, 'Non-recursive delete should succeed for an existing file');
+        assertProperties(await neuroSafeDeleteValidation(filePath, false), { success: true }, 'Non-recursive delete should succeed for an existing file');
 
-        assertProperties(await neuroSafeDeleteValidation(makeContext({
-            id: 'abc',
-            name: 'delete_file_or_folder',
-            params: {
-                path: filePath,
-                recursive: true,
-            },
-        } as ActionData)), { success: false, retry: false }, 'Recursive delete should fail for an existing file');
+        assertProperties(await neuroSafeDeleteValidation(filePath, true), { success: false, retry: false }, 'Recursive delete should fail for an existing file');
 
-        assertProperties(await neuroSafeDeleteValidation(makeContext({
-            id: 'abc',
-            name: 'delete_file_or_folder',
-            params: {
-                path: dirPath,
-                recursive: false,
-            },
-        } as ActionData)), { success: false, retry: false }, 'Non-recursive delete should fail for an existing directory');
+        assertProperties(await neuroSafeDeleteValidation(dirPath, false), { success: false, retry: false }, 'Non-recursive delete should fail for an existing directory');
 
-        assertProperties(await neuroSafeDeleteValidation(makeContext({
-            id: 'abc',
-            name: 'delete_file_or_folder',
-            params: {
-                path: dirPath,
-                recursive: true,
-            },
-        } as ActionData)), { success: true }, 'Recursive delete should succeed for an existing directory');
+        assertProperties(await neuroSafeDeleteValidation(dirPath, true), { success: true }, 'Recursive delete should succeed for an existing directory');
 
-        assertProperties(await neuroSafeDeleteValidation(makeContext({
-            id: 'abc',
-            name: 'delete_file_or_folder',
-            params: {
-                path: unsafePath,
-                recursive: false,
-            },
-        } as ActionData)), { success: false, retry: false }, 'Delete should fail for an unsafe file');
+        assertProperties(await neuroSafeDeleteValidation(unsafePath, false), { success: false, retry: false }, 'Delete should fail for an unsafe file');
 
-        assertProperties(await neuroSafeDeleteValidation(makeContext({
-            id: 'abc',
-            name: 'delete_file_or_folder',
-            params: {
-                path: nonexistentFilePath,
-                recursive: false,
-            },
-        } as ActionData)), { success: false, retry: false }, 'Non-recursive delete should fail for a nonexistent file');
+        assertProperties(await neuroSafeDeleteValidation(nonexistentFilePath, false), { success: false, retry: false }, 'Non-recursive delete should fail for a nonexistent file');
 
-        assertProperties(await neuroSafeDeleteValidation(makeContext({
-            id: 'abc',
-            name: 'delete_file_or_folder',
-            params: {
-                path: nonexistentDirPath,
-                recursive: true,
-            },
-        } as ActionData)), { success: false, retry: false }, 'Recursive delete should fail for a nonexistent directory');
+        assertProperties(await neuroSafeDeleteValidation(nonexistentDirPath, true), { success: false, retry: false }, 'Recursive delete should fail for a nonexistent directory');
     });
 
     test('handleGetWorkspaceFiles', async function () {
