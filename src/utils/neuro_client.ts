@@ -483,6 +483,7 @@ export function attemptConvertStandardJSONSchema(schema: StandardJSONSchemaV1): 
     let jsonSchema: JSONSchema7;
     let type: SupportedSchemaDrafts;
 
+
     try {
         type = 'draft-07';
         if (schema['~standard'].vendor === 'zod') {
@@ -495,15 +496,9 @@ export function attemptConvertStandardJSONSchema(schema: StandardJSONSchemaV1): 
         }
     } catch {
         type = 'draft-2020-12';
-        if (schema['~standard'].vendor === 'zod') {
-            jsonSchema = z.toJSONSchema(schema as z.ZodType, {
-                target: type,
-                override: (ctx) => zodSchemaOverride(ctx.jsonSchema),
-            }) as JSONSchema7;
-        } else {
-            jsonSchema = schema['~standard'].jsonSchema.input({ target: type });
-        }
+        jsonSchema = schema['~standard'].jsonSchema.input({ target: type });
     }
+
     delete jsonSchema['$schema'];
 
     return {
