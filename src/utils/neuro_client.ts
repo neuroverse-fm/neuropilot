@@ -13,6 +13,7 @@ import type { NeuroClient } from 'neuro-game-sdk';
 import type { reregisterAllActions, registerAction, unregisterAction } from '@/rce';
 import type { JSONSchema7 } from 'json-schema';
 import type { StandardJSONSchemaV1 } from '@standard-schema/spec';
+import z from 'zod';
 
 //#region Action force utils
 
@@ -481,16 +482,42 @@ export type SupportedSchemaDrafts = 'draft-07' | 'draft-2020-12';
 export function attemptConvertStandardJSONSchema(schema: StandardJSONSchemaV1): { schema: JSONSchema7, type: SupportedSchemaDrafts } {
     let jsonSchema: JSONSchema7;
     let type: SupportedSchemaDrafts;
+
     try {
         type = 'draft-07';
-        jsonSchema = schema['~standard'].jsonSchema.input({ target: type });
+        if (schema['~standard'].vendor === 'zod') {
+            jsonSchema = z.toJSONSchema(schema as z.ZodType, {
+                target: type,
+                override: (ctx) => zodSchemaOverride(ctx.jsonSchema),
+            }) as JSONSchema7;
+        } else {
+            jsonSchema = schema['~standard'].jsonSchema.input({ target: type });
+        }
     } catch {
         type = 'draft-2020-12';
-        jsonSchema = schema['~standard'].jsonSchema.input({ target: type });
+        if (schema['~standard'].vendor === 'zod') {
+            jsonSchema = z.toJSONSchema(schema as z.ZodType, {
+                target: type,
+                override: (ctx) => zodSchemaOverride(ctx.jsonSchema),
+            }) as JSONSchema7;
+        } else {
+            jsonSchema = schema['~standard'].jsonSchema.input({ target: type });
+        }
     }
     delete jsonSchema['$schema'];
+
     return {
         schema: jsonSchema,
         type,
     };
+}
+
+function zodSchemaOverride(jsonSchema: z.core.JSONSchema.JSONSchema): void {
+    if (jsonSchema.type === 'integer') {
+        // Delete redundant minima / maxima
+        if (jsonSchema.maximum === Number.MAX_SAFE_INTEGER)
+            delete jsonSchema.maximum;
+        if (jsonSchema.minimum === Number.MIN_SAFE_INTEGER)
+            delete jsonSchema.minimum;
+    }
 }
