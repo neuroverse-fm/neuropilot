@@ -4,18 +4,19 @@
  */
 
 import * as vscode from 'vscode';
-import { ActionData } from 'neuro-game-sdk';
-import { ActionForceParams, actionHandlerFailure, ActionHandlerResult, actionHandlerSuccess, RCEAction, stripToAction } from '@/utils/neuro_client';
+import assert from 'node:assert';
+import { ActionData, type NeuroClient } from 'neuro-game-sdk';
+import { validate } from 'jsonschema';
+import type { StandardJSONSchemaV1 } from '@standard-schema/spec';
+import type { JSONSchema7 } from 'json-schema';
+
+import { ActionForceParams, actionHandlerFailure, ActionHandlerResult, actionHandlerSuccess, InferDataFromSchema, RCEAction, SchemaTypes, stripToAction, attemptConvertStandardJSONSchema } from '@/utils/neuro_client';
 import { NEURO } from '@/constants';
 import { isThenable, logOutput, notifyOnCaughtException } from '@/utils/misc';
 import { ACTIONS, CONFIG, CONNECTION, getAllPermissions, getPermissionLevel, PermissionLevel, stringToPermissionLevel } from '@/config';
-import { validate } from 'jsonschema';
 import type { RCECancelEvent } from '@events/utils';
 import { fireOnActionStart, updateActionStatus } from '@events/actions';
 import { RCEContext } from '@/context/rce';
-
-import type { NeuroClient } from 'neuro-game-sdk';
-import type { JSONSchema7Object } from 'json-schema';
 
 export const CATEGORY_MISC = 'Miscellaneous';
 
@@ -25,8 +26,11 @@ const REGISTERED_ACTIONS: Set<string> = /* @__PURE__ */ new Set<string>();
 /**
  * A prompt parameter can either be a string or a function that converts an RCEContext into a prompt string.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type PromptGenerator<T extends JSONSchema7Object | undefined, E = any> = string | ((context: RCEContext<T, E>) => string);
+export type PromptGenerator<
+    TData extends unknown | undefined = unknown,
+    TSchema extends StandardJSONSchemaV1 | JSONSchema7 | undefined = JSONSchema7 | undefined,
+    TDataShape = InferDataFromSchema<TSchema>,
+> = string | ((context: RCEContext<TData, TSchema, TDataShape>) => string);
 
 let activeRequestContext: RCEContext | null = null;
 
@@ -87,7 +91,7 @@ export function emergencyDenyRequests(): void {
     updateActionStatus(data, 'cancelled', 'Emergency shutdown activated');
     clearRceRequest(activeContext);
     activeContext.done(false);
-    logOutput('INFO', `Cancelled ${activeContext.action.name} due to emergency shutdown.`);
+    logOutput('INFO', `Cancelled ${activeContext.data.name} due to emergency shutdown.`);
     NEURO.client?.sendContext('Your last request was denied.');
     vscode.window.showInformationMessage(`The last request from ${NEURO.currentController} has been denied automatically.`);
 }
@@ -194,13 +198,16 @@ export function revealRceNotification(): void {
     if (!request)
         return;
 
+    const action = getAction(activeContext.data.name);
+    assert(action);
+
     // don't show the notification if it's already open
     if (request.notificationVisible)
         return;
 
     request.notificationVisible = true;
-    if (!ACTIONS.disablePreviewEffects && activeContext.action.preview) {
-        activeContext.lifecycle.preview = activeContext.action.preview(activeContext);
+    if (!ACTIONS.disablePreviewEffects && action.preview) {
+        activeContext.lifecycle.preview = action.preview(activeContext);
     }
 
     // weirdly enough, a "notification" isn't actually a thing in vscode.
@@ -243,8 +250,10 @@ export async function acceptRceRequest(): Promise<void> {
     // Clear timers and cancel events before handler execution to prevent them from triggering mid-execution
     activeContext.clearPreHandlerResources();
 
+    const action = getAction(actionData.name)!;
+
     try {
-        const result = await activeContext.action.handler(activeContext);
+        const result = await action.handler(activeContext);
         switch (result.success) {
             case 'retry': {
                 activeContext.updateStatus('failure', result.historyNote);
@@ -303,13 +312,19 @@ export function denyRceRequest(): void {
  * @param actions The actions to add.
  * @param register Whether to register the actions with Neuro immediately if the permissions allow.
  */
-export function addActions(actions: RCEAction[], register = true): void {
+// allowing any here because it genuinely doens't matter what gets passed in
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function addActions(actions: RCEAction<any, SchemaTypes, any>[], register = true): void {
     const actionsToAdd = actions.filter(a => !ACTIONS_ARRAY.some(existing => existing.name === a.name));
     const actionsNotToAdd = actions.filter(a => !actionsToAdd.includes(a));
     if (actionsNotToAdd.length > 0) {
         logOutput('WARNING', `Tried to add actions that are already registered: ${actionsNotToAdd.map(a => a.name).join(', ')}`);
     }
-    ACTIONS_ARRAY.push(...actionsToAdd);
+    const finalActionForms = actionsToAdd.map((a) => {
+        if ('converter' in a) delete a.converter;
+        return a as RCEAction;
+    });
+    ACTIONS_ARRAY.push(...finalActionForms);
     if (register && NEURO.connected) {
         const actionNames = actionsToAdd.map(a => a.name);
         const actionsToRegister = actionNames
@@ -550,8 +565,12 @@ export function getActions(): readonly RCEAction[] {
     return ACTIONS_ARRAY;
 }
 
-export function getAction(actionName: string): RCEAction | undefined {
-    return ACTIONS_ARRAY.find(a => a.name === actionName);
+export function getAction<
+    const TData extends unknown | undefined,
+    const TSchema extends SchemaTypes,
+    const TDataShape extends unknown | undefined,
+>(actionName: string): RCEAction<TData, TSchema, TDataShape> | undefined {
+    return ACTIONS_ARRAY.find(a => a.name === actionName) as RCEAction<TData, TSchema, TDataShape> | undefined;
 }
 
 export function getExtendedActionsInfo(): ExtendedActionInfo[] {
@@ -624,8 +643,9 @@ export async function RCEActionHandler(actionData: ActionData) {
             fireOnActionStart(actionData, 'Validating action...');
 
             context = new RCEContext(actionData);
+            const action = getAction(actionData.name)!;
 
-            const effectivePermission = getPermissionLevel(context.action.name);
+            const effectivePermission = getPermissionLevel(action.name);
             if (effectivePermission === PermissionLevel.OFF) {
                 clearActionForce();
                 sendResult('Action failed: You don\'t have permission to execute this action.');
@@ -634,11 +654,11 @@ export async function RCEActionHandler(actionData: ActionData) {
                 return;
             }
 
-            if (context.action.contextSetupHook) {
+            if (action.contextSetupHook) {
                 context.lifecycle.setupHooks = false;
                 // TODO: Add documentation for handling if a value already exists in case of async race timing and all that
                 const setupArray = [];
-                for (const hook of context.action.contextSetupHook) {
+                for (const hook of action.contextSetupHook) {
                     setupArray.push(hook(context));
                 }
                 Promise.allSettled(setupArray).then(() => context!.lifecycle.setupHooks = true);
@@ -646,9 +666,18 @@ export async function RCEActionHandler(actionData: ActionData) {
 
             // Validate schema
             stage = 'validating schema';
-            if (context.action.schema) {
+            if (action.schema) {
                 context.updateStatus('pending', 'Validating schema...');
-                const schema = context.action.schema;
+                let schema: JSONSchema7;
+                if ('~standard' in action.schema) {
+                    const convertedSchema = attemptConvertStandardJSONSchema(action.schema);
+                    if (convertedSchema.type === 'draft-2020-12') {
+                        logOutput('WARNING', `Converting schema of "${context.data.name}" failed with draft-07!`);
+                    }
+                    schema = convertedSchema.schema;
+                } else {
+                    schema = action.schema;
+                }
                 const schemaValidationResult = validate(actionData.params, schema, { required: true });
                 if (!schemaValidationResult.valid) {
                     const messagesArray: string[] = [];
@@ -668,7 +697,7 @@ export async function RCEActionHandler(actionData: ActionData) {
             }
 
             // Validate custom
-            if (context.action.validators?.sync && context.action.validators?.sync.length > 0) {
+            if (action.validators?.sync && action.validators?.sync.length > 0) {
                 stage = 'running synchronous validators';
                 context.updateStatus('pending', 'Running synchronous validators...');
                 if (!context.lifecycle.validatorResults) {
@@ -677,7 +706,7 @@ export async function RCEActionHandler(actionData: ActionData) {
                 if (!context.lifecycle.validatorResults.sync) {
                     context.lifecycle.validatorResults.sync = [];
                 }
-                for (const validate of context.action.validators.sync) {
+                for (const validate of action.validators.sync) {
                     const actionResult = validate(context);
                     context.lifecycle.validatorResults.sync.push(actionResult);
                     if (!actionResult.success) {
@@ -701,7 +730,7 @@ export async function RCEActionHandler(actionData: ActionData) {
             // } else
             // TODO: revisit above later 
             let cancelPromiseReject: ((reason?: Error) => void) | undefined;
-            if (ACTIONS.enableCancelEvents && context.action.cancelEvents) {
+            if (ACTIONS.enableCancelEvents && action.cancelEvents) {
                 stage = 'setting up cancel events';
                 context.lifecycle.events = [];
                 const eventListener = (eventObject: RCECancelEvent, eventData: unknown) => {
@@ -724,7 +753,7 @@ export async function RCEActionHandler(actionData: ActionData) {
                         createdLogReason = createdReason;
                     }
                     cancelled = true;
-                    logOutput('WARNING', `${CONNECTION.nameOfAPI}'${CONNECTION.nameOfAPI.endsWith('s') ? '' : 's'} action ${context!.action.name} was cancelled because ${createdLogReason}`);
+                    logOutput('WARNING', `${CONNECTION.nameOfAPI}'${CONNECTION.nameOfAPI.endsWith('s') ? '' : 's'} action ${context!.data.name} was cancelled because ${createdLogReason}`);
                     NEURO.client?.sendContext(`Your request was cancelled because ${createdReason}`);
                     context!.updateStatus('cancelled', `Cancelled because ${createdLogReason}`);
                     clearRceRequest(context!);
@@ -735,7 +764,7 @@ export async function RCEActionHandler(actionData: ActionData) {
                         cancelPromiseReject(new Error(`Request was cancelled because ${createdLogReason}`));
                     }
                 };
-                for (const eventObject of context.action.cancelEvents) {
+                for (const eventObject of action.cancelEvents) {
                     const eventDetails = eventObject(context);
                     if (eventDetails) {
                         const subscription = eventDetails.event((eventData) => eventListener(eventDetails, eventData));
@@ -749,7 +778,7 @@ export async function RCEActionHandler(actionData: ActionData) {
                 return;
             }
 
-            if (context.action.validators?.async && context.action.validators.async.length > 0) {
+            if (action.validators?.async && action.validators.async.length > 0) {
                 stage = 'running asynchronous validators';
                 sendResult('Now validating your request further, please wait a moment...');
                 context.updateStatus('pending', 'Running asynchronous validators...');
@@ -760,7 +789,7 @@ export async function RCEActionHandler(actionData: ActionData) {
                     context.lifecycle.validatorResults.async = [];
                 }
                 const asyncArray = [];
-                for (const v of context.action.validators.async) {
+                for (const v of action.validators.async) {
                     asyncArray.push(v(context));
                 };
 
@@ -820,7 +849,7 @@ export async function RCEActionHandler(actionData: ActionData) {
                 // Clear timers and cancel events before handler execution to prevent them from triggering mid-execution
                 // TODO: It's probably better to avoid having to set up cancel events in the first place here (unless on async validators of course)
                 context.clearPreHandlerResources();
-                const result = context.action.handler(context);
+                const result = action.handler(context);
                 if (isThenable(result)) {
                     clearActionForce();
                     sendResult(); // TODO: Add a small "Running the action" result to send to Neuro?
@@ -860,7 +889,7 @@ export async function RCEActionHandler(actionData: ActionData) {
                     ? NEURO.currentController
                     : 'The Neuro API server') +
                     ' wants to ' +
-                    (typeof context.action.promptGenerator === 'string' ? context.action.promptGenerator : context.action.promptGenerator?.(context) ?? `execute ${context.action.name}.`).trim();
+                    (typeof action.promptGenerator === 'string' ? action.promptGenerator : action.promptGenerator?.(context) ?? `execute ${action.name}.`).trim();
 
                 context.request = {
                     prompt,

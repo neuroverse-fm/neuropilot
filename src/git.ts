@@ -1,11 +1,13 @@
 import * as vscode from 'vscode';
+import assert from 'node:assert';
+import { z } from 'zod';
+
 import { EXTENSIONS, NEURO, PROMISE_REJECTION_STRING } from '@/constants';
 import type { Change, CommitOptions, Commit, Repository, API, GitExtension } from '@typing/git.d';
 import { ForcePushMode } from '@typing/git.d';
 import { StatusStrings, RefTypeStrings } from '@typing/git_status';
 import { logOutput, simpleFileName, isPathNeuroSafe, normalizePath, getWorkspacePath, getWorkspaceUri } from '@/utils/misc';
-import { ActionValidationResult, actionValidationAccept, actionValidationFailure, RCEAction, actionValidationRetry, RCEHandlerReturns, actionHandlerSuccess, actionHandlerFailure, actionHandlerRetry } from '@/utils/neuro_client';
-import assert from 'node:assert';
+import { ActionValidationResult, actionValidationAccept, actionValidationFailure, actionValidationRetry, RCEHandlerReturns, actionHandlerSuccess, actionHandlerFailure, actionHandlerRetry, defineAction } from '@/utils/neuro_client';
 import { RCECancelEvent } from '@events/utils';
 import { addActions, registerAction, reregisterAllActions, unregisterAction } from './rce';
 import { RCEContext } from '@ctx/rce';
@@ -42,6 +44,51 @@ function gitValidator(): ActionValidationResult {
     return actionValidationAccept();
 }
 
+function gitDiffValidator(ref1?: string, ref2?: string, diffType = 'diffWithHEAD') {
+    const FAIL_NOTE = `Inputs did not match what was necessary to make a ${diffType}-type diff`;
+    switch (diffType) {
+        case 'diffWithHEAD':
+            if (ref1 || ref2) {
+                return actionValidationAccept('Neither "ref1" nor "ref2" is needed.');
+            }
+            return actionValidationAccept();
+        case 'diffWith':
+            if (ref1 && ref2) {
+                return actionValidationAccept('Only "ref1" is needed for the "diffWith" diff type.');
+            } else if (!ref1) {
+                return actionValidationRetry('"ref1" is required for the diff type of "diffWith"', FAIL_NOTE);
+            } else {
+                return actionValidationAccept();
+            }
+        case 'diffIndexWithHEAD':
+            if (ref1 || ref2) {
+                return actionValidationAccept('Neither "ref1" nor "ref2" is needed.');
+            }
+            return actionValidationAccept();
+        case 'diffIndexWith':
+            if (ref1 && ref2) {
+                return actionValidationAccept('Only "ref1" is needed for the "diffIndexWith" diff type.');
+            } else if (!ref1) {
+                return actionValidationRetry('"ref1" is required for the diff type of "diffIndexWith"', FAIL_NOTE);
+            } else {
+                return actionValidationAccept();
+            }
+        case 'diffBetween':
+            if (!ref1 || !ref2) {
+                return actionValidationRetry('"ref1" AND "ref2" is required for the diff type of "diffWith"', FAIL_NOTE);
+            } else {
+                return actionValidationAccept();
+            }
+        case 'fullDiff':
+            if (ref1 || ref2) {
+                return actionValidationAccept('Neither "ref1" nor "ref2" is needed.');
+            }
+            return actionValidationAccept();
+        default:
+            return actionValidationFailure('Unknown diff type.', 'Unknown/unhandled diff type specified');
+    }
+}
+
 async function neuroSafeValidationHelper(filePath: string): Promise<ActionValidationResult> {
     const absolutePath = getAbsoluteFilePath(filePath);
     if (!isPathNeuroSafe(absolutePath)) {
@@ -57,13 +104,11 @@ async function neuroSafeValidationHelper(filePath: string): Promise<ActionValida
     }
 }
 
-async function filePathGitValidator(context: RCEContext): Promise<ActionValidationResult> {
-    const actionData = context.data;
-    if (actionData.params.filePath === '') {
+async function filePathGitValidator(filePath: string | string[]): Promise<ActionValidationResult> {
+    if (filePath === '') {
         return actionValidationRetry('No file path specified.');
     };
 
-    const filePath: string | string[] = actionData.params?.filePath;
     if (typeof filePath === 'string') {
         const result = await neuroSafeValidationHelper(filePath);
         if (!result.success) return result;
@@ -78,53 +123,8 @@ async function filePathGitValidator(context: RCEContext): Promise<ActionValidati
     return actionValidationAccept();
 }
 
-function gitDiffValidator(context: RCEContext): ActionValidationResult {
-    const actionData = context.data;
-    const diffType: string = actionData.params?.diffType ?? 'diffWithHEAD';
-    const FAIL_NOTE = `Inputs did not match what was necessary to make a ${diffType}-type diff`;
-    switch (diffType) {
-        case 'diffWithHEAD':
-            if (actionData.params?.ref1 || actionData.params?.ref2) {
-                return actionValidationAccept('Neither "ref1" nor "ref2" is needed.');
-            }
-            return actionValidationAccept();
-        case 'diffWith':
-            if (actionData.params?.ref1 && actionData.params?.ref2) {
-                return actionValidationAccept('Only "ref1" is needed for the "diffWith" diff type.');
-            } else if (!actionData.params?.ref1) {
-                return actionValidationRetry('"ref1" is required for the diff type of "diffWith"', FAIL_NOTE);
-            } else {
-                return actionValidationAccept();
-            }
-        case 'diffIndexWithHEAD':
-            if (actionData.params?.ref1 || actionData.params?.ref2) {
-                return actionValidationAccept('Neither "ref1" nor "ref2" is needed.');
-            }
-            return actionValidationAccept();
-        case 'diffIndexWith':
-            if (actionData.params?.ref1 && actionData.params?.ref2) {
-                return actionValidationAccept('Only "ref1" is needed for the "diffIndexWith" diff type.');
-            } else if (!actionData.params?.ref1) {
-                return actionValidationRetry('"ref1" is required for the diff type of "diffIndexWith"', FAIL_NOTE);
-            } else {
-                return actionValidationAccept();
-            }
-        case 'diffBetween':
-            if (!actionData.params?.ref1 || !actionData.params?.ref2) {
-                return actionValidationRetry('"ref1" AND "ref2" is required for the diff type of "diffWith"', FAIL_NOTE);
-            } else {
-                return actionValidationAccept();
-            }
-        case 'fullDiff':
-            if (actionData.params?.ref1 || actionData.params?.ref2) {
-                return actionValidationAccept('Neither "ref1" nor "ref2" is needed.');
-            }
-            return actionValidationAccept();
-        default:
-            return actionValidationFailure('Unknown diff type.', 'Unknown/unhandled diff type specified');
-    }
-}
-const commonCancelEvents: ((context: RCEContext) => RCECancelEvent | null)[] = [
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const commonCancelEvents: ((context: RCEContext) => RCECancelEvent<any> | null)[] = [
     () => new RCECancelEvent({
         reason: 'the Git extension was disabled.',
         events: [
@@ -134,7 +134,7 @@ const commonCancelEvents: ((context: RCEContext) => RCECancelEvent | null)[] = [
 ];
 
 export const gitActions = {
-    init_git_repo: {
+    init_git_repo: defineAction({
         name: 'init_git_repo',
         description: 'Initialize a new Git repository in the current workspace folder',
         category: CATEGORY_GIT,
@@ -160,90 +160,72 @@ export const gitActions = {
             ],
         },
         registerCondition: () => !!git,
-    },
-    add_file_to_git: {
+    }),
+    add_file_to_git: defineAction({
         name: 'add_file_to_git',
         description: 'Add a file to the staging area',
         category: CATEGORY_GIT,
-        schema: {
-            type: 'object',
-            properties: {
-                filePath: {
-                    type: 'array',
-                    description: 'Array of relative file paths to the files you want to add to staging.',
-                    items: { type: 'string', examples: ['src/index.js', './README.md'] },
-                    minItems: 1,
-                    uniqueItems: true,
-                },
-            },
-            required: ['filePath'],
-            additionalProperties: false,
-        },
-        handler: handleAddFileToGit,
-        preview: (ctx: RCEContext) => {
+        schema: z.object({
+            filePath: z.array(z.string()).meta({
+                uniqueItems: true,
+            }).min(1),
+        }),
+        handler: (ctx) => returnHandleAddFileToGit(ctx.data.params.filePath),
+        preview: (ctx) => {
             const ws = getWorkspaceUri();
             if (!ws) return { dispose: () => { } };
-            const filePaths: string[] = ctx.data.params!.filePath;
+            const filePaths: string[] = ctx.data.params.filePath;
             const fileUris: vscode.Uri[] = filePaths.map((p) => {
                 return vscode.Uri.joinPath(ws, p);
             });
             return filePreviewProvider.mark(fileUris, 'add this file to the Git staging area');
         },
         cancelEvents: commonCancelEvents,
-        promptGenerator: (context: RCEContext) => `add the file "${context.data.params.filePath}" to the staging area.`,
+        promptGenerator: (context) => `add the file "${context.data.params.filePath}" to the staging area.`,
         validators: {
             sync: [gitValidator],
-            async: [filePathGitValidator],
+            async: [(ctx) => filePathGitValidator(ctx.data.params.filePath)],
         },
         registerCondition: () => !!repo,
-    },
-    make_git_commit: {
+    }),
+    make_git_commit: defineAction({
         name: 'make_git_commit',
         description: 'Commit staged changes with a message',
         category: CATEGORY_GIT,
-        schema: {
-            type: 'object',
-            properties: {
-                message: { type: 'string', description: 'The commit message to add.' },
-                options: {
-                    type: 'array',
-                    description: 'Extra options you can choose for committing.',
-                    items: { type: 'string', enum: ['signoff', 'verbose', 'amend'] },
-                    uniqueItems: true,
-                },
-            },
-            required: ['message'],
-            additionalProperties: false,
-        },
-        handler: handleMakeGitCommit,
+        schema: z.object({
+            message: z.string().meta({
+                description: 'The commit message to add.',
+            }),
+            options: z.array(z.enum(['signoff', 'verbose', 'amend'])).optional().meta({
+                uniqueItems: true,
+            }),
+        }),
+        handler: (ctx) => returnHandleMakeGitCommit(ctx.data.params.message, ctx.data.params.options),
         cancelEvents: commonCancelEvents,
-        promptGenerator: (context: RCEContext) => `commit changes with the message "${context.data.params.message}".`,
+        promptGenerator: (context) => `commit changes with the message "${context.data.params.message}".`,
         validators: {
             sync: [gitValidator],
         },
         registerCondition: () => !!repo,
-    },
-    merge_to_current_branch: {
+    }),
+    merge_to_current_branch: defineAction({
         name: 'merge_to_current_branch',
         description: 'Merge another branch into the current branch.',
         category: CATEGORY_GIT,
-        schema: {
-            type: 'object',
-            properties: {
-                ref_to_merge: { type: 'string', description: 'The branch name to merge into the current branch.' },
-            },
-            required: ['ref_to_merge'],
-            additionalProperties: false,
-        },
-        handler: handleGitMerge,
+        schema: z.object({
+            ref_to_merge: z.string().meta({
+                description: 'The branch name to merge into the current branch.',
+            }),
+        }),
+        handler: (ctx) => returnHandleGitMerge(ctx.data.params.ref_to_merge),
         cancelEvents: commonCancelEvents,
-        promptGenerator: (context: RCEContext) => `merge "${context.data.params.ref_to_merge}" into the current branch.`,
+        promptGenerator: (context) => `merge "${context.data.params.ref_to_merge}" into the current branch.`,
         validators: {
             sync: [gitValidator],
         },
         registerCondition: () => !!repo,
-    },
-    git_status: {
+    }),
+    git_status: defineAction({
         name: 'git_status',
         description: 'Get the current status of the Git repository',
         category: CATEGORY_GIT,
@@ -254,205 +236,186 @@ export const gitActions = {
             sync: [gitValidator],
         },
         registerCondition: () => !!repo,
-    },
-    remove_file_from_git: {
+    }),
+    remove_file_from_git: defineAction({
         name: 'remove_file_from_git',
         description: 'Remove a file from the staging area',
         category: CATEGORY_GIT,
-        schema: {
-            type: 'object',
-            properties: {
-                filePath: {
-                    type: 'array',
-                    description: 'Array of relative file paths to remove from staging.',
-                    items: { type: 'string', examples: ['src/index.js', './README.md'] },
-                    minItems: 1,
-                    uniqueItems: true,
-                },
-            },
-            required: ['filePath'],
-            additionalProperties: false,
-        },
-        handler: handleRemoveFileFromGit,
-        preview: (ctx: RCEContext) => {
+        schema: z.object({
+            filePath: z.array(z.string().meta({
+                examples: ['src/index.js', './README.md'],
+            })).min(1).meta({
+                uniqueItems: true,
+            }),
+        }),
+        handler: (ctx) => returnHandleRemoveFileFromGit(ctx.data.params.filePath),
+        preview: (ctx) => {
             const ws = getWorkspaceUri();
             if (!ws) return { dispose: () => { } };
-            const filePaths: string[] = ctx.data.params!.filePath;
+            const filePaths: string[] = ctx.data.params.filePath;
             const fileUris: vscode.Uri[] = filePaths.map((p) => {
                 return vscode.Uri.joinPath(ws, p);
             });
             return filePreviewProvider.mark(fileUris, 'remove this file from the Git staging area');
         },
         cancelEvents: commonCancelEvents,
-        promptGenerator: (context: RCEContext) => `remove the file "${context.data.params.filePath}" from the staging area.`,
+        promptGenerator: (context) => `remove the file "${context.data.params.filePath}" from the staging area.`,
         validators: {
             sync: [gitValidator],
-            async: [filePathGitValidator],
+            async: [(ctx) => filePathGitValidator(ctx.data.params.filePath)],
         },
         registerCondition: () => !!repo,
-    },
-    delete_git_branch: {
+    }),
+    delete_git_branch: defineAction({
         name: 'delete_git_branch',
         description: 'Delete a branch in the current Git repository',
         category: CATEGORY_GIT,
-        schema: {
-            type: 'object',
-            properties: {
-                branchName: { type: 'string', description: 'Which branch in the Git repository should be deleted?' },
-                force: { type: 'boolean', description: 'If true, forcibly deletes a branch.' },
-            },
-            required: ['branchName'],
-            additionalProperties: false,
-        },
-        handler: handleDeleteGitBranch,
+        schema: z.object({
+            branchName: z.string().meta({
+                description: 'Which branch in the Git repository should be deleted?',
+            }),
+            force: z.boolean().optional().meta({
+                description: 'If true, forcibly deletes a branch.',
+            }),
+        }),
+        handler: (ctx) => returnHandleDeleteGitBranch(ctx.data.params.branchName, ctx.data.params.force),
         cancelEvents: commonCancelEvents,
-        promptGenerator: (context: RCEContext) => `delete the branch "${context.data.params.branchName}".`,
+        promptGenerator: (context) => `delete the branch "${context.data.params.branchName}".`,
         validators: {
             sync: [gitValidator],
         },
         registerCondition: () => !!repo,
-    },
-    switch_git_branch: {
+    }),
+    switch_git_branch: defineAction({
         name: 'switch_git_branch',
         description: 'Switch to a different branch in the current Git repository',
         category: CATEGORY_GIT,
-        schema: {
-            type: 'object',
-            properties: {
-                branchName: { type: 'string', description: 'The name of the branch to switch to.' },
-            },
-            required: ['branchName'],
-            additionalProperties: false,
-        },
-        handler: handleSwitchGitBranch,
+        schema: z.object({
+            branchName: z.string().meta({
+                description: 'The name of the branch to switch to.',
+            }),
+        }),
+        handler: (ctx) => returnHandleSwitchGitBranch(ctx.data.params.branchName),
         cancelEvents: commonCancelEvents,
-        promptGenerator: (context: RCEContext) => `switch to the branch "${context.data.params.branchName}".`,
+        promptGenerator: (context) => `switch to the branch "${context.data.params.branchName}".`,
         validators: {
             sync: [gitValidator],
         },
         registerCondition: () => !!repo,
-    },
-    new_git_branch: {
+    }),
+    new_git_branch: defineAction({
         name: 'new_git_branch',
         description: 'Create a new branch in the current Git repository',
         category: CATEGORY_GIT,
-        schema: {
-            type: 'object',
-            properties: {
-                branchName: { type: 'string', description: 'The name of the new branch.' },
-            },
-            required: ['branchName'],
-            additionalProperties: false,
-        },
-        handler: handleNewGitBranch,
+        schema: z.object({
+            branchName: z.string().meta({
+                description: 'The name of the new branch.',
+            }),
+        }),
+        handler: (ctx) => returnHandleNewGitBranch(ctx.data.params.branchName),
         cancelEvents: commonCancelEvents,
-        promptGenerator: (context: RCEContext) => `create a new branch "${context.data.params.branchName}".`,
+        promptGenerator: (context) => `create a new branch "${context.data.params.branchName}".`,
         validators: {
             sync: [gitValidator],
         },
         registerCondition: () => !!repo,
-    },
-    diff_files: {
+    }),
+    diff_files: defineAction({
         name: 'diff_files',
         description: 'Get the differences between two versions of a file in the Git repository',
         category: CATEGORY_GIT,
-        schema: {
-            type: 'object',
-            properties: {
-                ref1: { type: 'string', description: 'The first ref to use to diff with. Only used if diffType is "diffWith", "diffIndexWith", and "diffBetween".' },
-                ref2: { type: 'string', description: 'The second ref to diff against the first ref. Only used if diffType is "diffBetween".' },
-                filePath: { type: 'string', description: 'For certain diff types, you can specify a file to diff. If omitted, will usually diff the entire ref.' },
-                diffType: { type: 'string', enum: ['diffWithHEAD', 'diffWith', 'diffIndexWithHEAD', 'diffIndexWith', 'diffBetween', 'fullDiff'], description: 'The type of diff to run. This will also affect what parameters are required.' },
-            },
-            additionalProperties: false,
-        },
-        handler: handleDiffFiles,
-        preview: (ctx: RCEContext) => {
+        schema: z.object({
+            ref1: z.string().meta({
+                description: 'The first ref to use to diff with. Only used if diffType is "diffWith", "diffIndexWith", and "diffBetween".',
+            }).optional(),
+            ref2: z.string().meta({
+                description: 'The second ref to diff against the first ref. Only used if diffType is "diffBetween".',
+            }).optional(),
+            filePath: z.string().meta({
+                description: 'For certain diff types, you can specify a file to diff. If omitted, will usually diff the entire ref.',
+            }).optional(),
+            diffType: z.enum(['diffWithHEAD', 'diffWith', 'diffIndexWithHEAD', 'diffIndexWith', 'diffBetween', 'fullDiff']).meta({
+                description: 'The type of diff to run. This will also affect what parameters are required.',
+            }).optional(),
+        }),
+        handler: ({ data: { params } }) => returnHandleDiffFiles(params.ref1, params.ref2, params.filePath, params.diffType),
+        preview: (ctx) => {
             const ws = getWorkspaceUri();
             if (!ws) return { dispose: () => { } };
-            const filePath: string = ctx.data.params!.filePath;
+            const filePath = ctx.data.params.filePath;
+            if (!filePath) return { dispose: () => { } };
             const fileUri: vscode.Uri = vscode.Uri.joinPath(ws, filePath);
             return filePreviewProvider.mark([fileUri], 'view the diff for this file');
         },
         cancelEvents: commonCancelEvents,
-        promptGenerator: (context: RCEContext) => `obtain ${context.data.params?.filePath ? `"${context.data.params.filePath}"'s` : 'a'} Git diff${context.data.params?.ref1 && context.data.params?.ref2 ? ` between ${context.data.params.ref1} and ${context.data.params.ref2}` : context.data.params?.ref1 ? ` at ref ${context.data.params.ref1}` : ''}${context.data.params?.diffType ? ` (of type "${context.data.params.diffType}")` : ''}.`,
+        promptGenerator: (context) => `obtain ${context.data.params.filePath ? `"${context.data.params.filePath}"'s` : 'a'} Git diff${context.data.params.ref1 && context.data.params.ref2 ? ` between ${context.data.params.ref1} and ${context.data.params.ref2}` : context.data.params.ref1 ? ` at ref ${context.data.params.ref1}` : ''}${context.data.params.diffType ? ` (of type "${context.data.params.diffType}")` : ''}.`,
         validators: {
-            sync: [gitValidator, gitDiffValidator],
-            async: [filePathGitValidator],
+            sync: [gitValidator, ({ data: { params } }) => gitDiffValidator(params.ref1, params.ref2, params.diffType)],
+            async: [(ctx) => ctx.data.params.filePath ? filePathGitValidator(ctx.data.params.filePath) : new Promise<ActionValidationResult>(() => actionValidationAccept())],
         },
         registerCondition: () => !!repo,
-    },
-    git_log: {
+    }),
+    git_log: defineAction({
         name: 'git_log',
         description: 'Get the commit history of the current branch',
         category: CATEGORY_GIT,
-        schema: {
-            type: 'object',
-            properties: {
-                log_limit: {
-                    type: 'integer',
-                    minimum: 1,
-                    description: 'Limits the number of items returned, starting from the latest commit.',
-                },
-            },
-            additionalProperties: false,
-        },
-        handler: handleGitLog,
+        schema: z.object({
+            log_limit: z.int().min(1).meta({
+                description: 'Limits the number of items returned, starting from the latest commit.',
+            }).optional(),
+        }),
+        handler: (ctx) => returnHandleGitLog(ctx.data.params.log_limit),
         cancelEvents: commonCancelEvents,
-        promptGenerator: (context: RCEContext) => `get the ${context.data.params?.log_limit ? `${context.data.params.log_limit} most recent commits in the ` : ''}Git log.`,
+        promptGenerator: (context) => `get the ${context.data.params.log_limit ? `${context.data.params.log_limit} most recent commits in the ` : ''}Git log.`,
         validators: {
             sync: [gitValidator],
         },
         registerCondition: () => !!repo,
-    },
-    git_blame: {
+    }),
+    git_blame: defineAction({
         name: 'git_blame',
         description: 'Get commit attributions for each line in a file.',
         category: CATEGORY_GIT,
-        schema: {
-            type: 'object',
-            properties: {
-                filePath: { type: 'string', description: 'The file to get attributions on.' },
-            },
-            required: ['filePath'],
-            additionalProperties: false,
-        },
-        handler: handleGitBlame,
-        preview: (ctx: RCEContext) => {
+        schema: z.object({
+            filePath: z.string().meta({
+                description: 'The file to get attributions on.',
+            }),
+        }),
+        handler: (ctx) => returnHandleGitBlame(ctx.data.params.filePath),
+        preview: (ctx) => {
             const ws = getWorkspaceUri();
             if (!ws) return { dispose: () => { } };
-            const filePath: string = ctx.data.params!.filePath;
+            const filePath: string = ctx.data.params.filePath;
             const fileUri: vscode.Uri = vscode.Uri.joinPath(ws, filePath);
             return filePreviewProvider.mark([fileUri], 'view the blame history for this file');
         },
         cancelEvents: commonCancelEvents,
-        promptGenerator: (context: RCEContext) => `get the Git blame for the file "${context.data.params.filePath}".`,
+        promptGenerator: (context) => `get the Git blame for the file "${context.data.params.filePath}".`,
         validators: {
             sync: [gitValidator],
-            async: [filePathGitValidator],
+            async: [(ctx) => filePathGitValidator(ctx.data.params.filePath)],
         },
         registerCondition: () => !!repo,
-    },
+    }),
 
     // Requires gitTags
-    tag_head: {
+    tag_head: defineAction({
         name: 'tag_head',
         description: 'Tag the current commit using Git.',
         category: CATEGORY_GIT,
-        schema: {
-            type: 'object',
-            properties: {
-                name: { type: 'string', description: 'The name of the tag.' },
-                upstream: { type: 'string', description: 'What commit/ref do you want to tag? If not set, will tag the current commit.' },
-            },
-            required: ['name'],
-            additionalProperties: false,
-        },
-        handler: handleTagHEAD,
+        schema: z.object({
+            name: z.string().meta({
+                description: 'The name of the tag.',
+            }),
+            upstream: z.string().meta({
+                description: 'What commit/ref do you want to tag? If not set, will tag the current commit.',
+            }).optional(),
+        }),
+        handler: (ctx) => returnHandleTagHEAD(ctx.data.params.name, ctx.data.params.upstream),
         cancelEvents: commonCancelEvents,
-        promptGenerator: (context: RCEContext) => `tag the current commit with the name "${context.data.params.name}" and associate it with the "${context.data.params.upstream}" remote.`,
+        promptGenerator: (context) => `tag the current commit with the name "${context.data.params.name}" and associate it with the "${context.data.params.upstream}" remote.`,
         validators: {
-            sync: [gitValidator, (context: RCEContext) => {
+            sync: [gitValidator, (context) => {
                 const tagPattern = /^(?![/.@])(?!.*[/.@]$)(?!.*[/.@]{2,})(?:[a-z]+(?:[/.@][a-z]+)*)$/;
                 if (!tagPattern.test(context.data.params.name)) {
                     return actionValidationFailure('The Git tag does not conform to Git\'s tag naming rules.');
@@ -461,86 +424,80 @@ export const gitActions = {
             }],
         },
         registerCondition: () => !!repo,
-    },
-    delete_tag: {
+    }),
+    delete_tag: defineAction({
         name: 'delete_tag',
         description: 'Delete a tag from Git.',
         category: CATEGORY_GIT,
-        schema: {
-            type: 'object',
-            properties: {
-                name: { type: 'string', description: 'The name of the tag to delete.' },
-            },
-            required: ['name'],
-            additionalProperties: false,
-        },
-        handler: handleDeleteTag,
+        schema: z.object({
+            name: z.string().meta({
+                description: 'The name of the tag to delete.',
+            }),
+        }),
+        handler: (ctx) => returnHandleDeleteTag(ctx.data.params.name),
         cancelEvents: commonCancelEvents,
-        promptGenerator: (context: RCEContext) => `delete the tag "${context.data.params.name}".`,
+        promptGenerator: (context) => `delete the tag "${context.data.params.name}".`,
         validators: {
             sync: [gitValidator],
         },
         registerCondition: () => !!repo,
-    },
+    }),
 
     // Requires gitConfigs
-    set_git_config: {
+    set_git_config: defineAction({
         name: 'set_git_config',
         description: 'Set a Git configuration value',
         category: CATEGORY_GIT_CONFIG,
-        schema: {
-            type: 'object',
-            properties: {
-                key: { type: 'string', description: 'The config key to target.' },
-                value: { type: 'string', description: 'The new value for the config key.' },
-            },
-            required: ['key', 'value'],
-            additionalProperties: false,
-        },
-        handler: handleSetGitConfig,
+        schema: z.object({
+            key: z.string().meta({
+                description: 'The config key to target.',
+            }),
+            value: z.string().meta({
+                description: 'The new value for the config key.',
+            }),
+        }),
+        handler: (ctx) => returnHandleSetConfig(ctx.data.params.key, ctx.data.params.value),
         cancelEvents: commonCancelEvents,
-        promptGenerator: (context: RCEContext) => `set the Git config key "${context.data.params.key}" to "${context.data.params.value}".`,
+        promptGenerator: (context) => `set the Git config key "${context.data.params.key}" to "${context.data.params.value}".`,
         validators: {
             sync: [gitValidator],
         },
         registerCondition: () => !!repo,
-    },
-    get_git_config: {
+    }),
+    get_git_config: defineAction({
         name: 'get_git_config',
         description: 'Get a Git configuration value',
         category: CATEGORY_GIT_CONFIG,
-        schema: {
-            type: 'object',
-            properties: {
-                key: { type: 'string', description: 'The config key to get. If omitted, you will get the full list of config keys and their values.' },
-            },
-            additionalProperties: false,
-        },
-        handler: handleGetGitConfig,
+        schema: z.object({
+            key: z.string().meta({
+                description: 'The config key to get. If omitted, you will get the full list of config keys and their values.',
+            }).optional(),
+        }),
+        handler: (ctx) => returnHandleGetGitConfig(ctx.data.params.key),
         cancelEvents: commonCancelEvents,
-        promptGenerator: (context: RCEContext) => context.data.params?.key ? `get the Git config key "${context.data.params.key}".` : 'get the Git config.',
+        promptGenerator: (context) => context.data.params?.key ? `get the Git config key "${context.data.params.key}".` : 'get the Git config.',
         validators: {
             sync: [gitValidator],
         },
         registerCondition: () => !!repo,
-    },
+    }),
 
     // Requires gitRemotes
-    fetch_git_commits: {
+    fetch_git_commits: defineAction({
         name: 'fetch_git_commits',
         description: 'Fetch commits from the remote repository',
         category: CATEGORY_GIT_REMOTES,
-        schema: {
-            type: 'object',
-            properties: {
-                remoteName: { type: 'string', description: 'Which remote to fetch from. If omitted, will fetch from the default set repo.' },
-                branchName: { type: 'string', description: 'Which branch to fetch from. If omitted, will fetch from the set remote branch of the current branch.' },
-            },
-            additionalProperties: false,
-        },
-        handler: handleFetchGitCommits,
+        schema: z.object({
+            remoteName: z.string().meta({
+                description: 'Which remote to fetch from. If omitted, will fetch from the default set repo.',
+            }).optional(),
+            branchName: z.string().meta({
+                description: 'Which branch to fetch from. If omitted, will fetch from the set remote branch of the current branch.',
+            }).optional(),
+        }),
+        handler: ({ data: { params } }) => returnHandleFetchGitCommits(params.remoteName, params.branchName),
         cancelEvents: commonCancelEvents,
-        promptGenerator: (context: RCEContext) => {
+        promptGenerator: (context) => {
             if (context.data.params.remoteName && context.data.params.branchName)
                 return `fetch commits ${context.data.params.remoteName}/${context.data.params.branchName}.`;
             else if (context.data.params.remoteName)
@@ -553,8 +510,8 @@ export const gitActions = {
             sync: [gitValidator],
         },
         registerCondition: () => !!repo,
-    },
-    pull_git_commits: {
+    }),
+    pull_git_commits: defineAction({
         name: 'pull_git_commits',
         description: 'Pull commits from the remote repository',
         category: CATEGORY_GIT_REMOTES,
@@ -565,23 +522,25 @@ export const gitActions = {
             sync: [gitValidator],
         },
         registerCondition: () => !!repo,
-    },
-    push_git_commits: {
+    }),
+    push_git_commits: defineAction({
         name: 'push_git_commits',
         description: 'Push commits to the remote repository',
         category: CATEGORY_GIT_REMOTES,
-        schema: {
-            type: 'object',
-            properties: {
-                remoteName: { type: 'string', description: 'The remote to push to. If omitted, will push to the default remote.' },
-                branchName: { type: 'string', description: 'The branch to push to. If omitted, will push to the set remote branch.' },
-                forcePush: { type: 'boolean', description: 'If true, will forcibly push to remote.' },
-            },
-            additionalProperties: false,
-        },
-        handler: handlePushGitCommits,
+        schema: z.object({
+            remoteName: z.string().meta({
+                description: 'The remote to push to. If omitted, will push to the default remote.',
+            }).optional(),
+            branchName: z.string().meta({
+                description: 'The branch to push to. If omitted, will push to the set remote branch.',
+            }).optional(),
+            forcePush: z.boolean().meta({
+                description: 'If true, will forcibly push to remote.',
+            }).optional(),
+        }),
+        handler: ({ data: { params: { remoteName, branchName, forcePush } } }) => returnHandlePushGitCommits(remoteName, branchName, forcePush),
         cancelEvents: commonCancelEvents,
-        promptGenerator: (context: RCEContext) => {
+        promptGenerator: (context) => {
             const force = context.data.params.forcePush ? 'force ' : '';
             if (context.data.params.remoteName && context.data.params.branchName)
                 return `${force}push commits to ${context.data.params.remoteName}/${context.data.params.branchName}.`;
@@ -595,73 +554,68 @@ export const gitActions = {
             sync: [gitValidator],
         },
         registerCondition: () => !!repo,
-    },
+    }),
 
     // Requires gitRemotes and editRemoteData
-    add_git_remote: {
+    add_git_remote: defineAction({
         name: 'add_git_remote',
         description: 'Add a new remote to the Git repository',
         category: CATEGORY_GIT_REMOTES,
-        schema: {
-            type: 'object',
-            properties: {
-                remoteName: { type: 'string', description: 'The nickname set for the remote. You will use this name for inputs to other remote-related actions if you wish to use their remote parameters.' },
-                remoteURL: { type: 'string', description: 'The URL that the remote name is aliased to. It must be either SSH (which will only work if SSH is properly set up) or HTTPS.' },
-            },
-            required: ['remoteName', 'remoteURL'],
-            additionalProperties: false,
-        },
-        handler: handleAddGitRemote,
+        schema: z.object({
+            remoteName: z.string().meta({
+                description: 'The nickname set for the remote. You will use this name for inputs to other remote-related actions if you wish to use their remote parameters.',
+            }),
+            remoteURL: z.string().meta({
+                description: 'The URL that the remote name is aliased to. It must be either SSH (which will only work if SSH is properly set up) or HTTPS.',
+            }),
+        }),
+        handler: ({ data: { params } }) => returnHandleAddGitRemote(params.remoteName, params.remoteURL),
         cancelEvents: commonCancelEvents,
-        promptGenerator: (context: RCEContext) => `add a new remote "${context.data.params.remoteName}" with URL "${context.data.params.remoteURL}".`,
+        promptGenerator: (context) => `add a new remote "${context.data.params.remoteName}" with URL "${context.data.params.remoteURL}".`,
         validators: {
             sync: [gitValidator],
         },
         registerCondition: () => !!repo,
-    },
-    remove_git_remote: {
+    }),
+    remove_git_remote: defineAction({
         name: 'remove_git_remote',
         description: 'Remove a remote from the Git repository',
         category: CATEGORY_GIT_REMOTES,
-        schema: {
-            type: 'object',
-            properties: {
-                remoteName: { type: 'string', description: 'Name of the remote Git repository to remove.' },
-            },
-            required: ['remoteName'],
-            additionalProperties: false,
-        },
-        handler: handleRemoveGitRemote,
+        schema: z.object({
+            remoteName: z.string().meta({
+                description: 'Name of the remote Git repository to remove.',
+            }),
+        }),
+        handler: (ctx) => returnHandleRemoveGitRemote(ctx.data.params.remoteName),
         cancelEvents: commonCancelEvents,
-        promptGenerator: (context: RCEContext) => `remove the remote "${context.data.params.remoteName}".`,
+        promptGenerator: (context) => `remove the remote "${context.data.params.remoteName}".`,
         validators: {
             sync: [gitValidator],
         },
         registerCondition: () => !!repo,
-    },
-    rename_git_remote: {
+    }),
+    rename_git_remote: defineAction({
         name: 'rename_git_remote',
         description: 'Rename a remote in the Git repository',
         category: CATEGORY_GIT_REMOTES,
-        schema: {
-            type: 'object',
-            properties: {
-                oldRemoteName: { type: 'string', description: 'The current remote name.' },
-                newRemoteName: { type: 'string', description: 'The new remote name.' },
-            },
-            required: ['oldRemoteName', 'newRemoteName'],
-            additionalProperties: false,
-        },
-        handler: handleRenameGitRemote,
+        schema: z.object({
+            oldRemoteName: z.string().meta({
+                description: 'The current remote name.',
+            }),
+            newRemoteName: z.string().meta({
+                description: 'The new remote name.',
+            }),
+        }),
+        handler: (ctx) => returnHandleRenameGitRemote(ctx.data.params.oldRemoteName, ctx.data.params.newRemoteName),
         cancelEvents: commonCancelEvents,
-        promptGenerator: (context: RCEContext) => `rename the remote "${context.data.params.oldRemoteName}" to "${context.data.params.newRemoteName}".`,
+        promptGenerator: (context) => `rename the remote "${context.data.params.oldRemoteName}" to "${context.data.params.newRemoteName}".`,
         validators: {
             sync: [gitValidator],
         },
         registerCondition: () => !!repo,
-    },
+    }),
     // Special: Only registered during a merge conflict
-    abort_merge: {
+    abort_merge: defineAction({
         name: 'abort_merge',
         description: 'Abort the current merge operation.',
         category: CATEGORY_GIT,
@@ -672,15 +626,8 @@ export const gitActions = {
             sync: [gitValidator],
         },
         autoRegister: false,
-    },
-} satisfies Record<string, RCEAction>;
-
-// Get the current Git repository
-// let repo: Repository | undefined = git.repositories[0];
-// Handle git repo checks in each handler
-// eg.
-// if (!git)
-//     return actionResultFailure(NO_GIT_STRING);
+    }),
+};
 
 // Register all git commands
 export function addGitActions() {
@@ -729,11 +676,6 @@ export function addGitActions() {
     }
 }
 
-/*
- * Actions with the Git repo
- * Requires neuropilot.permission.gitConfig to be enabled.
- */
-
 export function handleNewGitRepo(): RCEHandlerReturns {
     const workspaceFolders = vscode.workspace.workspaceFolders;
     if (!workspaceFolders || workspaceFolders.length === 0) {
@@ -752,11 +694,8 @@ export function handleNewGitRepo(): RCEHandlerReturns {
     });
 }
 
-export function handleGetGitConfig(context: RCEContext): RCEHandlerReturns {
-    const { data: actionData } = context;
+function returnHandleGetGitConfig(configKey?: string) {
     assert(repo);
-    const configKey: string | undefined = actionData.params.key;
-
     if (!configKey) {
         return repo.getConfigs().then((configs: { key: string; value: string; }[]) => {
             return actionHandlerSuccess(`Git config:\n${configs.map((config) => `- ${config.key}: ${config.value}`).join('\n')}`, `Sent ${configs.length} repo Git config(s)`);
@@ -772,12 +711,16 @@ export function handleGetGitConfig(context: RCEContext): RCEHandlerReturns {
     }
 }
 
-export function handleSetGitConfig(context: RCEContext): RCEHandlerReturns {
+/** @deprecated Functions should now be inlined */
+export function handleGetGitConfig(context: RCEContext<{ key: string; }>): RCEHandlerReturns {
     const { data: actionData } = context;
-    assert(repo);
-    const configKey: string = actionData.params.key;
-    const configValue: string = actionData.params.value;
+    const configKey: string | undefined = actionData.params!.key;
 
+    return returnHandleGetGitConfig(configKey);
+}
+
+function returnHandleSetConfig(configKey: string, configValue: string) {
+    assert(repo);
     return repo.setConfig(configKey, configValue).then(() => {
         return actionHandlerSuccess(`Set Git config key "${configKey}" to: ${configValue}`, `Wrote new repo config value of "${configKey}"`);
     }, (erm: string) => {
@@ -786,15 +729,18 @@ export function handleSetGitConfig(context: RCEContext): RCEHandlerReturns {
     });
 }
 
-/*
- * Actions with Git branches
- */
-
-export function handleNewGitBranch(context: RCEContext): RCEHandlerReturns {
+/** @deprecated Functions should now be inlined */
+export function handleSetGitConfig(context: RCEContext<{ key: string; value: string; }>): RCEHandlerReturns {
     const { data: actionData } = context;
-    assert(repo);
-    const branchName: string = actionData.params.branchName;
 
+    const configKey: string = actionData.params!.key;
+    const configValue: string = actionData.params!.value;
+
+    return returnHandleSetConfig(configKey, configValue);
+}
+
+function returnHandleNewGitBranch(branchName: string) {
+    assert(repo);
     return repo.createBranch(branchName, true).then(() => {
         return actionHandlerSuccess(`Created and switched to new branch ${branchName}.`, `Branch "${branchName}" created`);
     }, (erm: string) => {
@@ -803,11 +749,16 @@ export function handleNewGitBranch(context: RCEContext): RCEHandlerReturns {
     });
 }
 
-export function handleSwitchGitBranch(context: RCEContext): RCEHandlerReturns {
+/** @deprecated Functions should now be inlined */
+export function handleNewGitBranch(context: RCEContext<{ branchName: string; }>): RCEHandlerReturns {
     const { data: actionData } = context;
-    assert(repo);
-    const branchName: string = actionData.params.branchName;
+    const branchName: string = actionData.params!.branchName;
 
+    return returnHandleNewGitBranch(branchName);
+}
+
+function returnHandleSwitchGitBranch(branchName: string) {
+    assert(repo);
     return repo.checkout(branchName).then(() => {
         return actionHandlerSuccess(`Switched to branch ${branchName}.`, `Branch "${branchName}" checked out`);
     }, (erm: string) => {
@@ -816,12 +767,16 @@ export function handleSwitchGitBranch(context: RCEContext): RCEHandlerReturns {
     });
 }
 
-export function handleDeleteGitBranch(context: RCEContext): RCEHandlerReturns {
+/** @deprecated Functions should now be inlined */
+export function handleSwitchGitBranch(context: RCEContext<{ branchName: string; }>): RCEHandlerReturns {
     const { data: actionData } = context;
-    assert(repo);
-    const branchName: string = actionData.params.branchName;
-    const forceDelete: boolean = actionData.params.force ?? false;
+    const branchName: string = actionData.params!.branchName;
 
+    return returnHandleSwitchGitBranch(branchName);
+}
+
+function returnHandleDeleteGitBranch(branchName: string, forceDelete = false) {
+    assert(repo);
     return repo.deleteBranch(branchName, forceDelete).then(() => {
         return actionHandlerSuccess(`Deleted branch ${branchName}.`, `Branch "${branchName}"${forceDelete ? ' forcibly' : ''} deleted`);
     }, (erm: string) => {
@@ -830,9 +785,14 @@ export function handleDeleteGitBranch(context: RCEContext): RCEHandlerReturns {
     });
 }
 
-/*
- * Actions with the Git index
- */
+/** @deprecated Functions should now be inlined */
+export function handleDeleteGitBranch(context: RCEContext<{ branchName: string, force?: boolean }>): RCEHandlerReturns {
+    const { data: actionData } = context;
+    const branchName = actionData.params!.branchName;
+    const forceDelete = actionData.params!.force;
+
+    return returnHandleDeleteGitBranch(branchName, forceDelete);
+}
 
 interface StateStringProps {
     fileName?: string;
@@ -926,10 +886,8 @@ function getAbsoluteFilePath(filePath = '.'): string {
     return normalizePath(workspaceFolder + '/' + filePath);
 }
 
-export function handleAddFileToGit(context: RCEContext): RCEHandlerReturns {
-    const { data: actionData } = context;
+function returnHandleAddFileToGit(filePath: string[]) {
     assert(repo);
-    const filePath: string[] = actionData.params.filePath;
     const absolutePaths: string[] = [];
 
     for (const path of filePath) {
@@ -944,10 +902,17 @@ export function handleAddFileToGit(context: RCEContext): RCEHandlerReturns {
     });
 }
 
-export function handleRemoveFileFromGit(context: RCEContext): RCEHandlerReturns {
+/** @deprecated Functions should now be inlined */
+export function handleAddFileToGit(context: RCEContext<{ filePath: string[] }>): RCEHandlerReturns {
     const { data: actionData } = context;
+
+    const filePath: string[] = actionData.params!.filePath;
+
+    return returnHandleAddFileToGit(filePath);
+}
+
+function returnHandleRemoveFileFromGit(filePath: string[]) {
     assert(repo);
-    const filePath: string[] = actionData.params.filePath;
     const absolutePaths: string[] = [];
 
     for (const path of filePath) {
@@ -962,11 +927,18 @@ export function handleRemoveFileFromGit(context: RCEContext): RCEHandlerReturns 
     });
 }
 
-export function handleMakeGitCommit(context: RCEContext): RCEHandlerReturns {
+/** @deprecated Functions should now be inlined */
+export function handleRemoveFileFromGit(context: RCEContext<{ filePath: string[] }>): RCEHandlerReturns {
     const { data: actionData } = context;
+    const filePath: string[] = actionData.params!.filePath;
+
+    return returnHandleRemoveFileFromGit(filePath);
+}
+
+function returnHandleMakeGitCommit(message: string, options?: string[]) {
     assert(repo);
-    const message = `${NEURO.currentController} committed: ${actionData.params?.message}`;
-    const commitOptions: string[] | undefined = actionData.params?.options;
+    const commitMessage = `${NEURO.currentController} committed: ${message}`;
+    const commitOptions: string[] | undefined = options;
     let ExtraCommitOptions: CommitOptions | undefined = {};
 
     if (!commitOptions) {
@@ -998,20 +970,24 @@ export function handleMakeGitCommit(context: RCEContext): RCEHandlerReturns {
         }
     }
 
-    repo.inputBox.value = message;
-    return repo.commit(message, ExtraCommitOptions).then(() => {
-        return actionHandlerSuccess(`Committed with message: "${message}"\nCommit options used: ${commitOptions ? commitOptions : 'None'}`, `${ExtraCommitOptions?.amend ? 'Amended c' : 'C'}ommit applied${ExtraCommitOptions?.signoff ? ' with signoff' : ''}`);
+    repo.inputBox.value = commitMessage;
+    return repo.commit(commitMessage, ExtraCommitOptions).then(() => {
+        return actionHandlerSuccess(`Committed with message: "${commitMessage}"\nCommit options used: ${commitOptions ? commitOptions : 'None'}`, `${ExtraCommitOptions?.amend ? 'Amended c' : 'C'}ommit applied${ExtraCommitOptions?.signoff ? ' with signoff' : ''}`);
     }, (erm: string) => {
         logOutput('ERROR', `Failed to commit: ${erm}`);
         return actionHandlerFailure('Failed to record commit', PROMISE_REJECTION_STRING);
     });
 }
 
-export function handleGitMerge(context: RCEContext): RCEHandlerReturns {
+/** @deprecated Functions should now be inlined */
+export function handleMakeGitCommit(context: RCEContext<{ message: string; options?: ('amend' | 'signoff' | 'verbose')[] }>): RCEHandlerReturns {
     const { data: actionData } = context;
-    assert(repo);
-    const refToMerge = actionData.params.ref_to_merge;
 
+    return returnHandleMakeGitCommit(actionData.params!.message, actionData.params!.options);
+}
+
+function returnHandleGitMerge(refToMerge: string) {
+    assert(repo);
     return repo.merge(refToMerge).then(() => {
         return actionHandlerSuccess(`Cleanly merged ${refToMerge} into the current branch.`, `Cleanly merged ${refToMerge}`);
     }, (erm: string) => {
@@ -1023,6 +999,14 @@ export function handleGitMerge(context: RCEContext): RCEHandlerReturns {
             return actionHandlerFailure(`Couldn't merge ${refToMerge}.`, PROMISE_REJECTION_STRING);
         }
     });
+}
+
+/** @deprecated Functions should now be inlined */
+export function handleGitMerge(context: RCEContext<{ ref_to_merge: string }>): RCEHandlerReturns {
+    const { data: actionData } = context;
+    const refToMerge = actionData.params!.ref_to_merge;
+
+    return returnHandleGitMerge(refToMerge);
 }
 
 export function handleAbortMerge(): RCEHandlerReturns {
@@ -1037,16 +1021,9 @@ export function handleAbortMerge(): RCEHandlerReturns {
     });
 }
 
-export function handleDiffFiles(context: RCEContext): RCEHandlerReturns {
-    const { data: actionData } = context;
+function returnHandleDiffFiles(ref1?: string, ref2?: string, filePath = '.', diffType = 'diffWithHEAD') {
     assert(repo);
-
-    const ref1: string | undefined = actionData.params.ref1;
-    const ref2: string | undefined = actionData.params.ref2;
-    const filePath: string = actionData.params.filePath ?? '.';
     const diffThisFile = getAbsoluteFilePath(filePath);
-
-    const diffType: string = actionData.params.diffType ?? 'diffWithHEAD'; // Default to diffWithHEAD
 
     switch (diffType) {
         case 'diffWithHEAD':
@@ -1126,12 +1103,20 @@ export function handleDiffFiles(context: RCEContext): RCEHandlerReturns {
     }
 }
 
-export function handleGitLog(context: RCEContext): RCEHandlerReturns {
+/** @deprecated Functions should now be inlined */
+export function handleDiffFiles(context: RCEContext<{ ref1?: string; ref2?: string; filePath?: string; diffType?: string; }>): RCEHandlerReturns {
     const { data: actionData } = context;
+
+    const ref1 = actionData.params!.ref1;
+    const ref2 = actionData.params!.ref2;
+    const filePath = actionData.params!.filePath;
+    const diffType = actionData.params!.diffType;
+
+    return returnHandleDiffFiles(ref1, ref2, filePath, diffType);
+}
+
+function returnHandleGitLog(logLimit?: number) {
     assert(repo);
-
-    const logLimit: number | undefined = actionData.params?.log_limit;
-
     return repo.log().then((commits: Commit[]) => {
         // If log_limit is defined, restrict number of commits to that value.
         if (logLimit) {
@@ -1149,10 +1134,16 @@ export function handleGitLog(context: RCEContext): RCEHandlerReturns {
     });
 }
 
-export function handleGitBlame(context: RCEContext): RCEHandlerReturns {
+/** @deprecated Functions should now be inlined */
+export function handleGitLog(context: RCEContext<{ log_limit?: number }>): RCEHandlerReturns {
     const { data: actionData } = context;
+    const logLimit = actionData.params!.log_limit;
+
+    return returnHandleGitLog(logLimit);
+}
+
+function returnHandleGitBlame(filePath: string) {
     assert(repo);
-    const filePath: string = actionData.params.filePath;
     const absolutePath: string = getAbsoluteFilePath(filePath);
 
     if (!isPathNeuroSafe(absolutePath)) {
@@ -1167,17 +1158,16 @@ export function handleGitBlame(context: RCEContext): RCEHandlerReturns {
     });
 }
 
-/**
- * Actions with Git tags
- * Requires neuropilot.permission.gitTags to be enabled.
- */
-
-export function handleTagHEAD(context: RCEContext): RCEHandlerReturns {
+/** @deprecated Functions should now be inlined */
+export function handleGitBlame(context: RCEContext<{ filePath: string }>): RCEHandlerReturns {
     const { data: actionData } = context;
-    assert(repo);
-    const name: string = actionData.params.name;
-    const upstream: string = actionData.params.upstream ?? 'HEAD';
+    const filePath: string = actionData.params!.filePath;
 
+    return returnHandleGitBlame(filePath);
+}
+
+function returnHandleTagHEAD(name: string, upstream = 'HEAD') {
+    assert(repo);
     return repo.tag(name, upstream).then(() => {
         return actionHandlerSuccess(`Tag ${name} created for ${upstream}.`, `Tag "${name}" created`);
     }, (erm: string) => {
@@ -1186,11 +1176,17 @@ export function handleTagHEAD(context: RCEContext): RCEHandlerReturns {
     });
 }
 
-export function handleDeleteTag(context: RCEContext): RCEHandlerReturns {
+/** @deprecated Functions should now be inlined */
+export function handleTagHEAD(context: RCEContext<{ name: string; upstream?: string }>): RCEHandlerReturns {
     const { data: actionData } = context;
-    assert(repo);
-    const name: string = actionData.params.name;
+    const name = actionData.params!.name;
+    const upstream = actionData.params!.upstream;
 
+    return returnHandleTagHEAD(name, upstream);
+}
+
+function returnHandleDeleteTag(name: string) {
+    assert(repo);
     return repo.deleteTag(name).then(() => {
         return actionHandlerSuccess(`Deleted tag ${name}`, `Tag "${name}" deleted`);
     }, (erm: string) => {
@@ -1199,23 +1195,31 @@ export function handleDeleteTag(context: RCEContext): RCEHandlerReturns {
     });
 }
 
-/*
- * Actions with Git remotes
- * Requires neuropilot.permission.gitRemotes to be enabled.
- */
-
-export function handleFetchGitCommits(context: RCEContext): RCEHandlerReturns {
+/** @deprecated Functions should now be inlined */
+export function handleDeleteTag(context: RCEContext<{ name: string; }>): RCEHandlerReturns {
     const { data: actionData } = context;
-    assert(repo);
-    const remoteName: string = actionData.params.remoteName;
-    const branchName: string = actionData.params.branchName;
+    const name: string = actionData.params!.name;
 
+    return returnHandleDeleteTag(name);
+}
+
+function returnHandleFetchGitCommits(remoteName?: string, branchName?: string) {
+    assert(repo);
     return repo.fetch(remoteName, branchName).then(() => {
         return actionHandlerSuccess(`Fetched commits from ${remoteName ? 'remote ' + remoteName : 'default remote'}${branchName ? `, branch "${branchName}"` : ''}.`, `Fetched from ${remoteName || 'default remote'}`);
     }, (erm: string) => {
         logOutput('ERROR', `Failed to fetch commits: ${erm}`);
         return actionHandlerFailure(`Failed to fetch commits from remote "${remoteName}"`, PROMISE_REJECTION_STRING);
     });
+}
+
+/** @deprecated Functions should now be inlined */
+export function handleFetchGitCommits(context: RCEContext<{ remoteName?: string; branchName?: string; }>): RCEHandlerReturns {
+    const { data: actionData } = context;
+    const remoteName = actionData.params!.remoteName;
+    const branchName = actionData.params!.branchName;
+
+    return returnHandleFetchGitCommits(remoteName, branchName);
 }
 
 export function handlePullGitCommits(): RCEHandlerReturns {
@@ -1229,13 +1233,8 @@ export function handlePullGitCommits(): RCEHandlerReturns {
     });
 }
 
-export function handlePushGitCommits(context: RCEContext): RCEHandlerReturns {
-    const { data: actionData } = context;
+function returnHandlePushGitCommits(remoteName?: string, branchName?: string, forcePush = false) {
     assert(repo);
-    const remoteName: string | undefined = actionData.params.remoteName;
-    const branchName: string | undefined = actionData.params.branchName;
-    const forcePush: boolean = actionData.params.forcePush ?? false;
-
     const forcePushMode: ForcePushMode | undefined = forcePush === true ? ForcePushMode.Force : undefined;
 
     return repo.push(remoteName, branchName, true, forcePushMode).then(() => {
@@ -1246,18 +1245,18 @@ export function handlePushGitCommits(context: RCEContext): RCEHandlerReturns {
     });
 }
 
-/*
- * THESE ACTIONS ARE CONSIDERED DANGEROUS REMOTE OPERATIONS
- * Requires neuropilot.permission.editRemoteData to be enabled, IN ADDITION to neuropilot.permission.gitRemotes.
- */
-
-export function handleAddGitRemote(context: RCEContext): RCEHandlerReturns {
+/** @deprecated Functions should now be inlined */
+export function handlePushGitCommits(context: RCEContext<{ remoteName?: string; branchName?: string; forcePush?: boolean }>): RCEHandlerReturns {
     const { data: actionData } = context;
+    const remoteName = actionData.params!.remoteName;
+    const branchName = actionData.params!.branchName;
+    const forcePush = actionData.params!.forcePush;
+
+    return returnHandlePushGitCommits(remoteName, branchName, forcePush);
+}
+
+function returnHandleAddGitRemote(remoteName: string, remoteUrl: string) {
     assert(repo);
-
-    const remoteName: string = actionData.params.remoteName;
-    const remoteUrl: string = actionData.params.remoteURL;
-
     return repo.addRemote(remoteName, remoteUrl).then(() => {
         return actionHandlerSuccess(`Added remote "${remoteName}" with URL: ${remoteUrl}`, `Remote "${remoteName}" added`);
     }, (erm: string) => {
@@ -1266,11 +1265,17 @@ export function handleAddGitRemote(context: RCEContext): RCEHandlerReturns {
     });
 }
 
-export function handleRemoveGitRemote(context: RCEContext): RCEHandlerReturns {
+/** @deprecated Functions should now be inlined */
+export function handleAddGitRemote(context: RCEContext<{ remoteName: string; remoteURL: string; }>): RCEHandlerReturns {
     const { data: actionData } = context;
-    assert(repo);
-    const remoteName: string = actionData.params.remoteName;
+    const remoteName: string = actionData.params!.remoteName;
+    const remoteUrl: string = actionData.params!.remoteURL;
 
+    return returnHandleAddGitRemote(remoteName, remoteUrl);
+}
+
+function returnHandleRemoveGitRemote(remoteName: string) {
+    assert(repo);
     return repo.removeRemote(remoteName).then(() => {
         return actionHandlerSuccess(`Removed remote "${remoteName}".`, `Remote "${remoteName}" removed`);
     }, (erm: string) => {
@@ -1279,16 +1284,29 @@ export function handleRemoveGitRemote(context: RCEContext): RCEHandlerReturns {
     });
 }
 
-export function handleRenameGitRemote(context: RCEContext): RCEHandlerReturns {
+/** @deprecated Functions should now be inlined */
+export function handleRemoveGitRemote(context: RCEContext<{ remoteName: string; }>): RCEHandlerReturns {
     const { data: actionData } = context;
-    assert(repo);
-    const oldRemoteName: string = actionData.params.oldRemoteName;
-    const newRemoteName: string = actionData.params.newRemoteName;
+    const remoteName: string = actionData.params!.remoteName;
 
+    return returnHandleRemoveGitRemote(remoteName);
+}
+
+function returnHandleRenameGitRemote(oldRemoteName: string, newRemoteName: string) {
+    assert(repo);
     return repo.renameRemote(oldRemoteName, newRemoteName).then(() => {
         return actionHandlerSuccess(`Renamed remote "${oldRemoteName}" to "${newRemoteName}".`, `Remote "${oldRemoteName}" renamed to "${newRemoteName}"`);
     }, (erm: string) => {
         logOutput('ERROR', `Failed to rename remote ${oldRemoteName}: ${erm}`);
         return actionHandlerFailure(`Failed to rename remote "${oldRemoteName}" to "${newRemoteName}"`, PROMISE_REJECTION_STRING);
     });
+}
+
+/** @deprecated Functions should now be inlined */
+export function handleRenameGitRemote(context: RCEContext<{ oldRemoteName: string; newRemoteName: string; }>): RCEHandlerReturns {
+    const { data: actionData } = context;
+    const oldRemoteName: string = actionData.params!.oldRemoteName;
+    const newRemoteName: string = actionData.params!.newRemoteName;
+
+    return returnHandleRenameGitRemote(oldRemoteName, newRemoteName);
 }

@@ -11,7 +11,9 @@ import type { RCEContext } from '@ctx/rce';
 
 import type { NeuroClient } from 'neuro-game-sdk';
 import type { reregisterAllActions, registerAction, unregisterAction } from '@/rce';
-import type { JSONSchema7Object } from 'json-schema';
+import type { JSONSchema7 } from 'json-schema';
+import type { StandardJSONSchemaV1 } from '@standard-schema/spec';
+import z from 'zod';
 
 //#region Action force utils
 
@@ -40,13 +42,26 @@ export interface ActionForceParams {
 
 //#region Action metadata & helpers
 
+export type SchemaTypes = StandardJSONSchemaV1 | JSONSchema7 | undefined;
+
+/**
+ * Extracts the input type from a Standard Schema and casts it to be compatible with RCEAction.
+ * This is necessary because Standard Schema's InferInput returns a type that may not structurally match JSONSchema7Object.
+ */
+export type InferDataFromSchema<TSchema extends SchemaTypes> =
+    TSchema extends StandardJSONSchemaV1 ? StandardJSONSchemaV1.InferInput<TSchema> : TSchema extends JSONSchema7 ? unknown : undefined;
+
 /**
  * ActionHandler to use with constants for records of actions and their corresponding handlers.
  * 
  * You may optionally type the interface if you are sure the action will take a specific form.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export interface RCEAction<T extends JSONSchema7Object | undefined = any, E = any> extends Action {
+export interface RCEAction<TData extends unknown | undefined = undefined, TSchema extends SchemaTypes = SchemaTypes, TDataShape extends unknown | undefined = TData extends undefined ? InferDataFromSchema<TSchema> : TData> extends Omit<Action, 'schema'> {
+    /**
+     * A valid JSON Schema or Standard JSON Schema that describes the action's parameters.
+     * Standard JSON Schemas (like Zod v4+) will be automatically converted to JSON Schema before registration.
+     */
+    schema?: TSchema;
     /** 
      * A human-friendly name for the action. If not provided, the action's name converted to Title Case will be used. 
      * @example Edit File
@@ -57,7 +72,7 @@ export interface RCEAction<T extends JSONSchema7Object | undefined = any, E = an
      * An object that defines an array of functions to validate the action's "environment".
      * Validators run before requests/executions to ensure environment/input validity.
      */
-    validators?: RCEValidators<T, E>
+    validators?: RCEValidators<TData, TSchema, TDataShape>
     /**
      * Cancellation events attached to the action that will be automatically set up.
      * Each cancellation event will be setup in parallel to each other.
@@ -66,7 +81,8 @@ export interface RCEAction<T extends JSONSchema7Object | undefined = any, E = an
      * Following VS Code's pattern, Disposables will not be awaited if async.
      * Returns from calling the `dispose()` function will not be used anywhere.
      */
-    cancelEvents?: ((context: RCEContext<T, E>) => RCECancelEvent<E> | null)[];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    cancelEvents?: ((context: RCEContext<TData, TSchema, TDataShape>) => RCECancelEvent<any> | null)[];
     /**
      * A function that is used to preview the action's effects.
      * This function will be called while awaiting user approval, if the action is set to Copilot permission.
@@ -75,7 +91,7 @@ export interface RCEAction<T extends JSONSchema7Object | undefined = any, E = an
      * If your preview function does not require a dispose function to be called, return a no-op Disposable-like.
      * @example return { dispose: () => undefined } // for no-ops
      */
-    preview?: (context: RCEContext<T, E>) => { dispose: () => unknown };
+    preview?: (context: RCEContext<TData, TSchema, TDataShape>) => { dispose: () => unknown };
     /** 
      * The function to handle the action.
      * This function must be synchronous.
@@ -83,7 +99,7 @@ export interface RCEAction<T extends JSONSchema7Object | undefined = any, E = an
      * An action result can be sent as either a synchronous result or asynchronous result, it will automatically be handled by RCE.
      * (see {@link RCEHandlerReturns})
      */
-    handler: RCEHandler<T, E>;
+    handler: RCEHandler<TData, TSchema, TDataShape>;
     /** 
      * The function to generate a prompt for the action request (Copilot Mode). 
      * The prompt should fit the phrasing scheme "Neuro wants to [prompt]".
@@ -93,7 +109,7 @@ export interface RCEAction<T extends JSONSchema7Object | undefined = any, E = an
      * It is this way due to a potential new addition in Neuro API "v2". (not officially proposed)
      * More info (comment): https://github.com/VedalAI/neuro-game-sdk/discussions/58#discussioncomment-12938623
      */
-    promptGenerator: PromptGenerator<T, E> | null;
+    promptGenerator: PromptGenerator<TData, TSchema, TDataShape> | null;
     /** Default permission for actions when no permission is configured in user or workspace settings. Defaults to {@link PermissionLevel.OFF}. */
     defaultPermission?: PermissionLevel;
     /**
@@ -133,11 +149,39 @@ export interface RCEAction<T extends JSONSchema7Object | undefined = any, E = an
      * 
      * These functions will be parallelised, so the same key should not be accessed from multiple functions.
      */
-    contextSetupHook?: ((context: RCEContext<T, E>) => Thenable<void>)[];
+    contextSetupHook?: ((context: RCEContext<TData, TSchema, TDataShape>) => Thenable<void>)[];
+}
+
+/**
+ * Define an action with proper type inference for schema, input data, and event types.
+ * @param action The action definition
+ * @returns The same action with full type inference
+ * @example
+ * // Event type is inferred from cancelEvents
+ * defineAction({
+ *   name: 'my_action',
+ *   schema: z.object({ file: z.string() }),
+ *   handler: (ctx) => actionHandlerSuccess(),
+ *   cancelEvents: [(ctx) => new RCECancelEvent<vscode.FileDeleteEvent>({ ... })],
+ *   // ...
+ * });
+ * @pure
+ */
+/*@__PURE__*/
+export function defineAction<
+    const TData extends object | undefined,
+    const TSchema extends SchemaTypes,
+    const TInput extends InferDataFromSchema<TSchema>,
+>(action: RCEAction<TData, TSchema, TInput>): RCEAction<TData, TSchema, TInput> {
+    return action;
 }
 
 // apparently this JSDoc is really hard when trying to link to RCEAction.validators.async
-interface RCEValidators<T extends JSONSchema7Object | undefined, E> {
+interface RCEValidators<
+    TData extends unknown | undefined,
+    TSchema extends SchemaTypes,
+    TDataShape = InferDataFromSchema<TSchema>,
+> {
     /** 
      * Synchronous validators that will block execution of the rest of the thread.
      * As this delays the action result to Neuro, any thenables must resolve quickly so as to be effectively synchronous speed-wise.
@@ -148,19 +192,25 @@ interface RCEValidators<T extends JSONSchema7Object | undefined, E> {
      * - {@link RCEAction.promptGenerator generating the Copilot-mode prompt},
      * - {@link RCEAction.preview preview effects}, and/or
      * - {@link RCEAction.handler handling the action}.
+     * 
+     * @todo Turn into factory function that returns arrays?
      */
-    sync?: ((context: RCEContext<T, E>) => ActionValidationResult)[],
+    sync?: ((context: RCEContext<TData, TSchema, TDataShape>) => ActionValidationResult)[],
     /**
      * Asynchronous validators that will be ran in parallel to each other.
      * These will be executed after an action result, so it's perfect for long-running validators.
      * 
      * Async validators will time out (and consequently fail) after 1 second (1000ms). It is planned that this value will be adjustable in the future.
+     * @todo Turn into factory function that returns arrays?
      */
-    async?: ((context: RCEContext<T, E>) => Thenable<ActionValidationResult>)[];
+    async?: ((context: RCEContext<TData, TSchema, TDataShape>) => Thenable<ActionValidationResult>)[];
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type RCEHandler<T extends JSONSchema7Object | undefined, E = any> = (context: RCEContext<T, E>) => RCEHandlerReturns;
+type RCEHandler<
+    TData extends unknown | undefined,
+    TSchema extends SchemaTypes,
+    TDataShape = InferDataFromSchema<TSchema>,
+> = (context: RCEContext<TData, TSchema, TDataShape>) => RCEHandlerReturns;
 /**
  * The possible values that an RCE handler can return.
  */
@@ -172,10 +222,17 @@ export type RCEHandlerReturns = ActionHandlerResult | Thenable<ActionHandlerResu
  * @returns The action stripped to its basic form, without the handler and permissions.
  */
 export function stripToAction(action: RCEAction): Action {
+    let schema = action.schema;
+
+    // Auto-convert Standard JSON Schema to JSON Schema
+    if (schema && isStandardJSONSchema(schema)) {
+        schema = attemptConvertStandardJSONSchema(schema).schema;
+    }
+
     return {
         name: action.name,
         description: turtleSafari(action.description),
-        schema: action.schema,
+        schema: schema as Omit<JSONSchema7, 'type'> & { type: 'object' },
     };
 }
 
@@ -387,7 +444,7 @@ export function actionResultEnumFailure<T>(parameterName: string, validValues: T
  * This should explain, if possible, why the action failed.
  * If omitted, will just return "Action failed.".
  * @returns A context message with the specified message.
- * @deprecated Action handlers can now be async, and RCE will handle  it properly.
+ * @deprecated Action handlers can now be async, and RCE will handle it properly.
  */
 export function contextFailure(message?: string, tag: OutputTag = 'WARNING'): string {
     const result = message !== undefined ? `Action failed: ${message}` : 'Action failed.';
@@ -396,3 +453,66 @@ export function contextFailure(message?: string, tag: OutputTag = 'WARNING'): st
 }
 
 //#endregion
+
+/**
+ * Checks if the schema is a Standard JSON Schema or regular JSON Schema.
+ * @param schema The schema in question.
+ * @returns A boolean for whether or not it is a Standard JSON Schema or normal JSON Schema.
+ * @throws If the schema passed is a Standard Schema, but doesn't support Standard JSON Schema.
+ */
+export function isStandardJSONSchema(schema: unknown): schema is StandardJSONSchemaV1 {
+    if (typeof schema === 'object' && schema !== null && '~standard' in schema) {
+        const standardProp = (schema as Record<string, unknown>)['~standard'];
+        if (typeof standardProp === 'object' && standardProp !== null && 'jsonSchema' in standardProp) {
+            return true;
+        } else {
+            throw new Error('Schema used is a Standard Schema, but does not support Standard JSON Schema!');
+        }
+    } else return false;
+}
+
+export type SupportedSchemaDrafts = 'draft-07' | 'draft-2020-12';
+
+/**
+ * Try to convert a Standard JSON Schema object into a normal JSON schema object.
+ * @param schema The schema to convert.
+ * @returns An object containing the schema and type.
+ * @throws If the Standard JSON Schema object cannot be converted to a normal JSON schema.
+ */
+export function attemptConvertStandardJSONSchema(schema: StandardJSONSchemaV1): { schema: JSONSchema7, type: SupportedSchemaDrafts } {
+    let jsonSchema: JSONSchema7;
+    let type: SupportedSchemaDrafts;
+
+
+    try {
+        type = 'draft-07';
+        if (schema['~standard'].vendor === 'zod') {
+            jsonSchema = z.toJSONSchema(schema as z.ZodType, {
+                target: type,
+                override: (ctx) => zodSchemaOverride(ctx.jsonSchema),
+            }) as JSONSchema7;
+        } else {
+            jsonSchema = schema['~standard'].jsonSchema.input({ target: type });
+        }
+    } catch {
+        type = 'draft-2020-12';
+        jsonSchema = schema['~standard'].jsonSchema.input({ target: type });
+    }
+
+    delete jsonSchema['$schema'];
+
+    return {
+        schema: jsonSchema,
+        type,
+    };
+}
+
+function zodSchemaOverride(jsonSchema: z.core.JSONSchema.JSONSchema): void {
+    if (jsonSchema.type === 'integer') {
+        // Delete redundant minima / maxima
+        if (jsonSchema.maximum === Number.MAX_SAFE_INTEGER)
+            delete jsonSchema.maximum;
+        if (jsonSchema.minimum === Number.MIN_SAFE_INTEGER)
+            delete jsonSchema.minimum;
+    }
+}

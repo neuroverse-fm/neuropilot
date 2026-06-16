@@ -1,7 +1,7 @@
 import { render } from 'preact';
 import { useState, useEffect, useMemo } from 'preact/hooks';
-import type { ExecuteViewProviderMessage, ExecutionHistoryItem } from '@/views/execute';
-import { ActionStatus } from '~/src/events/actions';
+import type { ExecuteViewProviderMessage, ExecutionHistoryItem } from '@typing/views/execute';
+import type { ActionStatus } from '@typing/actions';
 
 interface State {
     history: ExecutionHistoryItem[];

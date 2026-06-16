@@ -1,7 +1,8 @@
 import { Disposable, EventEmitter } from 'vscode';
 import { ActionData } from 'neuro-game-sdk';
+import type { ActionStatus } from '@typing/actions';
 
-export type ActionStatus = 'pending' | 'success' | 'failure' | 'denied' | 'exception' | 'timeout' | 'schema' | 'cancelled';
+export { ActionStatus }; // re-exporting for the sake of compat I'm done with this
 
 export interface ActionsEventData {
     readonly action: string;

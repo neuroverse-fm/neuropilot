@@ -1,11 +1,18 @@
-import type { JSONSchema7Object } from 'json-schema';
-import type { ActionValidationResult, RCEAction } from '@/utils/neuro_client';
+import type { ActionValidationResult, InferDataFromSchema, RCEAction, SchemaTypes } from '@/utils/neuro_client';
 import type { ActionData } from 'neuro-game-sdk';
 import { Disposable, Progress } from 'vscode';
 import { ActionStatus, updateActionStatus } from '@events/actions';
-import { getAction } from '@/rce';
 
 export type RCEStorage = Record<string | number | symbol, unknown>;
+
+/**
+ * Conditional type for ActionData that makes params required when a schema exists,
+ * and optional/undefined when no schema is provided.
+ */
+export type RCEActionData<TDataShape, TSchema extends SchemaTypes> =
+    TSchema extends undefined
+        ? Omit<ActionData, 'params'> & { params?: undefined }
+        : Omit<ActionData, 'params'> & { params: TDataShape };
 
 export interface RCELifecycleMetadata {
     events?: Disposable[];
@@ -39,14 +46,15 @@ export interface RCERequestState {
  * 6. Some arbitrary time in between here, event listeners for cancel events may also be fired, and the predicate will receive the context object as well.
  * 7. Handler
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export class RCEContext<T extends JSONSchema7Object | undefined = any, K = any> extends Disposable {
-    name: string;
-    private success: boolean | null;
+export class RCEContext<
+    const TData extends unknown | undefined = undefined,
+    const TSchema extends SchemaTypes = SchemaTypes,
+    const TDataShape extends unknown | undefined = TData extends undefined ? InferDataFromSchema<TSchema> : TData,
+> extends Disposable {
+    private success: boolean | null = null;
     createdAt: string = new Date().toLocaleTimeString();
 
-    data: ActionData<T>;
-    action: RCEAction<T, K>;
+    data: RCEActionData<TDataShape, TSchema>;
     readonly forced: boolean;
 
     /** Lifecycle-specific data */
@@ -60,7 +68,7 @@ export class RCEContext<T extends JSONSchema7Object | undefined = any, K = any> 
      * each stage.
      * This data does not persist across different executions.
      */
-    public storage?: RCEStorage;
+    public storage: RCEStorage = {};
     private _updateStatus: SimplifiedStatusUpdateHandler = (status: ActionStatus, message?: string) => updateActionStatus(this.data, status, message);
     /**
      * Updates the status of the action on the action execution history panel
@@ -69,7 +77,7 @@ export class RCEContext<T extends JSONSchema7Object | undefined = any, K = any> 
      */
     readonly updateStatus: SimplifiedStatusUpdateHandler = (status: ActionStatus, message?: string) => this._updateStatus(status, message);
 
-    constructor(data: ActionData<T>, forced = false) {
+    constructor(data: RCEActionData<TDataShape, TSchema>, forced = false) {
         super(() => {
             // Clear timers and cancel events
             this.clearPreHandlerResources();
@@ -85,16 +93,11 @@ export class RCEContext<T extends JSONSchema7Object | undefined = any, K = any> 
             for (const k in this.lifecycle) {
                 this.lifecycle[k as keyof typeof this.lifecycle] = undefined;
             }
-            this.storage = undefined;
+            this.storage = {} as never;
             this.data = {} as never;
-            this.action = {} as never;
             this._updateStatus = (_status, _message) => undefined;
         });
         this.data = data;
-        this.action = getAction(data.name)!;
-        this.name = data.name;
-        this.success = null;
-        this.storage = {};
         this.forced = forced;
     }
 

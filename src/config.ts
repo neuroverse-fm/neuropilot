@@ -1,7 +1,11 @@
 import * as vscode from 'vscode';
+
 import { NEURO } from '@/constants';
 import { logOutput } from '@/utils/misc';
 import { getAction } from '@/rce';
+import { PermissionLevel } from '@typing/actions';
+
+export { PermissionLevel }; // re-exporting for the sake of compat I'm done with this
 
 //#region Types
 
@@ -407,13 +411,6 @@ export async function checkDeprecatedSettings(version: string) {
             }
         }
     }
-}
-
-/** Permission level enums */
-export const enum PermissionLevel {
-    OFF = 0,
-    COPILOT = 1,
-    AUTOPILOT = 2,
 }
 
 export function permissionLevelToString(level: PermissionLevel): string {
